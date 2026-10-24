@@ -30,6 +30,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
+local AudioController = require(script.Parent.AudioController)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local NUMBER_COLORS: { [string]: Color3 } = {
@@ -126,6 +127,9 @@ local function onProjectile(
 		part = shape
 	end
 	SpellVfx.decorateBolt(part :: BasePart, fxKey, visual.color)
+	if fxKey == "Bullet" then
+		AudioController.play("turretShot", origin)
+	end
 	bolts[id] = {
 		part = part :: BasePart,
 		model = model,
@@ -165,18 +169,38 @@ local function onProjectileEnd(id: number, position: Vector3)
 		Debris:AddItem(bolt.model or bolt.part, 0.4)
 		if near(position) then
 			SpellVfx.impact(folder, position, bolt.fxKey, bolt.color)
+			if bolt.fxKey then
+				AudioController.playSpell(bolt.fxKey, "impact", position)
+			end
 		end
 	end
 end
 
-local function onCast(character: Model, spellId: string, _target: Vector3)
+local function onCast(character: Model, spellId: string, target: Vector3)
 	if typeof(character) ~= "Instance" or not character.Parent then
 		return
 	end
 	local def = SpellDefinitions.get(spellId)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if def and root and root:IsA("BasePart") and near(root.Position) then
-		SpellVfx.castAnimation(folder, character, def.visual.color)
+		SpellVfx.castAnimation(folder, character, def.visual.color, def.glyph)
+		AudioController.playSpell(spellId, "cast", root.Position)
+		-- Spells with a pull (Black Hole) or a heal get their own extra effect,
+		-- chosen by their stats rather than by name.
+		if def.stats.pull and def.stats.radius and typeof(target) == "Vector3" then
+			SpellVfx.blackHole(folder, target, def.stats.radius, def.stats.duration or 3)
+		end
+		if def.stats.heal then
+			SpellVfx.healBurst(folder, character, def.visual.color)
+		end
+	end
+end
+
+-- A player just drew a glyph: show it over their head.
+local function onGlyph(character: Model, glyphId: string, color: Color3)
+	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") and near(root.Position) then
+		SpellVfx.glyphEmblem(folder, character, glyphId, color)
 	end
 end
 

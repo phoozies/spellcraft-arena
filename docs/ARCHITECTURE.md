@@ -12,7 +12,11 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Types.luau                  shared types (SpellDef, Profile, MatchState…)
   Net/Remotes.luau            the one registry of every RemoteEvent
   Spells/SpellDefinitions     the 8-spell dictionary (data only)
-  Spells/WordMatcher          text/voice → spell id
+  Spells/Glyphs               the 8 drawable shapes (single strokes)
+  Spells/GlyphRecognizer      stroke → glyph id ($1 unistroke recognizer)
+  Spells/WordMatcher          admin spell names → spell id
+  Audio/Cues                  every sound by name (asset ids, volume, pitch)
+  UI/GlyphView                draws a glyph as a line (HUD, signs, VFX)
   Spells/Rarity               weights, colors, glyphs, roll()
   Spells/Placement            placement rules shared by ghost preview + server
   Match/DraftRoller           draft card rolling (injectable RNG)
@@ -28,9 +32,8 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     HandService         held spell copies (up to 5, duplicates ok), match spellbook, readied slot, shared cast cooldowns
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Buff, Movement, Summon
-    SpellInputService   chat hook + spell box remote → 1s typing cooldown → WordMatcher → HandService.grant
-    AdminService        ";" admin commands (chat or spell box), server-side admin check
-    VoiceService        push-to-talk AudioSpeechToText → SpellInputService
+    SpellInputService   DrawSpell remote → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
+    AdminService        ";" admin commands (chat), server-side admin check
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, drafts, teams, PvP rules
     HubService          builds the hub, spawning, team boxes, FFA pad, dummies, hub regen
@@ -42,7 +45,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
 src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Controllers/
     ClientState         mirror of server state + change signals
-    HudController       hotbar, spell box, mic, coins/wins wallet, match bar, toasts, feed
+    HudController       hotbar, glyph cards, coins/wins wallet, match bar, toasts, feed
     MenuController      Play / Spellbook / Crates / Quests panels
     CrateController     Crate Shop panel + spin reel (animates the server's result)
     DraftController     draft cards
@@ -103,10 +106,10 @@ Some dependencies would form a cycle, so they're injected instead of required:
 ## Cast pipeline (copy model)
 
 ```
-client: word ──SubmitWord──► SpellInputService
-                               ├ ";" prefix + admin → AdminService (never shown in chat)
-                               ├ 1s typing cooldown (per player, all sources)
-                               └ WordMatcher → HandService.grant
+client: stroke ──DrawSpell──► SpellInputService
+                               ├ validate (≤200 Vector2, finite, in range)
+                               ├ 1s draw cooldown (per player)
+                               └ GlyphRecognizer → glyph → spell → HandService.grant
                                     ├ match: in spellbook? hub: owned?
                                     ├ hotbar full (5)? → refuse
                                     └ add ONE copy (duplicates allowed) and ready it
@@ -126,7 +129,8 @@ client: aim  ──CastSpell───► CastService
 - **Breakable blocks:** `segments` in a placeable's stats builds a grid of separately breakable blocks under an untagged parent Model, which deletes itself when empty. `DestructibleService` darkens damaged parts (`BaseColor` attribute), sends `Fx("chip")` on hits, and sends `Fx("shatter")` per part on break. Arenas use `MapKit.blockWall`.
 - **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `coinsGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
 
-- **Paste blocking** is client-side (`HudController.guardAgainstPaste` undoes any text change of more than one character). The server's typing cooldown is the real limit, and it also covers chat and voice.
+- **Drawing** is recorded by `DrawController` (mouse, touch, or the right stick) in screen-height units and sent once, when the stroke ends. The server never trusts the client's verdict: `GlyphResult` is feedback only. Admin chat commands (`;`) still travel through chat, handled by `SpellInputService`'s `ShouldDeliverCallback`.
+- **Audio and mood:** `AudioController` plays cues by name (`Audio/Cues`, spells point at theirs with `sfx`), places them in the world with falloff, and runs the hub ambience. `LightingController` fades between the hub's night and the arenas' daylight on the client only.
 - **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
 - **Crowd-control immunity:** `StatusService.apply` refuses to refresh an active Root, Time Stop, or Shrink, and adds a 2.5s immunity after it ends (`Config.CC_IMMUNITY`).
 
@@ -165,7 +169,7 @@ The profile (`Types.Profile`, schema 2: `coins`, `ownedSpells`, `stats`, `daily`
 ## Security checklist
 
 - Every remote handler type-checks its arguments (`typeof`, NaN and range checks, string length limits).
-- Words are limited to one per second across chat, box, and voice.
+- Drawings are limited to one per second, at most 200 points each, every coordinate finite and within `Config.DRAW_MAX_COORD`.
 - Debug commands only run when `RunService:IsStudio()`.
 - Admin status is decided server-side on join (UserId list, place or group owner, or Studio). A non-admin's `;` message is delivered as plain chat. Commands run in their own thread and are logged.
 - `;announce` text goes through `TextService:FilterStringAsync` before broadcast.

@@ -15,7 +15,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local GlyphView = require(script.Parent.Parent.UI.GlyphView)
+local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 

@@ -1,22 +1,25 @@
 # Controls
 
-You get a spell by typing (or saying) its word, which adds **one copy** to your hotbar. You can hold up to 5, duplicates included. Casting uses the copy up, and copies of the same spell share one cooldown. Tapping a hotbar slot readies that copy. The keyboard key that opens the spell box (default **T**) can be changed in **⚙ Settings**. The setting is saved to your profile, and keys used for movement, chat, the hotbar, or rotating can't be chosen. You can submit one word per second, and **pasting into the spell box is blocked**: a text change of more than one character at a time is undone. On phones, picking a keyboard autocomplete suggestion counts as a paste, so type the letters instead.
+You get a spell by **drawing its shape**, which adds **one copy** to your hotbar. You can hold up to 5, duplicates included. Casting uses the copy up, and copies of the same spell share one cooldown. Tapping a hotbar slot readies that copy. The key that opens the drawing canvas (default **F**) can be changed in **⚙ Settings**. The setting is saved to your profile, and keys used for movement, chat, the hotbar, canceling (**G**), or rotating can't be chosen. You can draw one spell per second. The glyph cards above the hotbar, the stones around the hub's fountain, and the Spellbook all show what to draw.
 
 | Action | Keyboard & mouse | Gamepad (Xbox / PlayStation) | Touch (phone / tablet) | VR |
 |---|---|---|---|---|
-| Get a spell (type its word) | Type in chat, or press **T** (rebindable) for the spell box | **Y** opens the spell box (on-screen keyboard) | Tap the spell box | **Y** / on-screen keyboard |
-| Speak a spell | Hold **🎤** | Hold **🎤** | Hold **🎤** | Hold **🎤** |
+| Open the canvas | **F** (rebindable) or the **✏ Draw** button | **X** | **✏ Draw** button | **F** / **X** |
+| Draw the shape | Hold **left click** and drag, release to send | Push the **right stick** around, release to send | Drag a finger, lift to send | Mouse/pointer drag |
+| Cancel | **G**, **Esc**, or **F** again | **X** again | Tap **✏ Draw** again | same |
 | Ready a held copy | **1–5** | **D-pad ← / →** | Tap a hotbar slot | Hotbar / D-pad |
 | Cast | **Left click** (aims at cursor) | **R2** (aims at screen center) | **Tap the world** where you want it | **Right trigger** (aims where your right hand points) |
 | Rotate a placeable | **R** | **L1 / R1** | **⟳** button | **L1 / R1** |
 | Menus | Side buttons | Select + navigate with the stick | Side buttons | Pointer |
 
-## Voice spells
+## Drawing tips
 
-Voice spells need **microphone input** turned on (Game Settings → Communication) and an eligible account. If speech-to-text isn't available, the 🎤 button hides itself. What the game heard appears above the spell box for 2.5 seconds.
+- Draw **big and smooth**. Size and angle don't matter, and you can start anywhere on a closed shape and go either way.
+- The line turns **gold** when the spell is readied and **red** when the magic couldn't read it. Too-small drawings are ignored ("Draw a bigger shape!").
+- In a match you can only ready the spells in your spellbook; the others fizzle with a hint.
 
 ## Accessibility
 
 - UI scales with the screen. Touch layouts are 15% larger, and buttons are at least 52 px.
-- Rarity uses a shape plus a color (● ◆ ★ ✦), so it's readable without color vision.
+- Rarity uses a shape plus a color (● ▲ ◆ ★ 👑), so it's readable without color vision.
 - No camera shake, which matters for VR comfort.

@@ -1,7 +1,7 @@
 --!strict
 -- Draws a glyph (shared/Spells/Glyphs) as a line on screen: the spell cards'
--- icons, the spellbook's "how to draw it" picture, and the player's own
--- stroke while drawing. A line is a chain of thin rotated Frames, so it
+-- icons, the spellbook's "how to draw it" picture, the hub's glyph stones,
+-- and the player's own stroke while drawing. Used by client and server. A line is a chain of thin rotated Frames, so it
 -- needs no uploaded images.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

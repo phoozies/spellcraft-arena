@@ -101,6 +101,8 @@ export type SpellDef = {
 	name: string,
 	aliases: { string }, -- admin names (`;give fire`); players draw `glyph` instead
 	glyph: string, -- id in Spells/Glyphs: the shape drawn to ready this spell
+	-- Names in Audio/Cues: `cast` plays when it's cast, `impact` where it lands.
+	sfx: { cast: string?, impact: string? }?,
 	rarity: Rarity,
 	archetype: Archetype,
 	cooldown: number,

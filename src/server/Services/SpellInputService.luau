@@ -28,6 +28,7 @@ local SpellInputService = {}
 
 local toastRemote: RemoteEvent
 local resultRemote: RemoteEvent
+local fxRemote: RemoteEvent
 local lastDraw: { [Player]: number } = {}
 local noDrawCooldown: { [Player]: boolean } = {}
 
@@ -122,6 +123,11 @@ function SpellInputService.submitStroke(player: Player, points: { Vector2 }): st
 		)
 	end
 	resultRemote:FireClient(player, spellId, glyphId)
+	-- Everyone nearby sees the glyph pop up over the caster's head.
+	local character = player.Character
+	if def and character then
+		fxRemote:FireAllClients("glyph", character, def.glyph, def.visual.color)
+	end
 	return spellId
 end
 
@@ -166,6 +172,7 @@ end
 function SpellInputService.init()
 	toastRemote = Remotes.get("Toast")
 	resultRemote = Remotes.get("GlyphResult")
+	fxRemote = Remotes.get("Fx")
 end
 
 function SpellInputService.start()

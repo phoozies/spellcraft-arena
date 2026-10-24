@@ -8,7 +8,10 @@
 -- with characters/parts that may be mid-destroy.
 
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 
 local SpellVfx = {}
 
@@ -243,7 +246,12 @@ local function shoulderOf(character: Model): (Motor6D?, CFrame)
 	return nil, CFrame.identity
 end
 
-function SpellVfx.castAnimation(parent: Instance, character: Model, color: Color3)
+function SpellVfx.castAnimation(
+	parent: Instance,
+	character: Model,
+	color: Color3,
+	glyphId: string?
+)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		return
@@ -297,6 +305,46 @@ function SpellVfx.castAnimation(parent: Instance, character: Model, color: Color
 		:Play()
 	Debris:AddItem(circle, 0.5)
 	Debris:AddItem(inner, 0.5)
+
+	-- The glyph you drew, imprinted on the ground under the caster.
+	if glyphId then
+		local plate = Instance.new("Part")
+		plate.Name = "GlyphImprint"
+		plate.Anchored = true
+		plate.CanCollide = false
+		plate.CanQuery = false
+		plate.CanTouch = false
+		plate.Transparency = 1
+		plate.Size = Vector3.new(7, 0.1, 7)
+		plate.CFrame = CFrame.new(feet + Vector3.new(0, 0.15, 0))
+			* CFrame.Angles(0, math.rad(root.Orientation.Y), 0)
+		plate.Parent = parent
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		gui.CanvasSize = Vector2.new(220, 220)
+		gui.LightInfluence = 0
+		gui.Brightness = 3
+		gui.Parent = plate
+		local view = GlyphView.create(gui, glyphId, 200, color, { Position = UDim2.fromOffset(10, 10) })
+		if view then
+			task.delay(0.15, function()
+				for _, line in view:GetChildren() do
+					if line:IsA("Frame") then
+						TweenService
+							:Create(line, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+								BackgroundTransparency = 1,
+							})
+							:Play()
+					end
+				end
+			end)
+		end
+		TweenService:Create(plate, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {
+			CFrame = plate.CFrame * CFrame.Angles(0, math.rad(80), 0),
+		}):Play()
+		Debris:AddItem(plate, 0.8)
+	end
 
 	-- Hand sparkle.
 	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
@@ -412,6 +460,111 @@ function SpellVfx.dust(parent: Instance, position: Vector3, width: number, color
 		color:Lerp(Color3.new(1, 1, 1), 0.4)
 	)
 	Debris:AddItem(anchor, 1)
+end
+
+-- The glyph a player just drew pops up over their head, rises, and fades,
+-- so everyone can see which spell they readied.
+function SpellVfx.glyphEmblem(parent: Instance, character: Model, glyphId: string, color: Color3)
+	local head = character:FindFirstChild("Head")
+	if not head or not head:IsA("BasePart") then
+		return
+	end
+	local anchor = anchorAt(parent, head.Position + Vector3.new(0, 4.5, 0))
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(110, 110)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = 140
+	gui.Parent = anchor
+	local view = GlyphView.create(gui, glyphId, 100, color, { Position = UDim2.fromOffset(5, 5) })
+	if view then
+		local pop = Instance.new("UIScale")
+		pop.Scale = 0.2
+		pop.Parent = view
+		TweenService:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		task.delay(0.55, function()
+			for _, line in view:GetChildren() do
+				if line:IsA("Frame") then
+					TweenService:Create(line, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+				end
+			end
+		end)
+	end
+	TweenService:Create(anchor, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		CFrame = anchor.CFrame + Vector3.new(0, 3, 0),
+	}):Play()
+	local sparks = emitter(anchor, TEX.sparkle, color, STYLES.default)
+	sparks.Rate = 0
+	sparks:Emit(16)
+	Debris:AddItem(anchor, 1.2)
+end
+
+-- Healing: green sparkles drift up around the character and a soft ring
+-- spreads on the ground.
+function SpellVfx.healBurst(parent: Instance, character: Model, color: Color3)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	local anchor = anchorAt(parent, root.Position)
+	anchor.Size = Vector3.new(4, 5, 4)
+	local sparkle = emitter(anchor, TEX.sparkle, color, STYLES.default)
+	sparkle.Rate = 0
+	sparkle.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.9),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	sparkle.Lifetime = NumberRange.new(0.9, 1.4)
+	sparkle.Speed = NumberRange.new(1, 3)
+	sparkle.SpreadAngle = Vector2.new(60, 60)
+	sparkle.EmissionDirection = Enum.NormalId.Top
+	sparkle.Acceleration = Vector3.new(0, 5, 0)
+	sparkle.Shape = Enum.ParticleEmitterShape.Cylinder
+	sparkle:Emit(26)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 16
+	light.Brightness = 3
+	light.Parent = anchor
+	TweenService:Create(light, TweenInfo.new(0.7), { Brightness = 0 }):Play()
+	SpellVfx.shockwave(parent, root.Position - Vector3.new(0, 2.9, 0), 6, color)
+	Debris:AddItem(anchor, 1.6)
+end
+
+-- Black hole: motes stream inward from a sphere around the center and a
+-- violet glow throbs, for as long as the hole is open.
+function SpellVfx.blackHole(parent: Instance, center: Vector3, radius: number, duration: number)
+	local anchor = anchorAt(parent, center + Vector3.new(0, 4, 0))
+	anchor.Shape = Enum.PartType.Ball
+	anchor.Size = Vector3.one * radius * 1.6
+	local inflow = emitter(anchor, TEX.sparkle, Color3.fromRGB(190, 110, 255), STYLES.default)
+	inflow.Shape = Enum.ParticleEmitterShape.Sphere
+	inflow.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	inflow.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+	inflow.Rate = 140
+	inflow.Speed = NumberRange.new(radius * 0.6, radius * 0.9)
+	inflow.Lifetime = NumberRange.new(0.9, 1.3)
+	inflow.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1.2),
+		NumberSequenceKeypoint.new(1, 0.1),
+	})
+	inflow.SpreadAngle = Vector2.zero
+	inflow.RotSpeed = NumberRange.new(-90, 90)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(150, 70, 255)
+	light.Range = radius * 2
+	light.Brightness = 2
+	light.Parent = anchor
+	TweenService:Create(
+		light,
+		TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Brightness = 5 }
+	):Play()
+	SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius, Color3.fromRGB(150, 70, 255))
+	task.delay(duration, function()
+		inflow.Enabled = false
+	end)
+	Debris:AddItem(anchor, duration + 1.5)
 end
 
 return SpellVfx

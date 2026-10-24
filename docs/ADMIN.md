@@ -1,6 +1,6 @@
 # Admin Commands
 
-Type commands in **chat** or the **spell box** with the `;` prefix, for example `;give me zap`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
+Type commands in **chat** or the **chat** with the `;` prefix, for example `;give me zap`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
 

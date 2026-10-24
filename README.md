@@ -1,8 +1,8 @@
 # Wordcraft Arena *(working title)*
 
-A Scribblenauts-inspired PvP game for Roblox: **type or say a word, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
+A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
-- Type "fireball", "rock wall", or "zap" in chat, the spell box, or out loud 🎤 to add a copy of the spell to your hotbar. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can submit one word per second, and pasting is blocked.
+- Draw a circle (Fireball), a triangle (Rock Wall), a lightning bolt (Zap), and so on to add a copy of the spell to your hotbar: press **F** or tap ✏ Draw, then trace the shape. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
 - Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 3v3, 4v4, and FFA, best of 3. In the hub, stand on the Blue or Red side of a team box to pick your team before the match. You start each match with 3 random spells you own, then draft a new card each round (cards have random rarities) until your hand holds 5.
@@ -37,7 +37,7 @@ require(game.ServerScriptService.Tests.Runner)()
 | [Semantic layer](docs/semantic/features.yaml) | Machine-readable feature map for AI agents (start at [CLAUDE.md](CLAUDE.md)) |
 | [Spells](docs/SPELLS.md) | The dictionary, rarity, archetypes, how to add a spell |
 | [Architecture](docs/ARCHITECTURE.md) | Code layout, cast pipeline, PvP rules, data and security |
-| [Controls](docs/CONTROLS.md) | Per-device bindings, voice, accessibility |
+| [Controls](docs/CONTROLS.md) | Per-device bindings, drawing, accessibility |
 | [Admin commands](docs/ADMIN.md) | Who is an admin, every `;` command, adding commands |
 | [Contributing](docs/CONTRIBUTING.md) | Setup, workflow, conventions, test helpers |
 | [Changelog](CHANGELOG.md) | Release notes |

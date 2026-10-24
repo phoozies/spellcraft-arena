@@ -15,6 +15,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local AudioController = require(script.Parent.AudioController)
 local ClientState = require(script.Parent.ClientState)
 local MenuController = require(script.Parent.MenuController)
 
@@ -138,7 +139,8 @@ local function spin(result: Types.CrateResult)
 		resultLabel.TextColor3 = info.color
 		resultLabel.Text = if result.duplicate
 			then `{info.glyph} {name} (duplicate): +{result.refund} coins back`
-			else `{info.glyph} NEW SPELL: {name}! Type "{if def then def.aliases[1] else name}" to cast it.`
+			else `{info.glyph} NEW SPELL: {name}! Draw its shape to cast it.`
+		AudioController.play("crateReveal")
 		local winner = reelStrip:FindFirstChild(`Card{WIN_INDEX}`)
 		if winner and winner:IsA("Frame") then
 			local pop = Instance.new("UIScale")

@@ -34,7 +34,7 @@ local DEFINITIONS: { [string]: string } = {
 	QueueCounts = "(counts: {[mode]: number}) live players waiting per mode",
 	Knockout = "(killerName: string?, victimName: string, spellName: string?) kill feed",
 	Impulse = "(velocity: Vector3) self-beneficial boost (dash, pads) applied by the owning client",
-	Fx = "(kind: string, ...) cosmetic effects rendered by clients: projectile spawn/end, poof",
+	Fx = "(kind: string, ...) cosmetic effects rendered by clients: projectile spawn/end, poof, glyph, ...",
 	GlyphResult = "(spellId: string?, glyphId: string?) what the player's drawing was (nil = not recognized)",
 }
 

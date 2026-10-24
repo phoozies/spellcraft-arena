@@ -4,6 +4,8 @@
 
 local ORDER = {
 	"ClientState",
+	"LightingController",
+	"AudioController",
 	"HudController",
 	"MenuController",
 	"CrateController",

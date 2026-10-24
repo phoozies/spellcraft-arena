@@ -87,7 +87,7 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 			player,
 			if duplicate
 				then `Duplicate {name}! +{refund} coins back.`
-				else `Unlocked {name}! Type "{if def then def.aliases[1] else name}" to cast it.`,
+				else `Unlocked {name}! Draw its shape to cast it.`,
 			"reward"
 		)
 	end)

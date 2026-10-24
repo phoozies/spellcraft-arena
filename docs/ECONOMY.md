@@ -63,11 +63,11 @@ The ranking is per server (players currently here), built from their saved `stat
 
 | Thing | Where (studs) | Built by |
 |---|---|---|
-| Spellbook kiosk (imported **Grimoire** model on a lectern, prompt "Spellbook") | (-16, 0, 50) | `Maps/InkwellPlaza.luau` |
-| Daily Quests chest | (16, 0, 50) | same |
-| Crate Shop stage (5 crates, prompt "Crates") | (50, 0, 38) | same; crates use the imported **Crate** model tinted by rarity, else colored blocks |
-| Podium (3 pedestals) | (62, 0, -12) | same |
-| Most Wins board | right of the podium, angled to the plaza | same |
+| Spellbook kiosk (imported **Grimoire** model on a lectern, prompt "Spellbook") | (-22, 0, 70) | `Maps/InkwellPlaza.luau` |
+| Daily Quests chest | (22, 0, 70) | same |
+| Crate Shop stage (5 crates, prompt "Crates") | (76, 0, 36) | same; crates use the imported **Crate** model tinted by rarity, else colored blocks |
+| Podium (3 pedestals) | (-23, 0, -20), the hall entrance | same |
+| Most Wins board | right side of the hall entrance, angled to the plaza | same |
 
 ## Admin and debug
 

@@ -4,6 +4,18 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (drawing, a new hub, audio and VFX)
+- **Draw spells.** Press **F** (or tap ✏ Draw, or **X** on a gamepad) and trace a shape: circle = Fireball, wave = Water Lock, triangle = Rock Wall, chevron = Gust, lightning = Zap, infinity = Heal, spiral = Black Hole, star = Turret. The server recognizes the stroke (`Glyphs`, `GlyphRecognizer`, a $1 unistroke recognizer that ignores size, rotation, direction, and start point) and readies the spell. The line turns gold or red with the verdict, and everyone sees the glyph pop over the caster's head. New `DrawController`, `GlyphView`, `DrawSpell` and `GlyphResult` remotes, `tests/Glyphs.spec`.
+- **Glyph cards** above the hotbar show what to draw (with cooldowns); the Spellbook shows each spell's glyph.
+- **New hub: the Great Hall of Glyphs.** A moonlit round plaza (inkwell fountain, eight glyph stones) opens into a long stone hall with pointed arches, glowing rune windows, glyph banners, a red carpet, the team boxes, the FFA portal, and a red Arena Gate at the far end. The Spell Practice pavilion is west, the Crate Shop east, the podium and Most Wins board at the hall entrance. Pumpkins and torches throughout.
+- **Night mood** (`LightingController`): the hub fades to a purple night with bloom; matches keep the bright arena lighting.
+- **Audio** (`Audio/Cues`, `AudioController`): a cast and an impact sound per spell, hit sounds, shattering rock, drawing success and failure chimes, the crate reveal, and a quiet night ambience in the hub. Spells name their cues with `sfx = { cast, impact }`. `tests/Audio.spec`.
+- **Spell VFX:** the glyph you drew is imprinted in the magic circle under the caster, Heal sparkles and a ring, Black Hole streams motes inward with a pulsing glow.
+
+### Removed (drawing)
+- Typing, chat casting, the spell box, and voice casting (`VoiceService`, `VoiceListen`, `VoiceHeard`, `SubmitWord`). Chat still carries admin `;` commands, and spell names still work in them.
+- The "type a spell" key setting is now the **draw key** setting (default F).
+
 ### Added (coins, crates, wins podium)
 - **Coins.** Winning a match pays 100 coins (+50 for the first win of the day); the daily login chest and daily quests pay coins too. New players start with 150. The HUD's top-left wallet shows coins and wins, and the Victory screen counts up the coins you won.
 - **Crates** (`Economy/Crates`, `CrateService`, `CrateController`): a Common, Uncommon, Rare, Epic, and Legendary crate (100 / 250 / 500 / 1000 / 2000 coins). Each spin is decided on the server and unlocks a spell of the crate's rarity (with a 15–20% chance of one tier up); a spell you already own refunds half the price. Open them from the new 🎁 Crates menu or the Crate Shop stage in the hub; a reel of spell cards spins and lands on your prize.

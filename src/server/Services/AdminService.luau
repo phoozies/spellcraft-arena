@@ -1,5 +1,5 @@
 --!strict
--- Admin commands, typed in chat or the spell box with Config.ADMIN_PREFIX
+-- Admin commands, typed in chat with Config.ADMIN_PREFIX
 -- (";"), e.g. ";give me fireball" or ";startmatch 2v2". See docs/ADMIN.md.
 --
 -- Who is an admin: UserIds in Config.ADMIN_USER_IDS, the place owner (or
