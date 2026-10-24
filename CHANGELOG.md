@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (wall + Fireball)
+- **Every spell hits the Rock Wall, your own included** (`HitByAll`), where before your own spells passed through your own structures.
+- **The Rock Wall takes 50 damage in total** (it was 150), shared across its pieces: the base breaks first, then the rubble, then the stones, and the whole wall is gone at 50.
+- **Bigger Fireball hitbox:** radius 2 → 3.5 (it now hits from up to 5 studs off-center), with the visual enlarged from 2 to 3.2 studs to match.
+
 ### Added (3D models)
 - **Imported models** (`assets/models`, prepared by `tools/prepare-models.luau`, stored in `ReplicatedStorage.Models`) for the Fireball, Water Lock, Rock Wall, and the sparring arena. All fall back to plain shapes if the models aren't in the place.
 - **Fireball** and **Water Lock** bolts are drawn with the models (the fireball trails its tail behind it).

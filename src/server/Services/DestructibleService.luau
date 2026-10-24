@@ -76,6 +76,10 @@ function DestructibleService.canHarm(attacker: Player?, target: Instance): boole
 	if not resolved then
 		return false
 	end
+	-- Walls (HitByAll) are solid to every spell, the owner's and allies' included.
+	if resolved:GetAttribute("HitByAll") then
+		return true
+	end
 	if attacker and owner == attacker then
 		return false
 	end
@@ -173,6 +177,47 @@ local function breakStructure(target: Instance, destroyer: Player?)
 	target:Destroy()
 end
 
+-- Damage to a wall built from chunks (Rock Wall). Any chunk that is hit takes
+-- from the wall's shared budget; every chunk's bar and wear follow the
+-- remaining ratio, and chunks break one by one as it drains (`BreakAt` on
+-- each chunk: the low pieces first, the tall stones when the budget is gone).
+local function damageWall(
+	wall: Model,
+	hitChunk: Instance,
+	amount: number,
+	attacker: Player?,
+	owner: Player?
+): number
+	local max = (wall:GetAttribute("WallMaxHealth") :: number?) or 1
+	local pool = math.max(0, (wall:GetAttribute("WallHealth") :: number) - amount)
+	wall:SetAttribute("WallHealth", pool)
+	local ratio = pool / max
+
+	local position = if hitChunk:IsA("Model")
+		then hitChunk:GetPivot().Position
+		else wall:GetPivot().Position
+	showNumber(position, amount, "damage", attacker, owner)
+	local part = partsOf(hitChunk)[1]
+	if part and amount >= 3 and ratio > 0 then
+		fxRemote:FireAllClients("chip", position, part.Color)
+	end
+
+	for _, chunk in wall:GetChildren() do
+		if chunk:IsA("Model") then
+			chunk:SetAttribute(
+				"Health",
+				((chunk:GetAttribute("MaxHealth") :: number?) or 1) * ratio
+			)
+			updateBar(chunk)
+			local breakAt = (chunk:GetAttribute("BreakAt") :: number?) or 0
+			if ratio <= breakAt then
+				breakStructure(chunk, attacker)
+			end
+		end
+	end
+	return amount
+end
+
 -- Applies damage. Returns the damage actually dealt (0 if not allowed).
 function DestructibleService.damage(
 	target: Instance,
@@ -184,11 +229,14 @@ function DestructibleService.damage(
 	if not resolved or amount <= 0 then
 		return 0
 	end
-	if attacker and owner == attacker then
-		return 0
-	end
-	if not relation(attacker, owner, resolved) then
-		return 0
+	local hitByAll = not isCharacter and resolved:GetAttribute("HitByAll") == true
+	if not hitByAll then
+		if attacker and owner == attacker then
+			return 0
+		end
+		if not relation(attacker, owner, resolved) then
+			return 0
+		end
 	end
 
 	if isCharacter and owner then
@@ -232,6 +280,12 @@ function DestructibleService.damage(
 		end
 		humanoid:TakeDamage(amount)
 		return amount
+	end
+
+	-- A wall's chunks share one damage budget (WallHealth on the wall model).
+	local wall = resolved.Parent
+	if wall and typeof(wall:GetAttribute("WallHealth")) == "number" then
+		return damageWall(wall :: Model, resolved, amount, attacker, owner)
 	end
 
 	-- Structures / summons / props
