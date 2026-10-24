@@ -11,31 +11,13 @@ local TweenService = game:GetService("TweenService")
 
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
+local TrapBubble = require(script.Parent.Parent.TrapBubble)
 local Projectile = require(script.Parent.Projectile)
 
 local Control = {}
 
 local function bubble(character: Model, color: Color3, duration: number)
-	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return
-	end
-	local orb = Instance.new("Part")
-	orb.Shape = Enum.PartType.Ball
-	orb.Size = Vector3.new(7, 7, 7)
-	orb.Color = color
-	orb.Material = Enum.Material.Glass
-	orb.Transparency = 0.55
-	orb.CanCollide = false
-	orb.CanQuery = false
-	orb.Massless = true
-	orb.CFrame = root.CFrame
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = orb
-	weld.Part1 = root
-	weld.Parent = orb
-	orb.Parent = character
-	Debris:AddItem(orb, duration)
+	TrapBubble.show(character, duration, color)
 end
 
 function Control.cast(ctx: any): boolean?

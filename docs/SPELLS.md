@@ -37,7 +37,7 @@ Shields don't stack: a recast refills the shield to its full value instead of ad
 
 **Health:** there's no regeneration in arenas, only healing spells. The hub regenerates 5 HP/s.
 
-**Breakable blocks:** Rock Wall (3×2) and Castle (5×3) are built from separately breakable blocks, each holding an equal share of the spell's `health`. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
+**Breakable pieces:** the Rock Wall is the imported earth-wall model: its base, standing stones, and rubble are separate pieces that share the spell's `health` (half by volume, half equally), so the tall stones take most of the punishment. Without the model it falls back to a 3×2 grid of blocks. Castle (5×3) is a grid of blocks, each holding an equal share of `health`. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
 
 ## How words are matched
 
@@ -66,7 +66,7 @@ Each glyph is a different shape, so rarity is readable without relying on color 
 |---|---|---|---|---|---|---|
 | 1 | **Fireball** ⭐ | fireball, fire, flame, blaze | Projectile | Common | 0.9s | Hurl a ball of fire that burns players and structures. |
 | 1 | **Water Lock** ⭐ | water lock, waterlock, water, bubble, trap | Control | Common | 3s | Trap an enemy in a bubble so they can't move for 1.5 seconds. |
-| 1 | **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Raise a stone wall that blocks spells. It breaks apart block by block. |
+| 1 | **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Raise a rocky earth wall that blocks spells. It breaks apart piece by piece. |
 | 2 | **Wind Gust** | wind gust, wind, gust, push | Projectile | Common | 1.5s | A blast of wind that shoves enemies away. |
 | 2 | **Wooden Crate** | wooden crate, crate, box | Placeable | Common | 0.5s | Drop a crate to hide behind or climb on. |
 | 2 | **Heal Leaf** | heal leaf, heal, leaf, medicine | Buff | Common | 4s | Restore 15 health. |

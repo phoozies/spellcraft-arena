@@ -367,11 +367,25 @@ function DestructibleService.build(
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.Parent = model
 	model.PrimaryPart = part
+	DestructibleService.wrap(model, part, health, owner, teamName, Placement.height(visual))
+	return model
+end
 
+-- Makes an existing model breakable: tags it Destructible, gives it
+-- Health/MaxHealth/owner/team attributes, and hangs a health bar on `anchor`
+-- (a BasePart inside it). `height` is the model's height, for bar placement.
+function DestructibleService.wrap(
+	model: Model,
+	anchor: BasePart,
+	health: number,
+	owner: Player?,
+	teamName: string?,
+	height: number
+): Model
 	local bar = Instance.new("BillboardGui")
 	bar.Name = "HealthBar"
 	bar.Size = UDim2.fromOffset(80, 10)
-	bar.StudsOffsetWorldSpace = Vector3.new(0, Placement.height(visual) / 2 + 1.5, 0)
+	bar.StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 1.5, 0)
 	bar.AlwaysOnTop = true
 	bar.MaxDistance = 120
 	bar.Enabled = false
@@ -389,7 +403,7 @@ function DestructibleService.build(
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0.5, 0)
 	corner.Parent = back
-	bar.Parent = part
+	bar.Parent = anchor
 
 	model:SetAttribute("Health", health)
 	model:SetAttribute("MaxHealth", health)

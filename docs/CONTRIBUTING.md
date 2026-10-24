@@ -6,6 +6,10 @@
 2. Run `rojo serve`, then connect from the Rojo plugin in Studio.
 3. **No Rojo CLI?** Run `node tools/studio-sync.js` and paste `tools/studio-sync.luau` into the Studio command bar. It temporarily needs *Allow HTTP Requests*, so turn that back off afterwards.
 
+## 3D models
+
+The imported models live in the place file, not the project. To add or change one, follow `assets/models/README.md` (import the FBX, run `tools/prepare-models.luau`, save the place). Always keep a plain-shape fallback in code, because a place built by CI won't have the models.
+
 ## Workflow
 
 - **Branch from `main`** and keep PRs focused, one system at a time.

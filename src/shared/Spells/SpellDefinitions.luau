@@ -61,6 +61,7 @@ local DEFINITIONS: { SpellDef } = {
 			radius = 2.5,
 			status = "Root",
 			statusDuration = 1.5,
+			model = "WaterBubble", -- the trap bubble around the victim
 		},
 		visual = {
 			shape = "Ball",
@@ -79,13 +80,20 @@ local DEFINITIONS: { SpellDef } = {
 		starter = true,
 		archetype = "Placeable",
 		cooldown = 1,
-		description = "Raise a stone wall that blocks spells. It breaks apart block by block.",
-		stats = { health = 150, lifetime = 20, maxActive = 3, segments = { x = 3, y = 2 } },
+		description = "Raise a rocky earth wall that blocks spells. It breaks apart piece by piece.",
+		stats = {
+			health = 150,
+			lifetime = 20,
+			maxActive = 3,
+			model = "RockWall",
+			segments = { x = 3, y = 2 }, -- fallback when the model isn't in the place
+		},
 		visual = {
 			shape = "Block",
-			size = Vector3.new(12, 8, 2),
-			color = rgb(128, 120, 112),
-			material = M.Slate,
+			-- Matches the RockWall model's size so placement rules fit it.
+			size = Vector3.new(14.4, 7.7, 6.1),
+			color = rgb(140, 112, 84),
+			material = M.Ground,
 		},
 	},
 

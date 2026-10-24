@@ -51,6 +51,19 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/SpellVfx           particle/trail styles per spell, cast animation (C0 arm raise + magic circle)
   UI/Theme              shared look and builders
 
+## Imported 3D models
+
+Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and coloured by `tools/prepare-models.luau`, and stored **in the place** under `ReplicatedStorage.Models`. `src/shared/ModelKit.luau` is the only reader. Because the place file isn't part of the Rojo project, every use falls back to plain shapes when a model is missing. See `assets/models/README.md`.
+
+| Model | Where it's used |
+|---|---|
+| Fireball | `FxController` bolt (Fireball, Dragon's fireballs); particles and trail attach to its invisible `Root` part |
+| WaterBubble | `FxController` bolt (Water Lock) and `TrapBubble`, welded around a trapped player and scaled to 1.5× their height |
+| RockWall | `Placeable.buildModelWall`: each mesh part is its own breakable chunk (health is half by volume, half equal), and the placement ghost shows the model |
+| Arena | `HubService.placeSparringArena`: replaces the old mat and posts; the floor top sits at the old mat height |
+
+Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
+
 src/character → StarterPlayer.StarterCharacterScripts
   Health.server.luau    empty: replaces Roblox's default regen (arenas have no regen)
 

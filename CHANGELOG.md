@@ -4,6 +4,17 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (3D models)
+- **Imported models** (`assets/models`, prepared by `tools/prepare-models.luau`, stored in `ReplicatedStorage.Models`) for the Fireball, Water Lock, Rock Wall, and the sparring arena. All fall back to plain shapes if the models aren't in the place.
+- **Fireball** and **Water Lock** bolts are drawn with the models (the fireball trails its tail behind it).
+- **Water Lock** now wraps its victim in a glassy bubble (before, only area-style crowd control showed one).
+- **Rock Wall** is a sculpted earth wall (standing stones, base, rubble). Its three pieces break separately. The placement ghost shows the real model.
+- **Sparring arena:** a marble-pillared, sandstone-seated colosseum with a neon rune ring replaces the red mat. It has four entrances, and its floor lines up with the 50×50 PvP zone.
+- `tests/Models.spec.luau` checks the models when they're present.
+
+### Fixed (3D models)
+- Placement checks now use real collision shapes (`GetPartsInPart`), so large hollow meshes no longer block everything inside their bounding box.
+
 ### Added (round 3)
 - **Stackable hotbar:** hold up to 5 spell copies in any mix, including 5 of the same spell. Copies of the same spell share one cast cooldown, and casting readies the next copy automatically.
 - **Breakable blocks:** Rock Wall (3×2) and Castle (5×3) are grids of separately breakable blocks. There are brick, ice, and cloud block walls in every arena, plus a self-rebuilding practice wall in the hub. Blocks darken as they're damaged, chip on hits, and shatter into chunks.

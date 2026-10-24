@@ -22,6 +22,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
+local TrapBubble = require(script.Parent.Parent.TrapBubble)
 
 export type LaunchOptions = {
 	caster: Player?,
@@ -83,7 +84,16 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 	if isCharacter then
 		local character = target :: Model
 		if stats.status then
-			StatusService.apply(character, stats.status, stats.statusDuration or 1)
+			local applied = StatusService.apply(character, stats.status, stats.statusDuration or 1)
+			-- Water Lock wraps its victim in the imported bubble model.
+			if applied and stats.model then
+				TrapBubble.show(
+					character,
+					stats.statusDuration or 1,
+					opts.visual.color,
+					stats.model
+				)
+			end
 		end
 		if stats.knockback and stats.knockback ~= 0 then
 			local flat = Vector3.new(direction.X, 0, direction.Z)

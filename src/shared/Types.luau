@@ -53,6 +53,11 @@ export type SpellStats = {
 	-- Build as a grid of separately breakable blocks ({x = columns, y = rows});
 	-- `health` is split evenly between them.
 	segments: { x: number, y: number }?,
+	-- Name of an imported model in ReplicatedStorage.Models (see ModelKit).
+	-- Placeables (Rock Wall) build from it when present, each mesh part its
+	-- own breakable chunk, with `segments` as the fallback; Water Lock uses
+	-- it for the bubble around its victim.
+	model: string?,
 	-- Zone behaviors
 	pull: number?,
 	destroysStructures: boolean?,

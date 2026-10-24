@@ -13,6 +13,7 @@ local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
 local buildHub = require(MapsFolder:WaitForChild("InkwellPlaza")) :: any
@@ -63,6 +64,27 @@ local function regenTick(dt: number)
 			end
 		end
 	end
+end
+
+-- The sparring arena: a colosseum (imported "Arena" model) around the
+-- Sparring Ring. Its 46-stud floor sits where the old red mat was, so the
+-- 50x50 SparringZone (PvP) still lines up; the pillars ring the edge. If the
+-- model isn't in the place, the plain mat and posts from the map builder stay.
+local ARENA_CENTER = Vector3.new(80, 0.6, 0)
+
+local function placeSparringArena()
+	local arena = ModelKit.clone("Arena", "solid")
+	if not arena then
+		return
+	end
+	for _, child in hub:GetChildren() do
+		if child.Name == "RingFloor" or child.Name == "RingPost" then
+			child:Destroy()
+		end
+	end
+	arena.Name = "SparringArena"
+	arena:PivotTo(CFrame.new(ARENA_CENTER))
+	arena.Parent = hub
 end
 
 local function setupLighting()
@@ -226,6 +248,7 @@ function HubService.init()
 	end
 	hub = buildHub()
 	hub.Parent = workspace
+	placeSparringArena()
 	setupLighting()
 end
 
