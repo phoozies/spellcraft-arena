@@ -3,8 +3,9 @@
 --
 --   Queue -> Countdown -> Round -> (Draft -> Countdown -> Round)* -> Results -> Hub
 --
--- * Best of 3 rounds (Config.ROUNDS_TO_WIN). Each player's hand starts as 3
---   random owned spells and gains +1 from the draft after each round (max 5).
+-- * Best of 3 rounds (Config.ROUNDS_TO_WIN). Each player's spellbook is the
+--   five spells of their equipped element. The draft after each round
+--   offers match boosts (Power, Vitality, ...), not spells (BoostService).
 -- * Teams: "Blue" / "Red" for 1v1, 2v2, 4v4; FFA puts every player on their
 --   own team (their name).
 -- * Owns the PvP relation rules used by DestructibleService and the world
@@ -16,13 +17,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local DraftRoller = require(ReplicatedStorage.Shared.Match.DraftRoller)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 local ArenaService = require(script.Parent.ArenaService)
+local BoostService = require(script.Parent.BoostService)
+local ElementService = require(script.Parent.ElementService)
 local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
@@ -291,12 +294,13 @@ local function spawnRound(match: Match)
 		local group = if match.mode == "FFA" then "FFA" else TEAM_SPAWN_GROUP[team]
 		indexByGroup[group] = (indexByGroup[group] or 0) + 1
 		spawnAt(player, ArenaService.spawnCFrame(match.arena, group, indexByGroup[group]), true)
+		BoostService.applyToCharacter(player)
 		match.alive[player] = true
 		local character = player.Character
 		if character then
 			character:SetAttribute("Team", team)
 		end
-		-- Every round starts empty-handed: type to summon your spells.
+		-- Every round starts empty-handed: draw to summon your spells.
 		HandService.resetCooldowns(player)
 		HandService.clearCopies(player)
 	end
@@ -324,9 +328,12 @@ local function runDraft(match: Match)
 	local rng = Random.new()
 	local anyOffers = false
 	for _, player in connected(match) do
-		local hand = HandService.getSpellbook(player) or {}
-		if #hand < Config.MAX_HAND then
-			local cards = DraftRoller.roll(hand, rng)
+		local ids = BoostService.roll(player, rng)
+		if #ids > 0 then
+			local cards: { Types.DraftCard } = {}
+			for _, id in ids do
+				table.insert(cards, { boostId = id })
+			end
 			match.offers[player] = cards
 			anyOffers = true
 			draftRemote:FireClient(player, cards, workspace:GetServerTimeNow() + Config.DRAFT_TIME)
@@ -342,11 +349,11 @@ local function runDraft(match: Match)
 	for player, cards in match.offers do
 		if player.Parent and #cards > 0 then
 			local card = cards[math.random(1, #cards)]
-			HandService.addToSpellbook(player, card.spellId)
-			local def = SpellDefinitions.get(card.spellId)
+			BoostService.pick(player, card.boostId)
+			local boost = Boosts.get(card.boostId)
 			toastRemote:FireClient(
 				player,
-				`Auto-picked {if def then def.name else card.spellId}`,
+				`Auto-picked {if boost then boost.name else card.boostId}`,
 				"ready"
 			)
 		end
@@ -451,6 +458,7 @@ local function finishMatch(match: Match, winner: string?)
 		for _, player in match.players do
 			if playerMatch[player] == match then
 				playerMatch[player] = nil
+				BoostService.reset(player)
 				if player.Parent then
 					HandService.clearMatch(player)
 					MatchService.spawnInHub(player)
@@ -555,14 +563,20 @@ function MatchService.startMatch(
 	for _, player in players do
 		MatchService.leaveQueue(player)
 		playerMatch[player] = match
-		local profile = PlayerDataService.get(player)
-		local owned = if profile then profile.ownedSpells else SpellDefinitions.starters()
+		-- Everyone fights with their equipped element; anyone who never picked
+		-- one gets a random element for now.
+		local elementId = ElementService.equipped(player)
+		if not elementId then
+			local all = Elements.ids()
+			elementId = all[math.random(1, #all)]
+			ElementService.grant(player, elementId)
+			EconomyService.sendSummary(player)
+			toastRemote:FireClient(player, `You fight with {elementId}!`, "reward")
+		end
+		BoostService.reset(player)
 		local hand = {}
-		for _, id in shuffle(owned) do
-			if #hand >= Config.STARTING_HAND then
-				break
-			end
-			table.insert(hand, id)
+		for _, def in SpellDefinitions.ofElement(elementId) do
+			table.insert(hand, def.id)
 		end
 		HandService.setSpellbook(player, hand)
 		toastRemote:FireClient(
@@ -650,6 +664,7 @@ function MatchService.removeFromMatch(player: Player)
 	playerMatch[player] = nil
 	match.alive[player] = false
 	match.offers[player] = nil
+	BoostService.reset(player)
 	if player.Parent then
 		HandService.clearMatch(player)
 		stateRemote:FireClient(player, { phase = "Idle", round = 0, endsAt = 0, scores = {} })
@@ -780,9 +795,14 @@ function MatchService.start()
 			return
 		end
 		match.offers[player] = nil
-		HandService.addToSpellbook(player, card.spellId)
-		if Rarity.INFO[card.rarity].order >= 2 then
-			EconomyService.track(player, "draftRare")
+		if BoostService.pick(player, card.boostId) then
+			local boost = Boosts.get(card.boostId)
+			toastRemote:FireClient(
+				player,
+				`{if boost then boost.name else card.boostId} boost! {if boost then boost.description else ""}`,
+				"reward"
+			)
+			EconomyService.track(player, "boost")
 		end
 	end)
 

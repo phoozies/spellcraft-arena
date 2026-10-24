@@ -1,111 +1,123 @@
 --!strict
--- Rarity tiers, the crate shop (shared/Economy/Crates), starters, and the
--- draft roller. All pure modules with injectable RNGs.
+-- Elements (shared/Spells/Elements), the Element Crate (shared/Economy/
+-- Crates), and match boosts (shared/Match/Boosts). All pure modules with
+-- injectable RNGs.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
 local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
-local DraftRoller = require(ReplicatedStorage.Shared.Match.DraftRoller)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 
 return function(t: any)
-	t.describe("Spells and starters", function()
-		t.it("everyone starts with Fireball, Water Lock and Rock Wall", function()
-			local starters = SpellDefinitions.starters()
-			t.expect(#starters).toBe(3)
-			t.expect(table.find(starters, "Fireball") ~= nil).toBeTruthy()
-			t.expect(table.find(starters, "WaterLock") ~= nil).toBeTruthy()
-			t.expect(table.find(starters, "RockWall") ~= nil).toBeTruthy()
-		end)
-		t.it("every rarity has at least one crate spell", function()
-			for _, name in Rarity.ORDER do
-				t.expect(#SpellDefinitions.crateDrops(name) >= 1).toBeTruthy()
-			end
-		end)
-		t.it("a new player can afford the Common crate", function()
-			local common = Crates.get("Common")
-			t.expect(common ~= nil and Config.COINS.STARTING >= common.price).toBeTruthy()
-		end)
-	end)
-
-	t.describe("Rarity.roll", function()
-		t.it("maps the roll range onto the weights (50/25/15/8/2)", function()
-			t.expect(Rarity.roll(0)).toBe("Common")
-			t.expect(Rarity.roll(0.49)).toBe("Common")
-			t.expect(Rarity.roll(0.51)).toBe("Uncommon")
-			t.expect(Rarity.roll(0.76)).toBe("Rare")
-			t.expect(Rarity.roll(0.91)).toBe("Epic")
-			t.expect(Rarity.roll(0.995)).toBe("Legendary")
-		end)
-	end)
-
-	t.describe("Crates", function()
-		t.it("one crate per rarity, pricier as rarity rises", function()
-			t.expect(#Crates.LIST).toBe(#Rarity.ORDER)
-			local last = 0
-			for index, crate in Crates.LIST do
-				t.expect(crate.id).toBe(Rarity.ORDER[index])
-				t.expect(crate.price > last).toBeTruthy()
-				last = crate.price
-			end
-		end)
-		t.it("odds are percentages that add up to 100", function()
-			for _, crate in Crates.LIST do
-				local total = 0
-				for _, weight in crate.odds do
-					total += weight
+	t.describe("Elements", function()
+		t.it("there are four, with five spells each in slot order", function()
+			t.expect(#Elements.LIST).toBe(4)
+			for _, element in Elements.LIST do
+				t.expect(#element.spells).toBe(5)
+				for slot, id in element.spells do
+					local def = SpellDefinitions.get(id)
+					t.expect(def ~= nil and def.element == element.id and def.slot == slot).toBeTruthy()
 				end
-				t.expect(total).toBe(100)
-				t.expect((crate.odds[crate.id] or 0) >= 50).toBeTruthy()
 			end
 		end)
-		t.it("rolls only spells the crate can drop, never starters", function()
+		t.it("every spell belongs to exactly one element's list", function()
+			local seen: { [string]: boolean } = {}
+			for _, element in Elements.LIST do
+				for _, id in element.spells do
+					t.expect(seen[id]).toBeNil()
+					seen[id] = true
+				end
+			end
+			t.expect(#SpellDefinitions.list).toBe(20)
+			for _, def in SpellDefinitions.list do
+				t.expect(seen[def.id]).toBe(true)
+			end
+		end)
+		t.it("the ultimate is always slot 5", function()
+			for _, def in SpellDefinitions.list do
+				t.expect(def.ultimate == true).toBe(def.slot == 5)
+			end
+		end)
+	end)
+
+	t.describe("Element Crate", function()
+		t.it("a new player can't afford it right away, but can after a win or two", function()
+			local crate = Crates.get("Element") :: any
+			t.expect(crate ~= nil).toBeTruthy()
+			t.expect(Config.COINS.STARTING < crate.price).toBeTruthy()
+			t.expect(Config.COINS.STARTING + Config.COINS.MATCH_WIN * 2 >= crate.price).toBeTruthy()
+		end)
+		t.it("only ever rolls elements you don't own", function()
 			local rng = Random.new(7)
-			for _, crate in Crates.LIST do
-				local possible = Crates.possibleDrops(crate)
-				for _ = 1, 200 do
-					local spellId, rarity = Crates.roll(crate, rng)
-					t.expect(spellId ~= nil and table.find(possible, spellId) ~= nil).toBeTruthy()
-					local def = SpellDefinitions.get(spellId :: string)
-					t.expect(def ~= nil and not def.starter and def.rarity == rarity).toBeTruthy()
-				end
+			for _ = 1, 200 do
+				local owned = { "Fire" }
+				local rolled = Crates.roll(owned, rng)
+				t.expect(rolled ~= nil and rolled ~= "Fire" and Elements.get(rolled) ~= nil).toBeTruthy()
 			end
 		end)
-		t.it("hits the crate's odds", function()
-			local rng = Random.new(99)
-			local crate = Crates.get("Common") :: any
-			local upgrades = 0
-			for _ = 1, 4000 do
-				local _, rarity = Crates.roll(crate, rng)
-				if rarity == "Uncommon" then
-					upgrades += 1
+		t.it("can land on every element you're missing", function()
+			local rng = Random.new(3)
+			local seen: { [string]: boolean } = {}
+			for _ = 1, 300 do
+				local rolled = Crates.roll({ "Fire" }, rng)
+				if rolled then
+					seen[rolled] = true
 				end
 			end
-			t.expect(upgrades / 4000).toBeNear(0.2, 0.03)
+			t.expect(seen.Water).toBe(true)
+			t.expect(seen.Earth).toBe(true)
+			t.expect(seen.Air).toBe(true)
 		end)
-		t.it("refunds half the price for a duplicate", function()
-			t.expect(Crates.refundFor(Crates.get("Rare") :: any)).toBe(250)
+		t.it("has nothing to roll once you own every element", function()
+			t.expect(Crates.roll(Elements.ids(), Random.new(1))).toBeNil()
+			t.expect(#Crates.unowned(Elements.ids())).toBe(0)
 		end)
 	end)
 
-	t.describe("DraftRoller", function()
-		t.it("offers 3 distinct cards not already in hand", function()
+	t.describe("Boosts", function()
+		t.it("offers 3 distinct boosts", function()
 			local rng = Random.new(1)
-			for _ = 1, 200 do
-				local hand = { "Fireball", "WaterLock", "RockWall" }
-				local cards = DraftRoller.roll(hand, rng)
-				t.expect(#cards).toBe(3)
-				local seen = {}
-				for _, card in cards do
-					t.expect(table.find(hand, card.spellId)).toBeNil()
-					t.expect(seen[card.spellId]).toBeNil()
-					seen[card.spellId] = true
-					local def = SpellDefinitions.get(card.spellId)
-					t.expect(def ~= nil and def.rarity == card.rarity).toBeTruthy()
+			for _ = 1, 100 do
+				local picks = Boosts.roll({}, rng)
+				t.expect(#picks).toBe(Boosts.CARD_COUNT)
+				local seen: { [string]: boolean } = {}
+				for _, id in picks do
+					t.expect(seen[id]).toBeNil()
+					seen[id] = true
+					t.expect(Boosts.get(id) ~= nil).toBeTruthy()
 				end
 			end
+		end)
+		t.it("stops offering a boost at its stack cap", function()
+			local rng = Random.new(2)
+			local owned = { Power = Boosts.MAX_STACKS }
+			for _ = 1, 100 do
+				t.expect(table.find(Boosts.roll(owned, rng), "Power")).toBeNil()
+			end
+		end)
+		t.it("offers fewer cards when almost everything is maxed out", function()
+			local owned = {}
+			for _, boost in Boosts.LIST do
+				owned[boost.id] = Boosts.MAX_STACKS
+			end
+			owned.Focus = 0
+			t.expect(#Boosts.roll(owned, Random.new(1))).toBe(1)
+		end)
+		t.it("totals stack and respect the cooldown floor", function()
+			local none = Boosts.totals({})
+			t.expect(none.damage).toBe(1)
+			t.expect(none.cooldownFactor).toBe(1)
+			local lots = Boosts.totals({ Power = 2, Vitality = 3, Swiftness = 1, Focus = 3, HealthPotion = 2 })
+			t.expect(lots.damage).toBeNear(1.3, 0.001)
+			t.expect(lots.maxHealth).toBe(60)
+			t.expect(lots.speed).toBe(3)
+			t.expect(lots.cooldownFactor).toBeNear(0.64, 0.001)
+			t.expect(#lots.potions).toBe(2)
+			local capped = Boosts.totals({ Focus = 99 })
+			t.expect(capped.cooldownFactor >= Boosts.MIN_COOLDOWN_FACTOR).toBeTruthy()
 		end)
 	end)
 end

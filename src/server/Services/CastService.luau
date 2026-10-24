@@ -18,6 +18,7 @@ local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
+local BoostService = require(script.Parent.BoostService)
 local StatusService = require(script.Parent.StatusService)
 
 export type Target = { character: Model?, instance: Instance, player: Player?, position: Vector3 }
@@ -146,6 +147,11 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if StatusService.has(character, "TimeStop") or character:GetAttribute("Frozen") then
 		return
 	end
+	-- Stunned (Water Lock) or mid-channel (Earthquake): no casting.
+	if StatusService.has(character, "Stun") or StatusService.has(character, "Channel") then
+		toastRemote:FireClient(player, "You can't cast right now!", "fizzle")
+		return
+	end
 	-- Must be holding a copy of the readied spell (drawing grants copies).
 	local spellId = HandService.getReadied(player)
 	local def = spellId and SpellDefinitions.get(spellId)
@@ -212,7 +218,8 @@ local function onCast(player: Player, target: any, rotationY: any)
 	end
 
 	-- The copy is used up and every copy of this spell shares the cooldown.
-	local cooldown = def.cooldown
+	-- The Focus match boost shortens every spell's cooldown.
+	local cooldown = def.cooldown * BoostService.cooldownFactor(player)
 	if StatusService.has(character, "CooldownCut") then
 		cooldown *= 0.5
 	end

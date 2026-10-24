@@ -195,8 +195,13 @@ end
 -- Returns (glyphId, score, runnerUpScore). `glyphId` is nil when nothing is
 -- close enough or two glyphs are too hard to tell apart; `score` is the best
 -- one found either way (for tuning and feedback). Points are in any consistent
--- 2D unit (pixels, screen fractions).
-function GlyphRecognizer.recognize(points: { Vector2 }): (string?, number, number)
+-- 2D unit (pixels, screen fractions). `allowed` limits the choice to those
+-- glyph ids (a player's equipped element uses just five), which makes
+-- look-alike shapes impossible to confuse.
+function GlyphRecognizer.recognize(
+	points: { Vector2 },
+	allowed: { [string]: boolean }?
+): (string?, number, number)
 	if #points < GlyphRecognizer.MIN_POINTS then
 		return nil, 0, 0
 	end
@@ -213,6 +218,9 @@ function GlyphRecognizer.recognize(points: { Vector2 }): (string?, number, numbe
 	-- Best distance per glyph (its closest template).
 	local best: { [string]: number } = {}
 	for _, template in templates do
+		if allowed and not allowed[template.glyphId] then
+			continue
+		end
 		local d = distanceAtBestAngle(stroke, template.points)
 		if d < (best[template.glyphId] or math.huge) then
 			best[template.glyphId] = d

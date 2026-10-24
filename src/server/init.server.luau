@@ -18,8 +18,10 @@ Remotes.setup()
 local ORDER = {
 	"PlayerDataService",
 	"EconomyService",
+	"ElementService",
 	"StatusService",
 	"DestructibleService",
+	"BoostService",
 	"HandService",
 	"CastService",
 	"SpellInputService",

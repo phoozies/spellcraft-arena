@@ -1,8 +1,9 @@
 --!strict
 -- Buff archetype: effects on the caster.
 -- Reads stats: heal, shield (absorb HP), duration, reflect, scale (Giant),
--- revive (Phoenix), cooldownCut (Wizard Hat).
--- With `visual.model` (Heal) every nearby client pops that model up over
+-- revive (Phoenix), cooldownCut (Wizard Hat), damageMult (Fire Boost),
+-- invincible (Water Body), barrier (Air Shield), haste (Air Boost).
+-- With `visual.model` every nearby client pops that model up over
 -- the caster's head (Fx "modelPop").
 
 local Debris = game:GetService("Debris")
@@ -38,6 +39,20 @@ local function aura(ctx: any, duration: number)
 	Debris:AddItem(orb, duration)
 end
 
+-- Sets a character attribute for `duration` seconds; a newer cast of the
+-- same attribute restarts the timer and only the latest timer clears it.
+local function timedAttribute(character: Model, name: string, value: any, duration: number)
+	character:SetAttribute(name, value)
+	local tokenName = name .. "Token"
+	local token = ((character:GetAttribute(tokenName) :: number?) or 0) + 1
+	character:SetAttribute(tokenName, token)
+	task.delay(duration, function()
+		if character.Parent and character:GetAttribute(tokenName) == token then
+			character:SetAttribute(name, nil)
+		end
+	end)
+end
+
 function Buff.cast(ctx: any): boolean?
 	local stats = ctx.def.stats
 	local character = ctx.character
@@ -64,6 +79,18 @@ function Buff.cast(ctx: any): boolean?
 	end
 	if stats.reflect then
 		StatusService.apply(character, "Reflect", duration)
+	end
+	if stats.damageMult then
+		timedAttribute(character, "DamageMult", stats.damageMult, duration)
+	end
+	if stats.invincible then
+		StatusService.apply(character, "Invincible", duration)
+	end
+	if stats.barrier then
+		timedAttribute(character, "Barrier", true, duration)
+	end
+	if stats.haste then
+		StatusService.apply(character, "Haste", duration)
 	end
 	if stats.scale then
 		StatusService.apply(character, "Giant", duration)

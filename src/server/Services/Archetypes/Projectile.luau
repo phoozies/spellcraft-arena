@@ -3,7 +3,7 @@
 -- the target and hits the first player/structure/wall in its path.
 --
 -- Reads stats: damage, speed, range, radius, knockback, status,
--- statusDuration, chain, comboStatus, comboMultiplier.
+-- statusDuration, chain, pierce, comboStatus, comboMultiplier.
 -- Also used by Control (status projectiles) and by turrets/summons via
 -- Projectile.launch().
 --
@@ -232,6 +232,14 @@ local function step(p: Live, dt: number): boolean
 		applyHit(opts, result.Instance, p.direction)
 		if opts.stats.chain and hitTarget then
 			chainFrom(opts, p.position, { [hitTarget] = true }, opts.stats.chain)
+		end
+		-- Piercing bolts (Water Wave, Tornado) keep flying after they hit a
+		-- player, and hit each player only once.
+		if opts.stats.pierce and isCharacter and hitTarget then
+			table.insert(p.ignore, hitTarget)
+			p.params.FilterDescendantsInstances = p.ignore
+			p.travelled += result.Distance
+			return p.travelled >= p.range
 		end
 	end
 	return true

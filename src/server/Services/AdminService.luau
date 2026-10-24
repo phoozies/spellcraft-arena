@@ -17,12 +17,14 @@ local TextService = game:GetService("TextService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
 local CrateService = require(script.Parent.CrateService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local EconomyService = require(script.Parent.EconomyService)
+local ElementService = require(script.Parent.ElementService)
 local HandService = require(script.Parent.HandService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -110,7 +112,7 @@ local function rootOf(player: Player): BasePart?
 	return character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- "fireball", "rock wall", "all" -> spell ids
+-- "fireball", "earth wall", "all" -> spell ids
 local function resolveSpells(text: string): { string }
 	if string.lower(text) == "all" then
 		local ids = {}
@@ -171,26 +173,30 @@ COMMANDS.give = {
 }
 
 COMMANDS.unlock = {
-	usage = "unlock <player> <spell|all>",
-	help = "Permanently unlock spells in a player's spellbook (saved).",
+	usage = "unlock <player> <Fire|Water|Earth|Air|all>",
+	help = "Permanently unlock an element for a player (saved).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local spells = resolveSpells(joinFrom(args, 2))
-		if #targets == 0 or #spells == 0 then
-			return "Usage: unlock <player> <spell|all>"
-		end
-		for _, target in targets do
-			local profile = PlayerDataService.get(target)
-			if profile then
-				for _, id in spells do
-					if not table.find(profile.ownedSpells, id) then
-						table.insert(profile.ownedSpells, id)
-					end
-				end
-				EconomyService.sendSummary(target)
+		local word = args[2] or ""
+		local wanted: { string } = {}
+		if string.lower(word) == "all" then
+			wanted = Elements.ids()
+		else
+			local id = string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2))
+			if Elements.get(id) then
+				wanted = { id }
 			end
 		end
-		return `Unlocked {#spells} spell(s) for {names(targets)}.`
+		if #targets == 0 or #wanted == 0 then
+			return "Usage: unlock <player> <Fire|Water|Earth|Air|all>"
+		end
+		for _, target in targets do
+			for _, id in wanted do
+				ElementService.grant(target, id)
+			end
+			EconomyService.sendSummary(target)
+		end
+		return `Unlocked {table.concat(wanted, ", ")} for {names(targets)}.`
 	end,
 }
 
@@ -239,14 +245,13 @@ COMMANDS.wins = {
 }
 
 COMMANDS.crate = {
-	usage = "crate <player> <Common|Uncommon|Rare|Epic|Legendary>",
-	help = "Open a crate for a player (charges their coins, like the shop).",
+	usage = "crate <player>",
+	help = "Open an Element Crate for a player (charges their coins, like the shop).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local word = args[2] or ""
-		local crateId = string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2))
+		local crateId = "Element"
 		if #targets == 0 or not Crates.get(crateId) then
-			return "Usage: crate <player> <Common|Uncommon|Rare|Epic|Legendary>"
+			return "Usage: crate <player>"
 		end
 		local opened = 0
 		for _, target in targets do

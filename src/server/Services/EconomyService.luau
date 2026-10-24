@@ -32,8 +32,8 @@ local QUEST_POOL = {
 	{ id = "break10", text = "Destroy 10 objects", event = "destroy", goal = 10, rewardCoins = 30 },
 	{
 		id = "draft3",
-		text = "Draft 3 Uncommon or better spells",
-		event = "draftRare",
+		text = "Pick 3 match boosts",
+		event = "boost",
 		goal = 3,
 		rewardCoins = 35,
 	},
@@ -58,7 +58,8 @@ local function sendSummary(player: Player)
 	end
 	profileRemote:FireClient(player, {
 		coins = profile.coins,
-		ownedSpells = profile.ownedSpells,
+		elements = profile.elements,
+		element = profile.element,
 		quests = profile.daily.quests,
 		streak = profile.daily.streak,
 		settings = profile.settings,

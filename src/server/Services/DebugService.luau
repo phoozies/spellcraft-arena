@@ -5,9 +5,10 @@
 --   coins <n>      grant coins
 --   wins <n>       add n match wins (leaderboard + podium)
 --   crate <id>     open a crate (charges coins), returns the result
---   state          returns {coins, wins, ownedSpells} per player
+--   state          returns {coins, wins, elements, element} per player
 --   solo <mode>    start a match alone (rounds end on the timer)
---   unlockall      own every spell
+--   unlockall      own every element
+--   element <id>   equip an element (grants it first)
 --   knockback      server-push your own character (tests authoritative knockback)
 
 local Players = game:GetService("Players")
@@ -16,8 +17,9 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local CrateService = require(script.Parent.CrateService)
+local ElementService = require(script.Parent.ElementService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -48,7 +50,12 @@ function DebugService.run(player: Player, command: string, arg: any): any
 	elseif command == "state" then
 		local profile = PlayerDataService.get(player)
 		return profile
-			and { coins = profile.coins, wins = profile.stats.wins, ownedSpells = profile.ownedSpells }
+			and {
+				coins = profile.coins,
+				wins = profile.stats.wins,
+				elements = profile.elements,
+				element = profile.element,
+			}
 	elseif command == "solo" and typeof(arg) == "string" and (Config.MODES :: any)[arg] then
 		MatchService.startMatch(arg :: any, { player }, { solo = true })
 	elseif command == "knockback" and player.Character then
@@ -56,12 +63,15 @@ function DebugService.run(player: Player, command: string, arg: any): any
 	elseif command == "unlockall" then
 		local profile = PlayerDataService.get(player)
 		if profile then
-			profile.ownedSpells = {}
-			for _, def in SpellDefinitions.list do
-				table.insert(profile.ownedSpells, def.id)
+			for _, id in Elements.ids() do
+				ElementService.grant(player, id)
 			end
 			EconomyService.sendSummary(player)
 		end
+	elseif command == "element" and typeof(arg) == "string" and Elements.get(arg) then
+		ElementService.grant(player, arg)
+		ElementService.equip(player, arg)
+		EconomyService.sendSummary(player)
 	end
 	return nil
 end

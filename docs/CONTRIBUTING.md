@@ -19,14 +19,14 @@ The imported models live in the place file, not the project. To add or change on
   require(game.ServerScriptService.Tests.Runner)()
   ```
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
-- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;give me all`, `;coins me 5000`, `;crate me Epic`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
+- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;unlock me all`, `;coins me 5000`, `;crate me Epic`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
   ```lua
   local debug = game.ServerStorage.WordcraftDebug
   debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
   debug:Invoke("coins", 500)
-  debug:Invoke("crate", "Rare")     -- returns the CrateResult (or the refusal reason)
+  debug:Invoke("crate", "Element")     -- returns the CrateResult (or the refusal reason)
   debug:Invoke("wins", 3)
-  debug:Invoke("state")             -- {coins, wins, ownedSpells} per player
+  debug:Invoke("state")             -- {coins, wins, elements, element} per player
   debug:Invoke("unlockall")
   ```
   Studio playtests with API access save to the real DataStore, so these change your saved profile.

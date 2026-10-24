@@ -21,5 +21,5 @@ You get a spell by **drawing its shape**, which adds **one copy** to your hotbar
 ## Accessibility
 
 - UI scales with the screen. Touch layouts are 15% larger, and buttons are at least 52 px.
-- Rarity uses a shape plus a color (● ▲ ◆ ★ 👑), so it's readable without color vision.
+- Elements use an icon plus a color (🔥 💧 ⛰ 🌪), and spells use a shape, so nothing depends on color alone.
 - No camera shake, which matters for VR comfort.

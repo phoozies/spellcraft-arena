@@ -108,7 +108,7 @@ local function cast(screenPoint: Vector2?)
 		Remotes.get("CastSpell"):FireServer(point, rotation)
 		return
 	end
-	-- Point-and-click spells (Zap) land on the reticle's clamped point.
+	-- Point-and-click spells (Fire Pillar, Earth Punch, ...) land on the reticle's clamped point.
 	local target = if ReticleController.isActive() and not screenPoint
 		then ReticleController.getTarget()
 		else InputController.aimPoint(screenPoint)

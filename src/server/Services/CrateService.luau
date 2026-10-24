@@ -1,22 +1,22 @@
 --!strict
--- Crate opening: the only way to unlock non-starter spells.
+-- Crate opening: the only way to unlock elements after the free first pick.
 --
 --   client OpenCrate(crateId) ──► validate (known crate, not mid-spin, in the
---   hub, enough coins) ──► EconomyService.spend ──► Crates.roll ──► own it?
---   refund : add to profile.ownedSpells ──► CrateOpened(result) to the opener
+--   hub, enough coins, an element left to win) ──► EconomyService.spend ──►
+--   Crates.roll ──► ElementService.grant ──► CrateOpened(result) to the opener
 --
 -- The server decides the result before the client's reel starts spinning;
 -- the client only animates toward it (CrateController). Opening is refused
--- during a match so nobody gains spells mid-fight.
+-- during a match so nobody changes elements mid-fight.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
 local EconomyService = require(script.Parent.EconomyService)
+local ElementService = require(script.Parent.ElementService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
@@ -38,6 +38,9 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 	if not profile then
 		return nil, "Your spellbook is still loading."
 	end
+	if #profile.elements == 0 then
+		return nil, "Pick your first element in the Spellbook before opening crates!"
+	end
 	if MatchService.isInMatch(player) then
 		return nil, "Open crates in the hub, after your match."
 	end
@@ -48,46 +51,30 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 	if profile.coins < crate.price then
 		return nil, `You need {crate.price - profile.coins} more coins. Win matches to earn coins!`
 	end
-	local spellId, rarity = Crates.roll(crate, rng)
-	if not spellId or not rarity then
-		return nil, "That crate is empty right now."
+	local element = Crates.roll(profile.elements, rng)
+	if not element then
+		return nil, "You already own every element!"
 	end
 	if not EconomyService.spend(player, crate.price) then
 		return nil, "Not enough coins."
 	end
 	busyUntil[player] = now + Crates.SPIN_TIME
-
-	local duplicate = table.find(profile.ownedSpells, spellId) ~= nil
-	local refund = 0
-	if duplicate then
-		refund = Crates.refundFor(crate)
-		-- Credited now (safe if they leave mid-spin), shown at the reveal.
-		EconomyService.addCoins(player, refund, "crateDuplicate", true)
-	else
-		table.insert(profile.ownedSpells, spellId)
-	end
+	ElementService.grant(player, element)
 	local result: Types.CrateResult = {
 		crate = crate.id,
-		spellId = spellId,
-		rarity = rarity,
-		duplicate = duplicate,
-		refund = refund,
+		element = element :: Types.ElementId,
 		coins = profile.coins,
 	}
-	-- Reveal (toast + refund) only once the reel has stopped, so the
-	-- balance and spellbook don't spoil the spin.
+	-- Reveal (toast + new element in the spellbook) only once the reel has
+	-- stopped, so the summary doesn't spoil the spin.
 	task.delay(Crates.SPIN_TIME, function()
 		if not player.Parent then
 			return
 		end
 		EconomyService.sendSummary(player)
-		local def = SpellDefinitions.get(spellId)
-		local name = if def then def.name else spellId
 		toastRemote:FireClient(
 			player,
-			if duplicate
-				then `Duplicate {name}! +{refund} coins back.`
-				else `Unlocked {name}! Draw its shape to cast it.`,
+			`Unlocked {element}! Equip it in the Spellbook to use its spells.`,
 			"reward"
 		)
 	end)

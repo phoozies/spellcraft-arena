@@ -2,11 +2,11 @@
 
 A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
-- Draw a circle (Fireball), a triangle (Rock Wall), a lightning bolt (Zap), and so on to add a copy of the spell to your hotbar: press **F** or tap ✏ Draw, then trace the shape. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
+- Draw a shape to add a copy of a spell to your hotbar: press **F** or tap ✏ Draw, then trace a circle, wave, triangle, lightning bolt, or star for your element's spell in slot 1-5. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
 - Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 3v3, 4v4, and FFA, best of 3. In the hub, stand on the Blue or Red side of a team box to pick your team before the match. You start each match with 3 random spells you own, then draft a new card each round (cards have random rarities) until your hand holds 5.
-- 8 spells. Everyone starts with Fireball, Water Lock, and Rock Wall. Win matches to earn coins, then spin crates (Common to Legendary) to unlock Gust, Zap, Heal, Black Hole, and Turret.
+- 20 spells in 4 elements (Fire, Water, Earth, Air), five each. Pick one element free, then win matches to earn coins and open Element Crates to unlock the others. Between rounds you pick a boost (more damage, health, speed, or faster spells) instead of earning spells.
 - Wins show on the player list, a Most Wins board, and a podium in the hub where the server's top 3 stand as their avatars.
 - A central hub plus 4 arenas: Crayon Canyon, Frostbite Fortress, Sky Islands, and the Sparring Arena (a colosseum).
 
@@ -35,7 +35,8 @@ require(game.ServerScriptService.Tests.Runner)()
 | [Game design](docs/GAME_DESIGN.md) | Pillars, research, core loop, modes, maps, progression, safety |
 | [Economy](docs/ECONOMY.md) | Coins, crates, wins leaderboard, podium |
 | [Semantic layer](docs/semantic/features.yaml) | Machine-readable feature map for AI agents (start at [CLAUDE.md](CLAUDE.md)) |
-| [Spells](docs/SPELLS.md) | The dictionary, rarity, archetypes, how to add a spell |
+| [Spells](docs/SPELLS.md) | The 4 elements and 20 spells, boosts, archetypes, how to add a spell |
+| [Classes](docs/CLASSES.md) | Planned, not built yet |
 | [Architecture](docs/ARCHITECTURE.md) | Code layout, cast pipeline, PvP rules, data and security |
 | [Controls](docs/CONTROLS.md) | Per-device bindings, drawing, accessibility |
 | [Admin commands](docs/ADMIN.md) | Who is an admin, every `;` command, adding commands |

@@ -11,7 +11,8 @@ local Types = require(ReplicatedStorage.Shared.Types)
 
 export type ProfileSummary = {
 	coins: number,
-	ownedSpells: { string },
+	elements: { string },
+	element: string, -- the equipped element ("" before the first pick)
 	quests: { Types.DailyQuest },
 	streak: number,
 	stats: { matches: number, wins: number, knockouts: number, casts: number },

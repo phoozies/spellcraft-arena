@@ -1,6 +1,6 @@
 # Admin Commands
 
-Type commands in **chat** or the **chat** with the `;` prefix, for example `;give me zap`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
+Type commands in **chat** or the **chat** with the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
 
@@ -29,10 +29,10 @@ Leaving the target out means `me` where that makes sense.
 |---|---|
 | `;help [command]` | Lists the commands, or shows one command's usage |
 | `;give <player> <spell\|all>` | Gives spell copies, skipping the spellbook and recharge rules. The hotbar holds 5. |
-| `;unlock <player> <spell\|all>` | Permanently unlocks spells (saved to the profile) |
+| `;unlock <player> <Fire\|Water\|Earth\|Air\|all>` | Permanently unlocks an element (saved) |
 | `;coins <player> <amount>` | Grants coins (spent on crates) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
-| `;crate <player> <Common\|Uncommon\|Rare\|Epic\|Legendary>` | Opens a crate for the player, charging their coins like the shop |
+| `;crate <player>` | Opens an Element Crate for the player, charging their coins like the shop |
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |
@@ -51,7 +51,7 @@ Leaving the target out means `me` where that makes sense.
 | `;ban <player> <minutes\|perm> [reason]` | Bans the player across the whole experience (`Players:BanAsync`) |
 | `;unban <userId>` | Lifts a ban |
 
-Spell names can be any alias and can be more than one word, for example `;give me rock wall`.
+Spell names can be any alias and can be more than one word, for example `;give me fire bomb`. `;give` readies a copy of the spell on your hotbar even if it isn't in your element.
 
 ## Adding a command
 

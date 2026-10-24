@@ -10,9 +10,13 @@
 --   chip           (position, color)                               chips off a damaged block
 --   dust           (position, width, color)                        dust ring under a placed object
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
---   strike         (center, radius, delay, modelName, color)       Zap: a bolt model slams down after `delay`
---   modelPop       (character, modelName, color)                   Heal: model pops up over a head and fades
--- and spins parts/models tagged "SpinFx" (Black Hole) locally.
+--   strike         (center, radius, delay, modelName, color)       a bolt model slams down after `delay`
+--   modelPop       (character, modelName, color)                   a model pops up over a head and fades
+--   glyph          (character, glyphId, color)                     the drawn glyph pops over a head
+--   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)
+--   rise           (center, radius, delay, color, kind, height)    boulder/pillar rises from the ground
+--   quake          (center, radius, duration, color)               Earthquake wind-up rumble
+-- and spins parts/models tagged "SpinFx" locally.
 -- The looks live in Fx/SpellVfx.
 --
 -- The server stays authoritative for hits; visuals here are a straight-line
@@ -127,9 +131,6 @@ local function onProjectile(
 		part = shape
 	end
 	SpellVfx.decorateBolt(part :: BasePart, fxKey, visual.color)
-	if fxKey == "Bullet" then
-		AudioController.play("turretShot", origin)
-	end
 	bolts[id] = {
 		part = part :: BasePart,
 		model = model,
@@ -185,14 +186,35 @@ local function onCast(character: Model, spellId: string, target: Vector3)
 	if def and root and root:IsA("BasePart") and near(root.Position) then
 		SpellVfx.castAnimation(folder, character, def.visual.color, def.glyph)
 		AudioController.playSpell(spellId, "cast", root.Position)
-		-- Spells with a pull (Black Hole) or a heal get their own extra effect,
-		-- chosen by their stats rather than by name.
-		if def.stats.pull and def.stats.radius and typeof(target) == "Vector3" then
-			SpellVfx.blackHole(folder, target, def.stats.radius, def.stats.duration or 3)
-		end
-		if def.stats.heal then
-			SpellVfx.healBurst(folder, character, def.visual.color)
-		end
+	end
+end
+
+-- Elemental column (Fire Pillar, Water Nebula, Earthquake).
+local function onPillar(center: Vector3, radius: number, color: Color3, elementId: string, spellId: string?)
+	if not near(center) then
+		return
+	end
+	SpellVfx.pillar(folder, center, radius, color, elementId)
+	if spellId then
+		AudioController.playSpell(spellId, "impact", center)
+	end
+end
+
+-- A boulder / stone pillar rises out of the ground (Earth Punch, Earth Pillar).
+local function onRise(center: Vector3, radius: number, delay: number, color: Color3, kind: string, height: number)
+	if not near(center) then
+		return
+	end
+	SpellVfx.rise(folder, center, radius, delay, color, kind, height)
+	task.delay(delay, function()
+		AudioController.play("rockBreak", center)
+	end)
+end
+
+-- Earthquake wind-up.
+local function onQuake(center: Vector3, radius: number, duration: number, color: Color3)
+	if near(center) then
+		SpellVfx.quake(folder, center, radius, duration, color)
 	end
 end
 
@@ -293,7 +315,7 @@ local function onNumber(position: Vector3, amount: number, kind: string)
 	Debris:AddItem(anchor, 1)
 end
 
--- Zap: after the server's telegraph delay, the bolt model drops from the
+-- Strike: after the server's telegraph delay, the bolt model drops from the
 -- sky onto the circle, flashes, and fades.
 local function onStrike(center: Vector3, radius: number, delay: number, modelName: string, color: Color3)
 	if not near(center) then
@@ -342,12 +364,12 @@ local function onStrike(center: Vector3, radius: number, delay: number, modelNam
 			Debris:AddItem(column, 0.5)
 		end
 		task.delay(0.12, function()
-			SpellVfx.impact(folder, center, "Zap", color)
+			SpellVfx.impact(folder, center, nil, color)
 		end)
 	end)
 end
 
--- Heal: the model pops up over the character's head, bobs, and fades.
+-- Model pop: the model pops up over the character's head, bobs, and fades.
 local function onModelPop(character: Model, modelName: string, color: Color3)
 	local head = typeof(character) == "Instance" and character:FindFirstChild("Head")
 	if not head or not head:IsA("BasePart") or not near(head.Position) then
@@ -406,7 +428,7 @@ local function step(dt: number)
 		if thing:IsA("BasePart") then
 			thing.CFrame *= spin
 		elseif thing:IsA("Model") then
-			-- Imported swirls (Black Hole) turn about their vertical axis.
+			-- Imported swirls turn about their vertical axis.
 			thing:PivotTo(thing:GetPivot() * turn)
 		end
 	end

@@ -7,15 +7,15 @@ into the game.
 |---|---|---|
 | `Fireball.fbx` | The **Fireball** bolt (also the Dragon's fireballs) | `Fireball_Core`, `Fireball_Outer`, `Fireball_Tail` |
 | `WaterBubble.fbx` | The **Water Lock** bolt, and the bubble around a trapped player | `Bubble_Shell`, `Bubble_Inner`, `Bubble_Highlight` |
-| `RockWall.fbx` | The **Rock Wall** ("earth wall") spell | `Wall_Base`, `Wall_Pillars`, `Wall_Rubble` |
+| `RockWall.fbx` | The **Earth Wall** spell | `Wall_Base`, `Wall_Pillars`, `Wall_Rubble` |
 | `Arena.fbx` | The **Sparring Arena** match map | `Arena_Floor`, `Arena_Pillars`, `Arena_RuneRing`, `Arena_Seating` |
 | `Grimoire.fbx` | The hub's **Spellbook** kiosk (open on a lectern) | `Grimoire_Cover`, `Grimoire_Gold`, `Grimoire_Gem`, `Grimoire_Pages` |
 | `Gust.fbx` | The **Gust** bolt | `Gust_Swirl`, `Gust_Core`, `Gust_Streaks` |
-| `Zap.fbx` | The **Zap** thunderbolt that slams down on the target | `Zap_Bolt`, `Zap_Glow` |
-| `Heal.fbx` | The **Heal** pop-up over the caster's head | `Heal_Cross`, `Heal_Ring` |
-| `BlackHole.fbx` | The **Black Hole** swirl (spun by clients) | `BlackHole_Core`, `BlackHole_Disk`, `BlackHole_Ring` |
-| `Turret.fbx` | The **Turret** body (turns to aim; barrel points forward) | `Turret_Base`, `Turret_Head`, `Turret_Barrel`, `Turret_Lens` |
-| `Crate.fbx` | The hub's **Crate Shop** crates (trim and gem tinted per rarity) | `Crate_Body`, `Crate_Trim`, `Crate_Gem` |
+| `Zap.fbx` | The **Zap** thunderbolt that slams down on the target *(no spell uses it now)* | `Zap_Bolt`, `Zap_Glow` |
+| `Heal.fbx` | The **Heal** pop-up over the caster's head *(no spell uses it now)* | `Heal_Cross`, `Heal_Ring` |
+| `BlackHole.fbx` | The **Black Hole** swirl (spun by clients) *(no spell uses it now)* | `BlackHole_Core`, `BlackHole_Disk`, `BlackHole_Ring` |
+| `Turret.fbx` | The **Turret** body (turns to aim; barrel points forward) *(no spell uses it now)* | `Turret_Base`, `Turret_Head`, `Turret_Barrel`, `Turret_Lens` |
+| `Crate.fbx` | The hub's **Crate Shop** crates (trim and gem tinted gold) | `Crate_Body`, `Crate_Trim`, `Crate_Gem` |
 
 `source/SpellModels.blend` is the Blender scene for the last six, built by
 [`tools/blender/build_spell_models.py`](../../tools/blender/build_spell_models.py).

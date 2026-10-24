@@ -40,7 +40,8 @@ local function recompute(character: Model)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
-	local speed = BASE_WALKSPEED
+	-- Swiftness boost (BoostService) adds to the base speed.
+	local speed = BASE_WALKSPEED + ((character:GetAttribute("BoostSpeed") :: number?) or 0)
 	local jump = BASE_JUMP
 	if active(character, "Slow") then
 		speed *= 0.5
@@ -48,7 +49,16 @@ local function recompute(character: Model)
 	if active(character, "Shrink") then
 		speed *= 0.8
 	end
-	if active(character, "Root") or active(character, "TimeStop") then
+	if active(character, "Haste") then
+		speed *= 1.5
+		jump *= 1.35
+	end
+	if
+		active(character, "Root")
+		or active(character, "TimeStop")
+		or active(character, "Stun")
+		or active(character, "Channel")
+	then
 		speed = 0
 		jump = 0
 	end
@@ -83,6 +93,10 @@ local function recompute(character: Model)
 			"Reflect",
 			"Revive",
 			"CooldownCut",
+			"Stun",
+			"Haste",
+			"Invincible",
+			"Channel",
 		}
 	do
 		character:SetAttribute("Status_" .. kind, if active(character, kind) then true else nil)
@@ -92,7 +106,7 @@ end
 -- Hard crowd control can't be refreshed while active, and leaves the target
 -- immune to that kind for Config.CC_IMMUNITY seconds afterwards, so spells
 -- re-typed every second can't chain-lock someone.
-local HARD_CC: { [string]: boolean } = { Root = true, TimeStop = true, Shrink = true }
+local HARD_CC: { [string]: boolean } = { Root = true, TimeStop = true, Shrink = true, Stun = true }
 
 -- Applies (or extends) an effect. `kind` is a StatusKind or a buff name
 -- ("Giant", "Reflect", "Revive", "CooldownCut"). Returns false when blocked
@@ -102,6 +116,17 @@ function StatusService.apply(
 	kind: Types.StatusKind | string,
 	duration: number
 ): boolean
+	-- Invincible (Water Body) and a Barrier (Air Shield) turn crowd control
+	-- away; the barrier is used up doing it.
+	if HARD_CC[kind] then
+		if active(character, "Invincible") then
+			return false
+		end
+		if character:GetAttribute("Barrier") then
+			character:SetAttribute("Barrier", nil)
+			return false
+		end
+	end
 	local list = effects[character]
 	if not list then
 		list = {}
@@ -127,6 +152,12 @@ function StatusService.apply(
 		end
 	end)
 	return true
+end
+
+-- Recomputes speed/jump/size from the active effects (after an attribute
+-- they depend on, like BoostSpeed, changes).
+function StatusService.refresh(character: Model)
+	recompute(character)
 end
 
 function StatusService.has(character: Model, kind: string): boolean

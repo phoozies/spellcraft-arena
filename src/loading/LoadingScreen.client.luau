@@ -13,11 +13,13 @@ ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local TIPS = {
 	"Press F and trace a shape to ready a spell. You can hold up to 5!",
-	"A circle is Fireball, a wave is Water Lock, a triangle is Rock Wall.",
+	"Circle, wave, triangle, lightning, star: the same five shapes work in every element.",
+	"Star is your ultimate: big damage, long recharge.",
+	"Win coins, then open an Element Crate to unlock a new element.",
 	"Big, smooth shapes work best. Don't worry about drawing it perfectly!",
 	"Copies of the same spell share one cooldown.",
-	"Rock Walls break block by block. Knock a hole and fire through!",
-	"No health regen in the arena. Draw a Heal when you're hurt.",
+	"Earth Walls break block by block. Knock a hole and fire through!",
+	"After each round you pick a boost: more damage, health, speed, or faster spells.",
 	"Change the draw key in Settings.",
 }
 

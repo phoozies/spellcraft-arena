@@ -15,7 +15,7 @@ local MAX_HEAL_PER_SEC = 5
 local MAX_SHIELD_PER_SEC = 5
 local MAX_HARD_CC_UPTIME = 0.6 -- statusDuration / window for Root/TimeStop/Shrink
 
-local HARD_CC = { Root = true, TimeStop = true, Shrink = true }
+local HARD_CC = { Root = true, TimeStop = true, Shrink = true, Stun = true }
 
 return function(t: any)
 	t.describe("Balance (copy model, ~1s re-type)", function()
@@ -38,10 +38,11 @@ return function(t: any)
 				end
 			end)
 
-			t.it(`{def.name}: never takes more than a third of a player's HP in one hit`, function()
+			t.it(`{def.name}: no one-shots (ultimates may take up to 40% of a player's HP)`, function()
 				if s.damage then
 					local hit = s.damage * (s.comboMultiplier or 1)
-					t.expect(hit <= Config.PLAYER_MAX_HEALTH * 0.34).toBeTruthy()
+					local share = if def.ultimate then 0.4 else 0.34
+					t.expect(hit <= Config.PLAYER_MAX_HEALTH * share).toBeTruthy()
 				end
 			end)
 
@@ -78,9 +79,20 @@ return function(t: any)
 				end
 			end)
 
-			t.it(`{def.name}: legendaries have long recharges`, function()
-				if def.rarity == "Legendary" then
-					t.expect(def.cooldown >= 10).toBeTruthy()
+			t.it(`{def.name}: ultimates are big and slow, everything else isn't`, function()
+				t.expect(def.ultimate == true).toBe(def.slot == 5)
+				if def.ultimate then
+					t.expect(def.cooldown >= 15).toBeTruthy()
+					-- Every ultimate either hits for 30+ or is a game-changing buff.
+					t.expect((s.damage or 0) >= 30).toBeTruthy()
+				else
+					t.expect((s.damage or 0) <= 30).toBeTruthy()
+				end
+			end)
+
+			t.it(`{def.name}: timed buffs can't be up all the time`, function()
+				if def.archetype == "Buff" and s.duration then
+					t.expect(s.duration / def.cooldown <= 0.6).toBeTruthy()
 				end
 			end)
 		end

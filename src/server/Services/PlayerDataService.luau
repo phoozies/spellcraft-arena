@@ -17,13 +17,15 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 
 type Profile = Types.Profile
 
 local STORE_NAME = "PlayerProfiles_v1"
 -- 2: levels/XP removed; coins added (crates unlock spells).
-local SCHEMA = 2
+-- 3: spells come from elements: ownedSpells is gone, profile.elements and
+--    profile.element replace it (players pick their first element again).
+local SCHEMA = 3
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -41,7 +43,8 @@ local function defaultProfile(): Profile
 	return {
 		schema = SCHEMA,
 		coins = Config.COINS.STARTING,
-		ownedSpells = SpellDefinitions.starters(),
+		elements = {},
+		element = "",
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
@@ -88,19 +91,18 @@ local function reconcile(data: any): Profile
 	end
 	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
 	data.settings.typeKey = nil
-	-- Owned spells: drop ids that left the dictionary, and always own the starters.
+	-- Elements: keep real, unique ones; the equipped element must be owned.
+	data.ownedSpells = nil -- schema 2's spell list
 	local owned = {}
-	for _, id in data.ownedSpells do
-		if SpellDefinitions.get(id) and not table.find(owned, id) then
+	for _, id in data.elements do
+		if typeof(id) == "string" and Elements.get(id) and not table.find(owned, id) then
 			table.insert(owned, id)
 		end
 	end
-	for _, id in SpellDefinitions.starters() do
-		if not table.find(owned, id) then
-			table.insert(owned, id)
-		end
+	data.elements = owned
+	if typeof(data.element) ~= "string" or not table.find(owned, data.element) then
+		data.element = owned[1] or ""
 	end
-	data.ownedSpells = owned
 	data.schema = SCHEMA
 	return data :: Profile
 end

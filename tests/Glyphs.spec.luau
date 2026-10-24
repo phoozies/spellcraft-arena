@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 
@@ -151,13 +152,44 @@ return function(t)
 	end)
 
 	t.describe("Spell glyphs", function()
-		t.it("every spell has a known glyph and no two spells share one", function()
-			local owner: { [string]: string } = {}
-			for _, def in SpellDefinitions.list do
-				t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
-				t.expect(owner[def.glyph]).toBeNil()
-				owner[def.glyph] = def.id
+		t.it("every spell has a known glyph, and an element never repeats one", function()
+			for _, element in Elements.LIST do
+				local owner: { [string]: string } = {}
+				for _, id in element.spells do
+					local def = SpellDefinitions.get(id) :: any
+					t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
+					t.expect(owner[def.glyph]).toBeNil()
+					owner[def.glyph] = def.id
+				end
 			end
+		end)
+
+		t.it("a slot is the same shape in every element", function()
+			for slot, glyphId in Elements.SLOT_GLYPHS do
+				for _, element in Elements.LIST do
+					local def = SpellDefinitions.get(element.spells[slot]) :: any
+					t.expect(def.glyph).toBe(glyphId)
+				end
+			end
+		end)
+
+		t.it("the five spell shapes are recognized from sloppy strokes (7% wobble) 95% of the time", function()
+			local allowed: { [string]: boolean } = {}
+			for _, glyphId in Elements.SLOT_GLYPHS do
+				allowed[glyphId] = true
+			end
+			local rng = Random.new(21)
+			local total, hits = 0, 0
+			for _, glyphId in Elements.SLOT_GLYPHS do
+				local glyph = Glyphs.get(glyphId) :: Glyphs.Glyph
+				for _ = 1, 60 do
+					total += 1
+					if GlyphRecognizer.recognize(attempt(glyph, rng, 0.07), allowed) == glyphId then
+						hits += 1
+					end
+				end
+			end
+			t.expect(hits / total >= 0.95).toBeTruthy()
 		end)
 	end)
 end

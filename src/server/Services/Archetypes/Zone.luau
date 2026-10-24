@@ -4,9 +4,10 @@
 --     toward the center (`pull`), deals damage per second (`damage`), or
 --     heals allies (`heal` + teamHeal).
 --   * delay (no duration): a telegraphed burst after `delay` seconds —
---     damage + knockback, optionally smashing structures. Zap is one: with a
---     `visual.model` the clients draw that model striking down at the burst
---     (Fx "strike").
+--     damage + knockback, optionally smashing structures. With `pillar` the
+--     clients draw the element's column erupting (Fx "pillar": Fire Pillar,
+--     Water Nebula, Earthquake); `rise` pops a boulder up out of the ground
+--     (Earth Punch); `channel` roots the caster for the delay (Earthquake).
 --   * hold (Black Hole): enemies pulled into the core (HOLD_RADIUS) are
 --     Rooted there until the zone ends: sucked in, then trapped.
 --   * visual.model: the lingering swirl is that model (spun by clients via
@@ -83,6 +84,17 @@ end
 local function burst(ctx: any, center: Vector3)
 	local stats = ctx.def.stats
 	local radius = stats.radius or 10
+	-- A caster who is knocked out mid-channel loses the spell.
+	if stats.channel then
+		local humanoid = ctx.character:FindFirstChildOfClass("Humanoid")
+		if not ctx.character.Parent or not humanoid or humanoid.Health <= 0 then
+			return
+		end
+	end
+	if stats.pillar then
+		-- Clients draw the element's column erupting.
+		fxRemote:FireAllClients("pillar", center, radius, ctx.def.visual.color, ctx.def.element, ctx.def.id)
+	end
 	local flash = disc(center, radius, ctx.def.visual.color, Enum.Material.Neon, 0.2)
 	TweenService:Create(flash, TweenInfo.new(0.5), { Transparency = 1 }):Play()
 	Debris:AddItem(flash, 0.6)
@@ -120,7 +132,7 @@ function Zone.cast(ctx: any): boolean?
 		-- Telegraph: a pulsing warning circle, plus a falling rock for Meteor.
 		local warning = disc(center, radius, Color3.fromRGB(255, 82, 82), Enum.Material.Neon, 0.6)
 		Debris:AddItem(warning, stats.delay)
-		if visual.shape == "Ball" then
+		if visual.shape == "Ball" and not stats.rise then
 			local rock = Instance.new("Part")
 			rock.Shape = Enum.PartType.Ball
 			rock.Size = visual.size
@@ -139,6 +151,15 @@ function Zone.cast(ctx: any): boolean?
 				}
 			):Play()
 			Debris:AddItem(rock, stats.delay)
+		end
+		if stats.rise then
+			-- Earth Punch: a boulder bursts up out of the ground at the burst.
+			fxRemote:FireAllClients("rise", center, radius, stats.delay, visual.color, "boulder", visual.size.Y)
+		end
+		if stats.channel then
+			-- Earthquake: the caster can't move or cast while the ground shakes.
+			StatusService.apply(ctx.character, "Channel", stats.delay)
+			fxRemote:FireAllClients("quake", center, radius, stats.delay, visual.color)
 		end
 		if visual.model then
 			-- Clients draw the model striking down at the burst (Zap's bolt).

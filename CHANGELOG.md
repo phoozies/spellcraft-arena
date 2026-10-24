@@ -4,6 +4,23 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (elements replace the 8 spells)
+- **Four elements, 20 spells.** Fire, Water, Earth, and Air have five spells each: a basic attack, a second move, a utility or boost, a heavy move, and an ultimate. Each slot uses the same shape in every element (circle, wave, triangle, lightning bolt, star), and recognition only considers those five shapes.
+  - **Fire:** Fireball (15), Fire Slash (10, fast), Fire Boost (+25% damage, 8s), Fire Pillar (30, large area, point and click), Fire Bomb (ultimate, 35).
+  - **Water:** Water Slice (10, fast), Water Body (invincible 7s), Water Lock (5 + stun), Water Wave (25, piercing), Water Nebula (ultimate, 35 pillar).
+  - **Earth:** Rock Throw (15, large rock), Earth Wall (35 HP), Earth Punch (20, boulder under the aim point), Earth Pillar (30, a line of pillars), Earthquake (ultimate, 40, 2s cast).
+  - **Air:** Gust (15, fast), Whirlwind (15, wide, blows enemies away), Air Boost (faster, higher jump), Air Shield (blocks the next hit, 4s), Tornado (ultimate, 30, piercing).
+- **Elements are chosen and unlocked.** Pick your first element free in the Spellbook; the others unlock from **Element Crates** (`ElementService`, one crate for 250 coins that always lands on an element you don't own). Equip any owned element in the hub; it is locked in during a match. Hub **shrines** list each element's spells and shapes.
+- **Duels give boosts, not spells.** After each round you pick 1 of 3 match boosts (Power, Vitality, Swiftness, Focus, Health Potion), which stack up to 3 times (`Match/Boosts`, `BoostService`). Your spellbook is always your element's five spells.
+- New mechanics: `Stun` (no moving or casting), `Invincible`, `Barrier`, `Haste`, `Channel` statuses; the `Line` archetype; piercing projectiles; `channel`, `rise`, and `pillar` zone bursts; a damage multiplier in `DestructibleService.damage`.
+- New effects and sounds: element pillars, rising boulders and stone pillars, an earthquake wind-up, new bolt styles, and 18 more audio cues (`Audio/Cues`).
+- **Classes are planned, not built.** `docs/CLASSES.md` records what's decided and the open questions.
+- Profile schema **3** (`elements`, `element`; `ownedSpells` removed): existing players pick their first element again.
+- Tests: `tests/Economy.spec` (elements, crate, boosts), updated `Balance`, `Glyphs`, `WordMatcher`, and `Audio` specs (204 pass).
+
+### Removed (elements)
+- The old 8 spells' unique ones: Zap, Heal, Black Hole, and Turret (their models stay in the repo but nothing uses them), Rarity tiers (Common to Legendary), the spell draft, and the five-crate shop with duplicate refunds.
+
 ### Added (drawing, a new hub, audio and VFX)
 - **Draw spells.** Press **F** (or tap ✏ Draw, or **X** on a gamepad) and trace a shape: circle = Fireball, wave = Water Lock, triangle = Rock Wall, chevron = Gust, lightning = Zap, infinity = Heal, spiral = Black Hole, star = Turret. The server recognizes the stroke (`Glyphs`, `GlyphRecognizer`, a $1 unistroke recognizer that ignores size, rotation, direction, and start point) and readies the spell. The line turns gold or red with the verdict, and everyone sees the glyph pop over the caster's head. New `DrawController`, `GlyphView`, `DrawSpell` and `GlyphResult` remotes, `tests/Glyphs.spec`.
 - **Glyph cards** above the hotbar show what to draw (with cooldowns); the Spellbook shows each spell's glyph.

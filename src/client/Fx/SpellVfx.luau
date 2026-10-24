@@ -81,16 +81,83 @@ local STYLES: { [string]: Style } = {
 		burst = 22,
 		tint = Color3.fromRGB(235, 245, 255),
 	},
-	Zap = {
+	FireSlash = {
+		texture = TEX.fire,
+		rate = 50,
+		size = 1.0,
+		speed = 1,
+		lifetime = 0.25,
+		trailWidth = 2.5,
+		lightRange = 10,
+		burst = 22,
+		tint = Color3.fromRGB(255, 150, 50),
+	},
+	FireBomb = {
+		texture = TEX.fire,
+		rate = 90,
+		size = 3.2,
+		speed = 2,
+		lifetime = 0.5,
+		trailWidth = 4,
+		lightRange = 22,
+		burst = 60,
+		tint = Color3.fromRGB(255, 90, 30),
+		secondary = TEX.smoke,
+	},
+	WaterSlice = {
+		texture = TEX.sparkle,
+		rate = 60,
+		size = 0.8,
+		speed = 1,
+		lifetime = 0.35,
+		trailWidth = 2.5,
+		lightRange = 8,
+		burst = 20,
+		tint = Color3.fromRGB(80, 180, 255),
+	},
+	WaterWave = {
 		texture = TEX.sparkle,
 		rate = 120,
-		size = 0.8,
+		size = 1.6,
+		speed = 3,
+		lifetime = 0.6,
+		trailWidth = 6,
+		lightRange = 8,
+		burst = 50,
+		tint = Color3.fromRGB(80, 170, 255),
+	},
+	RockThrow = {
+		texture = TEX.smoke,
+		rate = 40,
+		size = 2.2,
+		speed = 1,
+		lifetime = 0.5,
+		trailWidth = 2.5,
+		lightRange = 0,
+		burst = 28,
+		tint = Color3.fromRGB(140, 110, 80),
+	},
+	Whirlwind = {
+		texture = TEX.smoke,
+		rate = 80,
+		size = 5,
+		speed = 6,
+		lifetime = 0.6,
+		trailWidth = 7,
+		lightRange = 0,
+		burst = 36,
+		tint = Color3.fromRGB(235, 245, 255),
+	},
+	Tornado = {
+		texture = TEX.smoke,
+		rate = 120,
+		size = 6,
 		speed = 8,
-		lifetime = 0.25,
-		trailWidth = 0.6,
-		lightRange = 18,
-		burst = 34,
-		tint = Color3.fromRGB(255, 250, 160),
+		lifetime = 0.8,
+		trailWidth = 8,
+		lightRange = 0,
+		burst = 50,
+		tint = Color3.fromRGB(205, 235, 230),
 	},
 	Bullet = {
 		texture = TEX.sparkle,
@@ -499,72 +566,148 @@ function SpellVfx.glyphEmblem(parent: Instance, character: Model, glyphId: strin
 	Debris:AddItem(anchor, 1.2)
 end
 
--- Healing: green sparkles drift up around the character and a soft ring
--- spreads on the ground.
-function SpellVfx.healBurst(parent: Instance, character: Model, color: Color3)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root or not root:IsA("BasePart") then
-		return
-	end
-	local anchor = anchorAt(parent, root.Position)
-	anchor.Size = Vector3.new(4, 5, 4)
-	local sparkle = emitter(anchor, TEX.sparkle, color, STYLES.default)
-	sparkle.Rate = 0
-	sparkle.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.9),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-	sparkle.Lifetime = NumberRange.new(0.9, 1.4)
-	sparkle.Speed = NumberRange.new(1, 3)
-	sparkle.SpreadAngle = Vector2.new(60, 60)
-	sparkle.EmissionDirection = Enum.NormalId.Top
-	sparkle.Acceleration = Vector3.new(0, 5, 0)
-	sparkle.Shape = Enum.ParticleEmitterShape.Cylinder
-	sparkle:Emit(26)
+-- Elemental column erupting out of the ground (Fire Pillar, Water Nebula,
+-- Earthquake): a tall glowing cylinder shoots up, then fades, with spray,
+-- sparks, or rubble depending on the element.
+function SpellVfx.pillar(parent: Instance, center: Vector3, radius: number, color: Color3, elementId: string?)
+	local height = 70
+	local width = math.max(radius * 1.5, 4)
+	local column = Instance.new("Part")
+	column.Name = "Pillar"
+	column.Shape = Enum.PartType.Cylinder
+	column.Anchored = true
+	column.CanCollide = false
+	column.CanQuery = false
+	column.CanTouch = false
+	column.CastShadow = false
+	column.Material = if elementId == "Earth" then Enum.Material.Slate else Enum.Material.Neon
+	column.Color = color
+	column.Transparency = if elementId == "Earth" then 0.3 else 0.15
+	column.Size = Vector3.new(height, 0.5, 0.5)
+	column.CFrame = CFrame.new(center + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	column.Parent = parent
+	TweenService:Create(column, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.new(height, width, width),
+	}):Play()
+	task.delay(0.35, function()
+		if column.Parent then
+			TweenService:Create(column, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Size = Vector3.new(height, width * 1.3, width * 1.3),
+				Transparency = 1,
+			}):Play()
+		end
+	end)
+	-- A white-hot core inside the column.
+	local core = column:Clone()
+	core.Name = "PillarCore"
+	core.Color = Color3.new(1, 1, 1)
+	core.Material = Enum.Material.Neon
+	core.Size = Vector3.new(height, 0.3, 0.3)
+	core.Parent = parent
+	TweenService:Create(core, TweenInfo.new(0.14, Enum.EasingStyle.Quad), {
+		Size = Vector3.new(height, width * 0.45, width * 0.45),
+	}):Play()
+	TweenService:Create(core, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Transparency = 1,
+	}):Play()
+
+	local anchor = anchorAt(parent, center + Vector3.new(0, 1, 0))
+	anchor.Size = Vector3.new(width, 2, width)
+	local style = table.clone(STYLES.default)
+	style.size = if elementId == "Earth" then 1.8 else 2.4
+	style.speed = 22
+	style.lifetime = 0.9
+	local texture = if elementId == "Fire" then TEX.fire elseif elementId == "Earth" then TEX.smoke else TEX.sparkle
+	local spray = emitter(anchor, texture, color, style)
+	spray.Rate = 0
+	spray.EmissionDirection = Enum.NormalId.Top
+	spray.SpreadAngle = Vector2.new(25, 25)
+	spray.Acceleration = Vector3.new(0, -12, 0)
+	spray.Shape = Enum.ParticleEmitterShape.Cylinder
+	spray:Emit(60)
 	local light = Instance.new("PointLight")
 	light.Color = color
-	light.Range = 16
-	light.Brightness = 3
+	light.Range = radius * 3
+	light.Brightness = 5
 	light.Parent = anchor
-	TweenService:Create(light, TweenInfo.new(0.7), { Brightness = 0 }):Play()
-	SpellVfx.shockwave(parent, root.Position - Vector3.new(0, 2.9, 0), 6, color)
-	Debris:AddItem(anchor, 1.6)
+	TweenService:Create(light, TweenInfo.new(0.8), { Brightness = 0 }):Play()
+	SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius, color)
+	if elementId == "Earth" then
+		SpellVfx.dust(parent, center, radius, color)
+	end
+	Debris:AddItem(column, 1)
+	Debris:AddItem(core, 1)
+	Debris:AddItem(anchor, 1.4)
 end
 
--- Black hole: motes stream inward from a sphere around the center and a
--- violet glow throbs, for as long as the hole is open.
-function SpellVfx.blackHole(parent: Instance, center: Vector3, radius: number, duration: number)
-	local anchor = anchorAt(parent, center + Vector3.new(0, 4, 0))
-	anchor.Shape = Enum.PartType.Ball
-	anchor.Size = Vector3.one * radius * 1.6
-	local inflow = emitter(anchor, TEX.sparkle, Color3.fromRGB(190, 110, 255), STYLES.default)
-	inflow.Shape = Enum.ParticleEmitterShape.Sphere
-	inflow.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
-	inflow.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
-	inflow.Rate = 140
-	inflow.Speed = NumberRange.new(radius * 0.6, radius * 0.9)
-	inflow.Lifetime = NumberRange.new(0.9, 1.3)
-	inflow.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1.2),
-		NumberSequenceKeypoint.new(1, 0.1),
-	})
-	inflow.SpreadAngle = Vector2.zero
-	inflow.RotSpeed = NumberRange.new(-90, 90)
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(150, 70, 255)
-	light.Range = radius * 2
-	light.Brightness = 2
-	light.Parent = anchor
-	TweenService:Create(
-		light,
-		TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-		{ Brightness = 5 }
-	):Play()
-	SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius, Color3.fromRGB(150, 70, 255))
-	task.delay(duration, function()
-		inflow.Enabled = false
+-- A boulder or stone pillar bursts up out of the ground after `delay`
+-- seconds, holds a moment, and sinks back (Earth Punch, Earth Pillar).
+function SpellVfx.rise(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	delay: number,
+	color: Color3,
+	kind: string,
+	height: number
+)
+	task.delay(delay, function()
+		local rock = Instance.new("Part")
+		rock.Name = "RisingRock"
+		rock.Anchored = true
+		rock.CanCollide = false
+		rock.CanQuery = false
+		rock.CanTouch = false
+		rock.Color = color
+		rock.Material = Enum.Material.Slate
+		local top: number
+		if kind == "boulder" then
+			rock.Shape = Enum.PartType.Ball
+			rock.Size = Vector3.one * radius * 1.7
+			top = center.Y + radius * 0.55
+			rock.CFrame = CFrame.new(center.X, center.Y - radius, center.Z)
+		else
+			rock.Size = Vector3.new(radius * 0.9, height, radius * 0.9)
+			top = center.Y + height / 2 - 0.5
+			rock.CFrame = CFrame.new(center.X, center.Y - height / 2, center.Z)
+				* CFrame.Angles(0, math.random() * math.pi, 0)
+		end
+		rock.Parent = parent
+		TweenService:Create(rock, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = CFrame.new(center.X, top, center.Z) * rock.CFrame.Rotation,
+		}):Play()
+		SpellVfx.dust(parent, center, radius * 0.8, color)
+		task.delay(0.9, function()
+			if rock.Parent then
+				TweenService:Create(rock, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+					CFrame = rock.CFrame - Vector3.new(0, if kind == "boulder" then radius * 1.4 else height, 0),
+					Transparency = 1,
+				}):Play()
+			end
+		end)
+		Debris:AddItem(rock, 1.5)
 	end)
-	Debris:AddItem(anchor, duration + 1.5)
+end
+
+-- Earthquake wind-up: the ground pulses with rings and kicks up dust for
+-- the whole cast, so everyone can see the blast zone and get out of it.
+function SpellVfx.quake(parent: Instance, center: Vector3, radius: number, duration: number, color: Color3)
+	task.spawn(function()
+		local elapsed = 0
+		while elapsed < duration do
+			SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius * (0.35 + 0.65 * elapsed / duration), color)
+			local angle = math.random() * math.pi * 2
+			local distance = math.random() * radius * 0.9
+			SpellVfx.dust(
+				parent,
+				center + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance),
+				6,
+				color
+			)
+			task.wait(0.35)
+			elapsed += 0.35
+		end
+	end)
 end
 
 return SpellVfx

@@ -1,5 +1,5 @@
 --!strict
--- Hover hitbox for point-and-click spells (stats.reticle, e.g. Zap). While
+-- Hover hitbox for point-and-click spells (stats.reticle, e.g. Fire Pillar). While
 -- such a spell is readied:
 --   * a glowing circle the size of the spell's hit radius (+ the player
 --     hitbox bonus) follows the aim point on the ground, and

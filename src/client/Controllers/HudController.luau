@@ -12,7 +12,8 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
@@ -42,6 +43,7 @@ local matchText: TextLabel
 local scoreText: TextLabel
 local toastHolder: Frame
 local feedHolder: Frame
+local boostsLabel: TextLabel
 
 local TOAST_COLORS: { [string]: Color3 } = {
 	fizzle = Color3.fromRGB(120, 144, 156),
@@ -56,6 +58,21 @@ local TOAST_COLORS: { [string]: Color3 } = {
 
 function HudController.getGui(): ScreenGui
 	return gui
+end
+
+-- How many times you've picked a match boost (the server mirrors your picks
+-- to the player attribute "Boosts", e.g. "Power:2,Focus:1").
+function HudController.boostStacks(boostId: string): number
+	local text = player:GetAttribute("Boosts")
+	if typeof(text) ~= "string" then
+		return 0
+	end
+	for id, stacks in string.gmatch(text, "(%w+):(%d+)") do
+		if id == boostId then
+			return tonumber(stacks) or 0
+		end
+	end
+	return 0
 end
 
 function HudController.toast(message: string, kind: string?)
@@ -111,14 +128,16 @@ local function refreshWords()
 		ids = table.clone(ClientState.spellbook)
 	else
 		local profile = ClientState.profile
-		if profile then
-			ids = table.clone(profile.ownedSpells)
+		if profile and profile.element ~= "" then
+			for _, def in SpellDefinitions.ofElement(profile.element) do
+				table.insert(ids, def.id)
+			end
 		end
 	end
 	for order, id in ids do
 		local def = SpellDefinitions.get(id)
 		if def then
-			local info = Rarity.INFO[def.rarity]
+			local color = Elements.color(def.element)
 			local card = Theme.frame(glyphRow, {
 				Name = def.id,
 				Size = UDim2.fromOffset(62, 74),
@@ -126,9 +145,9 @@ local function refreshWords()
 				BackgroundTransparency = 0.2,
 			})
 			Theme.corner(card, 10)
-			local stroke = Theme.stroke(card, info.color, 2)
+			local stroke = Theme.stroke(card, color, if def.ultimate then 4 else 2)
 			stroke.Transparency = 0.2
-			GlyphView.create(card, def.glyph, 46, def.visual.color, { Position = UDim2.fromOffset(8, 2) })
+			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
 				Position = UDim2.new(0, 2, 1, -18),
@@ -227,14 +246,15 @@ local function refreshHotbar()
 		local id = ClientState.hand[i]
 		local def = id and SpellDefinitions.get(id)
 		if def then
-			local info = Rarity.INFO[def.rarity]
+			local color = Elements.color(def.element)
+			local element = Elements.get(def.element)
 			slot.button.Visible = true
-			slot.icon.Text = info.glyph
-			slot.icon.TextColor3 = def.visual.color
+			slot.icon.Text = if element then element.icon else ""
+			slot.icon.TextColor3 = color
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
 			local isReadied = i == ClientState.readiedSlot
-			slot.stroke.Color = if isReadied then Theme.COLORS.accent else info.color
+			slot.stroke.Color = if isReadied then Theme.COLORS.accent else color
 			slot.stroke.Thickness = if isReadied then 5 else 3
 			slot.button.BackgroundColor3 = if isReadied
 				then Color3.fromRGB(84, 80, 140)
@@ -380,6 +400,19 @@ local function buildMatchBar(root: Frame)
 	})
 end
 
+-- Your picked match boosts as a row of icons under the match bar.
+local function refreshBoosts()
+	local parts = {}
+	for _, boost in Boosts.LIST do
+		local stacks = HudController.boostStacks(boost.id)
+		if stacks > 0 then
+			table.insert(parts, `{boost.icon}x{stacks}`)
+		end
+	end
+	boostsLabel.Text = table.concat(parts, "  ")
+	boostsLabel.Visible = #parts > 0
+end
+
 local function refreshMatch()
 	local state = ClientState.match
 	matchBar.Visible = state.phase ~= "Idle"
@@ -398,6 +431,17 @@ local function refreshMatch()
 	if state.phase == "Results" then
 		matchText.Text = "Match over!"
 	end
+end
+
+local function buildBoosts(root: Frame)
+	boostsLabel = Theme.label(root, "", {
+		Name = "Boosts",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 76),
+		Size = UDim2.fromOffset(300, 28),
+		TextStrokeTransparency = 0.4,
+		Visible = false,
+	})
 end
 
 local function buildFeed(root: Frame)
@@ -461,6 +505,7 @@ function HudController.init()
 	buildGlyphRow(root)
 	buildWallet(root)
 	buildMatchBar(root)
+	buildBoosts(root)
 	buildFeed(root)
 
 	toastHolder = Theme.frame(root, {
@@ -490,6 +535,8 @@ function HudController.start()
 	ClientState.ProfileChanged:Connect(refreshWallet)
 	ClientState.ProfileChanged:Connect(refreshWords)
 	ClientState.MatchChanged:Connect(refreshMatch)
+	player:GetAttributeChangedSignal("Boosts"):Connect(refreshBoosts)
+	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)
 	refreshHotbar()

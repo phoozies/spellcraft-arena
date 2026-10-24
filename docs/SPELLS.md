@@ -1,130 +1,155 @@
-# Spell Dictionary
+# Spells
 
-Wordcraft Arena has 8 spells. Every player starts with the three ⭐ starters. The other five are unlocked from **crates**, one per rarity, bought with coins earned by winning matches (see [ECONOMY.md](ECONOMY.md)). In a match, any spell can also show up as a draft card, even one you haven't unlocked yet.
+Wordcraft Arena has **20 spells in 4 elements**: Fire, Water, Earth, and Air, five each. You equip **one element at a time** and can draw its five spells. Your first element is a free pick; the other three are unlocked from **Element Crates** (see [ECONOMY.md](ECONOMY.md)). In a match your equipped element is locked in and its five spells are your spellbook.
 
-> **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau).
-> This table is generated from it (see "Regenerating" below). Don't hand-edit numbers here.
+> **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau) and [`Elements.luau`](../src/shared/Spells/Elements.luau).
+> The tables below are generated from them (see "Regenerating"). Don't hand-edit numbers here.
+
+## The five slots and their shapes
+
+Every element has the same five slots, drawn with the same five shapes, so there is only one set to learn:
+
+| Slot | Shape | Role |
+|---|---|---|
+| 1 | Circle | The basic attack |
+| 2 | Wave | A second move |
+| 3 | Triangle | A utility or boost |
+| 4 | Lightning bolt | A heavy move |
+| 5 | Star | The **ultimate** (big damage, long recharge) |
 
 ## Getting spells: the copy model
 
-- **Drawing a spell's glyph adds one copy of that spell to your hotbar.** You can hold **up to 5 copies in any mix**, including 5 of the same spell. When all 5 slots are full, cast one before drawing another.
-- **Casting uses up a copy.** Draw the glyph again to get more.
-- **Copies of the same spell share one cast cooldown** (the **Cooldown** column below). After you cast a Fireball, your other Fireballs wait out its 0.9s before they can fire.
+- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You can hold **up to 5 copies in any mix**, including 5 of the same spell. When all 5 slots are full, cast one before drawing another.
+- **Casting uses up a copy.** Draw the shape again to get more.
+- **Copies of the same spell share one cast cooldown** (the **Cooldown** column below).
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
-- **Which glyphs work:** in the hub, any spell you own. In a match, only the spells in your match spellbook (3 random owned spells, plus one per draft, up to 5).
+- **Which shapes work:** only the five spells of your equipped element. A shape from a spell you don't have fizzles (in the hub the toast tells you which element it belongs to).
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 
-Every player has **100 HP**. Since you can stockpile copies, the fastest a spell can be re-cast is its cooldown (or the 0.35s global cast lockout), so every spell's value is measured per `max(0.35s, cooldown)`:
-
-| Budget | Limit |
-|---|---|
-| Any single hit (including combos) | ≤ 34 damage (no one-shots; best spam is about a 6s kill) |
-| Burst damage (including combos) | ≤ 20 per second |
-| Lingering zone damage | ≤ 24 total per second |
-| Healing / shields | ≤ 5 per second |
-| Hard crowd control (Root, Time Stop, Shrink) | ≤ 60% uptime, cooldown ≥ 2s, and **2.5s immunity** after it wears off (no chaining or refreshing) |
-| Placeables | 1–3 alive per player per spell, all expire |
-| Lingering zones | 1 alive per player per spell (a recast replaces the old one) |
-| Summons | 1 alive per player per spell, cooldown ≥ 5s |
-| Legendary spells | cooldown ≥ 10s |
-
-**Movement and hitboxes:**
-- Players walk at 24 (Roblox's default is 16). Every projectile flies at 1.5× its listed `speed` (`Config.PROJECTILE_SPEED_SCALE`) to keep up.
-- Bolts sweep a thin sphere against plain map geometry, so they glide over floors. Against players and breakable objects they use their radius **+1.5 studs** (`Config.HITBOX_BONUS`). The Fireball's radius is 3.5, so it hits from up to 5 studs off the center of its path. Area spells also reach 1.5 studs past their edge against players.
-
-**Health:** there's no regeneration in arenas, only healing spells. The hub regenerates 5 HP/s.
-
-**Rock Wall:** it's the imported earth-wall model, and **every spell hits it, your own included**. The whole wall has a shared **50-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones), and the wall is gone at 50. Four Fireballs bring it down. Without the model it falls back to a 3×2 grid of blocks. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
+- No non-ultimate hit above 30 damage; no hit above 34% of a player's HP, or 40% for ultimates.
+- Burst damage is capped at 20 per second of cooldown.
+- Ultimates (slot 5) have cooldowns of at least 15s and deal 30+ damage.
+- Hard crowd control (Stun, Root, ...) is limited to 60% uptime and needs a cooldown of at least 2s.
+- Timed buffs are up at most 60% of the time; walls and placeables have a lifetime and at most 3 alive.
 
 ## How drawings are matched
 
-Every spell owns one **glyph**, a single-stroke shape (`glyph` in `SpellDefinitions`, shapes in `shared/Spells/Glyphs.luau`). The client records your stroke and sends it (`DrawSpell`); the server runs `GlyphRecognizer` on it:
+The client records your stroke and sends it (`DrawSpell`); the server runs `GlyphRecognizer` on it:
 
-1. The stroke is resampled to 64 points, rotated and scaled to a square, then compared with every glyph template (the **$1 unistroke recognizer**).
+1. The stroke is resampled to 64 points, rotated and scaled to a square, then compared with the five shapes (the **$1 unistroke recognizer**).
 2. Size, position, rotation, and drawing direction don't matter, and closed shapes can start anywhere. Only the shape does.
-3. The best glyph wins if its score is at least `MIN_SCORE` (0.8) **and** clearly ahead of the runner-up (`MIN_MARGIN`). Otherwise the drawing fizzles. Straight lines, dots, and scribbles are rejected.
-4. The spell that owns the glyph is granted through `HandService.grant`, which still checks ownership (hub) or the match spellbook.
+3. The best shape wins if its score is at least `MIN_SCORE` (0.8) **and** clearly ahead of the runner-up (`MIN_MARGIN`). Otherwise the drawing fizzles. Straight lines, dots, and scribbles are rejected.
+4. The shape's **slot** picks the spell from your equipped element (`Elements.spells[slot]`), and `HandService.grant` readies it.
 
-| Glyph | Spell |
-|---|---|
-| Circle | Fireball |
-| Wave | Water Lock |
-| Triangle | Rock Wall |
-| Chevron (V) | Gust |
-| Lightning bolt | Zap |
-| Infinity (figure eight) | Heal |
-| Spiral | Black Hole |
-| Star | Turret |
+`tests/Glyphs.spec.luau` draws every shape with wobble, rotation, reversal, and random start points, and checks that an element never repeats a shape. Admin commands still take spell names through `WordMatcher` (`;give fireball`).
 
-`tests/Glyphs.spec.luau` draws every glyph with wobble, rotation, reversal, and random start points, and fails if a spell lacks a unique glyph. Admin commands still take spell names through `WordMatcher` (`;give fire`).
+## Hitboxes
 
-## Rarity
+Hitbox sizes are the spell's `radius` in studs (players add `Config.HITBOX_BONUS` = 1.5): **medium** 3–3.5, **large** 4–5, **wide** 6–8, **huge** 10+.
 
-| Rarity | Glyph | Draft weight | Color | Crate |
-|---|---|---|---|---|
-| Common | ● | 50% | grey | 100 coins |
-| Uncommon | ▲ | 25% | green | 250 coins |
-| Rare | ◆ | 15% | blue | 500 coins |
-| Epic | ★ | 8% | purple | 1000 coins |
-| Legendary | 👑 | 2% | gold | 2000 coins |
+## The 20 spells
 
-Each glyph is a different shape, so rarity is readable without relying on color (colorblind-friendly).
+### 🔥 Fire
 
-## Spells
+| Slot | Spell | Draw | Archetype | Cooldown | What it does |
+|---|---|---|---|---|---|
+| 1 | **Fireball** | circle | Projectile | 0.9s | Hurl a ball of fire with a medium hitbox. 15 damage. |
+| 2 | **Fire Slash** | wave | Projectile | 0.55s | A fast crescent of fire with a medium hitbox. 10 damage, recharges quickly. |
+| 3 | **Fire Boost** | triangle | Buff | 14s | Your fire burns hotter: +25% damage for 8 seconds. |
+| 4 | **Fire Pillar** | lightning bolt | Zone | 7s | Point and click: a huge pillar of fire erupts where you aim after a short warning. 30 damage in a large area. Range 70. |
+| 5 | **Fire Bomb** ★ | star | Projectile | 16s | ULTIMATE: a huge fireball with a very large hitbox. 35 damage. |
 
-| Spell | Draw | Archetype | Rarity | Cooldown | How you get it | What it does |
-|---|---|---|---|---|---|---|
-| **Fireball** ⭐ | circle | Projectile | Common | 0.9s | Starter | Hurl a ball of fire that burns players and structures. |
-| **Water Lock** ⭐ | wave | Control | Common | 3s | Starter | Trap an enemy in a bubble so they can't move for 1.5 seconds. |
-| **Rock Wall** ⭐ | triangle | Placeable | Common | 1s | Starter | Raise a rocky earth wall that blocks spells. It breaks apart piece by piece. |
-| **Gust** | chevron | Projectile | Common | 1.5s | Common crate | A wide blast of wind that shoves enemies far away. Low damage, huge hitbox. |
-| **Zap** | lightning bolt | Zone | Uncommon | 2.5s | Uncommon crate | Point and click: a thunderbolt strikes the ground where you aim after a short flash. Range 60. |
-| **Heal** | infinity | Buff | Rare | 4s | Rare crate | Restore 10 health. |
-| **Black Hole** | spiral | Zone | Epic | 10s | Epic crate | A black hole sucks enemies in, traps them for 3 seconds, and deals 10 damage over time. |
-| **Turret** | star | Placeable | Legendary | 12s | Legendary crate | Summon a 30-health turret that shoots bullets at the nearest enemy player. |
+### 💧 Water
 
-### The crate spells in detail
+| Slot | Spell | Draw | Archetype | Cooldown | What it does |
+|---|---|---|---|---|---|
+| 1 | **Water Slice** | circle | Projectile | 0.55s | A fast slice of water with a medium hitbox. 10 damage. |
+| 2 | **Water Body** | wave | Buff | 22s | Turn to flowing water: you can't be hurt or affected by spells for 7 seconds. |
+| 3 | **Water Lock** | triangle | Control | 4s | Trap an enemy in a bubble: 5 damage and a 1.5 second stun (no moving or casting). |
+| 4 | **Water Wave** | lightning bolt | Projectile | 8s | Send a large wave rolling forward through everything in its path. 25 damage. |
+| 5 | **Water Nebula** ★ | star | Zone | 18s | ULTIMATE: point and click: a towering water pillar crashes down in a large area. 35 damage. Range 70. |
 
-- **Gust** (Projectile): 5 damage, radius 6 (7.5 against players with `HITBOX_BONUS`), knockback 95, range 90. Drawn with the imported `Gust` model.
-- **Zap** (Zone burst + `reticle`): while Zap is readied, a circle on the ground shows exactly where it will hit (its 5-stud radius + 1.5 bonus) and a faint ring shows its **60-stud range**; aiming past the range pulls the circle in to the limit (it turns orange). On cast, a red warning circle flashes for 0.45s, then the `Zap` bolt model slams down: 18 damage and a small knockback.
-- **Heal** (Buff): +10 HP (4s cooldown, 2.5 HP/s, inside the 5 HP/s budget). The `Heal` model pops up over your head.
-- **Black Hole** (Zone + `hold`): a 16-radius zone for 3s that pulls enemies toward the center (pull 60) and deals 10 damage in total over its life. Anyone pulled into the core (4 studs) is **Rooted until it closes**: sucked in, then trapped. The `BlackHole` model spins over the zone.
-- **Turret** (Placeable + `turret`): a 30-HP turret (the `Turret` model) that shoots a 6-damage bullet at the nearest enemy player within 80 studs every second, for 20s. One alive at a time.
+### ⛰ Earth
 
-## Archetypes and the stats they read
+| Slot | Spell | Draw | Archetype | Cooldown | What it does |
+|---|---|---|---|---|---|
+| 1 | **Rock Throw** | circle | Projectile | 1.1s | Hurl a large boulder. 15 damage and a solid shove. |
+| 2 | **Earth Wall** | wave | Placeable | 4s | Raise a rocky wall with 35 health that blocks spells. It breaks apart piece by piece. |
+| 3 | **Earth Punch** | triangle | Zone | 5s | Point and click: a boulder bursts out of the ground beneath your target. 20 damage. Range 60. |
+| 4 | **Earth Pillar** | lightning bolt | Line | 9s | A wave of stone pillars erupts in a line in front of you. 30 damage to anyone it catches. |
+| 5 | **Earthquake** ★ | star | Zone | 22s | ULTIMATE: the ground shakes around you, then bursts. A long 2 second cast leaves you rooted, but it deals 40 damage in a huge area. |
 
-| Archetype | Module | Stats |
-|---|---|---|
-| Projectile | `Archetypes/Projectile.luau` | `damage, speed, range, radius, knockback, status, statusDuration, chain, comboStatus, comboMultiplier` |
-| Control | `Archetypes/Control.luau` | With `speed`: a status projectile. Without: an instant area using `radius`, `status`, `statusDuration`, `damage` (`range = 0` centers it on the caster) |
-| Placeable | `Archetypes/Placeable.luau` | `health, lifetime, maxActive`, plus optional `turret` (`damage, range, fireInterval`), `trap` (`status`), `bounce`, `hazardDps` + `radius` |
-| Zone | `Archetypes/Zone.luau` | Lingering: `duration, radius, status, damage` (per second), `pull, hold, heal, teamHeal, maxActive`. Burst: `delay, damage, knockback, destroysStructures`; `reticle` shows the client hit circle |
-| Buff | `Archetypes/Buff.luau` | `heal, shield, duration, reflect, scale, revive, cooldownCut` |
-| Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
-| Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
+### 🌪 Air
 
-Movement and Summon have no spells right now; they're kept as ready-made behaviors for future spells.
+| Slot | Spell | Draw | Archetype | Cooldown | What it does |
+|---|---|---|---|---|---|
+| 1 | **Gust** | circle | Projectile | 0.9s | A fast gust of air. 15 damage. |
+| 2 | **Whirlwind** | wave | Projectile | 5s | A wide gust that blows everyone it hits far away. 15 damage. |
+| 3 | **Air Boost** | triangle | Buff | 16s | Ride the wind: much faster and a higher jump for 6 seconds. |
+| 4 | **Air Shield** | lightning bolt | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
+| 5 | **Tornado** ★ | star | Projectile | 18s | ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage. |
+
+### Notes on the spells
+
+- **Earth Wall:** the imported earth-wall model, and **every spell hits it, your own included**. The whole wall has a shared **35-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones). Without the model it falls back to a 3×2 grid of blocks.
+- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground while readied, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
+- **Water Body** makes you immune to damage *and* effects (stun, knockback) for its duration. **Air Shield** blocks one hit of any kind, including a spell's effect, then pops.
+- **Fire Boost** multiplies all your damage by 1.25 for 8s (it stacks multiplicatively with the Power match boost).
+- **Piercing spells** (Water Wave, Tornado) keep flying after they hit a player and hit each player only once. They still stop on walls.
+- **Earthquake** roots you for its whole 2s cast (`stats.channel`) and cancels if you are knocked out first.
 
 `cooldown` on every spell is its **cast cooldown**, shared by every copy of that spell you hold.
 
-**`visual.model`:** any spell can name an imported model (`ReplicatedStorage.Models`) that replaces its primitive look: the bolt for projectiles, the body for placeables (the primitive stays as the invisible hitbox), the swirl for lingering zones, the strike for burst zones (Fx `strike`), and a pop-up over the caster for buffs (Fx `modelPop`). Without the model, the primitive `visual` is drawn.
+## Match boosts (instead of earning spells)
+
+In a duel the spellbook is always your element's five spells. After each round you pick **one of three boosts** that last for the rest of the match and stack up to 3 times (`shared/Match/Boosts.luau`, applied by `BoostService`):
+
+| Boost | Effect |
+|---|---|
+| 💥 Power | +15% damage |
+| ❤ Vitality | +20 max health |
+| 👟 Swiftness | +3 move speed |
+| ⏱ Focus | Spells recharge 12% faster (never below half) |
+| 🧪 Health Potion | Once a round, heal 35 when you fall below 35% health |
+
+## Stats the spells read
+
+| Archetype | Module | Stats |
+|---|---|---|
+| Projectile | `Archetypes/Projectile.luau` | `damage, speed, range, radius, knockback, pierce, status, statusDuration, chain, comboStatus, comboMultiplier` |
+| Control | `Archetypes/Control.luau` | With `speed`: a status projectile. Without: an instant area using `radius`, `status`, `statusDuration`, `damage` (`range = 0` centers it on the caster) |
+| Placeable | `Archetypes/Placeable.luau` | `health, lifetime, maxActive`, plus optional `turret` (`damage, range, fireInterval`), `trap` (`status`), `bounce`, `hazardDps` + `radius` |
+| Zone | `Archetypes/Zone.luau` | Lingering: `duration, radius, status, damage` (per second), `pull, hold, heal, teamHeal, maxActive`. Burst: `delay, damage, knockback, destroysStructures, radius, range`; `reticle` shows the client hit circle; `pillar` draws the element column; `rise` pops a boulder; `channel` roots the caster for `delay` |
+| Line | `Archetypes/Line.luau` | `damage, radius, count, spacing, step, delay, knockback`: a row of bursts along the caster's aim |
+| Buff | `Archetypes/Buff.luau` | `heal, shield, duration, reflect, scale, revive, cooldownCut, damageMult, invincible, barrier, haste` |
+| Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
+| Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
+
+**`visual.model`:** any spell can name an imported model (`ReplicatedStorage.Models`) that replaces its primitive look: the bolt for projectiles, the body for placeables (the primitive stays as the invisible hitbox), the swirl for lingering zones. Without the model, the primitive `visual` is drawn. Fireball, Water Lock's bubble, Earth Wall, and Gust use models today.
+
+## Audio and effects
+
+Every spell has `sfx = { cast, impact }` naming cues in `shared/Audio/Cues.luau`. Fire Pillar, Water Nebula, and Earthquake draw an elemental column (`SpellVfx.pillar`), Earth Punch and Earth Pillar make boulders and pillars rise (`SpellVfx.rise`), and Earthquake pulses the ground while it winds up (`SpellVfx.quake`).
 
 ## Adding a spell
 
-1. Add a row to `SpellDefinitions.luau` with a unique `id`, a **unique `glyph`** (add the shape to `Glyphs.luau` if none is free), plain-word `aliases` (admin names), `sfx` cue names, a `rarity`, an `archetype`, `cooldown` (cast cooldown), `stats`, and a primitive `visual` (optionally `visual.model`). Leave out `starter` and it joins its rarity's **crate** automatically.
-2. Run the tests. They fail if an alias or glyph collides with another spell's, a cue name is wrong, or the spell breaks a balance budget.
-3. Regenerate this table and update `docs/semantic/features.yaml` (the `spells.catalog`).
+1. Add a row to `SpellDefinitions.luau` with a unique `id`, an `element` and `slot` (the slot sets the shape), plain-word `aliases` (admin names), `sfx` cue names, an `archetype`, `cooldown`, `stats`, and a primitive `visual`. Add its id to the element's list in `Elements.luau`.
+2. Run the tests. They fail if an alias collides, an element repeats a shape, a cue name is wrong, or the spell breaks a balance budget.
+3. Regenerate the tables above and update `docs/semantic/features.yaml` (the `spells.catalog`).
 
 ## Regenerating
 
-Run this during a playtest (the server's module cache is fresh) and paste the output over the table above:
+Run this during a playtest (the server's module cache is fresh) and paste the output over the tables above:
 
 ```lua
 local Defs = require(game.ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local lines = {"| Spell | Draw | Archetype | Rarity | Cooldown | How you get it | What it does |", "|---|---|---|---|---|---|---|"}
-for _, d in Defs.list do
-	table.insert(lines, ("| **%s**%s | %s | %s | %s | %ss | %s | %s |"):format(d.name, d.starter and " ⭐" or "", d.glyph, d.archetype, d.rarity, tostring(d.cooldown), d.starter and "Starter" or (d.rarity .. " crate"), d.description))
+local Elements = require(game.ReplicatedStorage.Shared.Spells.Elements)
+for _, element in Elements.LIST do
+	print(`### {element.icon} {element.name}\n`)
+	print("| Slot | Spell | Draw | Archetype | Cooldown | What it does |\n|---|---|---|---|---|---|")
+	for slot, def in Defs.ofElement(element.id) do
+		print(("| %d | **%s**%s | %s | %s | %ss | %s |"):format(slot, def.name, def.ultimate and " ★" or "", def.glyph, def.archetype, tostring(def.cooldown), def.description))
+	end
 end
-print(table.concat(lines, "\n"))
 ```

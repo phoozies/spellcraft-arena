@@ -11,10 +11,9 @@
 --   after casting a Fireball, your other Fireballs wait for it.
 -- * SpellInputService adds a 1s cooldown between drawings.
 --
--- Which words work:
--- * Hub: any spell the player owns.
--- * Match: only spells in the player's match spellbook (3 random owned
---   spells, +1 per draft, max 5). MatchService sets it.
+-- Which spells work:
+-- * Hub: the five spells of the player's equipped element.
+-- * Match: the same five (MatchService sets the spellbook at the start).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -22,6 +21,9 @@ local Players = game:GetService("Players")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local ElementService = require(script.Parent.ElementService)
+local ElementService = require(script.Parent.ElementService)
+local ElementService = require(script.Parent.ElementService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 type State = {
@@ -60,9 +62,12 @@ local function push(player: Player)
 	handRemote:FireClient(player, state.copies, state.readiedSlot, state.spellbook)
 end
 
+-- A spell is drawable in the hub when it belongs to the equipped element.
+-- A spell is drawable in the hub when it belongs to the equipped element.
+-- A spell is drawable in the hub when it belongs to the equipped element.
 local function owns(player: Player, spellId: string): boolean
-	local profile = PlayerDataService.get(player)
-	return profile ~= nil and table.find(profile.ownedSpells, spellId) ~= nil
+	local def = SpellDefinitions.get(spellId)
+	return def ~= nil and ElementService.equipped(player) == def.element
 end
 
 -- Spell copies the player is holding (hotbar order).
@@ -86,17 +91,6 @@ function HandService.setSpellbook(player: Player, spellbook: { string })
 	state.readiedSlot = nil
 	state.cooldowns = {}
 	push(player)
-end
-
-function HandService.addToSpellbook(player: Player, spellId: string): boolean
-	local state = stateOf(player)
-	local book = state.spellbook
-	if not book or #book >= Config.MAX_HAND or table.find(book, spellId) then
-		return false
-	end
-	table.insert(book, spellId)
-	push(player)
-	return true
 end
 
 function HandService.clearMatch(player: Player)
@@ -127,7 +121,13 @@ function HandService.grant(player: Player, spellId: string, bypass: boolean?): (
 				return false, `{def.name} isn't in your spellbook this match. Draft it next round!`
 			end
 		elseif not owns(player, spellId) then
-			return false, `You haven't unlocked {def.name} yet. Open a {def.rarity} crate in the hub!`
+			if not ElementService.equipped(player) then
+				return false, "Pick your first element in the Spellbook!"
+			end
+			if ElementService.owns(player, def.element) then
+				return false, `{def.name} is a {def.element} spell. Equip {def.element} in the Spellbook!`
+			end
+			return false, `You haven't unlocked {def.element} yet. Open an Element Crate in the hub!`
 		end
 	end
 	if #state.copies >= Config.MAX_HAND then
@@ -231,6 +231,7 @@ function HandService.refresh(player: Player)
 end
 
 function HandService.init()
+	ElementService.setLockCheck(HandService.isInMatch)
 	handRemote = Remotes.get("HandUpdated")
 	cooldownRemote = Remotes.get("CooldownStarted")
 end

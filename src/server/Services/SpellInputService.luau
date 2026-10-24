@@ -3,8 +3,9 @@
 -- the server decides what it is.
 --
 --   DrawSpell(points) ──► validate (table of Vector2, count, range, 1s cooldown)
---   ──► GlyphRecognizer ──► the spell that owns that glyph ──► HandService.grant
---   (hotbar copy; owned in the hub, in your spellbook in a match)
+--   ──► GlyphRecognizer ──► the shape's slot in the player's equipped element
+--   ──► that spell ──► HandService.grant (hotbar copy; only the equipped
+--   element's spells work, in the hub and in matches)
 --   ──► GlyphResult(spellId?, glyphId?) back to the drawer for feedback
 --
 -- A drawing adds ONE copy of the spell to the hotbar (up to 5, duplicates
@@ -19,9 +20,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local ElementService = require(script.Parent.ElementService)
 local HandService = require(script.Parent.HandService)
 
 local SpellInputService = {}
@@ -32,10 +35,11 @@ local fxRemote: RemoteEvent
 local lastDraw: { [Player]: number } = {}
 local noDrawCooldown: { [Player]: boolean } = {}
 
--- Glyph id -> the spell drawn with it.
-local spellByGlyph: { [string]: string } = {}
-for _, def in SpellDefinitions.list do
-	spellByGlyph[def.glyph] = def.id
+-- Every element uses the same five shapes; only these are ever recognized,
+-- so look-alike shapes can never be confused with them.
+local ALLOWED: { [string]: boolean } = {}
+for _, glyphId in Elements.SLOT_GLYPHS do
+	ALLOWED[glyphId] = true
 end
 
 -- (player, text) -> handled. Installed by AdminService; returns true when
@@ -94,8 +98,17 @@ function SpellInputService.submitStroke(player: Player, points: { Vector2 }): st
 	end
 	lastDraw[player] = os.clock()
 
-	local glyphId = GlyphRecognizer.recognize(points)
-	local spellId = if glyphId then spellByGlyph[glyphId] else nil
+	local elementId = ElementService.equipped(player)
+	local element = if elementId then Elements.get(elementId) else nil
+	if not element then
+		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "fizzle")
+		resultRemote:FireClient(player, nil, nil)
+		return nil
+	end
+	local glyphId = GlyphRecognizer.recognize(points, ALLOWED)
+	-- The same five shapes mean five different spells in each element.
+	local slot = if glyphId then table.find(Elements.SLOT_GLYPHS, glyphId) else nil
+	local spellId = if slot then element.spells[slot] else nil
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
 		toastRemote:FireClient(player, hints[math.random(1, #hints)], "fizzle")

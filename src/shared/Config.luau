@@ -3,7 +3,6 @@
 -- and the server never trusts a client-reported value from this file.
 
 local Config = {
-	STARTING_HAND = 3,
 	MAX_HAND = 5,
 
 	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.

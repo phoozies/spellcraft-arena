@@ -218,6 +218,17 @@ local function damageWall(
 	return amount
 end
 
+-- How much harder this attacker hits: Fire Boost (a timed character
+-- attribute) times the Power match boost (a player attribute).
+local function attackMultiplier(attacker: Player): number
+	local mult = (attacker:GetAttribute("BoostDamage") :: number?) or 1
+	local character = attacker.Character
+	if character then
+		mult *= (character:GetAttribute("DamageMult") :: number?) or 1
+	end
+	return mult
+end
+
 -- Applies damage. Returns the damage actually dealt (0 if not allowed).
 function DestructibleService.damage(
 	target: Instance,
@@ -228,6 +239,9 @@ function DestructibleService.damage(
 	local resolved, owner, isCharacter = DestructibleService.resolve(target)
 	if not resolved or amount <= 0 then
 		return 0
+	end
+	if attacker then
+		amount *= attackMultiplier(attacker)
 	end
 	local hitByAll = not isCharacter and resolved:GetAttribute("HitByAll") == true
 	if not hitByAll then
@@ -246,6 +260,21 @@ function DestructibleService.damage(
 			return 0
 		end
 		if character:FindFirstChildOfClass("ForceField") or character:GetAttribute("God") then
+			return 0
+		end
+		-- Water Body: nothing touches you.
+		if StatusService.has(character, "Invincible") then
+			return 0
+		end
+		-- Air Shield: the next hit, of any kind, is blocked and the shield pops.
+		if character:GetAttribute("Barrier") then
+			character:SetAttribute("Barrier", nil)
+			fxRemote:FireAllClients(
+				"shockwave",
+				character:GetPivot().Position,
+				6,
+				Color3.fromRGB(190, 240, 235)
+			)
 			return 0
 		end
 		-- Shrunk players take extra damage; giants take less.

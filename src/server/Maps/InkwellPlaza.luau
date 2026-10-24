@@ -3,7 +3,7 @@
 -- the Great Hall of Glyphs. Everything is on one axis so players always know
 -- where to go (north is -Z):
 --
---   Spawn plaza (round, inkwell fountain, 8 glyph stones that show what to
+--   Spawn plaza (round, inkwell fountain, 4 element shrines that list what to
 --   draw for each spell) ── kiosks on the south arc (Spellbook, Daily Quests)
 --   ├─ west: Spell Practice pavilion (dummies, build anything)
 --   ├─ east: Crate Shop stage
@@ -34,7 +34,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local MapKit = require(script.Parent.MapKit)
@@ -236,7 +236,7 @@ local function glyphBanner(parent: Instance, frame: CFrame, spellIndex: number)
 	gui.CanvasSize = Vector2.new(120, 200)
 	gui.LightInfluence = 0
 	gui.Parent = cloth
-	GlyphView.create(gui, def.glyph, 96, def.visual.color, { Position = UDim2.fromOffset(12, 20) })
+	GlyphView.create(gui, def.glyph, 96, Elements.color(def.element), { Position = UDim2.fromOffset(12, 20) })
 	local name = Instance.new("TextLabel")
 	name.BackgroundTransparency = 1
 	name.Size = UDim2.new(1, 0, 0, 36)
@@ -244,6 +244,7 @@ local function glyphBanner(parent: Instance, frame: CFrame, spellIndex: number)
 	name.Font = Enum.Font.FredokaOne
 	name.TextScaled = true
 	name.TextColor3 = Color3.new(1, 1, 1)
+	name.TextColor3 = Elements.color(def.element)
 	name.Text = def.name
 	name.Parent = gui
 	MapKit.part(parent, {
@@ -438,42 +439,72 @@ return function(): Model
 	})
 	spawn:AddTag("HubSpawn")
 
-	-- Glyph stones: one standing slab per spell showing the shape to draw.
-	for index, def in SpellDefinitions.list do
-		local angle = math.rad(22.5 + (index - 1) * 45)
+	-- Element shrines: one standing slab per element around the fountain. Each
+	-- lists the element's five spells with the shape to draw for them; the
+	-- prompt opens the Spellbook to pick or equip it.
+	for index, element in Elements.LIST do
+		local angle = math.rad(55 + (index - 1) * 70 + (if index > 2 then 20 else 0))
 		local position = PLAZA + Vector3.new(math.sin(angle) * 29, 0, math.cos(angle) * 29)
-		local stone = MapKit.part(model, {
-			name = `GlyphStone_{def.id}`,
-			size = Vector3.new(6, 9, 1.2),
-			cframe = CFrame.lookAt(position + Vector3.new(0, 4.7, 0), PLAZA + Vector3.new(0, 4.7, 0)),
+		local slab = MapKit.part(model, {
+			name = `Shrine_{element.id}`,
+			size = Vector3.new(13, 9.5, 1.4),
+			cframe = CFrame.lookAt(position + Vector3.new(0, 5, 0), PLAZA + Vector3.new(0, 5, 0)),
 			color = STONE_DARK,
 			material = Enum.Material.Slate,
 		})
 		local gui = Instance.new("SurfaceGui")
-		gui.Name = "Glyph"
+		gui.Name = "Spells"
 		gui.Face = Enum.NormalId.Front
 		gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-		gui.CanvasSize = Vector2.new(120, 180)
+		gui.CanvasSize = Vector2.new(390, 285)
 		gui.LightInfluence = 0
-		gui.Parent = stone
-		GlyphView.create(gui, def.glyph, 96, def.visual.color, { Position = UDim2.fromOffset(12, 10) })
-		local name = Instance.new("TextLabel")
-		name.BackgroundTransparency = 1
-		name.Size = UDim2.new(1, -8, 0, 40)
-		name.Position = UDim2.fromOffset(4, 120)
-		name.Font = Enum.Font.FredokaOne
-		name.TextScaled = true
-		name.TextColor3 = Rarity.INFO[def.rarity].color
-		name.Text = def.name
-		name.Parent = gui
-		MapKit.part(model, {
-			name = "GlyphStoneCap",
-			size = Vector3.new(6.6, 0.8, 1.8),
-			cframe = stone.CFrame * CFrame.new(0, 4.8, 0),
-			color = STONE_LIGHT,
-			material = Enum.Material.Slate,
+		gui.Parent = slab
+		local title = Instance.new("TextLabel")
+		title.BackgroundTransparency = 1
+		title.Size = UDim2.new(1, 0, 0, 60)
+		title.Position = UDim2.fromOffset(0, 8)
+		title.Font = Enum.Font.FredokaOne
+		title.TextScaled = true
+		title.TextColor3 = element.color
+		title.Text = `{element.icon} {string.upper(element.name)}`
+		title.Parent = gui
+		for slot, id in element.spells do
+			local def = SpellDefinitions.get(id)
+			if def then
+				local x = (slot - 1) * 76 + 6
+				GlyphView.create(gui, def.glyph, 64, element.color, { Position = UDim2.fromOffset(x + 2, 80) })
+				local name = Instance.new("TextLabel")
+				name.BackgroundTransparency = 1
+				name.Size = UDim2.fromOffset(74, 44)
+				name.Position = UDim2.fromOffset(x, 150)
+				name.Font = Enum.Font.FredokaOne
+				name.TextScaled = true
+				name.TextWrapped = true
+				name.TextColor3 = if def.ultimate then GOLD else Color3.new(1, 1, 1)
+				name.Text = def.name
+				name.Parent = gui
+			end
+		end
+		local hint = Instance.new("TextLabel")
+		hint.BackgroundTransparency = 1
+		hint.Size = UDim2.new(1, -16, 0, 40)
+		hint.Position = UDim2.fromOffset(8, 220)
+		hint.Font = Enum.Font.GothamMedium
+		hint.TextScaled = true
+		hint.TextColor3 = Color3.fromRGB(197, 202, 233)
+		hint.Text = element.tagline
+		hint.Parent = gui
+		local light = MapKit.part(model, {
+			name = "ShrineGem",
+			shape = Enum.PartType.Ball,
+			size = Vector3.new(2.6, 2.6, 2.6),
+			cframe = slab.CFrame * CFrame.new(0, 6.2, 0),
+			color = element.color,
+			material = Enum.Material.Neon,
 			canCollide = false,
 		})
+		glow(light, element.color, 22, 1.4)
+		prompt(slab, "Spellbook", "Choose element", `{element.name} shrine`)
 	end
 
 	----------------------------------------------------------------------
@@ -801,8 +832,8 @@ return function(): Model
 	prompt(chest, "Quests", "Open", "Daily Quests")
 
 	----------------------------------------------------------------------
-	-- Crate shop (east): one crate per rarity on a stage, cheapest on the
-	-- left. Any crate's prompt opens the shop panel.
+	-- Crate shop (east): one Element Crate on a stage with the four element
+	-- orbs around it. The crate's prompt opens the shop panel.
 	----------------------------------------------------------------------
 	local SHOP = Vector3.new(76, 0, 36)
 	MapKit.part(model, {
@@ -815,44 +846,49 @@ return function(): Model
 	pointedArch(model, CFrame.new(SHOP + Vector3.new(0, 1, -6)), 36, 12, 1.4, STONE_LIGHT)
 	label(
 		signAnchor(model, "CrateShopSign", SHOP + Vector3.new(0, 15, -3)),
-		"Crate Shop\nSpend coins, unlock spells!",
+		"Crate Shop\nUnlock new elements!",
 		0,
 		90
 	)
-	for index, crate in Crates.LIST do
-		local info = Rarity.INFO[crate.id]
-		local spot = SHOP + Vector3.new((index - 3) * 6.5, 1, 0)
-		local holder = MapKit.part(model, {
-			name = `Crate_{crate.id}`,
-			size = Vector3.new(4, 4, 4),
-			cframe = CFrame.new(spot + Vector3.new(0, 2, 0)),
-			color = info.color,
-			material = Enum.Material.WoodPlanks,
-		})
-		local crateModel = ModelKit.clone("Crate", "solid")
-		if crateModel then
-			-- The model replaces the block; tint its trim and gem by rarity.
-			holder.Transparency = 1
-			local _, size = crateModel:GetBoundingBox()
-			crateModel:ScaleTo(4 / math.max(size.X, 0.01))
-			crateModel:PivotTo(
-				CFrame.new(spot + Vector3.new(0, 2, 0)) * CFrame.Angles(0, math.rad(-15 + index * 6), 0)
-			)
-			for _, part in crateModel:GetDescendants() do
-				if
-					part:IsA("BasePart")
-					and (part.Name == "Crate_Trim" or part.Name == "Crate_Gem")
-				then
-					part.Color = info.color
-				end
+	local crate = Crates.LIST[1]
+	local holder = MapKit.part(model, {
+		name = `Crate_{crate.id}`,
+		size = Vector3.new(5, 5, 5),
+		cframe = CFrame.new(SHOP + Vector3.new(0, 3.5, 0)),
+		color = GOLD,
+		material = Enum.Material.WoodPlanks,
+	})
+	local crateModel = ModelKit.clone("Crate", "solid")
+	if crateModel then
+		-- The model replaces the block; its trim and gem are tinted gold.
+		holder.Transparency = 1
+		local _, size = crateModel:GetBoundingBox()
+		crateModel:ScaleTo(5.5 / math.max(size.X, 0.01))
+		crateModel:PivotTo(CFrame.new(SHOP + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, math.rad(-10), 0))
+		for _, part in crateModel:GetDescendants() do
+			if part:IsA("BasePart") and (part.Name == "Crate_Trim" or part.Name == "Crate_Gem") then
+				part.Color = GOLD
 			end
-			crateModel.Name = `CrateModel_{crate.id}`
-			crateModel.Parent = model
 		end
-		glow(holder, info.color, 14, 1)
-		local priceTag = label(holder, `{info.glyph} {crate.id}\n💰 {crate.price}`, 4.5, 50)
-		priceTag.TextColor3 = info.color
-		prompt(holder, "Crates", "Open shop", `{crate.id} crate`)
+		crateModel.Name = `CrateModel_{crate.id}`
+		crateModel.Parent = model
+	end
+	glow(holder, GOLD, 16, 1.2)
+	local priceTag = label(holder, `🎁 {crate.name}\n💰 {crate.price}`, 5.5, 60)
+	priceTag.TextColor3 = GOLD
+	prompt(holder, "Crates", "Open shop", crate.name)
+	for index, element in Elements.LIST do
+		local orb = MapKit.part(model, {
+			name = `ElementOrb_{element.id}`,
+			shape = Enum.PartType.Ball,
+			size = Vector3.new(3, 3, 3),
+			cframe = CFrame.new(SHOP + Vector3.new((index - 2.5) * 7.5, 3.2, 1)),
+			color = element.color,
+			material = Enum.Material.Neon,
+			canCollide = false,
+		})
+		glow(orb, element.color, 12, 1)
+		label(orb, `{element.icon} {element.name}`, 3.2, 50)
 	end
 
 	----------------------------------------------------------------------
