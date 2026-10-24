@@ -10,6 +10,7 @@ local ORDER = {
 	"DraftController",
 	"PlacementController",
 	"ReticleController",
+	"DrawController",
 	"InputController",
 	"EffectsController",
 	"FxController",

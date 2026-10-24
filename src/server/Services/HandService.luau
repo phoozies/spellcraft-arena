@@ -3,17 +3,17 @@
 -- per-spell cast cooldowns.
 --
 -- Copy model:
--- * Typing (or saying) a spell word adds ONE copy of that spell to the
+-- * Drawing a spell's glyph adds ONE copy of that spell to the
 --   hotbar. A player can hold up to MAX_HAND (5) copies in any mix —
 --   including five of the same spell.
--- * Casting uses a copy up; type the word again to get more.
+-- * Casting uses a copy up; draw it again to get more.
 -- * All copies of the same spell share one cast cooldown (its `cooldown`):
 --   after casting a Fireball, your other Fireballs wait for it.
--- * SpellInputService adds a 1s typing cooldown between any words.
+-- * SpellInputService adds a 1s cooldown between drawings.
 --
 -- Which words work:
 -- * Hub: any spell the player owns.
--- * Match: only words in the player's match spellbook (3 random owned
+-- * Match: only spells in the player's match spellbook (3 random owned
 --   spells, +1 per draft, max 5). MatchService sets it.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -113,7 +113,7 @@ function HandService.cooldownLeft(player: Player, spellId: string): number
 	return math.max(0, (state.cooldowns[spellId] or 0) - os.clock())
 end
 
--- Adds one copy of a spell (from typing/voice) and readies it.
+-- Adds one copy of a spell (from a drawing) and readies it.
 -- Returns (ok, reason). `bypass` (admin give) skips spellbook/ownership.
 function HandService.grant(player: Player, spellId: string, bypass: boolean?): (boolean, string?)
 	local def = SpellDefinitions.get(spellId)

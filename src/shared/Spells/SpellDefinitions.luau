@@ -3,14 +3,15 @@
 -- comes from its `archetype` (see src/server/Services/Archetypes). To add a
 -- spell, add a row — no new code needed. Keep docs/SPELLS.md in sync.
 --
--- Aliases are what players can type or say. They are matched after
--- normalization (lowercase, no punctuation), so list plain words only.
+-- Players DRAW each spell's `glyph` (shared/Spells/Glyphs) to ready it; every
+-- spell needs a different one (tests/Glyphs.spec). Aliases are admin names
+-- (`;give fire`), matched after normalization (lowercase, no punctuation).
 --
 -- Getting spells: every player starts with the `starter` spells. Every
 -- other spell is unlocked from a crate of its rarity (shared/Economy/Crates,
 -- server CrateService). In a match any spell can also be drafted.
 --
--- Copy model: typing a word adds one copy of the spell to the hotbar
+-- Copy model: drawing a glyph adds one copy of the spell to the hotbar
 -- (up to 5 held, duplicates allowed); casting uses a copy up. `cooldown` is
 -- the spell's CAST cooldown, shared by every copy of that spell. Players
 -- have 100 HP and can stockpile copies, so damage per cast cooldown is the
@@ -34,6 +35,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "Fireball",
 		name = "Fireball",
 		aliases = { "fireball", "fire", "flame", "blaze" },
+		glyph = "circle",
 		rarity = "Common",
 		starter = true,
 		archetype = "Projectile",
@@ -54,6 +56,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "WaterLock",
 		name = "Water Lock",
 		aliases = { "water lock", "waterlock", "water", "bubble", "trap" },
+		glyph = "wave",
 		rarity = "Common",
 		starter = true,
 		archetype = "Control",
@@ -81,6 +84,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "RockWall",
 		name = "Rock Wall",
 		aliases = { "rock wall", "rockwall", "wall", "rock", "stone" },
+		glyph = "triangle",
 		rarity = "Common",
 		starter = true,
 		archetype = "Placeable",
@@ -108,6 +112,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "Gust",
 		name = "Gust",
 		aliases = { "gust", "wind", "push", "blow" },
+		glyph = "chevron",
 		rarity = "Common",
 		archetype = "Projectile",
 		cooldown = 1.5,
@@ -127,6 +132,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "Zap",
 		name = "Zap",
 		aliases = { "zap", "thunder", "lightning", "strike" },
+		glyph = "bolt",
 		rarity = "Uncommon",
 		archetype = "Zone",
 		cooldown = 2.5,
@@ -147,6 +153,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "Heal",
 		name = "Heal",
 		aliases = { "heal", "medic", "health", "cure" },
+		glyph = "infinity",
 		rarity = "Rare",
 		archetype = "Buff",
 		cooldown = 4,
@@ -164,6 +171,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "BlackHole",
 		name = "Black Hole",
 		aliases = { "black hole", "blackhole", "vortex", "void" },
+		glyph = "spiral",
 		rarity = "Epic",
 		archetype = "Zone",
 		cooldown = 10,
@@ -191,6 +199,7 @@ local DEFINITIONS: { SpellDef } = {
 		id = "Turret",
 		name = "Turret",
 		aliases = { "turret", "sentry", "gun" },
+		glyph = "star",
 		rarity = "Legendary",
 		archetype = "Placeable",
 		cooldown = 12,

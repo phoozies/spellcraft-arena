@@ -1,6 +1,5 @@
 --!strict
--- Settings panel. Currently: rebind the key that focuses the "type a spell"
--- box. Click "Change", press any key, done — the choice is saved to the
+-- Settings panel. Currently: rebind the key that opens the drawing canvas. Click "Change", press any key, done — the choice is saved to the
 -- player's profile (server validates it and refuses reserved keys like WASD,
 -- Space, the hotbar numbers, and "/" which Roblox chat uses).
 
@@ -24,7 +23,7 @@ local function refresh()
 	if ClientState.capturingKey then
 		return
 	end
-	keyLabel.Text = ClientState.typeKeyName()
+	keyLabel.Text = ClientState.drawKeyName()
 	changeButton.Text = "Change"
 end
 
@@ -54,11 +53,11 @@ local function startCapture()
 			stopCapture()
 			return
 		end
-		Remotes.get("SaveSettings"):FireServer("typeKey", name)
+		Remotes.get("SaveSettings"):FireServer("drawKey", name)
 		-- Show it immediately; the server confirms via ProfileUpdated.
 		keyLabel.Text = name
-		HudController.toast(`"Type a spell" key set to {name}`, "ready")
-		-- Let this key press finish before it can open the spell box.
+		HudController.toast(`"Draw a spell" key set to {name}`, "ready")
+		-- Let this key press finish before it can open the canvas.
 		task.delay(0.2, stopCapture)
 	end)
 end
@@ -71,7 +70,7 @@ function SettingsController.init()
 		BackgroundColor3 = Theme.COLORS.panelLight,
 	})
 	Theme.corner(row)
-	Theme.label(row, "Type-a-spell key", {
+	Theme.label(row, "Draw-a-spell key", {
 		Size = UDim2.new(0.42, 0, 1, -16),
 		Position = UDim2.fromOffset(12, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -83,7 +82,7 @@ function SettingsController.init()
 	})
 	Theme.corner(keyBox, 8)
 	Theme.stroke(keyBox, Theme.COLORS.accent, 2)
-	keyLabel = Theme.label(keyBox, Config.DEFAULT_TYPE_KEY, {
+	keyLabel = Theme.label(keyBox, Config.DEFAULT_DRAW_KEY, {
 		Size = UDim2.new(1, -8, 1, -8),
 		Position = UDim2.fromOffset(4, 4),
 		TextColor3 = Theme.COLORS.accent,
@@ -98,13 +97,13 @@ function SettingsController.init()
 			startCapture()
 		end
 	end)
-	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_TYPE_KEY}`, {
+	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_DRAW_KEY}`, {
 		Position = UDim2.fromOffset(16, 152),
 		Size = UDim2.fromOffset(180, Theme.TOUCH - 8),
 	})
 	reset.Activated:Connect(function()
-		Remotes.get("SaveSettings"):FireServer("typeKey", Config.DEFAULT_TYPE_KEY)
-		keyLabel.Text = Config.DEFAULT_TYPE_KEY
+		Remotes.get("SaveSettings"):FireServer("drawKey", Config.DEFAULT_DRAW_KEY)
+		keyLabel.Text = Config.DEFAULT_DRAW_KEY
 	end)
 	hint = Theme.label(panel, "Click Change, then press the key you want.", {
 		Position = UDim2.fromOffset(16, 210),
@@ -113,7 +112,7 @@ function SettingsController.init()
 		TextColor3 = Theme.COLORS.subtext,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
-	Theme.label(panel, "Gamepad: Y opens the spell box. Touch: tap the box.", {
+	Theme.label(panel, "Gamepad: X, then draw with the right stick. Touch: tap ✏ Draw, then drag.", {
 		Position = UDim2.fromOffset(16, 240),
 		Size = UDim2.new(1, -32, 0, 24),
 		Font = Theme.BODY_FONT,

@@ -331,14 +331,14 @@ COMMANDS.speed = {
 
 COMMANDS.freecast = {
 	usage = "freecast <player>",
-	help = "Toggle no typing cooldown and no recharges (testing).",
+	help = "Toggle no draw cooldown and no recharges (testing).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local states = {}
 		for _, target in targets do
 			local on = target:GetAttribute("FreeCast") ~= true
 			target:SetAttribute("FreeCast", if on then true else nil)
-			SpellInputService.setNoTypeCooldown(target, on)
+			SpellInputService.setNoDrawCooldown(target, on)
 			HandService.setFreeCasting(target, on)
 			table.insert(states, `{target.Name}: {if on then "ON" else "off"}`)
 		end

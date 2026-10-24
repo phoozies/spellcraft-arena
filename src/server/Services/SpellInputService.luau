@@ -1,35 +1,41 @@
 --!strict
--- Every way a player can "say" a spell funnels into SpellInputService.submit():
---   * Chat: a chat message that is exactly a spell word is consumed (not
---     broadcast) and grants that spell.
---   * The on-screen spell box (SubmitWord remote) — works with on-screen
---     keyboards on mobile, console, and VR. Pasting is blocked client-side.
---   * Voice (VoiceService calls submit with source "voice").
+-- Drawing a spell: the client sends the stroke it drew (DrawSpell remote),
+-- the server decides what it is.
 --
--- A word adds ONE copy of the spell to the hotbar (HandService.grant; up to
--- 5 copies, duplicates allowed). Words are limited to one per
--- Config.TYPE_COOLDOWN seconds per player across all sources.
+--   DrawSpell(points) ──► validate (table of Vector2, count, range, 1s cooldown)
+--   ──► GlyphRecognizer ──► the spell that owns that glyph ──► HandService.grant
+--   (hotbar copy; owned in the hub, in your spellbook in a match)
+--   ──► GlyphResult(spellId?, glyphId?) back to the drawer for feedback
 --
--- Messages starting with Config.ADMIN_PREFIX go to the admin command handler
--- (AdminService installs it) instead, from chat or the spell box.
+-- A drawing adds ONE copy of the spell to the hotbar (up to 5, duplicates
+-- allowed). Drawings are limited to one per Config.DRAW_COOLDOWN seconds.
+--
+-- Chat is no longer a way to cast: messages starting with Config.ADMIN_PREFIX
+-- go to the admin command handler (AdminService installs it); everything else
+-- is normal chat.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
 local HandService = require(script.Parent.HandService)
-
-type Source = "chat" | "box" | "voice"
 
 local SpellInputService = {}
 
 local toastRemote: RemoteEvent
-local lastWord: { [Player]: number } = {}
-local noTypeCooldown: { [Player]: boolean } = {}
+local resultRemote: RemoteEvent
+local lastDraw: { [Player]: number } = {}
+local noDrawCooldown: { [Player]: boolean } = {}
+
+-- Glyph id -> the spell drawn with it.
+local spellByGlyph: { [string]: string } = {}
+for _, def in SpellDefinitions.list do
+	spellByGlyph[def.glyph] = def.id
+end
 
 -- (player, text) -> handled. Installed by AdminService; returns true when
 -- the player is an admin and the text was a command. Must not yield (it runs
@@ -44,39 +50,61 @@ local function isCommand(text: string): boolean
 	return string.sub(text, 1, #Config.ADMIN_PREFIX) == Config.ADMIN_PREFIX
 end
 
--- Admin: skip the typing cooldown for a player.
-function SpellInputService.setNoTypeCooldown(player: Player, enabled: boolean)
-	noTypeCooldown[player] = if enabled then true else nil
+-- Admin: skip the drawing cooldown for a player.
+function SpellInputService.setNoDrawCooldown(player: Player, enabled: boolean)
+	noDrawCooldown[player] = if enabled then true else nil
 end
 
--- Seconds until this player may type another word.
-function SpellInputService.typeCooldownLeft(player: Player): number
-	if noTypeCooldown[player] then
+-- Seconds until this player may draw another spell.
+function SpellInputService.drawCooldownLeft(player: Player): number
+	if noDrawCooldown[player] then
 		return 0
 	end
-	return math.max(0, (lastWord[player] or 0) + Config.TYPE_COOLDOWN - os.clock())
+	return math.max(0, (lastDraw[player] or 0) + Config.DRAW_COOLDOWN - os.clock())
 end
 
--- Returns the spell id that was granted, or nil.
-function SpellInputService.submit(player: Player, text: string, source: Source): string?
-	local left = SpellInputService.typeCooldownLeft(player)
-	if left > 0 then
-		toastRemote:FireClient(player, `Typing cooldown ({math.ceil(left * 10) / 10}s)`, "cooldown")
+-- Returns a clean list of Vector2 from untrusted remote data, or nil.
+local function sanitize(raw: any): { Vector2 }?
+	if typeof(raw) ~= "table" or #raw > Config.DRAW_MAX_POINTS or #raw < GlyphRecognizer.MIN_POINTS then
 		return nil
 	end
-	lastWord[player] = os.clock()
+	local limit = Config.DRAW_MAX_COORD
+	local points: { Vector2 } = {}
+	for i = 1, #raw do
+		local p = raw[i]
+		if typeof(p) ~= "Vector2" then
+			return nil
+		end
+		-- NaN/inf and far-off-screen values are rejected outright.
+		if p.X ~= p.X or p.Y ~= p.Y or math.abs(p.X) > limit or math.abs(p.Y) > limit then
+			return nil
+		end
+		points[i] = p
+	end
+	return points
+end
 
-	local spellId = if source == "voice"
-		then WordMatcher.findInText(text)
-		else WordMatcher.matchWord(text)
+-- Recognizes a stroke and readies the spell. Returns the granted spell id.
+function SpellInputService.submitStroke(player: Player, points: { Vector2 }): string?
+	local left = SpellInputService.drawCooldownLeft(player)
+	if left > 0 then
+		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "cooldown")
+		return nil
+	end
+	lastDraw[player] = os.clock()
+
+	local glyphId = GlyphRecognizer.recognize(points)
+	local spellId = if glyphId then spellByGlyph[glyphId] else nil
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
 		toastRemote:FireClient(player, hints[math.random(1, #hints)], "fizzle")
+		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
 	local ok, message = HandService.grant(player, spellId)
 	if not ok then
 		toastRemote:FireClient(player, message or "Fizzle!", "fizzle")
+		resultRemote:FireClient(player, nil, glyphId)
 		return nil
 	end
 	local def = SpellDefinitions.get(spellId)
@@ -93,24 +121,19 @@ function SpellInputService.submit(player: Player, text: string, source: Source):
 			"ready"
 		)
 	end
+	resultRemote:FireClient(player, spellId, glyphId)
 	return spellId
-end
-
-local function runCommand(player: Player, text: string): boolean
-	return commandHandler ~= nil and commandHandler(player, text)
 end
 
 local function hookChat()
 	if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService then
-		warn(
-			"[SpellInput] Legacy chat detected; chat casting disabled (spell box and voice still work)."
-		)
+		warn("[SpellInput] Legacy chat detected; admin chat commands disabled.")
 		return
 	end
 	local channels = TextChatService:WaitForChild("TextChannels", 30)
 	local general = channels and channels:WaitForChild("RBXGeneral", 30)
 	if not general or not general:IsA("TextChannel") then
-		warn("[SpellInput] RBXGeneral channel not found; chat casting disabled.")
+		warn("[SpellInput] RBXGeneral channel not found; admin chat commands disabled.")
 		return
 	end
 	-- ShouldDeliverCallback runs once per recipient, so de-dupe by MessageId.
@@ -122,7 +145,6 @@ local function hookChat()
 		end
 		local player = Players:GetPlayerByUserId(source.UserId)
 		local command = player ~= nil and isCommand(message.Text)
-		local isSpell = not command and WordMatcher.matchWord(message.Text) ~= nil
 		if not handled[message.MessageId] then
 			handled[message.MessageId] = true
 			task.delay(10, function()
@@ -131,38 +153,31 @@ local function hookChat()
 			end)
 			if player and command then
 				-- Non-admins' ";..." messages are delivered as normal chat.
-				command = runCommand(player, message.Text)
+				command = commandHandler ~= nil and commandHandler(player, message.Text)
 				handled[message.MessageId .. ":cmd"] = command
-			elseif player and isSpell then
-				task.spawn(SpellInputService.submit, player, message.Text, "chat")
 			end
 		elseif command then
 			command = handled[message.MessageId .. ":cmd"] == true
 		end
-		return not (isSpell or command)
+		return not command
 	end
 end
 
 function SpellInputService.init()
 	toastRemote = Remotes.get("Toast")
+	resultRemote = Remotes.get("GlyphResult")
 end
 
 function SpellInputService.start()
-	Remotes.get("SubmitWord").OnServerEvent:Connect(function(player, text)
-		if typeof(text) ~= "string" or #text == 0 or #text > 120 then
-			return
+	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw)
+		local points = sanitize(raw)
+		if points then
+			SpellInputService.submitStroke(player, points)
 		end
-		if isCommand(text) and runCommand(player, text) then
-			return
-		end
-		if #text > 64 then
-			return
-		end
-		SpellInputService.submit(player, text, "box")
 	end)
 	Players.PlayerRemoving:Connect(function(player)
-		lastWord[player] = nil
-		noTypeCooldown[player] = nil
+		lastDraw[player] = nil
+		noDrawCooldown[player] = nil
 	end)
 	task.spawn(hookChat)
 end

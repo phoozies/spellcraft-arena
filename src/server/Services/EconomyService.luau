@@ -212,7 +212,7 @@ function EconomyService.start()
 		if not profile or typeof(key) ~= "string" or typeof(value) ~= "string" or #value > 32 then
 			return
 		end
-		if key == "typeKey" then
+		if key == "drawKey" then
 			local ok, keyCode = pcall(function()
 				return (Enum.KeyCode :: any)[value]
 			end)
@@ -220,7 +220,7 @@ function EconomyService.start()
 				toastRemote:FireClient(player, `Can't bind {value}; pick another key.`, "fizzle")
 				return
 			end
-			profile.settings.typeKey = value
+			profile.settings.drawKey = value
 			sendSummary(player)
 		end
 	end)

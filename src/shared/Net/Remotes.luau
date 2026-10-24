@@ -13,15 +13,14 @@ local FOLDER_NAME = "Remotes"
 -- name -> description (documentation lives next to the definition).
 local DEFINITIONS: { [string]: string } = {
 	-- Client -> Server
-	SubmitWord = "(text: string) word typed in the spell box or recognized by voice",
+	DrawSpell = "(points: {Vector2}) a stroke drawn on screen (screen-height units); the server recognizes it",
 	SelectSlot = "(slot: number) ready the spell in a hand slot (hotbar tap/keys)",
 	CastSpell = "(target: Vector3, rotationY: number?) cast the readied spell at a point",
 	PickDraft = "(index: number) choose one of the offered draft cards",
 	SetQueue = "(mode: string?) join a queue by mode name, or leave with nil",
 	ClaimQuest = "(questId: string) claim a finished daily quest",
-	VoiceListen = "(listening: boolean) push-to-talk for speaking a spell",
 	OpenCrate = "(crateId: string) buy and spin a crate (a Rarity name); server validates coins + rate",
-	SaveSettings = "(key: string, value: string) save a player setting, e.g. typeKey",
+	SaveSettings = "(key: string, value: string) save a player setting, e.g. drawKey",
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
@@ -36,7 +35,7 @@ local DEFINITIONS: { [string]: string } = {
 	Knockout = "(killerName: string?, victimName: string, spellName: string?) kill feed",
 	Impulse = "(velocity: Vector3) self-beneficial boost (dash, pads) applied by the owning client",
 	Fx = "(kind: string, ...) cosmetic effects rendered by clients: projectile spawn/end, poof",
-	VoiceHeard = "(transcript: string) what speech-to-text heard (for feedback)",
+	GlyphResult = "(spellId: string?, glyphId: string?) what the player's drawing was (nil = not recognized)",
 }
 
 local Remotes = {}

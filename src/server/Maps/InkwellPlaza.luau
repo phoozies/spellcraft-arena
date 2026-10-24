@@ -243,7 +243,7 @@ return function(): Model
 		transparency = 1,
 		canCollide = false,
 	})
-	label(groveSign, "Practice Grove\nType any spell you own!", 0)
+	label(groveSign, "Practice Grove\nDraw any spell you own!", 0)
 	for i = 1, 4 do
 		local spot = MapKit.part(model, {
 			name = "DummySpot",

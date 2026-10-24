@@ -32,7 +32,7 @@ local fxRemote = Remotes.get("Fx")
 
 -- player -> spellId -> live zone discs (oldest first). Lingering zones are
 -- capped per spell (stats.maxActive, default 1); casting another replaces
--- the oldest, so re-typing every second can't carpet the map.
+-- the oldest, so re-drawing every second can't carpet the map.
 local activeZones: { [Player]: { [string]: { BasePart } } } = setmetatable({}, { __mode = "k" }) :: any
 
 local function trackZone(player: Player, spellId: string, area: BasePart, maxActive: number)

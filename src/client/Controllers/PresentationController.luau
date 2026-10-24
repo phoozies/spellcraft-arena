@@ -245,7 +245,7 @@ local function showIntro(state: Types.MatchState)
 		end
 	end
 
-	Theme.label(backdrop, "Type spells to fight — best of 3!", {
+	Theme.label(backdrop, "Draw spells to fight — best of 3!", {
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.fromScale(0.5, 0.88),
 		Size = UDim2.new(0.8, 0, 0, 34),

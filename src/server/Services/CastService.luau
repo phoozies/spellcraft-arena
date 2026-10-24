@@ -146,11 +146,11 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if StatusService.has(character, "TimeStop") or character:GetAttribute("Frozen") then
 		return
 	end
-	-- Must be holding a copy of the readied spell (typing grants copies).
+	-- Must be holding a copy of the readied spell (drawing grants copies).
 	local spellId = HandService.getReadied(player)
 	local def = spellId and SpellDefinitions.get(spellId)
 	if not spellId or not def then
-		toastRemote:FireClient(player, "Type a spell word first!", "fizzle")
+		toastRemote:FireClient(player, "Draw a spell first!", "fizzle")
 		return
 	end
 	-- Copies of the same spell share one cast cooldown.

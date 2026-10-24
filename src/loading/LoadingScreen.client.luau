@@ -12,12 +12,13 @@ local player = Players.LocalPlayer
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local TIPS = {
-	"Type a spell word to get it — you can hold up to 5!",
+	"Press F and trace a shape to ready a spell. You can hold up to 5!",
+	"A circle is Fireball, a wave is Water Lock, a triangle is Rock Wall.",
+	"Big, smooth shapes work best. Don't worry about drawing it perfectly!",
 	"Copies of the same spell share one cooldown.",
-	"Water Lock, then Lightning = double damage!",
 	"Rock Walls break block by block. Knock a hole and fire through!",
-	"No health regen in the arena — bring a Heal Leaf.",
-	"Change the type-a-spell key in Settings.",
+	"No health regen in the arena. Draw a Heal when you're hurt.",
+	"Change the draw key in Settings.",
 }
 
 local gui = Instance.new("ScreenGui")

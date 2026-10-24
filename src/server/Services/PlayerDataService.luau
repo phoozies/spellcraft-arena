@@ -45,7 +45,7 @@ local function defaultProfile(): Profile
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
-		settings = { typeKey = Config.DEFAULT_TYPE_KEY },
+		settings = { drawKey = Config.DEFAULT_DRAW_KEY },
 	}
 end
 
@@ -86,6 +86,8 @@ local function reconcile(data: any): Profile
 			data.settings[key] = value
 		end
 	end
+	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
+	data.settings.typeKey = nil
 	-- Owned spells: drop ids that left the dictionary, and always own the starters.
 	local owned = {}
 	for _, id in data.ownedSpells do

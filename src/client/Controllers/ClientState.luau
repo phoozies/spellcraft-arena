@@ -15,18 +15,18 @@ export type ProfileSummary = {
 	quests: { Types.DailyQuest },
 	streak: number,
 	stats: { matches: number, wins: number, knockouts: number, casts: number },
-	settings: { typeKey: string },
+	settings: { drawKey: string },
 }
 
 local ClientState = {
 	hand = {} :: { string }, -- spell copies held (hotbar slots, duplicates allowed)
 	readiedSlot = nil :: number?,
 	readied = nil :: string?, -- spell id in the readied slot
-	-- Match only: the words this player may type this match (nil in the hub).
+	-- Match only: the spells this player may draw this match (nil in the hub).
 	spellbook = nil :: { string }?,
 	cooldowns = {} :: { [string]: number }, -- spellId -> server time it can be cast again
-	-- Local mirror of the 1s typing cooldown (os.clock() when typing is allowed).
-	typeReadyAt = 0,
+	-- Local mirror of the 1s drawing cooldown (os.clock() when drawing is allowed).
+	drawReadyAt = 0,
 	profile = nil :: ProfileSummary?,
 	match = { phase = "Idle", round = 0, endsAt = 0, scores = {} } :: Types.MatchState,
 	queueCounts = {} :: { [string]: number },
@@ -37,21 +37,21 @@ local ClientState = {
 	QueueChanged = Signal.new(),
 }
 
--- The key that focuses the "type a spell" box (player setting).
-function ClientState.typeKeyName(): string
+-- The key that opens the drawing canvas (player setting).
+function ClientState.drawKeyName(): string
 	local profile = ClientState.profile
 	return if profile
 			and profile.settings
-			and profile.settings.typeKey
-		then profile.settings.typeKey
-		else Config.DEFAULT_TYPE_KEY
+			and profile.settings.drawKey
+		then profile.settings.drawKey
+		else Config.DEFAULT_DRAW_KEY
 end
 
-function ClientState.typeKeyCode(): Enum.KeyCode
+function ClientState.drawKeyCode(): Enum.KeyCode
 	local ok, keyCode = pcall(function()
-		return (Enum.KeyCode :: any)[ClientState.typeKeyName()]
+		return (Enum.KeyCode :: any)[ClientState.drawKeyName()]
 	end)
-	return if ok and keyCode then keyCode else Enum.KeyCode.T
+	return if ok and keyCode then keyCode else Enum.KeyCode.F
 end
 
 -- True while the settings panel is waiting for a key press to rebind.

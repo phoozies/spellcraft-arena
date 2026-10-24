@@ -8,9 +8,11 @@ local GuiService = game:GetService("GuiService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local GlyphView = require(script.Parent.Parent.UI.GlyphView)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
@@ -22,6 +24,7 @@ local openName: string? = nil
 local modeButtons: { [string]: TextButton } = {}
 local spellbookGrid: ScrollingFrame
 local detailLabel: TextLabel
+local detailGlyph: Frame
 local questList: Frame
 
 local MODE_INFO = {
@@ -155,7 +158,14 @@ local function buildSpellbook(root: Instance)
 	})
 	Theme.corner(detail)
 	Theme.padding(detail, 10)
-	detailLabel = Theme.label(detail, "Pick a spell to learn its words!", {
+	detailGlyph = Theme.frame(detail, {
+		Name = "GlyphHolder",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.fromScale(1, 1),
+		Size = UDim2.fromOffset(96, 96),
+		BackgroundTransparency = 1,
+	})
+	detailLabel = Theme.label(detail, "Pick a spell to learn its shape!", {
 		Font = Theme.BODY_FONT,
 		TextWrapped = true,
 		TextScaled = false,
@@ -196,7 +206,9 @@ local function refreshSpellbook()
 			stroke.Color = info.color
 		end
 		button.Activated:Connect(function()
-			local words = table.concat(def.aliases, ", ")
+			detailGlyph:ClearAllChildren()
+			GlyphView.create(detailGlyph, def.glyph, 96, def.visual.color)
+			local shape = Glyphs.get(def.glyph)
 			local source = if def.starter
 				then "Starter spell"
 				else `Unlocked from a {def.rarity} crate`
@@ -204,7 +216,7 @@ local function refreshSpellbook()
 				`\n\n<i>Locked: open a {def.rarity} crate in the Crate Shop, or draft it in a match!</i>`
 			detailLabel.Text = `<b>{def.name}</b>  <font color="#{info.color:ToHex()}">{info.glyph} {def.rarity}</font>\n`
 				.. `{source} · {def.archetype}\n\n{def.description}\n\n`
-				.. `<b>Say or type:</b> {words}\n<b>Cooldown:</b> {def.cooldown}s`
+				.. `<b>Draw:</b> {if shape then shape.name else def.glyph}\n<b>Cooldown:</b> {def.cooldown}s`
 				.. (if has then "" else locked)
 		end)
 	end

@@ -8,9 +8,15 @@ local Config = {
 
 	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.
 	GLOBAL_CAST_LOCKOUT = 0.35,
-	-- Seconds between typed/spoken words (chat + box + voice combined). Each
-	-- word adds one copy of a spell (up to MAX_HAND held, duplicates allowed).
-	TYPE_COOLDOWN = 1,
+	-- Seconds between drawn spells. Each recognized drawing adds one copy of
+	-- a spell (up to MAX_HAND held, duplicates allowed).
+	DRAW_COOLDOWN = 1,
+	-- Largest stroke the server will look at (points), and how far from the
+	-- screen a point may be (in screen heights). Clients send ~4px samples.
+	DRAW_MAX_POINTS = 200,
+	DRAW_MAX_COORD = 6,
+	-- Longest a single stroke may take on the client before it auto-submits.
+	DRAW_MAX_SECONDS = 6,
 
 	-- Movement & aiming. Players move faster than Roblox's default (16) to
 	-- keep fights lively; projectiles are sped up by the same ratio and get
@@ -32,9 +38,9 @@ local Config = {
 	-- Seconds of the "VS" intro before players are moved into the arena.
 	INTRO_TIME = 4,
 
-	-- Settings: the default key that focuses the "type a spell" box, and keys
-	-- that can't be bound to it (movement, chat, hotbar, menus).
-	DEFAULT_TYPE_KEY = "T",
+	-- Settings: the default key that starts drawing a spell, and keys that
+	-- can't be bound to it (movement, chat, hotbar, cancel, menus).
+	DEFAULT_DRAW_KEY = "F",
 	RESERVED_KEYS = {
 		"W",
 		"A",
@@ -52,6 +58,7 @@ local Config = {
 		"Four",
 		"Five",
 		"R",
+		"G",
 		"LeftShift",
 		"RightShift",
 		"Up",
@@ -112,9 +119,9 @@ local Config = {
 
 	-- Shown when a word doesn't match any spell.
 	FIZZLE_HINTS = {
-		"Fizzle! Try a spell from your hand.",
-		"The magic didn't understand that word.",
-		"Hmm... try 'fireball' or 'rock wall'!",
+		"Fizzle! The magic couldn't read that drawing.",
+		"Draw one smooth shape, big and slow.",
+		"Not quite! Check the glyph cards and trace the shape.",
 	},
 
 	-- Set true only in Studio test sessions; enables gated debug remotes.

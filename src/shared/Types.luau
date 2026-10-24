@@ -99,7 +99,8 @@ export type SpellStats = {
 export type SpellDef = {
 	id: string,
 	name: string,
-	aliases: { string },
+	aliases: { string }, -- admin names (`;give fire`); players draw `glyph` instead
+	glyph: string, -- id in Spells/Glyphs: the shape drawn to ready this spell
 	rarity: Rarity,
 	archetype: Archetype,
 	cooldown: number,
@@ -141,7 +142,7 @@ export type Profile = {
 		quests: { DailyQuest },
 	},
 	settings: {
-		typeKey: string, -- Enum.KeyCode name that focuses the "type a spell" box
+		drawKey: string, -- Enum.KeyCode name that starts drawing a spell
 	},
 }
 
