@@ -6,8 +6,9 @@
 --     keyboards on mobile, console, and VR. Pasting is blocked client-side.
 --   * Voice (VoiceService calls submit with source "voice").
 --
--- A word grants ONE copy of the spell (HandService.grant). Words are limited
--- to one per Config.TYPE_COOLDOWN seconds per player across all sources.
+-- A word adds ONE copy of the spell to the hotbar (HandService.grant; up to
+-- 5 copies, duplicates allowed). Words are limited to one per
+-- Config.TYPE_COOLDOWN seconds per player across all sources.
 --
 -- Messages starting with Config.ADMIN_PREFIX go to the admin command handler
 -- (AdminService installs it) instead, from chat or the spell box.
@@ -78,13 +79,19 @@ function SpellInputService.submit(player: Player, text: string, source: Source):
 		toastRemote:FireClient(player, message or "Fizzle!", "fizzle")
 		return nil
 	end
-	if message then
-		toastRemote:FireClient(player, message, "info") -- already held
-		return spellId
-	end
 	local def = SpellDefinitions.get(spellId)
 	if def then
-		toastRemote:FireClient(player, `+1 {def.name}!`, "ready")
+		local held = 0
+		for _, id in HandService.getCopies(player) do
+			if id == spellId then
+				held += 1
+			end
+		end
+		toastRemote:FireClient(
+			player,
+			`+1 {def.name}!` .. (if held > 1 then ` (x{held})` else ""),
+			"ready"
+		)
 	end
 	return spellId
 end

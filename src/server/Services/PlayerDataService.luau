@@ -45,6 +45,7 @@ local function defaultProfile(): Profile
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
+		settings = { typeKey = Config.DEFAULT_TYPE_KEY },
 	}
 end
 
@@ -68,6 +69,11 @@ local function reconcile(data: any): Profile
 	for key, value in base.daily :: any do
 		if data.daily[key] == nil then
 			data.daily[key] = value
+		end
+	end
+	for key, value in base.settings :: any do
+		if data.settings[key] == nil then
+			data.settings[key] = value
 		end
 	end
 	data.schema = SCHEMA

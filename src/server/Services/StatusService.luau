@@ -12,8 +12,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 
-local BASE_WALKSPEED = 18
-local BASE_JUMP = 50
+local BASE_WALKSPEED = Config.WALK_SPEED
+local BASE_JUMP = Config.JUMP_POWER
 
 local StatusService = {}
 

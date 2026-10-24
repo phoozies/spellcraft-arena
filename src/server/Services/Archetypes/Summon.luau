@@ -137,6 +137,7 @@ function Summon.cast(ctx: any): boolean?
 							material = Enum.Material.Neon,
 						},
 						spellName = def.name,
+						fxKey = "Fireball",
 						ignore = { model },
 					})
 				end
@@ -145,6 +146,11 @@ function Summon.cast(ctx: any): boolean?
 				nextAttack = now + 2
 				local radius = stats.radius or 14
 				DestructibleService.poof(body.Position, visual.color)
+				DestructibleService.shockwave(
+					body.Position - Vector3.new(0, 1, 0),
+					radius,
+					visual.color
+				)
 				for _, hit in ctx.enemiesNear(body.Position, radius) do
 					if hit.character then
 						DestructibleService.damage(

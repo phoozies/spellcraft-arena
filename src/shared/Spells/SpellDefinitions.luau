@@ -6,12 +6,13 @@
 -- Aliases are what players can type or say. They are matched after
 -- normalization (lowercase, no punctuation), so list plain words only.
 --
--- Copy model: typing a word grants ONE copy of the spell; casting uses it
--- up. `cooldown` is the spell's recharge: how long after casting before its
--- word can be typed again. Everything is balanced assuming a player can
--- re-type a spell about once per second (Config.TYPE_COOLDOWN), so cheap
--- spells have 0–1s recharges and low per-cast numbers, while big spells
--- carry long recharges. tests/Balance.spec.luau enforces the budgets.
+-- Copy model: typing a word adds one copy of the spell to the hotbar
+-- (up to 5 held, duplicates allowed); casting uses a copy up. `cooldown` is
+-- the spell's CAST cooldown, shared by every copy of that spell. Players
+-- have 100 HP and can stockpile copies, so damage per cast cooldown is the
+-- budget that matters (~16-20 DPS for the best spammable spells, a ~6s
+-- time-to-kill). Numbers here are base values: projectile speed is scaled
+-- by Config.PROJECTILE_SPEED_SCALE. tests/Balance.spec.luau enforces it.
 
 local Types = require(script.Parent.Parent.Types)
 
@@ -33,7 +34,7 @@ local DEFINITIONS: { SpellDef } = {
 		unlockLevel = 1,
 		starter = true,
 		archetype = "Projectile",
-		cooldown = 0,
+		cooldown = 0.9,
 		description = "Hurl a ball of fire that burns players and structures.",
 		stats = { damage = 16, speed = 95, range = 160, radius = 2, knockback = 18 },
 		visual = {
@@ -78,8 +79,8 @@ local DEFINITIONS: { SpellDef } = {
 		starter = true,
 		archetype = "Placeable",
 		cooldown = 1,
-		description = "Raise a sturdy stone wall that blocks spells.",
-		stats = { health = 140, lifetime = 20, maxActive = 3 },
+		description = "Raise a stone wall that blocks spells. It breaks apart block by block.",
+		stats = { health = 150, lifetime = 20, maxActive = 3, segments = { x = 3, y = 2 } },
 		visual = {
 			shape = "Block",
 			size = Vector3.new(12, 8, 2),
@@ -114,7 +115,7 @@ local DEFINITIONS: { SpellDef } = {
 		rarity = "Common",
 		unlockLevel = 2,
 		archetype = "Placeable",
-		cooldown = 0,
+		cooldown = 0.5,
 		description = "Drop a crate to hide behind or climb on.",
 		stats = { health = 70, lifetime = 25, maxActive = 3 },
 		visual = {
@@ -148,7 +149,7 @@ local DEFINITIONS: { SpellDef } = {
 		rarity = "Common",
 		unlockLevel = 2,
 		archetype = "Projectile",
-		cooldown = 0,
+		cooldown = 0.5,
 		description = "A quick little zap. Low damage, super fast.",
 		stats = { damage = 9, speed = 170, range = 140, radius = 1 },
 		visual = {
@@ -659,8 +660,8 @@ local DEFINITIONS: { SpellDef } = {
 		unlockLevel = 9,
 		archetype = "Placeable",
 		cooldown = 10,
-		description = "A big castle wall. Very hard to break.",
-		stats = { health = 400, lifetime = 25, maxActive = 1 },
+		description = "A big castle wall. Very hard to break, but it crumbles block by block.",
+		stats = { health = 450, lifetime = 25, maxActive = 1, segments = { x = 5, y = 3 } },
 		visual = {
 			shape = "Block",
 			size = Vector3.new(20, 14, 4),
@@ -796,7 +797,7 @@ local DEFINITIONS: { SpellDef } = {
 		unlockLevel = 10,
 		archetype = "Buff",
 		cooldown = 15,
-		description = "All your spell recharges are cut in half for 6 seconds.",
+		description = "All your spell cooldowns are cut in half for 6 seconds.",
 		stats = { cooldownCut = 0.5, duration = 6 },
 		visual = {
 			shape = "Wedge",

@@ -73,6 +73,7 @@ local function burst(ctx: any, center: Vector3)
 	TweenService:Create(flash, TweenInfo.new(0.5), { Transparency = 1 }):Play()
 	Debris:AddItem(flash, 0.6)
 	DestructibleService.poof(center, ctx.def.visual.color)
+	DestructibleService.shockwave(center, radius, ctx.def.visual.color)
 
 	for _, hit in ctx.enemiesNear(center, radius) do
 		if hit.character then

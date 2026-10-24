@@ -82,16 +82,40 @@ function DestructibleService.canHarm(attacker: Player?, target: Instance): boole
 	return relation(attacker, owner, resolved)
 end
 
+local function partsOf(target: Instance): { BasePart }
+	if target:IsA("BasePart") then
+		return { target }
+	end
+	local parts = {}
+	for _, d in target:GetDescendants() do
+		if d:IsA("BasePart") then
+			table.insert(parts, d)
+		end
+	end
+	return parts
+end
+
+-- Health bar + visible wear: damaged things darken as they lose health so
+-- players can see a wall is about to give.
 local function updateBar(target: Instance)
+	local health = target:GetAttribute("Health") :: number? or 0
+	local max = target:GetAttribute("MaxHealth") :: number? or 1
+	local ratio = math.clamp(health / max, 0, 1)
 	local bar = target:FindFirstChild("HealthBar", true)
 	if bar and bar:IsA("BillboardGui") then
 		local fill = bar:FindFirstChild("Fill", true)
-		local health = target:GetAttribute("Health") :: number? or 0
-		local max = target:GetAttribute("MaxHealth") :: number? or 1
 		if fill and fill:IsA("Frame") then
-			fill.Size = UDim2.fromScale(math.clamp(health / max, 0, 1), 1)
+			fill.Size = UDim2.fromScale(ratio, 1)
 		end
 		bar.Enabled = health < max
+	end
+	for _, part in partsOf(target) do
+		local base = part:GetAttribute("BaseColor")
+		if typeof(base) ~= "Color3" then
+			base = part.Color
+			part:SetAttribute("BaseColor", base)
+		end
+		part.Color = (base :: Color3):Lerp(Color3.new(0.1, 0.08, 0.08), (1 - ratio) * 0.45)
 	end
 end
 
@@ -119,23 +143,32 @@ local function poof(position: Vector3, color: Color3)
 end
 DestructibleService.poof = poof
 
+-- Breaks every part of `target` into tumbling chunks (client-rendered).
+-- Visual only; the caller destroys the real instance.
+function DestructibleService.shatter(target: Instance)
+	for _, part in partsOf(target) do
+		if part.Transparency < 1 then
+			fxRemote:FireAllClients("shatter", part.CFrame, part.Size, part.Color, part.Material)
+		end
+	end
+end
+
+-- Expanding ground ring for slams and area bursts (client-rendered).
+function DestructibleService.shockwave(position: Vector3, radius: number, color: Color3)
+	fxRemote:FireAllClients("shockwave", position, radius, color)
+end
+
+-- Dust ring kicked up when something rises out of the ground.
+function DestructibleService.dust(position: Vector3, width: number, color: Color3)
+	fxRemote:FireAllClients("dust", position, width, color)
+end
+
 local function breakStructure(target: Instance, destroyer: Player?)
 	if target:GetAttribute("Broken") then
 		return
 	end
 	target:SetAttribute("Broken", true)
-	local position = if target:IsA("Model")
-		then target:GetPivot().Position
-		elseif target:IsA("BasePart") then target.Position
-		else Vector3.zero
-	local color = Color3.fromRGB(200, 200, 200)
-	local part = if target:IsA("BasePart")
-		then target
-		else target:FindFirstChildWhichIsA("BasePart", true)
-	if part then
-		color = part.Color
-	end
-	poof(position, color)
+	DestructibleService.shatter(target)
 	DestructibleService.Destroyed:Fire(target, destroyer)
 	target:Destroy()
 end
@@ -212,6 +245,11 @@ function DestructibleService.damage(
 		else nil
 	if propPosition then
 		showNumber(propPosition, amount, "damage", attacker, owner)
+		-- A few chips fly off on every hit (skip tiny zone ticks).
+		local part = partsOf(resolved)[1]
+		if part and amount >= 3 and health > 0 then
+			fxRemote:FireAllClients("chip", propPosition, part.Color)
+		end
 	end
 	if health <= 0 then
 		breakStructure(resolved, attacker)

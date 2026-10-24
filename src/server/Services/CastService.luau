@@ -53,6 +53,7 @@ local CastService = {}
 local hooks: WorldHooks? = nil
 local archetypes: { [string]: any } = {}
 local toastRemote: RemoteEvent
+local fxRemote: RemoteEvent
 
 function CastService.setWorldHooks(newHooks: WorldHooks)
 	hooks = newHooks
@@ -69,7 +70,8 @@ local function enemiesNear(caster: Player, position: Vector3, radius: number): {
 			and root
 			and humanoid
 			and humanoid.Health > 0
-			and (root.Position - position).Magnitude <= radius
+			-- Bigger hitbox: areas reach a little past their visual edge.
+			and (root.Position - position).Magnitude <= radius + Config.HITBOX_BONUS
 			and DestructibleService.canHarm(caster, character)
 		then
 			table.insert(results, {
@@ -151,7 +153,16 @@ local function onCast(player: Player, target: any, rotationY: any)
 		toastRemote:FireClient(player, "Type a spell word first!", "fizzle")
 		return
 	end
-	if not HandService.checkCastLockout(player) then
+	-- Copies of the same spell share one cast cooldown.
+	local ready, left = HandService.checkCast(player, spellId)
+	if not ready then
+		if left > Config.GLOBAL_CAST_LOCKOUT then
+			toastRemote:FireClient(
+				player,
+				`{def.name} cooling down ({math.ceil(left * 10) / 10}s)`,
+				"cooldown"
+			)
+		end
 		return
 	end
 
@@ -200,13 +211,15 @@ local function onCast(player: Player, target: any, rotationY: any)
 		return -- archetype rejected (e.g. invalid placement); the copy is kept
 	end
 
-	-- The copy is used up; the word recharges before it can be typed again.
-	local recharge = def.cooldown
+	-- The copy is used up and every copy of this spell shares the cooldown.
+	local cooldown = def.cooldown
 	if StatusService.has(character, "CooldownCut") then
-		recharge *= 0.5
+		cooldown *= 0.5
 	end
-	HandService.consume(player, spellId)
-	HandService.startRecharge(player, spellId, recharge)
+	HandService.consume(player)
+	HandService.startCooldown(player, spellId, cooldown)
+	-- Everyone nearby plays the cast animation + magic circle.
+	fxRemote:FireAllClients("cast", character, spellId, target)
 
 	local profile = PlayerDataService.get(player)
 	if profile then
@@ -220,6 +233,7 @@ end
 
 function CastService.init()
 	toastRemote = Remotes.get("Toast")
+	fxRemote = Remotes.get("Fx")
 	for _, module in script.Parent:WaitForChild("Archetypes"):GetChildren() do
 		if module:IsA("ModuleScript") then
 			archetypes[module.Name] = require(module) :: any

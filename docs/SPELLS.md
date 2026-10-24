@@ -7,29 +7,37 @@ Wordcraft Arena v1 has 40 spells across 10 levels. Players start with the three 
 
 ## Getting spells: the copy model
 
-- **Typing a spell word gives you one copy of that spell.** You can never hold two copies of the same spell, so typing a word you already hold just readies it.
-- **Casting uses the copy up.** To cast it again, type the word again.
+- **Typing a spell word adds one copy of that spell to your hotbar.** You can hold **up to 5 copies in any mix**, including 5 of the same spell. When all 5 slots are full, cast one before typing another.
+- **Casting uses up a copy.** Type the word again to get more.
+- **Copies of the same spell share one cast cooldown** (the **Cooldown** column below). After you cast a Fireball, your other Fireballs wait out its 0.9s before they can fire.
 - **You can submit one word per second.** This **typing cooldown** (`Config.TYPE_COOLDOWN = 1`) is shared across chat, the spell box, and voice. Pasting into the spell box is blocked.
-- **After you cast a spell, its word recharges** for the time in the **Recharge** column below before you can type it again.
 - **Which words work:** in the hub, any spell you own. In a match, only the words in your match spellbook (3 random owned spells, plus one per draft, up to 5).
-- **You hold up to 5 copies.** In the hub, the oldest copy drops off when you take a new one.
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 
-Since a cheap spell can be re-typed about once per second, every spell's value is measured per `max(1s, recharge)`:
+Every player has **100 HP**. Since you can stockpile copies, the fastest a spell can be re-cast is its cooldown (or the 0.35s global cast lockout), so every spell's value is measured per `max(0.35s, cooldown)`:
 
 | Budget | Limit |
 |---|---|
+| Any single hit (including combos) | ≤ 34 damage (no one-shots; best spam is about a 6s kill) |
 | Burst damage (including combos) | ≤ 20 per second |
 | Lingering zone damage | ≤ 24 total per second |
 | Healing / shields | ≤ 5 per second |
-| Hard crowd control (Root, Time Stop, Shrink) | ≤ 60% uptime, recharge ≥ 2s, and **2.5s immunity** after it wears off (no chaining or refreshing) |
+| Hard crowd control (Root, Time Stop, Shrink) | ≤ 60% uptime, cooldown ≥ 2s, and **2.5s immunity** after it wears off (no chaining or refreshing) |
 | Placeables | 1–3 alive per player per spell, all expire |
 | Lingering zones | 1 alive per player per spell (a recast replaces the old one) |
-| Summons | 1 alive per player per spell, recharge ≥ 5s |
-| Legendary spells | recharge ≥ 10s |
+| Summons | 1 alive per player per spell, cooldown ≥ 5s |
+| Legendary spells | cooldown ≥ 10s |
 
 Shields don't stack: a recast refills the shield to its full value instead of adding to it.
+
+**Movement and hitboxes:**
+- Players walk at 24 (Roblox's default is 16). Every projectile flies at 1.5× its listed `speed` (`Config.PROJECTILE_SPEED_SCALE`) to keep up.
+- Bolts sweep a thin sphere against plain map geometry, so they glide over floors. Against players and breakable objects they use their radius **+1.5 studs** (`Config.HITBOX_BONUS`). Area spells also reach 1.5 studs past their edge against players.
+
+**Health:** there's no regeneration in arenas, only healing spells. The hub regenerates 5 HP/s.
+
+**Breakable blocks:** Rock Wall (3×2) and Castle (5×3) are built from separately breakable blocks, each holding an equal share of the spell's `health`. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
 
 ## How words are matched
 
@@ -54,15 +62,15 @@ Each glyph is a different shape, so rarity is readable without relying on color 
 
 ## Spells
 
-| Lvl | Spell | Say or type | Archetype | Rarity | Recharge | What it does |
+| Lvl | Spell | Say or type | Archetype | Rarity | Cooldown | What it does |
 |---|---|---|---|---|---|---|
-| 1 | **Fireball** ⭐ | fireball, fire, flame, blaze | Projectile | Common | 0s | Hurl a ball of fire that burns players and structures. |
+| 1 | **Fireball** ⭐ | fireball, fire, flame, blaze | Projectile | Common | 0.9s | Hurl a ball of fire that burns players and structures. |
 | 1 | **Water Lock** ⭐ | water lock, waterlock, water, bubble, trap | Control | Common | 3s | Trap an enemy in a bubble so they can't move for 1.5 seconds. |
-| 1 | **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Raise a sturdy stone wall that blocks spells. |
+| 1 | **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Raise a stone wall that blocks spells. It breaks apart block by block. |
 | 2 | **Wind Gust** | wind gust, wind, gust, push | Projectile | Common | 1.5s | A blast of wind that shoves enemies away. |
-| 2 | **Wooden Crate** | wooden crate, crate, box | Placeable | Common | 0s | Drop a crate to hide behind or climb on. |
+| 2 | **Wooden Crate** | wooden crate, crate, box | Placeable | Common | 0.5s | Drop a crate to hide behind or climb on. |
 | 2 | **Heal Leaf** | heal leaf, heal, leaf, medicine | Buff | Common | 4s | Restore 15 health. |
-| 2 | **Spark** | spark, zap | Projectile | Common | 0s | A quick little zap. Low damage, super fast. |
+| 2 | **Spark** | spark, zap | Projectile | Common | 0.5s | A quick little zap. Low damage, super fast. |
 | 3 | **Ice Shard** | ice shard, ice, shard, freeze | Projectile | Common | 1s | An icy spike that slows whoever it hits. |
 | 3 | **Bounce Pad** | bounce pad, trampoline, spring, bounce | Placeable | Common | 1s | A springy pad that launches anyone who steps on it. |
 | 3 | **Mud Puddle** | mud puddle, mud, swamp | Zone | Common | 3s | A sticky puddle that slows enemies inside it. |
@@ -88,14 +96,14 @@ Each glyph is a different shape, so rarity is readable without relying on color 
 | 8 | **Robot** | robot, golem, bot | Summon | Epic | 8s | A clunky robot buddy that punches enemies. |
 | 8 | **Giant** | giant, grow, big, huge | Buff | Rare | 10s | Grow huge: bigger, tougher, and harder to knock back. |
 | 9 | **Black Hole** | black hole, blackhole, vortex, void | Zone | Legendary | 12s | A tiny black hole that drags everything in and crushes it. |
-| 9 | **Castle** | castle, fortress | Placeable | Epic | 10s | A big castle wall. Very hard to break. |
+| 9 | **Castle** | castle, fortress | Placeable | Epic | 10s | A big castle wall. Very hard to break, but it crumbles block by block. |
 | 9 | **Shrink** | shrink, tiny, small, mini | Control | Epic | 6s | Shrink an enemy so they're tiny and weak for 3 seconds. |
 | 9 | **Rainbow** | rainbow | Zone | Rare | 8s | A rainbow that heals you and your teammates inside it. |
 | 10 | **Phoenix** | phoenix, rebirth, revive | Buff | Legendary | 25s | If you're knocked out in the next 8 seconds, rise again at half health. |
 | 10 | **Earthquake** | earthquake, quake, tremor | Zone | Legendary | 12s | Shake the ground. Smashes structures and knocks players around. |
 | 10 | **Time Stop** | time stop, timestop, freeze time, pause, stop | Control | Legendary | 15s | Freeze every enemy near you for 1.5 seconds. |
 | 10 | **Kraken** | kraken, octopus, squid | Summon | Legendary | 12s | A giant kraken tentacle that slams enemies around it. |
-| 10 | **Wizard Hat** | wizard hat, wizard, hat, magic | Buff | Epic | 15s | All your spell recharges are cut in half for 6 seconds. |
+| 10 | **Wizard Hat** | wizard hat, wizard, hat, magic | Buff | Epic | 15s | All your spell cooldowns are cut in half for 6 seconds. |
 
 ## Archetypes and the stats they read
 
@@ -109,13 +117,13 @@ Each glyph is a different shape, so rarity is readable without relying on color 
 | Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
 | Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
 
-`cooldown` on every spell is its **recharge**: the time after casting before its word can be typed again.
+`cooldown` on every spell is its **cast cooldown**, shared by every copy of that spell you hold.
 
 **Combo:** Lightning deals ×2 damage to a target that is already Water-Locked (`comboStatus = "Root"`). Add the same two fields to any projectile to create new combos.
 
 ## Adding a spell
 
-1. Add a row to `SpellDefinitions.luau` with a unique `id`, plain-word `aliases`, a `rarity`, an `unlockLevel` (1–10), an `archetype`, `cooldown` (recharge), `stats`, and a primitive `visual`.
+1. Add a row to `SpellDefinitions.luau` with a unique `id`, plain-word `aliases`, a `rarity`, an `unlockLevel` (1–10), an `archetype`, `cooldown` (cast cooldown), `stats`, and a primitive `visual`.
 2. Run the tests. They fail if an alias collides with another spell's or if the spell breaks a balance budget.
 3. Regenerate this table.
 
@@ -125,7 +133,7 @@ Run this during a playtest (the server's module cache is fresh) and paste the ou
 
 ```lua
 local Defs = require(game.ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local lines = {"| Lvl | Spell | Say or type | Archetype | Rarity | Recharge | What it does |", "|---|---|---|---|---|---|---|"}
+local lines = {"| Lvl | Spell | Say or type | Archetype | Rarity | Cooldown | What it does |", "|---|---|---|---|---|---|---|"}
 for _, d in Defs.list do
 	table.insert(lines, ("| %d | **%s**%s | %s | %s | %s | %ss | %s |"):format(d.unlockLevel, d.name, d.starter and " ⭐" or "", table.concat(d.aliases, ", "), d.archetype, d.rarity, tostring(d.cooldown), d.description))
 end

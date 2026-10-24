@@ -152,6 +152,7 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 							material = Enum.Material.Metal,
 						},
 						spellName = ctx.def.name,
+						fxKey = "Cannonball",
 						ignore = { model },
 					})
 				end
@@ -176,6 +177,76 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 			end
 		end)
 	end
+end
+
+-- Builds a wall out of a grid of separately breakable blocks (Rock Wall,
+-- Castle). The grid is an untagged Model holding one Destructible model per
+-- block; it removes itself once every block is broken.
+local function buildSegmented(ctx: any, cframe: CFrame): Model
+	local def = ctx.def
+	local visual = def.visual
+	local stats = def.stats
+	local grid = stats.segments :: { x: number, y: number }
+	local count = grid.x * grid.y
+	local blockSize = Vector3.new(visual.size.X / grid.x, visual.size.Y / grid.y, visual.size.Z)
+
+	local wall = Instance.new("Model")
+	wall.Name = def.name
+	wall:SetAttribute("SpellId", def.id)
+	wall:SetAttribute("OwnerUserId", ctx.player.UserId)
+	wall.Parent = ctx.structures
+
+	local blockVisual = table.clone(visual)
+	blockVisual.size = blockSize - Vector3.new(0.08, 0.08, 0) -- tiny gaps read as masonry
+	for row = 1, grid.y do
+		for col = 1, grid.x do
+			local block = DestructibleService.build(
+				`{def.name}Block`,
+				blockVisual,
+				(stats.health or 100) / count,
+				ctx.player,
+				ctx.team
+			)
+			local body = block.PrimaryPart :: BasePart
+			-- Slight per-block color variation so the wall looks hand-built.
+			local shade = 1 + (math.random() - 0.5) * 0.12
+			body.Color = Color3.new(
+				math.clamp(visual.color.R * shade, 0, 1),
+				math.clamp(visual.color.G * shade, 0, 1),
+				math.clamp(visual.color.B * shade, 0, 1)
+			)
+			body:SetAttribute("BaseColor", body.Color)
+			local offset = Vector3.new(
+				(col - (grid.x + 1) / 2) * blockSize.X,
+				(row - (grid.y + 1) / 2) * blockSize.Y,
+				0
+			)
+			local final = cframe * CFrame.new(offset)
+			-- Each row rises out of the ground a beat after the one below it.
+			body.CFrame = final - Vector3.new(0, visual.size.Y, 0)
+			block.Parent = wall
+			task.delay((row - 1) * 0.06, function()
+				for i = 1, 6 do
+					if not body.Parent then
+						return
+					end
+					body.CFrame = final - Vector3.new(0, visual.size.Y * (1 - i / 6), 0)
+					task.wait()
+				end
+			end)
+		end
+	end
+	DestructibleService.dust(
+		cframe.Position - Vector3.new(0, visual.size.Y / 2, 0),
+		visual.size.X,
+		visual.color
+	)
+	wall.ChildRemoved:Connect(function()
+		if #wall:GetChildren() == 0 then
+			wall:Destroy()
+		end
+	end)
+	return wall
 end
 
 function Placeable.cast(ctx: any): boolean?
@@ -224,13 +295,32 @@ function Placeable.cast(ctx: any): boolean?
 		end
 	end
 
+	if stats.segments then
+		local wall = buildSegmented(ctx, cframe)
+		track(ctx.player, wall, def.id, stats.maxActive or 2)
+		if stats.lifetime then
+			task.delay(stats.lifetime, function()
+				if wall.Parent then
+					for _, block in wall:GetChildren() do
+						if block:IsA("Model") then
+							DestructibleService.shatter(block)
+						end
+					end
+					wall:Destroy()
+				end
+			end)
+		end
+		return true
+	end
+
 	local model =
 		DestructibleService.build(def.name, visual, stats.health or 100, ctx.player, ctx.team)
 	model:SetAttribute("SpellId", def.id)
 	local body = model.PrimaryPart :: BasePart
 	body.CFrame = cframe * Placement.partOffset(visual)
 
-	-- Rise-from-the-ground animation for a little juice.
+	-- Rise-from-the-ground animation with a dust burst.
+	DestructibleService.dust(ground, math.max(visual.size.X, visual.size.Z), visual.color)
 	local finalCFrame = body.CFrame
 	body.CFrame = finalCFrame - Vector3.new(0, Placement.height(visual), 0)
 	model.Parent = ctx.structures

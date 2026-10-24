@@ -194,15 +194,11 @@ local function tickWords()
 	for id, label in wordChips do
 		local def = SpellDefinitions.get(id)
 		local left = ClientState.cooldownLeft(id)
-		local held = table.find(ClientState.hand, id) ~= nil
 		if def then
 			label.Text = if left > 0
-				then `{string.lower(def.name)} {math.ceil(left)}s`
+				then `{string.lower(def.name)} {math.ceil(left * 10) / 10}s`
 				else string.lower(def.name)
-			label.TextColor3 = if left > 0
-				then Theme.COLORS.bad
-				elseif held then Theme.COLORS.subtext
-				else Theme.COLORS.text
+			label.TextColor3 = if left > 0 then Theme.COLORS.bad else Theme.COLORS.text
 		end
 	end
 end
@@ -281,20 +277,16 @@ local function refreshHotbar()
 			slot.icon.TextColor3 = def.visual.color
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
-			slot.stroke.Color = if id == ClientState.readied
-				then Theme.COLORS.accent
-				else info.color
-			slot.stroke.Thickness = if id == ClientState.readied then 5 else 3
-			slot.button.BackgroundColor3 = if id == ClientState.readied
+			local isReadied = i == ClientState.readiedSlot
+			slot.stroke.Color = if isReadied then Theme.COLORS.accent else info.color
+			slot.stroke.Thickness = if isReadied then 5 else 3
+			slot.button.BackgroundColor3 = if isReadied
 				then Color3.fromRGB(84, 80, 140)
 				else Theme.COLORS.panelLight
 		else
-			-- Empty slot: hint that typing a word fills it.
-			local slotsShown = math.max(
-				#ClientState.hand + 1,
-				if ClientState.spellbook then #ClientState.spellbook else Config.STARTING_HAND
-			)
-			slot.button.Visible = i <= math.min(slotsShown, Config.MAX_HAND)
+			-- Empty slot: hint that typing a word fills it. All 5 slots
+			-- show, since you can stockpile up to 5 copies.
+			slot.button.Visible = true
 			slot.icon.Text = ""
 			slot.name.Text = if i == #ClientState.hand + 1 then "type!" else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
@@ -309,7 +301,20 @@ end
 local typeBar: Frame
 
 local function tickCooldowns()
-	-- Held copies are always castable; recharges show on the word chips.
+	-- Copies of the same spell share one cooldown, so every slot holding
+	-- that spell shows the same sweep.
+	for i, slot in slots do
+		local id = ClientState.hand[i]
+		local def = id and SpellDefinitions.get(id)
+		local left = if id then ClientState.cooldownLeft(id) else 0
+		if def and left > 0 and def.cooldown > 0 then
+			slot.cooldown.Size = UDim2.fromScale(1, math.clamp(left / def.cooldown, 0, 1))
+			slot.cooldownText.Text = if left >= 1 then tostring(math.ceil(left)) else ""
+		else
+			slot.cooldown.Size = UDim2.fromScale(1, 0)
+			slot.cooldownText.Text = ""
+		end
+	end
 	tickWords()
 	local typeLeft = math.max(0, ClientState.typeReadyAt - os.clock())
 	typeBar.Size = UDim2.new(math.clamp(typeLeft / Config.TYPE_COOLDOWN, 0, 1), 0, 0, 4)
@@ -320,6 +325,7 @@ local function tickCooldowns()
 			then `Round {state.round} starts in {left}`
 			elseif state.phase == "Round" then `Round {state.round} — {left}s`
 			elseif state.phase == "Draft" then `Draft a spell! {left}s`
+			elseif state.phase == "Intro" then "Match starting…"
 			else "Match over"
 		matchText.Text = phaseText
 	end
@@ -339,7 +345,7 @@ local function buildSpellBox(root: Frame)
 	spellBox.BackgroundColor3 = Theme.COLORS.panel
 	spellBox.BackgroundTransparency = 0.15
 	spellBox.TextColor3 = Theme.COLORS.text
-	spellBox.PlaceholderText = "Type a spell... (T)"
+	spellBox.PlaceholderText = `Type a spell... ({Config.DEFAULT_TYPE_KEY})`
 	spellBox.PlaceholderColor3 = Theme.COLORS.subtext
 	spellBox.Font = Theme.FONT
 	spellBox.TextScaled = true
@@ -582,6 +588,9 @@ end
 function HudController.start()
 	ClientState.HandChanged:Connect(refreshHotbar)
 	ClientState.ProfileChanged:Connect(refreshLevel)
+	ClientState.ProfileChanged:Connect(function()
+		spellBox.PlaceholderText = `Type a spell... ({ClientState.typeKeyName()})`
+	end)
 	ClientState.MatchChanged:Connect(refreshMatch)
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)

@@ -1,7 +1,7 @@
 --!strict
--- Balance budgets for the copy model: any spell can be re-typed about once
--- per second (Config.TYPE_COOLDOWN), so what matters is value per
--- max(TYPE_COOLDOWN, recharge). These tests keep future tuning honest.
+-- Balance budgets. Every player has Config.PLAYER_MAX_HEALTH (100) HP and
+-- can stockpile up to 5 copies of a spell, so what matters is value per
+-- max(GLOBAL_CAST_LOCKOUT, cast cooldown). These tests keep tuning honest.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,7 +21,9 @@ return function(t: any)
 	t.describe("Balance (copy model, ~1s re-type)", function()
 		for _, def in SpellDefinitions.list do
 			local s = def.stats
-			local window = math.max(Config.TYPE_COOLDOWN, def.cooldown)
+			-- Copies can be stockpiled (5 held), so the fastest a spell can be
+			-- re-cast is its shared cast cooldown (or the global lockout).
+			local window = math.max(Config.GLOBAL_CAST_LOCKOUT, def.cooldown)
 
 			t.it(`{def.name}: burst damage within budget`, function()
 				if
@@ -33,6 +35,13 @@ return function(t: any)
 				then
 					local hit = s.damage * (s.comboMultiplier or 1)
 					t.expect(hit / window <= MAX_BURST_DPS).toBeTruthy()
+				end
+			end)
+
+			t.it(`{def.name}: never takes more than a third of a player's HP in one hit`, function()
+				if s.damage then
+					local hit = s.damage * (s.comboMultiplier or 1)
+					t.expect(hit <= Config.PLAYER_MAX_HEALTH * 0.34).toBeTruthy()
 				end
 			end)
 

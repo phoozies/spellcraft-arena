@@ -5,7 +5,13 @@
 --   poof           (position, color)                               debris burst
 --   beam           (from, to, color)                               chain flash
 --   number         (position, amount, kind)                        floating damage/heal/shield number
+--   cast           (character, spellId, target)                    arm raise + magic circle
+--   shatter        (cframe, size, color, material)                 block breaks into chunks
+--   chip           (position, color)                               chips off a damaged block
+--   dust           (position, width, color)                        dust ring under a placed object
+--   shockwave      (position, radius, color)                       ground ring for slams/bursts
 -- and spins parts tagged "SpinFx" (Tornado, Black Hole) locally.
+-- The looks live in Fx/SpellVfx.
 --
 -- The server stays authoritative for hits; visuals here are a straight-line
 -- prediction that is removed when the server says the projectile ended.
@@ -18,7 +24,9 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
+local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local NUMBER_COLORS: { [string]: Color3 } = {
@@ -40,6 +48,8 @@ type Bolt = {
 	speed: number,
 	range: number,
 	born: number,
+	fxKey: string?,
+	color: Color3,
 }
 
 local bolts: { [number]: Bolt } = {}
@@ -65,7 +75,8 @@ local function onProjectile(
 	direction: Vector3,
 	speed: number,
 	range: number,
-	visual: Types.Visual
+	visual: Types.Visual,
+	fxKey: string?
 )
 	if not near(origin) then
 		return
@@ -82,11 +93,7 @@ local function onProjectile(
 	part.CanTouch = false
 	part.CastShadow = false
 	part.CFrame = CFrame.lookAt(origin, origin + direction)
-	local light = Instance.new("PointLight")
-	light.Color = visual.color
-	light.Range = 8
-	light.Brightness = 1.5
-	light.Parent = part
+	SpellVfx.decorateBolt(part, fxKey, visual.color)
 	part.Parent = folder
 	bolts[id] = {
 		part = part,
@@ -95,6 +102,8 @@ local function onProjectile(
 		speed = speed,
 		range = range,
 		born = os.clock(),
+		fxKey = fxKey,
+		color = visual.color,
 	}
 end
 
@@ -103,7 +112,28 @@ local function onProjectileEnd(id: number, position: Vector3)
 	if bolt then
 		bolts[id] = nil
 		bolt.part.CFrame = CFrame.lookAt(position, position + bolt.direction)
-		Debris:AddItem(bolt.part, 0.03)
+		bolt.part.Transparency = 1
+		-- Let the trail/particles finish before removing the part.
+		for _, child in bolt.part:GetChildren() do
+			if child:IsA("ParticleEmitter") then
+				child.Enabled = false
+			end
+		end
+		Debris:AddItem(bolt.part, 0.4)
+		if near(position) then
+			SpellVfx.impact(folder, position, bolt.fxKey, bolt.color)
+		end
+	end
+end
+
+local function onCast(character: Model, spellId: string, _target: Vector3)
+	if typeof(character) ~= "Instance" or not character.Parent then
+		return
+	end
+	local def = SpellDefinitions.get(spellId)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if def and root and root:IsA("BasePart") and near(root.Position) then
+		SpellVfx.castAnimation(folder, character, def.visual.color)
 	end
 end
 
@@ -234,6 +264,28 @@ function FxController.start()
 			onBeam(...)
 		elseif kind == "number" then
 			onNumber(...)
+		elseif kind == "cast" then
+			onCast(...)
+		elseif kind == "shatter" then
+			local cframe: CFrame = (...)
+			if near(cframe.Position) then
+				SpellVfx.shatter(folder, ...)
+			end
+		elseif kind == "chip" then
+			local position: Vector3 = (...)
+			if near(position) then
+				SpellVfx.chip(folder, ...)
+			end
+		elseif kind == "dust" then
+			local position: Vector3 = (...)
+			if near(position) then
+				SpellVfx.dust(folder, ...)
+			end
+		elseif kind == "shockwave" then
+			local position: Vector3 = (...)
+			if near(position) then
+				SpellVfx.shockwave(folder, ...)
+			end
 		end
 	end)
 	RunService.RenderStepped:Connect(step)

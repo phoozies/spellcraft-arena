@@ -48,6 +48,8 @@ type Match = {
 	xp: { [Player]: number },
 	offers: { [Player]: { Types.DraftCard } },
 	ended: boolean,
+	lastRoundWinner: string?,
+	winner: string?,
 }
 
 local MatchService = {}
@@ -112,6 +114,17 @@ local function spawnAt(player: Player, cframe: CFrame, frozen: boolean)
 	end
 	character:PivotTo(cframe)
 	protect(character)
+	-- Everyone fights at the same 100 HP; our HUD and overhead bars replace
+	-- Roblox's default health display.
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.MaxHealth = Config.PLAYER_MAX_HEALTH
+		humanoid.Health = Config.PLAYER_MAX_HEALTH
+		humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+		humanoid.WalkSpeed = Config.WALK_SPEED
+		humanoid.UseJumpPower = true
+		humanoid.JumpPower = Config.JUMP_POWER
+	end
 	if frozen then
 		StatusService.setFrozen(character, true)
 	end
@@ -135,6 +148,15 @@ local function sendState(match: Match)
 	for _, team in match.teamOrder do
 		scores[teamDisplay(match, team)] = match.roundWins[team] or 0
 	end
+	local roster: { Types.RosterEntry } = {}
+	for _, player in match.players do
+		table.insert(roster, {
+			userId = player.UserId,
+			name = player.DisplayName,
+			team = teamDisplay(match, match.teams[player]),
+		})
+	end
+	local results = match.phase == "Results"
 	for _, player in match.players do
 		if player.Parent then
 			local state: Types.MatchState = {
@@ -146,6 +168,15 @@ local function sendState(match: Match)
 				scores = scores,
 				myTeam = teamDisplay(match, match.teams[player]),
 				myTeamId = match.teams[player],
+				roster = roster,
+				roundWinner = if match.lastRoundWinner
+					then teamDisplay(match, match.lastRoundWinner)
+					else nil,
+				winner = if results and match.winner then teamDisplay(match, match.winner) else nil,
+				won = if results
+					then match.winner ~= nil and match.teams[player] == match.winner
+					else nil,
+				xpGained = if results then match.xp[player] or 0 else nil,
 			}
 			stateRemote:FireClient(player, state)
 		end
@@ -272,7 +303,7 @@ local function spawnRound(match: Match)
 			character:SetAttribute("Team", team)
 		end
 		-- Every round starts empty-handed: type to summon your spells.
-		HandService.resetRecharges(player)
+		HandService.resetCooldowns(player)
 		HandService.clearCopies(player)
 	end
 end
@@ -389,6 +420,7 @@ local function finishMatch(match: Match, winner: string?)
 		return
 	end
 	match.ended = true
+	match.winner = winner
 	match.phase = "Results"
 	match.endsAt = workspace:GetServerTimeNow() + Config.RESULTS_TIME
 
@@ -416,11 +448,8 @@ local function finishMatch(match: Match, winner: string?)
 				)
 			end
 		end
-		toastRemote:FireClient(
-			player,
-			if won then `Victory! +{match.xp[player]} XP` else `Good game! +{match.xp[player]} XP`,
-			if won then "victory" else "info"
-		)
+		-- The Victory/Defeat screen (client PresentationController) shows the
+		-- result and XP from the Results state below.
 		ProgressionService.addXp(player, match.xp[player] or 0, "match")
 	end
 	sendState(match)
@@ -450,6 +479,12 @@ end
 
 local function runMatch(match: Match)
 	local winner: string? = nil
+	-- VS intro while everyone is still in the hub; clients fade to black
+	-- at the end of it, then we move them into the arena.
+	waitPhase(match, "Intro", Config.INTRO_TIME)
+	if match.ended then
+		return
+	end
 	while not match.ended do
 		match.round += 1
 		if match.round > 1 then
@@ -460,9 +495,10 @@ local function runMatch(match: Match)
 		if match.ended then
 			return
 		end
+		-- Clients show the round banner ("BLUE WINS ROUND 1" / "DRAW") from this.
+		match.lastRoundWinner = roundWinner
 		if roundWinner then
 			match.roundWins[roundWinner] = (match.roundWins[roundWinner] or 0) + 1
-			toastAll(match, `{teamDisplay(match, roundWinner)} wins round {match.round}!`, "round")
 			for _, player in connected(match) do
 				if match.teams[player] == roundWinner then
 					grantXp(match, player, Config.XP.ROUND_WIN)
@@ -472,8 +508,6 @@ local function runMatch(match: Match)
 				winner = roundWinner
 				break
 			end
-		else
-			toastAll(match, `Round {match.round} is a draw!`, "round")
 		end
 		if match.round >= Config.ROUNDS_TO_WIN * 2 + 1 then
 			break -- safety cap for repeated draws

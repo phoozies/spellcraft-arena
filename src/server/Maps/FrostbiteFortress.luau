@@ -131,6 +131,21 @@ return function(makeProp: Registrar): Model
 		makeProp(drift, 150)
 	end
 
+	-- Breakable ice-brick walls guarding the keep's flanks.
+	for _, z in { -22, 22 } do
+		MapKit.blockWall(
+			model,
+			CFrame.new(0, 0, z),
+			6,
+			3,
+			Vector3.new(3, 2.5, 2),
+			Color3.fromRGB(179, 229, 252),
+			Enum.Material.Ice,
+			35,
+			makeProp
+		)
+	end
+
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 64)
 	MapKit.ffaSpawns(spawns, Vector3.new(0, 3, 0), 45, 8)

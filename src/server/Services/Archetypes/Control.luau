@@ -49,6 +49,7 @@ function Control.cast(ctx: any): boolean?
 			stats = stats,
 			visual = ctx.def.visual,
 			spellName = ctx.def.name,
+			fxKey = ctx.def.id,
 			ignore = { ctx.character },
 		})
 		return true

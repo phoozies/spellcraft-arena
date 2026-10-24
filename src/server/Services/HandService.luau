@@ -1,16 +1,18 @@
 --!strict
--- Each player's held spell COPIES, which one is readied, and recharges.
+-- Each player's held spell COPIES (the hotbar), which slot is readied, and
+-- per-spell cast cooldowns.
 --
 -- Copy model:
--- * Typing (or saying) a spell word grants ONE copy of that spell. A player
---   can never hold two copies of the same spell.
--- * Casting uses the copy up; type the word again to get it back.
--- * After a cast the spell recharges (its `cooldown`) before its word works
---   again. SpellInputService adds a 1s typing cooldown between any words.
+-- * Typing (or saying) a spell word adds ONE copy of that spell to the
+--   hotbar. A player can hold up to MAX_HAND (5) copies in any mix —
+--   including five of the same spell.
+-- * Casting uses a copy up; type the word again to get more.
+-- * All copies of the same spell share one cast cooldown (its `cooldown`):
+--   after casting a Fireball, your other Fireballs wait for it.
+-- * SpellInputService adds a 1s typing cooldown between any words.
 --
 -- Which words work:
--- * Hub: any spell the player owns. Holding is capped at MAX_HAND copies;
---   the oldest copy drops when a new one is added.
+-- * Hub: any spell the player owns.
 -- * Match: only words in the player's match spellbook (3 random owned
 --   spells, +1 per draft, max 5). MatchService sets it.
 
@@ -23,19 +25,19 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 type State = {
-	copies: { string },
+	copies: { string }, -- hotbar slots, duplicates allowed
 	spellbook: { string }?,
-	readied: string?,
-	recharges: { [string]: number }, -- spellId -> os.clock() when it can be typed again
+	readiedSlot: number?,
+	cooldowns: { [string]: number }, -- spellId -> os.clock() when it can be cast again
 	lastCast: number,
-	freeCasting: boolean, -- admin: no recharges
+	freeCasting: boolean, -- admin: no cooldowns
 }
 
 local HandService = {}
 
 local states: { [Player]: State } = {}
 local handRemote: RemoteEvent
-local rechargeRemote: RemoteEvent
+local cooldownRemote: RemoteEvent
 
 local function stateOf(player: Player): State
 	local state = states[player]
@@ -43,8 +45,8 @@ local function stateOf(player: Player): State
 		state = {
 			copies = {},
 			spellbook = nil,
-			readied = nil,
-			recharges = {},
+			readiedSlot = nil,
+			cooldowns = {},
 			lastCast = 0,
 			freeCasting = false,
 		}
@@ -55,7 +57,7 @@ end
 
 local function push(player: Player)
 	local state = stateOf(player)
-	handRemote:FireClient(player, state.copies, state.readied, state.spellbook)
+	handRemote:FireClient(player, state.copies, state.readiedSlot, state.spellbook)
 end
 
 local function owns(player: Player, spellId: string): boolean
@@ -81,8 +83,8 @@ function HandService.setSpellbook(player: Player, spellbook: { string })
 	local state = stateOf(player)
 	state.spellbook = table.clone(spellbook)
 	state.copies = {}
-	state.readied = nil
-	state.recharges = {}
+	state.readiedSlot = nil
+	state.cooldowns = {}
 	push(player)
 end
 
@@ -101,30 +103,24 @@ function HandService.clearMatch(player: Player)
 	local state = stateOf(player)
 	state.spellbook = nil
 	state.copies = {}
-	state.readied = nil
-	state.recharges = {}
+	state.readiedSlot = nil
+	state.cooldowns = {}
 	push(player)
 end
 
-function HandService.rechargeLeft(player: Player, spellId: string): number
+function HandService.cooldownLeft(player: Player, spellId: string): number
 	local state = stateOf(player)
-	return math.max(0, (state.recharges[spellId] or 0) - os.clock())
+	return math.max(0, (state.cooldowns[spellId] or 0) - os.clock())
 end
 
--- Grants one copy of a spell (from typing/voice) and readies it.
--- Returns (ok, reason). Holding a copy already just readies it.
--- `bypass` (admin give) skips spellbook/ownership/recharge checks.
+-- Adds one copy of a spell (from typing/voice) and readies it.
+-- Returns (ok, reason). `bypass` (admin give) skips spellbook/ownership.
 function HandService.grant(player: Player, spellId: string, bypass: boolean?): (boolean, string?)
 	local def = SpellDefinitions.get(spellId)
 	if not def then
 		return false, "Unknown spell."
 	end
 	local state = stateOf(player)
-	if table.find(state.copies, spellId) then
-		state.readied = spellId
-		push(player)
-		return true, `You already have {def.name}!`
-	end
 	if not bypass then
 		if state.spellbook then
 			if not table.find(state.spellbook, spellId) then
@@ -133,29 +129,33 @@ function HandService.grant(player: Player, spellId: string, bypass: boolean?): (
 		elseif not owns(player, spellId) then
 			return false, `You haven't unlocked {def.name} yet (level {def.unlockLevel}).`
 		end
-		local left = HandService.rechargeLeft(player, spellId)
-		if left > 0 then
-			return false, `{def.name} is recharging ({math.ceil(left * 10) / 10}s)`
-		end
+	end
+	if #state.copies >= Config.MAX_HAND then
+		return false, `Your hands are full ({Config.MAX_HAND} spells). Cast one first!`
 	end
 	table.insert(state.copies, spellId)
-	while #state.copies > Config.MAX_HAND do
-		table.remove(state.copies, 1)
-	end
-	state.readied = spellId
+	state.readiedSlot = #state.copies
 	push(player)
 	return true, nil
 end
 
--- Uses up the copy after a successful cast and readies the next one.
-function HandService.consume(player: Player, spellId: string)
+-- Uses up the readied copy after a successful cast. Readies another copy
+-- of the same spell if there is one (so you can keep firing), otherwise
+-- the slot that slid into place.
+function HandService.consume(player: Player)
 	local state = stateOf(player)
-	local index = table.find(state.copies, spellId)
-	if index then
-		table.remove(state.copies, index)
+	local slot = state.readiedSlot
+	if not slot or not state.copies[slot] then
+		return
 	end
-	if state.readied == spellId then
-		state.readied = state.copies[math.min(index or 1, #state.copies)]
+	local spellId = table.remove(state.copies, slot)
+	local nextSame = table.find(state.copies, spellId)
+	if nextSame then
+		state.readiedSlot = nextSame
+	elseif #state.copies > 0 then
+		state.readiedSlot = math.min(slot, #state.copies)
+	else
+		state.readiedSlot = nil
 	end
 	push(player)
 end
@@ -163,64 +163,66 @@ end
 function HandService.clearCopies(player: Player)
 	local state = stateOf(player)
 	state.copies = {}
-	state.readied = nil
+	state.readiedSlot = nil
 	push(player)
 end
 
 function HandService.selectSlot(player: Player, slot: number)
 	local state = stateOf(player)
-	local id = state.copies[slot]
-	if id then
-		state.readied = id
+	if state.copies[slot] then
+		state.readiedSlot = slot
 		push(player)
 	end
 end
 
--- The readied spell, only if a copy is actually held.
+-- The spell in the readied slot, if any.
 function HandService.getReadied(player: Player): string?
 	local state = stateOf(player)
-	local id = state.readied
-	if id and table.find(state.copies, id) then
-		return id
-	end
-	return nil
+	local slot = state.readiedSlot
+	return if slot then state.copies[slot] else nil
 end
 
--- Global cast lockout (anti-macro). Returns (ok, secondsLeft).
-function HandService.checkCastLockout(player: Player): (boolean, number)
+-- Global cast lockout (anti-macro) + the spell's shared cast cooldown.
+-- Returns (ok, secondsLeft).
+function HandService.checkCast(player: Player, spellId: string): (boolean, number)
 	local state = stateOf(player)
-	local since = os.clock() - state.lastCast
+	local now = os.clock()
+	local since = now - state.lastCast
 	if since < Config.GLOBAL_CAST_LOCKOUT then
 		return false, Config.GLOBAL_CAST_LOCKOUT - since
+	end
+	local readyAt = state.cooldowns[spellId] or 0
+	if now < readyAt then
+		return false, readyAt - now
 	end
 	return true, 0
 end
 
--- Records a cast: starts the lockout and the spell's recharge.
-function HandService.startRecharge(player: Player, spellId: string, seconds: number)
+-- Records a cast: starts the lockout and the spell's shared cooldown.
+function HandService.startCooldown(player: Player, spellId: string, seconds: number)
 	local state = stateOf(player)
 	local now = os.clock()
 	state.lastCast = now
 	if state.freeCasting then
 		seconds = 0
 	end
-	state.recharges[spellId] = now + seconds
+	state.cooldowns[spellId] = now + seconds
 	if seconds > 0 then
 		-- Server-time timestamp the client compares against workspace:GetServerTimeNow().
-		rechargeRemote:FireClient(player, spellId, workspace:GetServerTimeNow() + seconds)
+		cooldownRemote:FireClient(player, spellId, workspace:GetServerTimeNow() + seconds)
 	end
 end
 
-function HandService.resetRecharges(player: Player)
-	stateOf(player).recharges = {}
+function HandService.resetCooldowns(player: Player)
+	stateOf(player).cooldowns = {}
 end
 
--- Admin: no recharges for this player.
+-- Admin: no cast cooldowns for this player.
 function HandService.setFreeCasting(player: Player, enabled: boolean)
 	local state = stateOf(player)
 	state.freeCasting = enabled
 	if enabled then
-		state.recharges = {}
+		state.cooldowns = {}
 	end
 end
 
@@ -230,7 +232,7 @@ end
 
 function HandService.init()
 	handRemote = Remotes.get("HandUpdated")
-	rechargeRemote = Remotes.get("CooldownStarted")
+	cooldownRemote = Remotes.get("CooldownStarted")
 end
 
 function HandService.start()

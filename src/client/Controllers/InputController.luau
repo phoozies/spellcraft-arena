@@ -114,7 +114,7 @@ local function cycleSlot(direction: number)
 	if #hand == 0 then
 		return
 	end
-	local index = table.find(hand, ClientState.readied or "") or 1
+	local index = ClientState.readiedSlot or 1
 	index = ((index - 1 + direction) % #hand) + 1
 	Remotes.get("SelectSlot"):FireServer(index)
 end
@@ -129,12 +129,13 @@ function InputController.start()
 
 	-- Mouse clicks go through UserInputService so clicks on GUI are ignored.
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
+		if processed or ClientState.capturingKey then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			cast(nil)
-		elseif input.KeyCode == Enum.KeyCode.T then
+		elseif input.KeyCode == ClientState.typeKeyCode() then
+			-- Rebindable in Settings (default T).
 			task.defer(HudController.focusSpellBox)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			PlacementController.rotate(math.pi / 4)

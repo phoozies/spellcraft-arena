@@ -62,7 +62,19 @@ function collect(node, segments, out) {
 		if (key.startsWith("$") || typeof child !== "object") continue;
 		const childSegments = segments.concat(key);
 		if (child.$path) {
-			walk(path.join(ROOT, child.$path), childSegments, out, true);
+			const full = path.join(ROOT, child.$path);
+			if (fs.statSync(full).isFile()) {
+				// A single file mapped to a named instance (e.g. ReplicatedFirst.LoadingScreen).
+				const info = classify(path.basename(full));
+				out.push({
+					path: childSegments,
+					className: info.className,
+					source: fs.readFileSync(full, "utf8"),
+					root: false,
+				});
+			} else {
+				walk(full, childSegments, out, true);
+			}
 		} else {
 			collect(child, childSegments, out);
 		}

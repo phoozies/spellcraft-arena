@@ -12,15 +12,58 @@ local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
-local buildHub =
-	require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("InkwellPlaza")) :: any
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
+local buildHub = require(MapsFolder:WaitForChild("InkwellPlaza")) :: any
+local MapKit = require(MapsFolder:WaitForChild("MapKit")) :: any
 
 local HUB_RESPAWN_DELAY = 3
 local DUMMY_HEALTH = 250
+local PRACTICE_WALL_CFRAME = CFrame.new(-62, 0, -28) * CFrame.Angles(0, math.rad(90), 0)
+local PRACTICE_WALL_REBUILD = 20
 
 local HubService = {}
 
 local hub: Model
+
+-- A breakable block wall in the Practice Grove (anyone may break it, like
+-- the dummies). It rebuilds itself a while after it's been damaged.
+local practiceWall: Folder? = nil
+
+local function buildPracticeWall()
+	if practiceWall then
+		practiceWall:Destroy()
+	end
+	practiceWall = MapKit.blockWall(
+		hub,
+		PRACTICE_WALL_CFRAME,
+		5,
+		3,
+		Vector3.new(3, 2.5, 2),
+		Color3.fromRGB(176, 120, 90),
+		Enum.Material.Brick,
+		30,
+		function(block: Instance, health: number)
+			block:SetAttribute("Dummy", true)
+			DestructibleService.makeProp(block, health)
+		end
+	)
+end
+
+-- Health only regenerates in the hub; arenas rely on healing spells.
+-- (The default Roblox regen script is replaced by StarterCharacterScripts.Health.)
+local function regenTick(dt: number)
+	for _, player in Players:GetPlayers() do
+		if not MatchService.isInMatch(player) then
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+				humanoid.Health =
+					math.min(humanoid.MaxHealth, humanoid.Health + Config.HUB_REGEN_PER_SECOND * dt)
+			end
+		end
+	end
+end
 
 local function setupLighting()
 	Lighting.ClockTime = 14.5
@@ -198,6 +241,7 @@ function HubService.start()
 		end
 	end
 	MatchService.QueueChanged:Connect(refreshPadLabels)
+	buildPracticeWall()
 
 	PlayerDataService.ProfileLoaded:Connect(function(player)
 		MatchService.spawnInHub(player)
@@ -215,12 +259,23 @@ function HubService.start()
 
 	task.spawn(function()
 		local tick = 0
+		local wallDamagedAt: number? = nil
 		while true do
-			task.wait(0.5)
+			local dt = task.wait(0.5)
 			tick += 1
 			updateSparring()
+			regenTick(dt)
 			if tick % 10 == 0 then
 				updateLeaderboard()
+			end
+			-- Rebuild the practice wall a while after it first takes damage.
+			local wall = practiceWall
+			if wall and #wall:GetChildren() < 15 then
+				wallDamagedAt = wallDamagedAt or os.clock()
+				if os.clock() - wallDamagedAt >= PRACTICE_WALL_REBUILD then
+					wallDamagedAt = nil
+					buildPracticeWall()
+				end
 			end
 		end
 	end)

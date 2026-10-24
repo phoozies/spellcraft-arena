@@ -2,7 +2,8 @@
 
 A Scribblenauts-inspired PvP game for Roblox: **type or say a word, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
-- Type "fireball", "rock wall", or "tornado" in chat, the spell box, or out loud 🎤 to get one copy of the spell. Casting uses it up, so type it again. You can submit one word per second, and pasting is blocked.
+- Type "fireball", "rock wall", or "tornado" in chat, the spell box, or out loud 🎤 to add a copy of the spell to your hotbar. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can submit one word per second, and pasting is blocked.
+- Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 4v4, and FFA, best of 3. You start each match with 3 random spells you own, then draft a new card each round (cards have random rarities) until your hand holds 5.
 - 40 spells to unlock across levels 1–10. Players start with Fireball, Water Lock, and Rock Wall.

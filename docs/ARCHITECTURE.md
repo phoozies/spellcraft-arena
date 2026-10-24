@@ -23,7 +23,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     ProgressionService  XP, levels, unlocks, daily login/quests, first win
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
-    HandService         held spell copies (1 per spell), match spellbook, readied spell, recharges
+    HandService         held spell copies (up to 5, duplicates ok), match spellbook, readied slot, shared cast cooldowns
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Buff, Movement, Summon
     SpellInputService   chat hook + spell box remote → 1s typing cooldown → WordMatcher → HandService.grant
@@ -44,9 +44,18 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PlacementController ghost preview
     InputController     per-device bindings + aiming (mouse, pad, touch, VR)
     EffectsController   self boosts, slippery friction, team outlines, camera reset
-    FxController        renders projectiles, poofs, beams, SpinFx from Fx events
+    FxController        dispatches Fx events (bolts, impacts, cast anim, shatter, chips, dust, numbers)
+    HealthController    own HP bar (shield + damage trail), overhead bars, hides Roblox health
+    SettingsController  Settings panel: rebind the type-a-spell key (saved to profile)
+    PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat, KO, level-up
+  Fx/SpellVfx           particle/trail styles per spell, cast animation (C0 arm raise + magic circle)
   UI/Theme              shared look and builders
 
+src/character → StarterPlayer.StarterCharacterScripts
+  Health.server.luau    empty: replaces Roblox's default regen (arenas have no regen)
+
+src/loading   → ReplicatedFirst.LoadingScreen
+  LoadingScreen.client  custom join screen (title, tips, progress) until the HUD exists
 tests/      → ServerScriptService.Tests     Runner + *.spec modules
 tools/      studio-sync.js / .luau          fallback sync without the Rojo CLI
 ```
@@ -72,18 +81,24 @@ client: word ──SubmitWord──► SpellInputService
                                ├ ";" prefix + admin → AdminService (never shown in chat)
                                ├ 1s typing cooldown (per player, all sources)
                                └ WordMatcher → HandService.grant
-                                    ├ already holding it? → just ready it
                                     ├ match: in spellbook? hub: owned?
-                                    ├ word recharging? → refuse
-                                    └ add ONE copy (max 5 held) and ready it
+                                    ├ hotbar full (5)? → refuse
+                                    └ add ONE copy (duplicates allowed) and ready it
 client: aim  ──CastSpell───► CastService
                                ├ alive? not frozen/time-stopped?
-                               ├ holding a copy of the readied spell; global lockout 0.35s
+                               ├ readied slot holds a copy; global lockout 0.35s;
+                               │  that spell's SHARED cooldown is over
                                ├ clamp target to range (placeables: 40 studs)
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
                                ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, copy kept
-                               └ HandService.consume (copy used up) + startRecharge(def.cooldown)
+                               ├ HandService.consume (that copy used up; next copy of the same spell readied)
+                               ├ HandService.startCooldown(def.cooldown) — shared by every copy
+                               └ Fx("cast") → every client plays the arm raise + magic circle
 ```
+
+- **Projectile hit tests:** each bolt sweeps a thin sphere (0.75) against the world, so it glides over floors. A second, fatter sweep (radius + `Config.HITBOX_BONUS`) sees only characters and breakables the caster can hurt. The nearest hit wins. Breakables are fetched once per frame and pre-filtered by distance.
+- **Breakable blocks:** `segments` in a placeable's stats builds a grid of separately breakable blocks under an untagged parent Model, which deletes itself when empty. `DestructibleService` darkens damaged parts (`BaseColor` attribute), sends `Fx("chip")` on hits, and sends `Fx("shatter")` per part on break. Arenas use `MapKit.blockWall`.
+- **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `xpGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
 
 - **Paste blocking** is client-side (`HudController.guardAgainstPaste` undoes any text change of more than one character). The server's typing cooldown is the real limit, and it also covers chat and voice.
 - **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
