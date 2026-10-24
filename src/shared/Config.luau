@@ -25,7 +25,7 @@ local Config = {
 	PROJECTILE_SPEED_SCALE = 1.5,
 	-- Studs added to every projectile's hit radius (spherecast) and to
 	-- area-of-effect checks against players.
-	HITBOX_BONUS = 1.5,
+	HITBOX_BONUS = 2,
 
 	-- Health regenerates only in the hub. In arenas the only healing is spells.
 	HUB_REGEN_PER_SECOND = 5,

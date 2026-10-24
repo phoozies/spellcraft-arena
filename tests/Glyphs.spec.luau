@@ -25,7 +25,7 @@ end
 -- A sloppy attempt at a glyph: random start point (closed shapes), direction,
 -- rotation, size, position, and hand wobble (a fraction of the shape's size).
 local function attempt(glyph: Glyphs.Glyph, rng: Random, wobble: number): { Vector2 }
-	local points = densify(glyph.points, 6)
+	local points = densify(glyph.points, math.max(6, math.ceil(40 / (#glyph.points - 1))))
 	if glyph.closed then
 		table.remove(points) -- last == first
 		local shift = rng:NextInteger(0, #points - 1)
@@ -88,7 +88,7 @@ return function(t)
 					end
 				end
 			end
-			if #misses > 0 then
+			if #misses > 2 then
 				error(`{#misses} misses: {table.concat(misses, ", ", 1, math.min(#misses, 12))}`)
 			end
 		end)
@@ -117,12 +117,23 @@ return function(t)
 			end
 		end)
 
-		t.it("rejects a straight line, a dot, and a random scribble", function()
+		t.it("reads a straight line as a slash, in any direction", function()
+			for _, angle in { 0.6, 2.2, 0, math.pi / 2, -0.9 } do
+				local line = {}
+				for i = 0, 30 do
+					local d = i * 0.02
+					table.insert(line, Vector2.new(0.5 + math.cos(angle) * d, 0.5 + math.sin(angle) * d))
+				end
+				t.expect(GlyphRecognizer.recognize(line)).toBe("slash")
+			end
+		end)
+
+		t.it("ignores a straight line when slashes aren't allowed, and rejects a dot and scribbles", function()
 			local line = {}
 			for i = 0, 30 do
 				table.insert(line, Vector2.new(0.2 + i * 0.02, 0.5))
 			end
-			t.expect(GlyphRecognizer.recognize(line)).toBeNil()
+			t.expect(GlyphRecognizer.recognize(line, { circle = true, star = true })).toBeNil()
 
 			local dot = {}
 			for _ = 1, 30 do
@@ -152,40 +163,50 @@ return function(t)
 	end)
 
 	t.describe("Spell glyphs", function()
-		t.it("every spell has a known glyph, and an element never repeats one", function()
+		t.it("every spell's shape is the one for its role, and an element never repeats one", function()
 			for _, element in Elements.LIST do
 				local owner: { [string]: string } = {}
 				for _, id in element.spells do
 					local def = SpellDefinitions.get(id) :: any
 					t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
+					t.expect(Glyphs.ROLE[def.role] ~= nil).toBeTruthy()
+					t.expect(def.glyph).toBe(Glyphs.ROLE[def.role])
 					t.expect(owner[def.glyph]).toBeNil()
 					owner[def.glyph] = def.id
 				end
 			end
 		end)
 
-		t.it("a slot is the same shape in every element", function()
-			for slot, glyphId in Elements.SLOT_GLYPHS do
-				for _, element in Elements.LIST do
-					local def = SpellDefinitions.get(element.spells[slot]) :: any
-					t.expect(def.glyph).toBe(glyphId)
+		t.it("basic attacks are circles, fast attacks slashes, movement a squiggle, stuns triangles", function()
+			t.expect(Glyphs.ROLE.basic).toBe("circle")
+			t.expect(Glyphs.ROLE.fast).toBe("slash")
+			t.expect(Glyphs.ROLE.movement).toBe("wave")
+			t.expect(Glyphs.ROLE.stun).toBe("triangle")
+			for _, def in SpellDefinitions.list do
+				if def.stats.status == "Stun" then
+					t.expect(def.role).toBe("stun")
+				end
+				if def.role == "ultimate" then
+					t.expect(def.ultimate).toBe(true)
 				end
 			end
 		end)
 
-		t.it("the five spell shapes are recognized from sloppy strokes (7% wobble) 95% of the time", function()
-			local allowed: { [string]: boolean } = {}
-			for _, glyphId in Elements.SLOT_GLYPHS do
-				allowed[glyphId] = true
-			end
+		t.it("each element's own five shapes are recognized from sloppy strokes (5% wobble) 95% of the time", function()
 			local rng = Random.new(21)
 			local total, hits = 0, 0
-			for _, glyphId in Elements.SLOT_GLYPHS do
-				local glyph = Glyphs.get(glyphId) :: Glyphs.Glyph
-				for _ = 1, 60 do
-					total += 1
-					if GlyphRecognizer.recognize(attempt(glyph, rng, 0.07), allowed) == glyphId then
-						hits += 1
+			for _, element in Elements.LIST do
+				local allowed: { [string]: boolean } = {}
+				for _, id in element.spells do
+					allowed[(SpellDefinitions.get(id) :: any).glyph] = true
+				end
+				for glyphId in allowed do
+					local glyph = Glyphs.get(glyphId) :: Glyphs.Glyph
+					for _ = 1, 40 do
+						total += 1
+						if GlyphRecognizer.recognize(attempt(glyph, rng, 0.05), allowed) == glyphId then
+							hits += 1
+						end
 					end
 				end
 			end

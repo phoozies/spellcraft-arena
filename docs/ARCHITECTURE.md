@@ -17,7 +17,8 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Spells/WordMatcher          admin spell names → spell id
   Audio/Cues                  every sound by name (asset ids, volume, pitch)
   UI/GlyphView                draws a glyph as a line (HUD, signs, VFX)
-  Spells/Elements             the 4 elements, their 5 spells each, the slot shapes
+  Spells/Elements             the 4 elements and their 5 spells each
+  (Spells/Glyphs              the shapes and Glyphs.ROLE, the shape for each kind of move)
   Spells/Placement            placement rules shared by ghost preview + server
   Match/Boosts                the match boosts + roll/totals (injectable RNG)
   Economy/Crates              the Element Crate: price, roll() of an unowned element (injectable RNG)

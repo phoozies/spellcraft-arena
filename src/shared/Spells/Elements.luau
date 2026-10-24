@@ -1,12 +1,10 @@
 --!strict
 -- The four elements. Every spell belongs to one (SpellDefinitions `element`)
--- and every element has the same five spell slots:
---
---   1  the basic attack         (glyph: circle)
---   2  a second move            (glyph: wave)
---   3  a utility or boost       (glyph: triangle)
---   4  a heavy move             (glyph: lightning bolt)
---   5  the ultimate             (glyph: star)
+-- and every element has five spells, slot 5 being its ultimate. A spell's
+-- shape comes from its role (a circle for a basic attack, a diagonal slash
+-- for a fast attack, a squiggle for movement, a triangle for a stun, ...; see
+-- Glyphs.ROLE), so it is the same in every element, and an element never
+-- repeats a shape.
 --
 -- A player equips one element at a time (profile.element); its five spells
 -- are what they can draw, in the hub and in every match. The first element is
@@ -23,15 +21,12 @@ export type Element = {
 	color: Color3,
 	icon: string,
 	tagline: string,
-	-- Spell ids by slot (1..5); filled in by SpellDefinitions' own data.
+	-- Spell ids by slot (1..5; slot 5 is the ultimate).
 	spells: { string },
 }
 
 local Elements = {}
 
--- The shape drawn for each slot, the same in every element so there is only
--- one set of shapes to learn.
-Elements.SLOT_GLYPHS = table.freeze({ "circle", "wave", "triangle", "bolt", "star" })
 Elements.SLOT_COUNT = 5
 
 Elements.LIST = {

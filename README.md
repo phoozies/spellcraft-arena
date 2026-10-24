@@ -2,7 +2,7 @@
 
 A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
-- Draw a shape to add a copy of a spell to your hotbar: press **F** or tap ✏ Draw, then trace a circle, wave, triangle, lightning bolt, or star for your element's spell in slot 1-5. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
+- Draw a shape to add a copy of a spell to your hotbar: press **F** or tap ✏ Draw, then trace it. The shape is the kind of move: circle = a basic attack, a diagonal slash = a fast attack, a squiggly line = movement, a triangle = a stun, a V = a boost or defense, a lightning bolt = a heavy attack, a spiral = an area attack, a star = your ultimate. You can hold up to 5 copies, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
 - Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 3v3, 4v4, and FFA, best of 3. In the hub, stand on the Blue or Red side of a team box to pick your team before the match. You start each match with 3 random spells you own, then draft a new card each round (cards have random rarities) until your hand holds 5.

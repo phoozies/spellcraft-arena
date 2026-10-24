@@ -28,7 +28,8 @@ glossary:
   element: Fire, Water, Earth, or Air (src/shared/Spells/Elements.luau); five spells each in five slots; a player equips one at a time
   spellbook (match): the 5 spells of the player's equipped element, locked in when the match starts
   elements owned: profile.elements; the first is a free pick, the rest come from Element Crates; profile.element is the equipped one
-  slot: 1-5 within an element (basic, second move, utility, heavy move, ultimate); the slot decides the shape drawn
+  slot: 1-5 within an element (display order; slot 5 is the ultimate)
+  role: the kind of move (basic, fast, movement, stun, boost, heavy, area, ultimate); decides the glyph
   ultimate: slot 5; 30-40 damage (or a game-changing effect) on a cooldown of 15s or more
   boost: a match power-up picked between rounds (shared/Match/Boosts.luau); lasts the rest of the match and stacks
   class: PLANNED, NOT BUILT (docs/CLASSES.md); a second layer on top of elements
@@ -36,7 +37,7 @@ glossary:
   coins: the only currency; earned by winning; spent on Element Crates
   wins: profile.stats.wins; the leaderboard stat
   hub: Inkwell Plaza, a moonlit courtyard plus the Great Hall of Glyphs, where players spawn, pick elements, open crates, and pick teams (no PvP)
-  glyph: the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); the five slot shapes are the same in every element
+  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, movement squiggle, stun triangle, boost V, heavy bolt, area spiral, ultimate star"
   arena: an instanced match map cloned at x = slot * 2000, y = 400
 
 bootstrap:
@@ -58,29 +59,29 @@ features:
     types: src/shared/Types.luau (SpellDef, SpellStats, Visual)
     catalog:
       Fire:
-        - { id: Fireball,   slot: 1, glyph: circle,   archetype: Projectile, model: Fireball, what: "medium hitbox, 15 dmg, cd 0.9" }
-        - { id: FireSlash,  slot: 2, glyph: wave,     archetype: Projectile, what: "fast, medium hitbox, 10 dmg, cd 0.55" }
-        - { id: FireBoost,  slot: 3, glyph: triangle, archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
-        - { id: FirePillar, slot: 4, glyph: bolt,     archetype: Zone,       what: "point-and-click, radius 9, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
-        - { id: FireBomb,   slot: 5, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: radius 7, 35 dmg, cd 16" }
+        - { id: Fireball,   role: basic,    glyph: circle,   archetype: Projectile, model: Fireball, what: "medium hitbox r5, 15 dmg, cd 0.9" }
+        - { id: FireSlash,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
+        - { id: FireBoost,  role: boost,    glyph: chevron,  archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
+        - { id: FirePillar, role: area,     glyph: spiral,   archetype: Zone,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
+        - { id: FireBomb,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
       Water:
-        - { id: WaterSlice,  slot: 1, glyph: circle,   archetype: Projectile, what: "fast, medium hitbox, 10 dmg, cd 0.55" }
-        - { id: WaterBody,   slot: 2, glyph: wave,     archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
-        - { id: WaterLock,   slot: 3, glyph: triangle, archetype: Control,    model: WaterBubble, what: "5 dmg + Stun 1.5s, cd 4" }
-        - { id: WaterWave,   slot: 4, glyph: bolt,     archetype: Projectile, what: "large piercing wave, radius 8, 25 dmg, cd 8 (stats.pierce)" }
-        - { id: WaterNebula, slot: 5, glyph: star,     archetype: Zone,       what: "ultimate: point-and-click water pillar, radius 10, 35 dmg, cd 18" }
+        - { id: WaterSlice,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
+        - { id: WaterBody,   role: boost,    glyph: chevron,  archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
+        - { id: WaterLock,   role: stun,     glyph: triangle, archetype: Control,    model: WaterBubble, what: "r4, 5 dmg + Stun 1.5s, cd 4" }
+        - { id: WaterWave,   role: heavy,    glyph: bolt,     archetype: Projectile, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
+        - { id: WaterNebula, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
       Earth:
-        - { id: RockThrow,  slot: 1, glyph: circle,   archetype: Projectile, what: "large rock, radius 4.2, 15 dmg, cd 1.1" }
-        - { id: EarthWall,  slot: 2, glyph: wave,     archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
-        - { id: EarthPunch, slot: 3, glyph: triangle, archetype: Zone,       what: "point-and-click boulder under the aim point, radius 5, 20 dmg, cd 5 (reticle, rise)" }
-        - { id: EarthPillar, slot: 4, glyph: bolt,    archetype: Line,       what: "6 pillars in a line in front, 30 dmg, cd 9" }
-        - { id: Earthquake, slot: 5, glyph: star,     archetype: Zone,       what: "ultimate: centered on the caster, radius 22, 40 dmg, 2s cast with the caster rooted, cd 22 (channel, pillar)" }
+        - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, what: "large rock, r6, 15 dmg, cd 1.1" }
+        - { id: EarthWall,  role: boost,    glyph: chevron,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
+        - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
+        - { id: EarthPillar, role: area,    glyph: spiral,   archetype: Line,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
+        - { id: Earthquake, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: centered on the caster, r25, 40 dmg, 2s cast with the caster rooted, cd 22 (channel, pillar)" }
       Air:
-        - { id: Gust,      slot: 1, glyph: circle,   archetype: Projectile, model: Gust, what: "fast, 15 dmg, cd 0.9" }
-        - { id: Whirlwind, slot: 2, glyph: wave,     archetype: Projectile, model: Gust, what: "wide gust, radius 7, 15 dmg, knockback 95, cd 5" }
-        - { id: AirBoost,  slot: 3, glyph: triangle, archetype: Buff,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
-        - { id: AirShield, slot: 4, glyph: bolt,     archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
-        - { id: Tornado,   slot: 5, glyph: star,     archetype: Projectile, what: "ultimate: piercing, radius 6, 30 dmg, knockback 105, cd 18" }
+        - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 0.9" }
+        - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
+        - { id: AirBoost,  role: movement, glyph: wave,     archetype: Buff,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
+        - { id: AirShield, role: boost,    glyph: chevron,  archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
+        - { id: Tornado,   role: ultimate, glyph: star,     archetype: Projectile, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
     stat_flags_added_for_these_spells:
       visual.model: imported model that replaces the primitive look (bolt / placeable skin / zone swirl); the primitive stays the hitbox and the fallback
       stats.reticle: client shows the ground hit circle at the clamped aim point (ReticleController)
@@ -91,7 +92,7 @@ features:
       stats.fireInterval: seconds between turret shots (default 1.5)
     invariants:
       - every alias is unique across spells and resolves via WordMatcher, used by admin commands (tests/WordMatcher.spec.luau)
-      - an element never repeats a glyph, a slot is the same glyph in every element, and sfx cue names exist (tests/Glyphs.spec.luau, tests/Audio.spec.luau)
+      - an element never repeats a glyph, every spell's glyph is Glyphs.ROLE[its role] (same in every element), and sfx cue names exist (tests/Glyphs.spec.luau, tests/Audio.spec.luau)
       - balance budgets in tests/Balance.spec.luau (normal hit <= 30 and <= 34% HP; ultimates 30-40 dmg with cd >= 15; burst <= 20 dps; hard CC uptime <= 60% and cooldown >= 2s; timed buffs <= 60% uptime; placeables 1-3 alive with a lifetime)
       - stats are frozen tables; never mutate a def at runtime
       - every model use must fall back to plain shapes when ReplicatedStorage.Models lacks it
@@ -139,7 +140,7 @@ features:
 
   - id: elements
     summary: Four elements of five spells each; a player owns some, equips one, and draws only its spells.
-    shared: src/shared/Spells/Elements.luau (LIST, SLOT_GLYPHS, get, ids)
+    shared: src/shared/Spells/Elements.luau (LIST, SLOT_COUNT, get, ids)
     server: src/server/Services/ElementService.luau (owned, equipped, owns, grant, equip, Changed; ChooseElement remote)
     client: MenuController Spellbook panel (element list, equip button, the 5 spell cards), hub shrines in InkwellPlaza
     rules:
@@ -260,7 +261,8 @@ features:
   - id: drawing
     summary: Players trace a glyph; the server recognizes it and readies the spell. Replaced typing, chat casting, and voice.
     owners: [src/shared/Spells/Glyphs.luau, src/shared/Spells/GlyphRecognizer.luau, src/server/Services/SpellInputService.luau, src/client/Controllers/DrawController.luau]
-    glyphs: { circle: slot 1, wave: slot 2, triangle: slot 3, bolt: slot 4, star: slot 5 }  # the same five in every element; the equipped element decides which spell
+    glyphs: { circle: basic, slash: fast, wave: movement, triangle: stun, chevron: boost, bolt: heavy, spiral: area, star: ultimate }  # by role; the equipped element decides which spell
+    straight_strokes: "a stroke whose points all stay within 22% of the line between its ends (and whose ends are far apart) is a slash, in any direction"
     remotes:
       c2s: [DrawSpell]
       s2c: [GlyphResult]
@@ -268,7 +270,7 @@ features:
     client_ui: HudController glyph cards (equipped element), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
     invariants:
       - the server recognizes the stroke itself; GlyphResult is feedback only
-      - only the five slot shapes are ever recognized (the other glyphs in Glyphs.lua are unused library shapes)
+      - only the equipped element's five shapes are ever recognized; infinity is an unused library shape
       - recognition ignores size, position, rotation, direction, and the start point of closed shapes
       - admin commands still use chat (";") and WordMatcher names
 

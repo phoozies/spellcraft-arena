@@ -4,7 +4,7 @@
 
 ## What exists today: elements
 
-Every player equips **one element** (Fire, Water, Earth, or Air). An element is five spells in five fixed slots, each drawn with the same five shapes in every element (see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are unlocked with **Element Crates**.
+Every player equips **one element** (Fire, Water, Earth, or Air). An element is five spells, each drawn with a shape that depends on its kind of move (a circle for a basic attack, a slash for a fast attack, and so on; see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are unlocked with **Element Crates**.
 
 Classes are meant to sit **on top of** elements, not replace them.
 
@@ -12,7 +12,7 @@ Classes are meant to sit **on top of** elements, not replace them.
 
 - They are a **second choice layered on the equipped element** (element + class), as the design brief says: "an element + class system".
 - The reference game's **Variants** screen (a "Fire Variants" panel with an *Evolution Quest*) is the closest thing we've seen: each element has variants that you unlock by completing a quest, and you equip one. That is **inspiration, not a decision**.
-- They must not break the five-slot, five-shape draw system, the server-authoritative rules, or the balance budgets (`tests/Balance.spec.luau`).
+- They must not break the one-shape-per-spell draw system, the server-authoritative rules, or the balance budgets (`tests/Balance.spec.luau`).
 
 ## Open questions (to decide before building)
 

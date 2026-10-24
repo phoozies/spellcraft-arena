@@ -4,9 +4,10 @@
 -- spell, add a row — no new code needed. Keep docs/SPELLS.md in sync.
 --
 -- Elements: every spell belongs to one of four elements (shared/Spells/
--- Elements) and fills one of its five slots. The slot decides the glyph the
--- player draws (the same five shapes in every element), so within an element
--- every spell has its own shape. Slot 5 is the element's ultimate.
+-- Elements) and fills one of its five slots (slot 5 is the ultimate). Its
+-- `role` (basic, fast, movement, stun, boost, heavy, area, ultimate) decides
+-- the shape the player draws (Glyphs.ROLE), the same in every element, and an
+-- element never repeats a shape.
 --
 -- Aliases are admin names (`;give fireball`), matched after normalization
 -- (lowercase, no punctuation), so list plain words only.
@@ -23,10 +24,11 @@
 -- speed is scaled by Config.PROJECTILE_SPEED_SCALE. tests/Balance.spec.luau
 -- enforces the budgets.
 --
--- Hitbox sizes (`radius`, studs; players add Config.HITBOX_BONUS):
---   medium 3-3.5 · large 4-5 · wide 6-8 · huge 10+
+-- Hitbox sizes (`radius`, studs; players add Config.HITBOX_BONUS = 2):
+--   medium 4.5-5 · large 6-7 · wide 8.5-11 · huge 12-25 (areas)
 
 local Elements = require(script.Parent.Elements)
+local Glyphs = require(script.Parent.Glyphs)
 local Types = require(script.Parent.Parent.Types)
 
 type SpellDef = Types.SpellDef
@@ -37,7 +39,7 @@ local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
 end
 
-local GLYPH = Elements.SLOT_GLYPHS
+local ROLE = Glyphs.ROLE
 
 local DEFINITIONS: { SpellDef } = {
 	----------------------------------------------------------------------
@@ -49,15 +51,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fireball", "fire ball", "fire" },
 		element = "Fire",
 		slot = 1,
-		glyph = GLYPH[1],
+		role = "basic",
+		glyph = ROLE.basic,
 		sfx = { cast = "fireballCast", impact = "fireballHit" },
 		archetype = "Projectile",
 		cooldown = 0.9,
 		description = "Hurl a ball of fire with a medium hitbox. 15 damage.",
-		stats = { damage = 15, speed = 95, range = 160, radius = 3.5, knockback = 18 },
+		stats = { damage = 15, speed = 95, range = 160, radius = 5, knockback = 18 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(3.2, 3.2, 3.2),
+			size = Vector3.new(4.5, 4.5, 4.5),
 			color = rgb(255, 112, 40),
 			material = M.Neon,
 			model = "Fireball",
@@ -69,15 +72,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire slash", "fireslash", "slash" },
 		element = "Fire",
 		slot = 2,
-		glyph = GLYPH[2],
+		role = "fast",
+		glyph = ROLE.fast,
 		sfx = { cast = "slashCast", impact = "fireballHit" },
 		archetype = "Projectile",
 		cooldown = 0.55,
 		description = "A fast crescent of fire with a medium hitbox. 10 damage, recharges quickly.",
-		stats = { damage = 10, speed = 150, range = 130, radius = 3, knockback = 8 },
+		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
 		visual = {
 			shape = "Block",
-			size = Vector3.new(5, 0.8, 1.2),
+			size = Vector3.new(7, 1, 1.6),
 			color = rgb(255, 150, 50),
 			material = M.Neon,
 		},
@@ -88,7 +92,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire boost", "fireboost" },
 		element = "Fire",
 		slot = 3,
-		glyph = GLYPH[3],
+		role = "boost",
+		glyph = ROLE.boost,
 		sfx = { cast = "boostCast" },
 		archetype = "Buff",
 		cooldown = 14,
@@ -108,7 +113,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire pillar", "firepillar" },
 		element = "Fire",
 		slot = 4,
-		glyph = GLYPH[4],
+		role = "area",
+		glyph = ROLE.area,
 		sfx = { cast = "pillarCast", impact = "pillarBoom" },
 		archetype = "Zone",
 		cooldown = 7,
@@ -116,7 +122,7 @@ local DEFINITIONS: { SpellDef } = {
 		stats = {
 			delay = 0.7,
 			damage = 30,
-			radius = 9,
+			radius = 12,
 			range = 70,
 			knockback = 22,
 			reticle = true,
@@ -135,16 +141,17 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire bomb", "firebomb", "bomb" },
 		element = "Fire",
 		slot = 5,
+		role = "ultimate",
 		ultimate = true,
-		glyph = GLYPH[5],
+		glyph = ROLE.ultimate,
 		sfx = { cast = "bombCast", impact = "bombBoom" },
 		archetype = "Projectile",
 		cooldown = 16,
 		description = "ULTIMATE: a huge fireball with a very large hitbox. 35 damage.",
-		stats = { damage = 35, speed = 60, range = 120, radius = 7, knockback = 40 },
+		stats = { damage = 35, speed = 60, range = 120, radius = 10, knockback = 40 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(8, 8, 8),
+			size = Vector3.new(11, 11, 11),
 			color = rgb(255, 80, 30),
 			material = M.Neon,
 			model = "Fireball",
@@ -160,15 +167,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water slice", "waterslice", "slice" },
 		element = "Water",
 		slot = 1,
-		glyph = GLYPH[1],
+		role = "fast",
+		glyph = ROLE.fast,
 		sfx = { cast = "sliceCast", impact = "waterTrap" },
 		archetype = "Projectile",
 		cooldown = 0.55,
 		description = "A fast slice of water with a medium hitbox. 10 damage.",
-		stats = { damage = 10, speed = 150, range = 130, radius = 3, knockback = 8 },
+		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
 		visual = {
 			shape = "Block",
-			size = Vector3.new(5, 0.8, 1.2),
+			size = Vector3.new(7, 1, 1.6),
 			color = rgb(80, 180, 255),
 			material = M.Neon,
 		},
@@ -179,7 +187,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water body", "waterbody" },
 		element = "Water",
 		slot = 2,
-		glyph = GLYPH[2],
+		role = "boost",
+		glyph = ROLE.boost,
 		sfx = { cast = "bodyCast" },
 		archetype = "Buff",
 		cooldown = 22,
@@ -199,7 +208,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water lock", "waterlock", "bubble", "trap" },
 		element = "Water",
 		slot = 3,
-		glyph = GLYPH[3],
+		role = "stun",
+		glyph = ROLE.stun,
 		sfx = { cast = "waterCast", impact = "waterTrap" },
 		archetype = "Control",
 		cooldown = 4,
@@ -208,14 +218,14 @@ local DEFINITIONS: { SpellDef } = {
 			damage = 5,
 			speed = 75,
 			range = 120,
-			radius = 2.5,
+			radius = 4,
 			status = "Stun",
 			statusDuration = 1.5,
 			model = "WaterBubble", -- the trap bubble around the victim
 		},
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(2.5, 2.5, 2.5),
+			size = Vector3.new(3.5, 3.5, 3.5),
 			color = rgb(64, 164, 255),
 			material = M.Glass,
 			transparency = 0.3,
@@ -228,15 +238,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water wave", "waterwave", "wave" },
 		element = "Water",
 		slot = 4,
-		glyph = GLYPH[4],
+		role = "heavy",
+		glyph = ROLE.heavy,
 		sfx = { cast = "waveCast", impact = "waterTrap" },
 		archetype = "Projectile",
 		cooldown = 8,
 		description = "Send a large wave rolling forward through everything in its path. 25 damage.",
-		stats = { damage = 25, speed = 70, range = 110, radius = 8, knockback = 25, pierce = true },
+		stats = { damage = 25, speed = 70, range = 110, radius = 11, knockback = 25, pierce = true },
 		visual = {
 			shape = "Block",
-			size = Vector3.new(14, 6, 2.5),
+			size = Vector3.new(19, 8, 3),
 			color = rgb(60, 150, 255),
 			material = M.Glass,
 			transparency = 0.25,
@@ -248,8 +259,9 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water nebula", "waternebula", "nebula" },
 		element = "Water",
 		slot = 5,
+		role = "ultimate",
 		ultimate = true,
-		glyph = GLYPH[5],
+		glyph = ROLE.ultimate,
 		sfx = { cast = "nebulaCast", impact = "nebulaBoom" },
 		archetype = "Zone",
 		cooldown = 18,
@@ -257,7 +269,7 @@ local DEFINITIONS: { SpellDef } = {
 		stats = {
 			delay = 0.9,
 			damage = 35,
-			radius = 10,
+			radius = 13,
 			range = 70,
 			knockback = 28,
 			reticle = true,
@@ -280,15 +292,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "rock throw", "rockthrow", "rock" },
 		element = "Earth",
 		slot = 1,
-		glyph = GLYPH[1],
+		role = "basic",
+		glyph = ROLE.basic,
 		sfx = { cast = "throwCast", impact = "rockBreak" },
 		archetype = "Projectile",
 		cooldown = 1.1,
 		description = "Hurl a large boulder. 15 damage and a solid shove.",
-		stats = { damage = 15, speed = 80, range = 130, radius = 4.2, knockback = 22 },
+		stats = { damage = 15, speed = 80, range = 130, radius = 6, knockback = 22 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(4.5, 4.5, 4.5),
+			size = Vector3.new(6.3, 6.3, 6.3),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
 		},
@@ -299,7 +312,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earth wall", "earthwall", "wall", "rock wall", "rockwall" },
 		element = "Earth",
 		slot = 2,
-		glyph = GLYPH[2],
+		role = "boost",
+		glyph = ROLE.boost,
 		sfx = { cast = "rockRaise" },
 		archetype = "Placeable",
 		cooldown = 4,
@@ -326,7 +340,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earth punch", "earthpunch", "punch" },
 		element = "Earth",
 		slot = 3,
-		glyph = GLYPH[3],
+		role = "heavy",
+		glyph = ROLE.heavy,
 		sfx = { cast = "punchCast", impact = "rockBreak" },
 		archetype = "Zone",
 		cooldown = 5,
@@ -334,7 +349,7 @@ local DEFINITIONS: { SpellDef } = {
 		stats = {
 			delay = 0.4,
 			damage = 20,
-			radius = 5,
+			radius = 7,
 			range = 60,
 			knockback = 28,
 			reticle = true,
@@ -342,7 +357,7 @@ local DEFINITIONS: { SpellDef } = {
 		},
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(6, 6, 6),
+			size = Vector3.new(8, 8, 8),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
 		},
@@ -353,23 +368,24 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earth pillar", "earthpillar" },
 		element = "Earth",
 		slot = 4,
-		glyph = GLYPH[4],
+		role = "area",
+		glyph = ROLE.area,
 		sfx = { cast = "rockRaise", impact = "rockBreak" },
 		archetype = "Line",
 		cooldown = 9,
 		description = "A wave of stone pillars erupts in a line in front of you. 30 damage to anyone it catches.",
 		stats = {
 			damage = 30,
-			radius = 4.5,
+			radius = 6.5,
 			count = 6,
-			spacing = 7,
+			spacing = 9,
 			step = 0.12,
 			delay = 0.35,
 			knockback = 24,
 		},
 		visual = {
 			shape = "Block",
-			size = Vector3.new(4, 12, 4),
+			size = Vector3.new(5.5, 14, 5.5),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
 		},
@@ -380,8 +396,9 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earthquake", "quake" },
 		element = "Earth",
 		slot = 5,
+		role = "ultimate",
 		ultimate = true,
-		glyph = GLYPH[5],
+		glyph = ROLE.ultimate,
 		sfx = { cast = "quakeRumble", impact = "quakeBoom" },
 		archetype = "Zone",
 		cooldown = 22,
@@ -389,7 +406,7 @@ local DEFINITIONS: { SpellDef } = {
 		stats = {
 			delay = 2,
 			damage = 40,
-			radius = 22,
+			radius = 25,
 			range = 0, -- centered on the caster
 			knockback = 40,
 			channel = true,
@@ -412,15 +429,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "gust", "wind" },
 		element = "Air",
 		slot = 1,
-		glyph = GLYPH[1],
+		role = "basic",
+		glyph = ROLE.basic,
 		sfx = { cast = "gustCast" },
 		archetype = "Projectile",
 		cooldown = 0.9,
 		description = "A fast gust of air. 15 damage.",
-		stats = { damage = 15, speed = 140, range = 140, radius = 3.2, knockback = 12 },
+		stats = { damage = 15, speed = 140, range = 140, radius = 4.6, knockback = 12 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(3.5, 3.5, 3.5),
+			size = Vector3.new(5, 5, 5),
 			color = rgb(220, 240, 255),
 			material = M.ForceField,
 			transparency = 0.4,
@@ -433,15 +451,16 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "whirlwind", "whirl" },
 		element = "Air",
 		slot = 2,
-		glyph = GLYPH[2],
+		role = "heavy",
+		glyph = ROLE.heavy,
 		sfx = { cast = "whirlCast" },
 		archetype = "Projectile",
 		cooldown = 5,
 		description = "A wide gust that blows everyone it hits far away. 15 damage.",
-		stats = { damage = 15, speed = 75, range = 90, radius = 7, knockback = 95 },
+		stats = { damage = 15, speed = 75, range = 90, radius = 10, knockback = 95 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(9, 9, 9),
+			size = Vector3.new(12.5, 12.5, 12.5),
 			color = rgb(220, 240, 255),
 			material = M.ForceField,
 			transparency = 0.4,
@@ -454,7 +473,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "air boost", "airboost" },
 		element = "Air",
 		slot = 3,
-		glyph = GLYPH[3],
+		role = "movement",
+		glyph = ROLE.movement,
 		sfx = { cast = "airBoostCast" },
 		archetype = "Buff",
 		cooldown = 16,
@@ -474,7 +494,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "air shield", "airshield", "shield" },
 		element = "Air",
 		slot = 4,
-		glyph = GLYPH[4],
+		role = "boost",
+		glyph = ROLE.boost,
 		sfx = { cast = "shieldCast" },
 		archetype = "Buff",
 		cooldown = 14,
@@ -494,16 +515,17 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "tornado", "twister" },
 		element = "Air",
 		slot = 5,
+		role = "ultimate",
 		ultimate = true,
-		glyph = GLYPH[5],
+		glyph = ROLE.ultimate,
 		sfx = { cast = "tornadoCast", impact = "waterTrap" },
 		archetype = "Projectile",
 		cooldown = 18,
 		description = "ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage.",
-		stats = { damage = 30, speed = 55, range = 120, radius = 6, knockback = 105, pierce = true },
+		stats = { damage = 30, speed = 55, range = 120, radius = 8.5, knockback = 105, pierce = true },
 		visual = {
 			shape = "Block",
-			size = Vector3.new(7, 14, 7),
+			size = Vector3.new(9.5, 17, 9.5),
 			color = rgb(205, 235, 230),
 			material = M.ForceField,
 			transparency = 0.35,

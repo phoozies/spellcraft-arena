@@ -157,6 +157,27 @@ local function distanceAtBestAngle(points: { Vector2 }, template: { Vector2 }): 
 	return math.min(f1, f2)
 end
 
+-- A stroke counts as a straight slash when no point strays far from the
+-- line between its ends (a fraction of that line's length) and the ends are
+-- well apart (so a closed loop or a squiggle never qualifies).
+local STRAIGHT_DEVIATION = 0.22
+local STRAIGHT_MIN_CHORD = 0.7 -- chord / path length
+
+local function isStraight(points: { Vector2 }): boolean
+	local first, last = points[1], points[#points]
+	local chord = last - first
+	local chordLength = chord.Magnitude
+	if chordLength < 1e-6 or chordLength < pathLength(points) * STRAIGHT_MIN_CHORD then
+		return false
+	end
+	local normal = Vector2.new(-chord.Y, chord.X) / chordLength
+	local worst = 0
+	for _, p in points do
+		worst = math.max(worst, math.abs((p - first):Dot(normal)))
+	end
+	return worst / chordLength <= STRAIGHT_DEVIATION
+end
+
 type Template = { glyphId: string, points: { Vector2 } }
 
 local function reversed(points: { Vector2 }): { Vector2 }
@@ -170,6 +191,9 @@ end
 local templates: { Template } = {}
 
 for _, glyph in Glyphs.LIST do
+	if glyph.line then
+		continue -- a straight line has no shape to match; see isStraight
+	end
 	local base = resample(glyph.points, SAMPLES)
 	local shapes = { base }
 	if glyph.closed then
@@ -211,6 +235,13 @@ function GlyphRecognizer.recognize(
 		minY, maxY = math.min(minY, p.Y), math.max(maxY, p.Y)
 	end
 	if math.max(maxX - minX, maxY - minY) < GlyphRecognizer.MIN_EXTENT then
+		return nil, 0, 0
+	end
+	-- A straight stroke is a slash (or nothing, where slashes aren't allowed).
+	if isStraight(points) then
+		if allowed == nil or allowed.slash then
+			return "slash", 1, 0
+		end
 		return nil, 0, 0
 	end
 	local stroke = prepare(points)

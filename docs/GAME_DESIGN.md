@@ -49,7 +49,7 @@ Players have **100 HP** and **don't regenerate in the arena**; the Health Potion
 
 ### Balancing for fast play
 
-Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+1.5 studs), while still gliding over floors. Since you can stockpile up to 5 copies, the numbers are budgeted per cast cooldown:
+Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+2 studs on top of each spell's own generous radius), while still gliding over floors. Since you can stockpile up to 5 copies, the numbers are budgeted per cast cooldown:
 - No normal hit takes more than 30 of your 100 HP, and ultimates (slot 5) take 30-40 on cooldowns of 15s or more.
 - Burst damage is capped at 20 per second, which works out to about a 6-second kill.
 - Hard crowd control can't be chained, thanks to 2.5s of immunity after it ends.

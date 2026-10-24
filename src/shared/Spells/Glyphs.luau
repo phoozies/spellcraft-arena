@@ -1,7 +1,7 @@
 --!strict
--- The shapes players draw to ready a spell. One glyph per spell
--- (SpellDefinitions `glyph`), each a single stroke so a finger or mouse can
--- trace it without lifting. Points are in a 0..1 box with +Y pointing DOWN
+-- The shapes players draw to ready a spell. Each spell has one glyph
+-- (SpellDefinitions `glyph`, chosen by the spell's role), each a single stroke
+-- so a finger or mouse can trace it without lifting. Points are in a 0..1 box with +Y pointing DOWN
 -- (screen space), and the recognizer ignores size, position, rotation, and
 -- drawing direction, so only the SHAPE matters.
 --
@@ -15,6 +15,8 @@ export type Glyph = {
 	name: string,
 	-- A closed shape can be started anywhere on its outline.
 	closed: boolean,
+	-- A straight line: recognized by straightness, not by template matching.
+	line: boolean?,
 	points: { Vector2 },
 }
 
@@ -75,7 +77,14 @@ Glyphs.LIST = {
 		closed = true,
 		points = { Vector2.new(0.5, 0), Vector2.new(1, 1), Vector2.new(0, 1), Vector2.new(0.5, 0) },
 	},
-	{ id = "wave", name = "Wave", closed = false, points = wave() },
+	{
+		id = "slash",
+		name = "Slash",
+		closed = false,
+		line = true,
+		points = { Vector2.new(0.1, 0.9), Vector2.new(0.9, 0.1) },
+	},
+	{ id = "wave", name = "Squiggle", closed = false, points = wave() },
 	{
 		id = "chevron",
 		name = "Chevron",
@@ -97,6 +106,33 @@ Glyphs.LIST = {
 	{ id = "star", name = "Star", closed = true, points = star() },
 	{ id = "spiral", name = "Spiral", closed = false, points = spiral() },
 } :: { Glyph }
+
+-- Which shape each KIND of move uses, the same in every element, so a shape
+-- always means the same thing: a circle is a basic attack, a diagonal slash a
+-- fast attack, a squiggle a movement spell, a triangle a stun, and so on.
+-- SpellDefinitions gives every spell a `role`; tests/Glyphs.spec checks that
+-- its `glyph` is this table's shape for the role.
+Glyphs.ROLE = table.freeze({
+	basic = "circle",
+	fast = "slash",
+	movement = "wave",
+	stun = "triangle",
+	boost = "chevron", -- buffs and defenses
+	heavy = "bolt",
+	area = "spiral",
+	ultimate = "star",
+})
+
+Glyphs.ROLE_NAMES = table.freeze({
+	basic = "Basic attack",
+	fast = "Fast attack",
+	movement = "Movement",
+	stun = "Stun",
+	boost = "Boost / defense",
+	heavy = "Heavy attack",
+	area = "Area attack",
+	ultimate = "Ultimate",
+})
 
 local byId: { [string]: Glyph } = {}
 for _, glyph in Glyphs.LIST do

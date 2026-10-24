@@ -133,7 +133,8 @@ export type SpellDef = {
 	-- Names in Audio/Cues: `cast` plays when it's cast, `impact` where it lands.
 	sfx: { cast: string?, impact: string? }?,
 	element: ElementId,
-	slot: number, -- 1..5 within its element; the slot decides its glyph
+	slot: number, -- 1..5 within its element (display order; slot 5 is the ultimate)
+	role: string, -- the kind of move (Glyphs.ROLE): decides its glyph
 	ultimate: boolean?, -- slot 5: the element's big, slow spell
 	archetype: Archetype,
 	cooldown: number,
