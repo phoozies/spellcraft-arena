@@ -4,6 +4,7 @@
 --   projectileEnd  (id, position)                                  remove bolt
 --   poof           (position, color)                               debris burst
 --   beam           (from, to, color)                               chain flash
+--   number         (position, amount, kind)                        floating damage/heal/shield number
 -- and spins parts tagged "SpinFx" (Tornado, Black Hole) locally.
 --
 -- The server stays authoritative for hits; visuals here are a straight-line
@@ -14,8 +15,17 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local TweenService = game:GetService("TweenService")
+
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
+local Theme = require(script.Parent.Parent.UI.Theme)
+
+local NUMBER_COLORS: { [string]: Color3 } = {
+	damage = Color3.fromRGB(255, 241, 118),
+	heal = Color3.fromRGB(129, 199, 132),
+	shield = Color3.fromRGB(129, 212, 250),
+}
 
 local FxController = {}
 
@@ -144,6 +154,48 @@ local function onBeam(from: Vector3, to: Vector3, color: Color3)
 	Debris:AddItem(beam, 0.2)
 end
 
+-- Floating number: pops up with a little random spread, rises, and fades.
+local function onNumber(position: Vector3, amount: number, kind: string)
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one * 0.2
+	local spread = Vector3.new(math.random(-15, 15) / 10, 0, math.random(-15, 15) / 10)
+	anchor.CFrame = CFrame.new(position + Vector3.new(0, 3, 0) + spread)
+	anchor.Parent = folder
+
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(90, 40)
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 150
+	gui.LightInfluence = 0
+	gui.Parent = anchor
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Theme.FONT
+	label.TextScaled = true
+	label.TextColor3 = NUMBER_COLORS[kind] or NUMBER_COLORS.damage
+	label.TextStrokeTransparency = 0.2
+	label.Text = if kind == "heal"
+		then `+{amount}`
+		elseif kind == "shield" then `({amount})`
+		else tostring(amount)
+	label.Parent = gui
+	-- Bigger hits get bigger numbers.
+	local scale = Instance.new("UIScale")
+	scale.Scale = math.clamp(0.8 + amount / 40, 0.8, 1.6)
+	scale.Parent = label
+
+	local info = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(anchor, info, { CFrame = anchor.CFrame + Vector3.new(0, 3, 0) }):Play()
+	TweenService:Create(label, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(anchor, 1)
+end
+
 local function step(dt: number)
 	local now = os.clock()
 	for id, bolt in bolts do
@@ -180,6 +232,8 @@ function FxController.start()
 			onPoof(...)
 		elseif kind == "beam" then
 			onBeam(...)
+		elseif kind == "number" then
+			onNumber(...)
 		end
 	end)
 	RunService.RenderStepped:Connect(step)

@@ -20,9 +20,13 @@ export type ProfileSummary = {
 }
 
 local ClientState = {
-	hand = {} :: { string },
+	hand = {} :: { string }, -- spell copies held (hotbar)
 	readied = nil :: string?,
-	cooldowns = {} :: { [string]: number }, -- spellId -> server time ready
+	-- Match only: the words this player may type this match (nil in the hub).
+	spellbook = nil :: { string }?,
+	cooldowns = {} :: { [string]: number }, -- spellId -> server time its word recharges
+	-- Local mirror of the 1s typing cooldown (os.clock() when typing is allowed).
+	typeReadyAt = 0,
 	profile = nil :: ProfileSummary?,
 	match = { phase = "Idle", round = 0, endsAt = 0, scores = {} } :: Types.MatchState,
 	queueCounts = {} :: { [string]: number },
@@ -42,9 +46,10 @@ function ClientState.cooldownLeft(spellId: string): number
 end
 
 function ClientState.start()
-	Remotes.get("HandUpdated").OnClientEvent:Connect(function(hand, readied)
+	Remotes.get("HandUpdated").OnClientEvent:Connect(function(hand, readied, spellbook)
 		ClientState.hand = hand
 		ClientState.readied = readied
+		ClientState.spellbook = spellbook
 		ClientState.HandChanged:Fire()
 	end)
 	Remotes.get("CooldownStarted").OnClientEvent:Connect(function(spellId, readyAt)

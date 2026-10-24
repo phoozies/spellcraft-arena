@@ -7,10 +7,15 @@ local Config = {
 	STARTING_HAND = 3,
 	MAX_HAND = 5,
 
-	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.
+	-- Seconds. Spells cannot be cast faster than this regardless of recharges.
 	GLOBAL_CAST_LOCKOUT = 0.35,
-	-- Max words a player may submit per second (chat + box + voice combined).
-	WORD_RATE_PER_SECOND = 4,
+	-- Seconds between typed/spoken words (chat + box + voice combined). Each
+	-- word grants one copy of a spell, so this is the real pace of the game.
+	TYPE_COOLDOWN = 1,
+	-- After a hard crowd-control effect (Root, TimeStop, Shrink) ends, the
+	-- target can't be hit by that kind again for this long. Stops CC chains
+	-- now that spells can be re-typed every second.
+	CC_IMMUNITY = 2.5,
 
 	PLAYER_MAX_HEALTH = 100,
 	SPAWN_PROTECTION = 3,
@@ -61,6 +66,12 @@ local Config = {
 
 	-- Set true only in Studio test sessions; enables gated debug remotes.
 	DEBUG_COMMANDS_IN_STUDIO = true,
+
+	-- Admin commands (see docs/ADMIN.md). UserIds listed here, the place
+	-- owner (or group owner, rank 255), and anyone testing in Studio are admins.
+	ADMIN_PREFIX = ";",
+	ADMIN_USER_IDS = { 118721190 } :: { number },
+	ADMIN_GROUP_MIN_RANK = 255,
 }
 
 return table.freeze(Config)

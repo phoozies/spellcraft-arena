@@ -27,17 +27,24 @@ Hub ──► queue (pad or Play menu) ──► Match (best of 3)
 
 ### In a match
 
-1. **Start:** you get **3 random spells from the ones you own**. New players own exactly Fireball, Water Lock, and Rock Wall.
+1. **Start:** your match **spellbook** is **3 random spells from the ones you own**. New players own exactly Fireball, Water Lock, and Rock Wall. These are the words you can type this match.
 2. **Countdown** (5s, frozen in place), then the **Round** (up to 120s). The last team standing wins the round. If time runs out, the team with the most remaining health wins.
-3. **Draft** (15s) after each round, while your hand has fewer than 5 spells. You're offered **3 cards, each with its own randomly rolled rarity**, and you pick one. If time runs out, one is picked for you. Your hand grows 3 → 4 → 5.
+3. **Draft** (15s) after each round, while your spellbook has fewer than 5 spells. You're offered **3 cards, each with its own randomly rolled rarity**, and you pick one. If time runs out, one is picked for you. Your spellbook grows 3 → 4 → 5.
 4. **First to 2 round wins** takes the match. Then a Results screen with XP, and back to the hub.
 
-### Casting
+### Casting: type it, get it, spend it
 
-- **Say** a spell word in chat, the spell box, or with the 🎤 push-to-talk button, or tap its hotbar slot. That spell becomes **readied**.
-- **Cast** the readied spell: click, R2, tap the world, or pull the VR trigger. It stays readied, so you can cast again once the cooldown ends.
+- **Type** a spell word in chat or the spell box, or **say** it with 🎤, to get **one copy** of that spell in your hotbar. You can't hold two copies of the same spell, and the new copy is readied automatically.
+- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up**, so type the word again to get it back.
+- **Typing cooldown:** 1 second between words across chat, the spell box, and voice. Pasting into the spell box is blocked, so speed comes from actually typing.
+- **Recharge:** after a cast, a spell's word can't be typed again until it recharges. Commons recharge in 0–2s, big spells in 4–25s (see SPELLS.md). In a match, chips above the spell box list your spellbook words with their recharge timers.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
-- In a match, words outside your hand fizzle with a hint ("Draft it next round!"). In the hub, any spell you own works.
+- **Which words work:** in a match, words outside your spellbook fizzle with a hint ("Draft it next round!"). In the hub, any spell you own works. Each round starts empty-handed, so your first move is to type.
+- **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
+
+### Balancing for 1-second spells
+
+Since a cheap spell can be re-cast about every second, the numbers are budgeted per second rather than per cast. Burst damage is capped at 20 per second. Hard crowd control can't be chained, thanks to a 2.5s immunity after it ends. Shields don't stack. Zones and summons are limited to one live copy per player per spell, and legendaries recharge for 10s or more. `tests/Balance.spec.luau` enforces all of these limits.
 
 ### PvP encouragement
 

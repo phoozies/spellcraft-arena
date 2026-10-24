@@ -271,7 +271,9 @@ local function spawnRound(match: Match)
 		if character then
 			character:SetAttribute("Team", team)
 		end
-		HandService.resetCooldowns(player)
+		-- Every round starts empty-handed: type to summon your spells.
+		HandService.resetRecharges(player)
+		HandService.clearCopies(player)
 	end
 end
 
@@ -297,7 +299,7 @@ local function runDraft(match: Match)
 	local rng = Random.new()
 	local anyOffers = false
 	for _, player in connected(match) do
-		local hand = HandService.getHand(player)
+		local hand = HandService.getSpellbook(player) or {}
 		if #hand < Config.MAX_HAND then
 			local cards = DraftRoller.roll(hand, rng)
 			match.offers[player] = cards
@@ -315,7 +317,7 @@ local function runDraft(match: Match)
 	for player, cards in match.offers do
 		if player.Parent and #cards > 0 then
 			local card = cards[math.random(1, #cards)]
-			HandService.addToMatchHand(player, card.spellId)
+			HandService.addToSpellbook(player, card.spellId)
 			local def = SpellDefinitions.get(card.spellId)
 			toastRemote:FireClient(
 				player,
@@ -428,7 +430,7 @@ local function finishMatch(match: Match, winner: string?)
 			if playerMatch[player] == match then
 				playerMatch[player] = nil
 				if player.Parent then
-					HandService.clearMatchHand(player)
+					HandService.clearMatch(player)
 					MatchService.spawnInHub(player)
 					stateRemote:FireClient(
 						player,
@@ -534,7 +536,7 @@ function MatchService.startMatch(
 			end
 			table.insert(hand, id)
 		end
-		HandService.setMatchHand(player, hand)
+		HandService.setSpellbook(player, hand)
 		toastRemote:FireClient(
 			player,
 			`Match found: {mode} on {ArenaService.DISPLAY_NAMES[arena.mapName]}!`,
@@ -607,6 +609,47 @@ end
 
 function MatchService.isInMatch(player: Player): boolean
 	return playerMatch[player] ~= nil
+end
+
+-- Takes a player out of their match (leaving the game, or the admin ;hub
+-- command). If only one team is left it wins by forfeit; if nobody is
+-- left the match just ends.
+function MatchService.removeFromMatch(player: Player)
+	local match = playerMatch[player]
+	if not match then
+		return
+	end
+	playerMatch[player] = nil
+	match.alive[player] = false
+	match.offers[player] = nil
+	if player.Parent then
+		HandService.clearMatch(player)
+		stateRemote:FireClient(player, { phase = "Idle", round = 0, endsAt = 0, scores = {} })
+	end
+	local remaining: { [string]: boolean } = {}
+	local count = 0
+	for _, other in connected(match) do
+		if not remaining[match.teams[other]] then
+			remaining[match.teams[other]] = true
+			count += 1
+		end
+	end
+	if count == 0 then
+		finishMatch(match, nil)
+	elseif count == 1 and not match.solo then
+		local winner = next(remaining)
+		toastAll(match, "Opponent left — you win by forfeit!", "victory")
+		finishMatch(match, winner)
+	end
+end
+
+-- Admin: end the match a player is in, with no winner.
+function MatchService.endMatchOf(player: Player)
+	local match = playerMatch[player]
+	if match then
+		toastAll(match, "An admin ended this match.", "round")
+		finishMatch(match, nil)
+	end
 end
 
 local function processQueues()
@@ -709,7 +752,7 @@ function MatchService.start()
 			return
 		end
 		match.offers[player] = nil
-		HandService.addToMatchHand(player, card.spellId)
+		HandService.addToSpellbook(player, card.spellId)
 		if Rarity.INFO[card.rarity].order >= 2 then
 			ProgressionService.track(player, "draftRare")
 		end
@@ -744,26 +787,7 @@ function MatchService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		MatchService.leaveQueue(player)
 		MatchService.sessionKnockouts[player] = nil
-		local match = playerMatch[player]
-		if match then
-			playerMatch[player] = nil
-			match.alive[player] = false
-			match.offers[player] = nil
-			-- If only one team still has players, it wins by forfeit.
-			local remaining: { [string]: boolean } = {}
-			local count = 0
-			for _, other in connected(match) do
-				if not remaining[match.teams[other]] then
-					remaining[match.teams[other]] = true
-					count += 1
-				end
-			end
-			if count <= 1 and not match.solo then
-				local winner = next(remaining)
-				toastAll(match, "Opponent left — you win by forfeit!", "victory")
-				finishMatch(match, winner)
-			end
-		end
+		MatchService.removeFromMatch(player)
 	end)
 
 	task.spawn(function()

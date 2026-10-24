@@ -95,6 +95,23 @@ local function updateBar(target: Instance)
 	end
 end
 
+-- Floating damage/heal/shield numbers. Only the two players involved see
+-- them (the attacker and the player who owns the target), which keeps
+-- busy fights readable and network traffic small. Zone ticks below 1 point
+-- are skipped.
+local function showNumber(position: Vector3, amount: number, kind: string, a: Player?, b: Player?)
+	if amount < 1 then
+		return
+	end
+	local rounded = math.floor(amount + 0.5)
+	if a then
+		fxRemote:FireClient(a, "number", position, rounded, kind)
+	end
+	if b and b ~= a then
+		fxRemote:FireClient(b, "number", position, rounded, kind)
+	end
+end
+
 -- Cosmetic burst of debris. Rendered by each client (FxController) so the
 -- server never replicates throwaway physics parts.
 local function poof(position: Vector3, color: Color3)
@@ -147,7 +164,7 @@ function DestructibleService.damage(
 		if not humanoid or humanoid.Health <= 0 then
 			return 0
 		end
-		if character:FindFirstChildOfClass("ForceField") then
+		if character:FindFirstChildOfClass("ForceField") or character:GetAttribute("God") then
 			return 0
 		end
 		-- Shrunk players take extra damage; giants take less.
@@ -156,6 +173,7 @@ function DestructibleService.damage(
 		elseif StatusService.has(character, "Giant") then
 			amount *= 0.75
 		end
+		local position = character:GetPivot().Position
 		local shield = character:GetAttribute("Shield") :: number? or 0
 		if shield > 0 then
 			local absorbed = math.min(shield, amount)
@@ -164,14 +182,19 @@ function DestructibleService.damage(
 				"Shield",
 				if shield - absorbed > 0 then shield - absorbed else nil
 			)
+			showNumber(position, absorbed, "shield", attacker, owner)
 		end
 		if attacker then
 			lastHit[owner] = { by = attacker, at = os.clock(), spell = spellName }
 		end
+		if amount <= 0 then
+			return 0
+		end
+		showNumber(position, amount, "damage", attacker, owner)
 		if amount >= humanoid.Health and StatusService.has(character, "Revive") then
 			StatusService.clear(character, "Revive")
 			humanoid.Health = humanoid.MaxHealth / 2
-			poof(character:GetPivot().Position, Color3.fromRGB(255, 145, 0))
+			poof(position, Color3.fromRGB(255, 145, 0))
 			return amount
 		end
 		humanoid:TakeDamage(amount)
@@ -183,16 +206,31 @@ function DestructibleService.damage(
 	health -= amount
 	resolved:SetAttribute("Health", health)
 	updateBar(resolved)
+	local propPosition = if resolved:IsA("Model")
+		then resolved:GetPivot().Position
+		elseif resolved:IsA("BasePart") then resolved.Position
+		else nil
+	if propPosition then
+		showNumber(propPosition, amount, "damage", attacker, owner)
+	end
 	if health <= 0 then
 		breakStructure(resolved, attacker)
 	end
 	return amount
 end
 
-function DestructibleService.heal(character: Model, amount: number)
+function DestructibleService.heal(character: Model, amount: number, healer: Player?)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health > 0 then
-		humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + amount)
+		local healed = math.min(humanoid.MaxHealth, humanoid.Health + amount) - humanoid.Health
+		humanoid.Health += healed
+		showNumber(
+			character:GetPivot().Position,
+			healed,
+			"heal",
+			healer,
+			Players:GetPlayerFromCharacter(character)
+		)
 	end
 end
 

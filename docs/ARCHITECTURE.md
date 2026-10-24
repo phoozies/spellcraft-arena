@@ -23,10 +23,11 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     ProgressionService  XP, levels, unlocks, daily login/quests, first win
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
-    HandService         hand per player, readied spell, cooldowns
+    HandService         held spell copies (1 per spell), match spellbook, readied spell, recharges
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Buff, Movement, Summon
-    SpellInputService   chat hook + spell box remote → WordMatcher → HandService
+    SpellInputService   chat hook + spell box remote → 1s typing cooldown → WordMatcher → HandService.grant
+    AdminService        ";" admin commands (chat or spell box), server-side admin check
     VoiceService        push-to-talk AudioSpeechToText → SpellInputService
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, drafts, teams, PvP rules
@@ -64,17 +65,29 @@ Some dependencies would form a cycle, so they're injected instead of required:
 - `DestructibleService.setRelationResolver(fn)`: MatchService decides who may damage whom.
 - `CastService.setWorldHooks(hooks)`: MatchService supplies the team, the structures folder, and the build regions.
 
-## Cast pipeline
+## Cast pipeline (copy model)
 
 ```
-client: word ──SubmitWord──► SpellInputService ─► WordMatcher ─► HandService.ready
+client: word ──SubmitWord──► SpellInputService
+                               ├ ";" prefix + admin → AdminService (never shown in chat)
+                               ├ 1s typing cooldown (per player, all sources)
+                               └ WordMatcher → HandService.grant
+                                    ├ already holding it? → just ready it
+                                    ├ match: in spellbook? hub: owned?
+                                    ├ word recharging? → refuse
+                                    └ add ONE copy (max 5 held) and ready it
 client: aim  ──CastSpell───► CastService
                                ├ alive? not frozen/time-stopped?
-                               ├ readied spell, off cooldown (global lockout 0.35s)
+                               ├ holding a copy of the readied spell; global lockout 0.35s
                                ├ clamp target to range (placeables: 40 studs)
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
-                               └ Archetypes[def.archetype].cast(ctx)  → false = rejected, no cooldown
+                               ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, copy kept
+                               └ HandService.consume (copy used up) + startRecharge(def.cooldown)
 ```
+
+- **Paste blocking** is client-side (`HudController.guardAgainstPaste` undoes any text change of more than one character). The server's typing cooldown is the real limit, and it also covers chat and voice.
+- **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
+- **Crowd-control immunity:** `StatusService.apply` refuses to refresh an active Root, Time Stop, or Shrink, and adds a 2.5s immunity after it ends (`Config.CC_IMMUNITY`).
 
 - **Damage** always goes through `DestructibleService.damage(target, amount, attacker, spellName)`. It resolves players, placed objects, summons, and map props the same way, and applies spawn protection, Shield, Shrink/Giant modifiers, and the Phoenix revive.
 - **Knockback is server-authoritative.** `DestructibleService.push` briefly takes network ownership of the victim's root (`SetNetworkOwner(nil)`), sets the velocity on the server, and returns ownership after 0.45s. Overlapping pushes extend the hold. A client that ignores remotes still gets knocked back, pulled, tripped, and rung out.
@@ -110,6 +123,8 @@ The profile (`Types.Profile`, schema 1) is stored under `PlayerProfiles_v1/u_<us
 ## Security checklist
 
 - Every remote handler type-checks its arguments (`typeof`, NaN and range checks, string length limits).
-- Words are rate-limited to 4 per second across chat, box, and voice.
+- Words are limited to one per second across chat, box, and voice.
 - Debug commands only run when `RunService:IsStudio()`.
+- Admin status is decided server-side on join (UserId list, place or group owner, or Studio). A non-admin's `;` message is delivered as plain chat. Commands run in their own thread and are logged.
+- `;announce` text goes through `TextService:FilterStringAsync` before broadcast.
 - The client never reports damage, hits, cooldowns, or ownership. It only sends intent.

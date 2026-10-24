@@ -10,12 +10,12 @@
 
 - **Branch from `main`** and keep PRs focused, one system at a time.
 - **Format and lint before pushing.** Run `stylua src tests` and `selene src tests`. CI runs both and also does a `rojo build`.
-- **Run the tests** in Studio (Edit or Server mode):
+- **Run the tests** in Studio. During a playtest, run this from the Server command bar, where module caches are fresh. In Edit mode Studio can serve stale cached modules after a sync.
   ```lua
   require(game.ServerScriptService.Tests.Runner)()
   ```
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
-- **Playtest helpers** (Studio only), from the command bar during Play:
+- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;give me all`, `;startmatch 1v1`). The older command-bar helpers also still work during Play:
   ```lua
   _G.WordcraftDebug("solo", "1v1")   -- match against nobody; rounds end on the timer
   _G.WordcraftDebug("xp", 500)

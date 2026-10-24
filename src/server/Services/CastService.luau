@@ -144,16 +144,14 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if StatusService.has(character, "TimeStop") or character:GetAttribute("Frozen") then
 		return
 	end
+	-- Must be holding a copy of the readied spell (typing grants copies).
 	local spellId = HandService.getReadied(player)
 	local def = spellId and SpellDefinitions.get(spellId)
 	if not spellId or not def then
+		toastRemote:FireClient(player, "Type a spell word first!", "fizzle")
 		return
 	end
-	local ok, left = HandService.checkCooldown(player, spellId)
-	if not ok then
-		if left > Config.GLOBAL_CAST_LOCKOUT then
-			toastRemote:FireClient(player, `{def.name} recharging ({math.ceil(left)}s)`, "cooldown")
-		end
+	if not HandService.checkCastLockout(player) then
 		return
 	end
 
@@ -199,14 +197,16 @@ local function onCast(player: Player, target: any, rotationY: any)
 		return
 	end
 	if result == false then
-		return -- archetype rejected (e.g. invalid placement); no cooldown
+		return -- archetype rejected (e.g. invalid placement); the copy is kept
 	end
 
-	local cooldown = def.cooldown
+	-- The copy is used up; the word recharges before it can be typed again.
+	local recharge = def.cooldown
 	if StatusService.has(character, "CooldownCut") then
-		cooldown *= 0.5
+		recharge *= 0.5
 	end
-	HandService.startCooldown(player, spellId, cooldown)
+	HandService.consume(player, spellId)
+	HandService.startRecharge(player, spellId, recharge)
 
 	local profile = PlayerDataService.get(player)
 	if profile then

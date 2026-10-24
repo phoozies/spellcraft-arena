@@ -15,6 +15,9 @@ local Projectile = require(script.Parent.Projectile)
 local Summon = {}
 
 local STEP = 0.1
+
+-- player -> spellId -> their live summon of that spell
+local live: { [Player]: { [string]: Model } } = setmetatable({}, { __mode = "k" }) :: any
 local WALK_SPEED = 14
 
 local function nearestEnemy(ctx: any, from: Vector3, range: number): any?
@@ -63,6 +66,16 @@ function Summon.cast(ctx: any): boolean?
 	face.Face = Enum.NormalId.Front
 	face.Parent = body
 	model.Parent = ctx.structures
+
+	-- One live summon per spell per player: a recast replaces the old one.
+	local bySpell = live[ctx.player] or {}
+	live[ctx.player] = bySpell
+	local previous = bySpell[def.id]
+	if previous and previous.Parent then
+		DestructibleService.poof(previous:GetPivot().Position, visual.color)
+		previous:Destroy()
+	end
+	bySpell[def.id] = model
 
 	task.spawn(function()
 		local expires = os.clock() + (stats.lifetime or 15)
