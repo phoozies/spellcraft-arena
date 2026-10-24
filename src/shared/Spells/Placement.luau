@@ -43,6 +43,24 @@ function Placement.partOffset(visual: Types.Visual): CFrame
 	return CFrame.identity
 end
 
+-- Invisible, parentless part used as the query shape. GetPartsInPart tests
+-- real collision geometry (GetPartBoundsInBox only tests bounding boxes, so a
+-- big hollow mesh like the sparring arena would block everything inside it).
+local probe: Part? = nil
+
+local function getProbe(): Part
+	if not probe then
+		local part = Instance.new("Part")
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Transparency = 1
+		probe = part
+	end
+	return probe :: Part
+end
+
 -- True when nothing solid overlaps the object's footprint. The box is shrunk
 -- slightly so resting on the ground or touching a neighbor is allowed.
 function Placement.isClear(visual: Types.Visual, cframe: CFrame, ignore: { Instance }): boolean
@@ -51,9 +69,11 @@ function Placement.isClear(visual: Types.Visual, cframe: CFrame, ignore: { Insta
 	params.FilterDescendantsInstances = ignore
 	params.RespectCanCollide = true
 	local bounds = Placement.boundsSize(visual)
-	local size =
+	local shape = getProbe()
+	shape.Size =
 		Vector3.new(bounds.X * 0.85, math.max(bounds.Y * 0.85 - 0.3, 0.05), bounds.Z * 0.85)
-	local hits = workspace:GetPartBoundsInBox(cframe, size, params)
+	shape.CFrame = cframe
+	local hits = workspace:GetPartsInPart(shape, params)
 	return #hits == 0
 end
 

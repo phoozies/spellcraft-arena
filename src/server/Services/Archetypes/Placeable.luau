@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Placement = require(ReplicatedStorage.Shared.Spells.Placement)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
@@ -249,6 +250,75 @@ local function buildSegmented(ctx: any, cframe: CFrame): Model
 	return wall
 end
 
+-- Builds a wall from an imported model (stats.model): every mesh part of the
+-- model becomes its own breakable chunk (e.g. Rock Wall = base, pillars,
+-- rubble), so the wall breaks apart piece by piece. Health is shared out
+-- between chunks, half by volume and half equally, so no chunk is trivially
+-- weak. Returns nil when the model isn't in the place (caller falls back).
+local function buildModelWall(ctx: any, cframe: CFrame): Model?
+	local def = ctx.def
+	local stats = def.stats
+	local source = ModelKit.clone(stats.model, "solid")
+	if not source then
+		return nil
+	end
+	local meshParts: { BasePart } = {}
+	local totalVolume = 0
+	for _, child in source:GetChildren() do
+		if child:IsA("BasePart") then
+			table.insert(meshParts, child)
+			totalVolume += child.Size.X * child.Size.Y * child.Size.Z
+		end
+	end
+	if #meshParts == 0 then
+		return nil
+	end
+
+	local wall = Instance.new("Model")
+	wall.Name = def.name
+	wall:SetAttribute("SpellId", def.id)
+	wall:SetAttribute("OwnerUserId", ctx.player.UserId)
+	wall.Parent = ctx.structures
+
+	local height = def.visual.size.Y
+	for _, part in meshParts do
+		local volumeShare = part.Size.X * part.Size.Y * part.Size.Z / totalVolume
+		local health = (stats.health or 100) * (0.5 * volumeShare + 0.5 / #meshParts)
+		local chunk = Instance.new("Model")
+		chunk.Name = `{def.name}Chunk`
+		part.Parent = chunk
+		chunk.PrimaryPart = part
+		part:SetAttribute("BaseColor", part.Color)
+		local final = cframe * part.CFrame
+		DestructibleService.wrap(chunk, part, health, ctx.player, ctx.team, part.Size.Y)
+		-- Rises out of the ground, tall pieces a beat after the low ones.
+		part.CFrame = final - Vector3.new(0, height, 0)
+		chunk.Parent = wall
+		task.spawn(function()
+			task.wait(if part.Size.Y > height * 0.5 then 0.08 else 0)
+			for i = 1, 8 do
+				if not part.Parent then
+					return
+				end
+				part.CFrame = final - Vector3.new(0, height * (1 - i / 8), 0)
+				task.wait()
+			end
+		end)
+	end
+	source:Destroy()
+	DestructibleService.dust(
+		cframe.Position - Vector3.new(0, height / 2, 0),
+		def.visual.size.X,
+		def.visual.color
+	)
+	wall.ChildRemoved:Connect(function()
+		if #wall:GetChildren() == 0 then
+			wall:Destroy()
+		end
+	end)
+	return wall
+end
+
 function Placeable.cast(ctx: any): boolean?
 	local def = ctx.def
 	local visual = def.visual
@@ -295,18 +365,26 @@ function Placeable.cast(ctx: any): boolean?
 		end
 	end
 
-	if stats.segments then
-		local wall = buildSegmented(ctx, cframe)
-		track(ctx.player, wall, def.id, stats.maxActive or 2)
+	-- Walls: the imported model if present, else the block-grid fallback.
+	local wall: Model? = nil
+	if stats.model then
+		wall = buildModelWall(ctx, cframe)
+	end
+	if not wall and stats.segments then
+		wall = buildSegmented(ctx, cframe)
+	end
+	if wall then
+		local builtWall = wall :: Model
+		track(ctx.player, builtWall, def.id, stats.maxActive or 2)
 		if stats.lifetime then
 			task.delay(stats.lifetime, function()
-				if wall.Parent then
-					for _, block in wall:GetChildren() do
+				if builtWall.Parent then
+					for _, block in builtWall:GetChildren() do
 						if block:IsA("Model") then
 							DestructibleService.shatter(block)
 						end
 					end
-					wall:Destroy()
+					builtWall:Destroy()
 				end
 			end)
 		end

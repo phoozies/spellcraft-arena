@@ -23,6 +23,7 @@ local RunService = game:GetService("RunService")
 
 local TweenService = game:GetService("TweenService")
 
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -41,8 +42,17 @@ local FxController = {}
 local DRAW_DISTANCE = 600
 local MAX_DEBRIS = 120
 
+-- Spells whose bolt is drawn with an imported model (ReplicatedStorage.Models)
+-- instead of a plain shape: model name, and bolt width as a multiple of the
+-- spell's visual size.
+local BOLT_MODELS: { [string]: { model: string, widthPerSize: number } } = {
+	Fireball = { model = "Fireball", widthPerSize = 1.6 },
+	WaterLock = { model = "WaterBubble", widthPerSize = 1.3 },
+}
+
 type Bolt = {
-	part: BasePart,
+	part: BasePart, -- the part particles/trails hang on (the model's Root)
+	model: Model?,
 	origin: Vector3,
 	direction: Vector3,
 	speed: number,
@@ -81,22 +91,41 @@ local function onProjectile(
 	if not near(origin) then
 		return
 	end
-	local part = Instance.new("Part")
-	part.Shape = shapeOf(visual.shape)
-	part.Size = visual.size
-	part.Color = visual.color
-	part.Material = visual.material
-	part.Transparency = visual.transparency or 0
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CastShadow = false
-	part.CFrame = CFrame.lookAt(origin, origin + direction)
-	SpellVfx.decorateBolt(part, fxKey, visual.color)
-	part.Parent = folder
+	local facing = CFrame.lookAt(origin, origin + direction)
+	local part: BasePart? = nil
+	local model: Model? = nil
+	local modelInfo = fxKey and BOLT_MODELS[fxKey]
+	if modelInfo then
+		model = ModelKit.clone(modelInfo.model, "effect")
+		if model then
+			local width = model:GetExtentsSize().X
+			model:ScaleTo((visual.size.X * modelInfo.widthPerSize) / math.max(width, 0.01))
+			model:PivotTo(facing)
+			part = model.PrimaryPart
+			model.Parent = folder
+		end
+	end
+	if not part then
+		-- No imported model in this place: a plain shape from the spell's visual.
+		local shape = Instance.new("Part")
+		shape.Shape = shapeOf(visual.shape)
+		shape.Size = visual.size
+		shape.Color = visual.color
+		shape.Material = visual.material
+		shape.Transparency = visual.transparency or 0
+		shape.Anchored = true
+		shape.CanCollide = false
+		shape.CanQuery = false
+		shape.CanTouch = false
+		shape.CastShadow = false
+		shape.CFrame = facing
+		shape.Parent = folder
+		part = shape
+	end
+	SpellVfx.decorateBolt(part :: BasePart, fxKey, visual.color)
 	bolts[id] = {
-		part = part,
+		part = part :: BasePart,
+		model = model,
 		origin = origin,
 		direction = direction,
 		speed = speed,
@@ -111,15 +140,26 @@ local function onProjectileEnd(id: number, position: Vector3)
 	local bolt = bolts[id]
 	if bolt then
 		bolts[id] = nil
-		bolt.part.CFrame = CFrame.lookAt(position, position + bolt.direction)
-		bolt.part.Transparency = 1
-		-- Let the trail/particles finish before removing the part.
+		local facing = CFrame.lookAt(position, position + bolt.direction)
+		if bolt.model then
+			bolt.model:PivotTo(facing)
+			-- Hide the meshes; the Root stays a moment so the trail can fade.
+			for _, child in bolt.model:GetDescendants() do
+				if child:IsA("BasePart") and child ~= bolt.part then
+					child.Transparency = 1
+				end
+			end
+		else
+			bolt.part.CFrame = facing
+			bolt.part.Transparency = 1
+		end
+		-- Let the trail/particles finish before removing the bolt.
 		for _, child in bolt.part:GetChildren() do
 			if child:IsA("ParticleEmitter") then
 				child.Enabled = false
 			end
 		end
-		Debris:AddItem(bolt.part, 0.4)
+		Debris:AddItem(bolt.model or bolt.part, 0.4)
 		if near(position) then
 			SpellVfx.impact(folder, position, bolt.fxKey, bolt.color)
 		end
@@ -231,11 +271,16 @@ local function step(dt: number)
 	for id, bolt in bolts do
 		local travelled = math.min((now - bolt.born) * bolt.speed, bolt.range)
 		local position = bolt.origin + bolt.direction * travelled
-		bolt.part.CFrame = CFrame.lookAt(position, position + bolt.direction)
+		local facing = CFrame.lookAt(position, position + bolt.direction)
+		if bolt.model then
+			bolt.model:PivotTo(facing)
+		else
+			bolt.part.CFrame = facing
+		end
 		-- Safety net if the end event is lost: drop it shortly after max range.
 		if travelled >= bolt.range and now - bolt.born > bolt.range / bolt.speed + 0.5 then
-			bolts[id] = nil
-			bolt.part:Destroy()
+			bolts[id] = nil;
+			(bolt.model or bolt.part):Destroy()
 		end
 	end
 	local spin = CFrame.Angles(math.pi * dt, 0, 0)

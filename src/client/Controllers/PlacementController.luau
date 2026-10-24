@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Placement = require(ReplicatedStorage.Shared.Spells.Placement)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -23,7 +24,10 @@ local player = Players.LocalPlayer
 
 local PlacementController = {}
 
-local ghost: Part? = nil
+-- The preview is a plain Part, or a Model when the spell has an imported
+-- model (e.g. Rock Wall); `ghostParts` is every part in it either way.
+local ghost: Instance? = nil
+local ghostParts: { BasePart } = {}
 local highlight: Highlight? = nil
 local ghostSpell: string? = nil
 local rotation = 0
@@ -59,10 +63,45 @@ local function clear()
 		ghost:Destroy()
 	end
 	ghost, highlight, ghostSpell, groundPoint = nil, nil, nil, nil
+	table.clear(ghostParts)
 	rotateButton.Visible = false
 end
 
-local function makeGhost(visual: Types.Visual)
+local function setGhostVisible(visible: boolean)
+	for _, part in ghostParts do
+		part.Transparency = if visible then 0.55 else 1
+	end
+end
+
+local function makeGhostFromModel(modelName: string): boolean
+	local model = ModelKit.clone(modelName, "effect")
+	if not model then
+		return false
+	end
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CastShadow = false
+			part.Material = Enum.Material.SmoothPlastic
+			table.insert(ghostParts, part)
+		end
+	end
+	local h = Instance.new("Highlight")
+	h.FillTransparency = 0.6
+	h.OutlineTransparency = 0
+	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	h.Parent = model
+	-- Local-only (created on the client), so other players never see it.
+	model.Parent = workspace
+	ghost, highlight = model, h
+	setGhostVisible(true)
+	rotateButton.Visible = UserInputService.TouchEnabled
+	return true
+end
+
+local function makeGhost(visual: Types.Visual, modelName: string?)
+	if modelName and makeGhostFromModel(modelName) then
+		return
+	end
 	local part = Instance.new("Part")
 	part.Name = "PlacementGhost"
 	part.Shape = if visual.shape == "Ball"
@@ -87,6 +126,7 @@ local function makeGhost(visual: Types.Visual)
 	-- Local-only part (created on the client), so other players never see it.
 	part.Parent = workspace
 	ghost, highlight = part, h
+	table.insert(ghostParts, part)
 	rotateButton.Visible = UserInputService.TouchEnabled
 end
 
@@ -119,15 +159,15 @@ local function update()
 	end
 	if ghostSpell ~= id then
 		clear()
-		makeGhost(def.visual)
+		makeGhost(def.visual, def.stats.model)
 		ghostSpell = id
 	end
-	local part = ghost :: Part
+	local preview = ghost :: Instance
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local point = if aimProvider then aimProvider() else nil
 	if not root or not point then
-		part.Transparency = 1
+		setGhostVisible(false)
 		valid = false
 		return
 	end
@@ -139,20 +179,24 @@ local function update()
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character :: Model, part }
+	params.FilterDescendantsInstances = { character :: Model, preview }
 	local down =
 		workspace:Raycast((point :: Vector3) + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then
-		part.Transparency = 1
+		setGhostVisible(false)
 		valid = false
 		return
 	end
 	groundPoint = down.Position
 	local cframe = Placement.cframeFor(def.visual, down.Position, rotation)
-	part.CFrame = cframe * Placement.partOffset(def.visual)
-	part.Transparency = 0.55
+	if preview:IsA("Model") then
+		preview:PivotTo(cframe)
+	else
+		(preview :: Part).CFrame = cframe * Placement.partOffset(def.visual)
+	end
+	setGhostVisible(true)
 
-	local ignore: { Instance } = { part }
+	local ignore: { Instance } = { preview }
 	for _, other in Players:GetPlayers() do
 		if other.Character then
 			table.insert(ignore, other.Character)
@@ -162,7 +206,9 @@ local function update()
 		and Placement.isClear(def.visual, cframe, ignore)
 	local left = ClientState.cooldownLeft(def.id)
 	local color = if valid and left <= 0 then Theme.COLORS.good else Theme.COLORS.bad
-	part.Color = color
+	for _, part in ghostParts do
+		part.Color = color
+	end
 	if highlight then
 		highlight.FillColor = color
 		highlight.OutlineColor = color

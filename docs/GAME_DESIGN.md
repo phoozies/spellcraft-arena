@@ -60,13 +60,13 @@ Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bi
 
 ### Breakable cover
 
-Rock Wall and Castle are built from separately breakable blocks, so you can punch holes through them. Every arena has breakable brick walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
+The Rock Wall is a sculpted earth wall whose base, standing stones, and rubble break separately, and the Castle is built from breakable blocks, so you can punch holes through both. Every arena has breakable brick walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
 
 ### PvP encouragement
 
 - XP for knockouts, round wins, and match wins, plus a "SPELL STREAK!" callout at 3 KOs.
 - Combos (Water Lock → Lightning deals ×2), knockback ring-outs on Sky Islands, and destructible cover.
-- A session leaderboard in the hub, and the hub Sparring Ring for opt-in PvP between matches.
+- A session leaderboard in the hub, and the hub's sparring arena (a marble-pillared colosseum with a neon rune ring) for opt-in PvP between matches.
 - Spawn protection lasts 3 seconds and friendly fire is off.
 
 ## Modes
@@ -82,7 +82,7 @@ Rock Wall and Castle are built from separately breakable blocks, so you can punc
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | Cobblestone plaza around a giant inkwell | Queue pads, Practice Grove (build anything, smash dummies), Sparring Ring, Spellbook kiosk, Daily Quest chest, leaderboard |
+| **Inkwell Plaza** (hub) | Cobblestone plaza around a giant inkwell | Queue pads, Practice Grove (build anything, smash dummies), sparring arena, Spellbook kiosk, Daily Quest chest, leaderboard |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
