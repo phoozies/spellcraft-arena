@@ -97,7 +97,7 @@ export type SpellDef = {
 	starter: boolean?,
 }
 
-export type MatchMode = "1v1" | "2v2" | "4v4" | "FFA"
+export type MatchMode = "1v1" | "2v2" | "3v3" | "4v4" | "FFA"
 
 export type MatchPhase = "Idle" | "Intro" | "Countdown" | "Round" | "Draft" | "Results"
 

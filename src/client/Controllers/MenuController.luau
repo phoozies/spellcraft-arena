@@ -26,6 +26,7 @@ local questList: Frame
 local MODE_INFO = {
 	{ mode = "1v1", text = "Duel" },
 	{ mode = "2v2", text = "Duos" },
+	{ mode = "3v3", text = "Trios" },
 	{ mode = "4v4", text = "Squads" },
 	{ mode = "FFA", text = "Free-for-all" },
 }
@@ -97,7 +98,7 @@ local function buildPlay(root: Instance)
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.new(0.5, -8, 0.5, -8)
+	layout.CellSize = UDim2.new(0.5, -8, 0.33, -8) -- 5 modes: 2 columns, 3 rows
 	layout.CellPadding = UDim2.fromOffset(12, 12)
 	layout.Parent = grid
 	for _, info in MODE_INFO do

@@ -25,11 +25,12 @@ export type Arena = {
 
 local ArenaService = {}
 
-ArenaService.MAP_NAMES = { "CrayonCanyon", "FrostbiteFortress", "SkyIslands" }
+ArenaService.MAP_NAMES = { "CrayonCanyon", "FrostbiteFortress", "SkyIslands", "SparringArena" }
 ArenaService.DISPLAY_NAMES = {
 	CrayonCanyon = "Crayon Canyon",
 	FrostbiteFortress = "Frostbite Fortress",
 	SkyIslands = "Sky Islands",
+	SparringArena = "Sparring Arena",
 }
 
 local templates: Folder
@@ -73,6 +74,8 @@ function ArenaService.pickMap(mode: string): string
 		CrayonCanyon = 1,
 		FrostbiteFortress = if mode == "4v4" then 2 else 1,
 		SkyIslands = if mode == "FFA" then 2 else 1,
+		-- A compact 46-stud floor: favored for small duels, skipped for 4v4.
+		SparringArena = if mode == "1v1" or mode == "2v2" then 2 elseif mode == "4v4" then 0 else 1,
 	}
 	local total = 0
 	for _, w in weights do

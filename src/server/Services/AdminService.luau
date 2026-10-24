@@ -361,7 +361,7 @@ COMMANDS.hub = {
 }
 
 COMMANDS.startmatch = {
-	usage = "startmatch <1v1|2v2|4v4|FFA> [players...]",
+	usage = "startmatch <1v1|2v2|3v3|4v4|FFA> [players...]",
 	help = "Start a match now with the listed players (default: everyone in the hub).",
 	run = function(admin, args)
 		local mode = args[1] and string.upper(args[1])
@@ -369,7 +369,7 @@ COMMANDS.startmatch = {
 			mode = args[1] and string.lower(args[1])
 		end
 		if not mode or not (Config.MODES :: any)[mode] then
-			return "Usage: startmatch <1v1|2v2|4v4|FFA> [players...]"
+			return "Usage: startmatch <1v1|2v2|3v3|4v4|FFA> [players...]"
 		end
 		local chosen: { Player } = {}
 		if #args >= 2 then

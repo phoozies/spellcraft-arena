@@ -31,7 +31,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     VoiceService        push-to-talk AudioSpeechToText → SpellInputService
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, drafts, teams, PvP rules
-    HubService          builds the hub, spawning, pads, dummies, sparring, board
+    HubService          builds the hub, spawning, team boxes, FFA pad, dummies, board, hub regen
     DebugService        Studio-only test commands
   Maps/                 MapKit + one builder per map (code-built, versioned)
 
@@ -60,7 +60,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 | Fireball | `FxController` bolt (Fireball, Dragon's fireballs); particles and trail attach to its invisible `Root` part |
 | WaterBubble | `FxController` bolt (Water Lock) and `TrapBubble`, welded around a trapped player and scaled to 1.5× their height |
 | RockWall | `Placeable.buildModelWall`: each mesh part is its own chunk, all sharing one 50-damage budget (`WallHealth` on the wall; chunks break at `BreakAt` thresholds, low pieces first; `DestructibleService.damageWall`). Chunks carry `HitByAll`, which makes `canHarm`/`damage` skip the owner and team rules, so every spell hits the wall. The placement ghost shows the model |
-| Arena | `HubService.placeSparringArena`: replaces the old mat and posts; the floor top sits at the old mat height |
+| Arena | `Maps/SparringArena.luau`, a match map (not in the hub). The floor top is the model's pivot, so the map's floor is at y = 0. An invisible wall ring (radius 24.2, `CanQuery` off so spells pass) keeps players on the floor, because the seating has no ground and its gaps drop into the void |
 
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
 
@@ -129,14 +129,15 @@ client: aim  ──CastSpell───► CastService
 |---|---|
 | Both in the same match, round active, different teams | ✅ |
 | Same team / different matches / draft or countdown | ❌ |
-| Hub: both players inside the Sparring Ring | ✅ |
+| Hub (no PvP there) | ❌ |
 | Training dummies | ✅ always |
 | Map props | ✅ only by players in that arena's match |
 
 ## Matches and arenas
 
 - **One place, instanced arenas.** Templates are built once into `ServerStorage.MapTemplates`. Each match clones one to `x = slot × 2000, y = 400`, so several matches run at once. Each round, `ArenaService.rebuild` swaps in a fresh copy, which restores broken props.
-- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `FFA_*`, `SmallModeWalls`).
+- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `FFA_*`, `SmallModeWalls`). Maps are registered in `ArenaService.MAP_NAMES`, with per-mode weights in `pickMap`.
+- **Team boxes** (`HubService.updateBoxes`, every 0.25s): the hub builder tags each side of a box `TeamPad` (`Mode`, `Team`, `Slots` attributes). The service collects who stands on each pad (sticky arrival order, capped at `Slots`), updates the labels, and, once both sides are full, runs a `Config.TEAM_BOX_COUNTDOWN` that restarts if anyone steps off or swaps. It then calls `MatchService.startMatch(mode, players, { teams = {...} })`, where `teams` maps each player to "Blue" or "Red". `Slots` is re-read every tick, so a pad can be resized live.
 - **To move matches to reserved servers later:** keep MatchService's state machine and replace `ArenaService.create` / `spawnAt` with `TeleportService:ReserveServer` and a match place that reads its mode from `TeleportData`.
 
 ## Data

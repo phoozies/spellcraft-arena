@@ -26,6 +26,10 @@ local Config = {
 	-- Health regenerates only in the hub. In arenas the only healing is spells.
 	HUB_REGEN_PER_SECOND = 5,
 
+	-- Seconds the hub's team boxes wait once both sides are full, so someone
+	-- can still step off before the match starts.
+	TEAM_BOX_COUNTDOWN = 5,
+
 	-- Seconds of the "VS" intro before players are moved into the arena.
 	INTRO_TIME = 4,
 
@@ -81,6 +85,7 @@ local Config = {
 	MODES = {
 		["1v1"] = { teams = 2, perTeam = 1 },
 		["2v2"] = { teams = 2, perTeam = 2 },
+		["3v3"] = { teams = 2, perTeam = 3 },
 		["4v4"] = { teams = 2, perTeam = 4 },
 		["FFA"] = { teams = 0, perTeam = 1, minPlayers = 2, maxPlayers = 8 },
 	},

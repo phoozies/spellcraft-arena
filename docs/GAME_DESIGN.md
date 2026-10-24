@@ -60,32 +60,40 @@ Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bi
 
 ### Breakable cover
 
-The Rock Wall is a sculpted earth wall whose base, standing stones, and rubble break separately, and the Castle is built from breakable blocks, so you can punch holes through both. Every arena has breakable brick walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
+The Rock Wall is a sculpted earth wall whose base, standing stones, and rubble break separately, and the Castle is built from breakable blocks, so you can punch holes through both. Most arenas also have breakable block walls. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
 
 ### PvP encouragement
 
 - XP for knockouts, round wins, and match wins, plus a "SPELL STREAK!" callout at 3 KOs.
 - Combos (Water Lock → Lightning deals ×2), knockback ring-outs on Sky Islands, and destructible cover.
-- A session leaderboard in the hub, and the hub's sparring arena (a marble-pillared colosseum with a neon rune ring) for opt-in PvP between matches.
+- A session leaderboard in the hub. There's no PvP in the hub; it all happens in matches.
 - Spawn protection lasts 3 seconds and friendly fire is off.
 
 ## Modes
 
 | Mode | Players | Teams | Notes |
 |---|---|---|---|
-| 1v1 | 2 | Blue / Red | Small-mode walls shrink the map |
-| 2v2 | 4 | Blue / Red | Small-mode walls shrink the map |
-| 4v4 | 8 | Blue / Red | Full map; Frostbite Fortress is weighted ×2 |
+| 1v1 | 2 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
+| 2v2 | 4 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
+| 3v3 | 6 | Blue / Red | Full map |
+| 4v4 | 8 | Blue / Red | Full map; Frostbite Fortress is weighted ×2; never the Sparring Arena (too small) |
 | FFA | 2–8 | everyone alone | Starts at 8 players, or 15s after reaching 2; Sky Islands is weighted ×2 |
 
-## Maps (all designed for 8 players)
+### Picking your team: the team boxes
+
+The hub has a **box for each team mode** (1v1, 2v2, 3v3, 4v4). Every box has a **Blue side and a Red side**, with one spot per teammate. **Stand on a side to pick your team**, so friends can line up together before the match, and the sides show how many spots are filled (for example `BLUE 1/2`). When **both sides are full**, a 5-second countdown starts. It restarts if anyone steps off or swaps sides, and then the match starts with exactly those teams. A full side turns newcomers away with a hint to try the other side.
+
+The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically. **FFA** has its own pink pad: step on it to join the queue.
+
+## Maps (designed for 8 players; the Sparring Arena suits smaller matches)
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | Cobblestone plaza around a giant inkwell | Queue pads, Practice Grove (build anything, smash dummies), sparring arena, Spellbook kiosk, Daily Quest chest, leaderboard |
+| **Inkwell Plaza** (hub) | Cobblestone plaza around a giant inkwell | Team boxes (1v1–4v4), FFA pad, Practice Grove (build anything, smash dummies), Spellbook kiosk, Daily Quest chest, leaderboard |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
+| **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A compact 46-stud floor, with pillars as cover; invisible walls keep everyone on the floor |
 
 Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and identical on every server.
 

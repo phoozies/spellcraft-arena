@@ -4,7 +4,7 @@
 -- MaxHealth attributes and a health bar; players use their Humanoid.
 --
 -- Who may hurt whom is decided by a relation resolver that MatchService
--- installs (teams in matches, sparring ring in the hub).
+-- installs (teams in matches; no PvP in the hub).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")

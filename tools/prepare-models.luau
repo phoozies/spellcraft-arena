@@ -41,7 +41,7 @@ local SPECS = {
 		},
 	},
 	RockWall = {
-		width = 14.4,
+		width = 23.04, -- a big wall: 23 x 12.4 x 9.7 studs
 		solid = true,
 		parts = {
 			Wall_Base = { color = rgb(104, 80, 58), material = M.Ground },
