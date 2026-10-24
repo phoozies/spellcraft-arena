@@ -57,6 +57,7 @@ local function sendSummary(player: Player)
 		ownedSpells = profile.ownedSpells,
 		quests = profile.daily.quests,
 		streak = profile.daily.streak,
+		settings = profile.settings,
 		stats = profile.stats,
 	})
 end
@@ -197,6 +198,26 @@ function ProgressionService.start()
 		syncUnlocks(profile)
 		refreshDaily(player, profile)
 		sendSummary(player)
+	end)
+
+	-- Player settings (saved with the profile). Only known keys with valid
+	-- values are accepted.
+	Remotes.get("SaveSettings").OnServerEvent:Connect(function(player, key, value)
+		local profile = PlayerDataService.get(player)
+		if not profile or typeof(key) ~= "string" or typeof(value) ~= "string" or #value > 32 then
+			return
+		end
+		if key == "typeKey" then
+			local ok, keyCode = pcall(function()
+				return (Enum.KeyCode :: any)[value]
+			end)
+			if not ok or keyCode == nil or table.find(Config.RESERVED_KEYS, value) then
+				toastRemote:FireClient(player, `Can't bind {value}; pick another key.`, "fizzle")
+				return
+			end
+			profile.settings.typeKey = value
+			sendSummary(player)
+		end
 	end)
 
 	Remotes.get("ClaimQuest").OnServerEvent:Connect(function(player, questId)

@@ -1,12 +1,12 @@
 # Controls
 
-You never *have* to type. Every spell can also be tapped on the hotbar, and on supported devices you can say it.
+You get a spell by typing (or saying) its word, which adds **one copy** to your hotbar. You can hold up to 5, duplicates included. Casting uses the copy up, and copies of the same spell share one cooldown. Tapping a hotbar slot readies that copy. The keyboard key that opens the spell box (default **T**) can be changed in **⚙ Settings**. The setting is saved to your profile, and keys used for movement, chat, the hotbar, or rotating can't be chosen. You can submit one word per second, and **pasting into the spell box is blocked**: a text change of more than one character at a time is undone. On phones, picking a keyboard autocomplete suggestion counts as a paste, so type the letters instead.
 
 | Action | Keyboard & mouse | Gamepad (Xbox / PlayStation) | Touch (phone / tablet) | VR |
 |---|---|---|---|---|
-| Ready a spell by word | Type in chat, or press **T** for the spell box | **Y** opens the spell box (on-screen keyboard) | Tap the spell box | **Y** / on-screen keyboard |
+| Get a spell (type its word) | Type in chat, or press **T** (rebindable) for the spell box | **Y** opens the spell box (on-screen keyboard) | Tap the spell box | **Y** / on-screen keyboard |
 | Speak a spell | Hold **🎤** | Hold **🎤** | Hold **🎤** | Hold **🎤** |
-| Ready a spell in your hand | **1–5** | **D-pad ← / →** | Tap a hotbar slot | Hotbar / D-pad |
+| Ready a held copy | **1–5** | **D-pad ← / →** | Tap a hotbar slot | Hotbar / D-pad |
 | Cast | **Left click** (aims at cursor) | **R2** (aims at screen center) | **Tap the world** where you want it | **Right trigger** (aims where your right hand points) |
 | Rotate a placeable | **R** | **L1 / R1** | **⟳** button | **L1 / R1** |
 | Menus | Side buttons | Select + navigate with the stick | Side buttons | Pointer |

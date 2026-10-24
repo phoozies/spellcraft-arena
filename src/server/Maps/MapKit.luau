@@ -117,6 +117,45 @@ function MapKit.ring(
 	end
 end
 
+-- A cover wall made of separately breakable blocks. `base` is the CFrame of
+-- the wall's bottom-center; blocks stack along its X (columns) and Y (rows).
+-- `makeProp` is the map registrar (ArenaService) or DestructibleService.makeProp.
+function MapKit.blockWall(
+	parent: Instance,
+	base: CFrame,
+	columns: number,
+	rows: number,
+	blockSize: Vector3,
+	color: Color3,
+	material: Enum.Material,
+	health: number,
+	makeProp: (Instance, number) -> ()
+): Folder
+	local folder = MapKit.folder(parent, "BlockWall")
+	for row = 1, rows do
+		for col = 1, columns do
+			local shade = 1 + ((col * 7 + row * 3) % 5 - 2) * 0.03
+			local block = MapKit.part(folder, {
+				name = "Block",
+				size = blockSize - Vector3.new(0.08, 0.08, 0),
+				cframe = base * CFrame.new(
+					(col - (columns + 1) / 2) * blockSize.X,
+					(row - 0.5) * blockSize.Y,
+					0
+				),
+				color = Color3.new(
+					math.clamp(color.R * shade, 0, 1),
+					math.clamp(color.G * shade, 0, 1),
+					math.clamp(color.B * shade, 0, 1)
+				),
+				material = material,
+			})
+			makeProp(block, health)
+		end
+	end
+	return folder
+end
+
 -- Scatter helper with a fixed seed so maps are identical everywhere.
 function MapKit.rng(seed: number): Random
 	return Random.new(seed)

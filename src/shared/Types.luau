@@ -50,6 +50,9 @@ export type SpellStats = {
 	trap: boolean?,
 	bounce: number?,
 	hazardDps: number?,
+	-- Build as a grid of separately breakable blocks ({x = columns, y = rows});
+	-- `health` is split evenly between them.
+	segments: { x: number, y: number }?,
 	-- Zone behaviors
 	pull: number?,
 	destroysStructures: boolean?,
@@ -89,7 +92,9 @@ export type SpellDef = {
 
 export type MatchMode = "1v1" | "2v2" | "4v4" | "FFA"
 
-export type MatchPhase = "Idle" | "Countdown" | "Round" | "Draft" | "Results"
+export type MatchPhase = "Idle" | "Intro" | "Countdown" | "Round" | "Draft" | "Results"
+
+export type RosterEntry = { userId: number, name: string, team: string }
 
 export type DraftCard = {
 	spellId: string,
@@ -117,6 +122,9 @@ export type Profile = {
 		questDay: number,
 		quests: { DailyQuest },
 	},
+	settings: {
+		typeKey: string, -- Enum.KeyCode name that focuses the "type a spell" box
+	},
 }
 
 export type DailyQuest = {
@@ -138,6 +146,12 @@ export type MatchState = {
 	scores: { [string]: number },
 	myTeam: string?, -- display name (matches `scores` keys)
 	myTeamId: string?, -- matches characters' "Team" attribute
+	-- For the intro/VS screen and banners:
+	roster: { RosterEntry }?, -- team = display name
+	roundWinner: string?, -- display name of the last round's winner
+	winner: string?, -- set in Results: display name of the match winner
+	won: boolean?, -- set in Results for this player
+	xpGained: number?, -- set in Results for this player
 }
 
 return nil

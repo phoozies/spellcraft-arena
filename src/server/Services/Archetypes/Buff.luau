@@ -39,11 +39,16 @@ function Buff.cast(ctx: any): boolean?
 	local duration = stats.duration or 0.6
 
 	if stats.heal then
-		DestructibleService.heal(character, stats.heal)
+		DestructibleService.heal(character, stats.heal, ctx.player)
 	end
 	if stats.shield then
-		character:SetAttribute("Shield", (character:GetAttribute("Shield") or 0) + stats.shield)
-		-- Only the latest cast's timer may clear the shield (recasts extend it).
+		-- Shields don't stack (spells can be re-typed every second): a recast
+		-- refills to the larger value and restarts the timer.
+		character:SetAttribute(
+			"Shield",
+			math.max(character:GetAttribute("Shield") or 0, stats.shield)
+		)
+		-- Only the latest cast's timer may clear the shield.
 		local token = (character:GetAttribute("ShieldToken") or 0) + 1
 		character:SetAttribute("ShieldToken", token)
 		task.delay(duration, function()

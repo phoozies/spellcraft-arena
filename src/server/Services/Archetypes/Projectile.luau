@@ -12,10 +12,12 @@
 -- from a single "projectile" Fx event and remove it on "projectileEnd", so
 -- nothing replicates per frame.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
@@ -29,6 +31,8 @@ export type LaunchOptions = {
 	visual: Types.Visual,
 	spellName: string,
 	ignore: { Instance },
+	-- Which client VFX to use (a spell id, or e.g. "Cannonball"); defaults to spellName.
+	fxKey: string?,
 }
 
 type Live = {
@@ -48,6 +52,10 @@ local Projectile = {}
 
 -- Hard cap so a flood of turrets/reflections can't grow the loop unbounded.
 local MAX_LIVE = 300
+-- Radius used against plain map geometry (walls, floors, cliffs).
+local WORLD_RADIUS = 0.75
+-- Breakable things, fetched once per frame and shared by every bolt.
+local frameDestructibles: { Instance } = {}
 
 local fxRemote = Remotes.get("Fx")
 local live: { Live } = {}
@@ -129,9 +137,12 @@ local function step(p: Live, dt: number): boolean
 	local caster = opts.caster
 	local stepLength = math.min(p.speed * dt, p.range - p.travelled)
 	local result: RaycastResult? = nil
+	-- World sweep uses a thin sphere so bolts glide over floors and ledges;
+	-- the generous hitbox is applied to targets in the "fat" sweep below.
+	local worldRadius = math.min(p.radius, WORLD_RADIUS)
 	-- Up to 3 passes so we can skip allied structures in the same frame.
 	for _ = 1, 3 do
-		result = workspace:Spherecast(p.position, p.radius, p.direction * stepLength, p.params)
+		result = workspace:Spherecast(p.position, worldRadius, p.direction * stepLength, p.params)
 		if not result then
 			break
 		end
@@ -148,6 +159,46 @@ local function step(p: Live, dt: number): boolean
 			result = nil
 		else
 			break
+		end
+	end
+
+	-- Bigger hitbox for targets only (a wide world sweep would snag bolts on
+	-- floors): sweep a fat sphere that only sees other characters and
+	-- breakable things this caster can hurt, and take whichever hit is first.
+	local targets: { Instance } = {}
+	for _, other in Players:GetPlayers() do
+		local character = other.Character
+		if other ~= caster and character and not table.find(p.ignore, character) then
+			table.insert(targets, character)
+		end
+	end
+	local reach = stepLength + p.radius + Config.HITBOX_BONUS + 12
+	for _, thing in frameDestructibles do
+		local pos = if thing:IsA("BasePart")
+			then thing.Position
+			elseif thing:IsA("Model") then thing:GetPivot().Position
+			else nil
+		if
+			pos
+			and (pos - p.position).Magnitude <= reach
+			and not table.find(p.ignore, thing)
+			and (caster == nil or DestructibleService.canHarm(caster, thing))
+		then
+			table.insert(targets, thing)
+		end
+	end
+	if #targets > 0 then
+		local fat = RaycastParams.new()
+		fat.FilterType = Enum.RaycastFilterType.Include
+		fat.FilterDescendantsInstances = targets
+		local targetHit = workspace:Spherecast(
+			p.position,
+			p.radius + Config.HITBOX_BONUS,
+			p.direction * stepLength,
+			fat
+		)
+		if targetHit and (not result or targetHit.Distance < result.Distance) then
+			result = targetHit
 		end
 	end
 
@@ -177,11 +228,12 @@ local function step(p: Live, dt: number): boolean
 end
 
 local function finish(p: Live)
+	-- Clients play the impact burst for this bolt (per-element VFX).
 	fxRemote:FireAllClients("projectileEnd", p.id, p.position)
-	DestructibleService.poof(p.position, p.opts.visual.color)
 end
 
 local function tick(dt: number)
+	frameDestructibles = CollectionService:GetTagged("Destructible")
 	for i = #live, 1, -1 do
 		local p = live[i]
 		local ok, done = pcall(step, p, dt)
@@ -218,7 +270,8 @@ function Projectile.launch(opts: LaunchOptions)
 		opts = opts,
 		position = opts.origin,
 		direction = direction,
-		speed = opts.stats.speed or 80,
+		-- Players are fast (Config.WALK_SPEED), so every bolt is sped up too.
+		speed = (opts.stats.speed or 80) * Config.PROJECTILE_SPEED_SCALE,
 		range = opts.stats.range or 150,
 		radius = opts.stats.radius or 1,
 		travelled = 0,
@@ -233,7 +286,8 @@ function Projectile.launch(opts: LaunchOptions)
 		direction,
 		p.speed,
 		p.range,
-		opts.visual
+		opts.visual,
+		opts.fxKey or opts.spellName
 	)
 	if not loop then
 		loop = RunService.Heartbeat:Connect(tick)
@@ -264,6 +318,7 @@ function Projectile.cast(ctx: any): boolean?
 		stats = ctx.def.stats,
 		visual = ctx.def.visual,
 		spellName = ctx.def.name,
+		fxKey = ctx.def.id,
 		ignore = { ctx.character },
 	})
 	return true

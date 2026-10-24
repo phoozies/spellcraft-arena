@@ -2,7 +2,8 @@
 
 A Scribblenauts-inspired PvP game for Roblox: **type or say a word, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
-- Say "fireball", "rock wall", or "tornado" in chat, the spell box, or out loud 🎤, and cast it.
+- Type "fireball", "rock wall", or "tornado" in chat, the spell box, or out loud 🎤 to add a copy of the spell to your hotbar. You can hold up to 5, duplicates included, and copies of the same spell share a cooldown. You can submit one word per second, and pasting is blocked.
+- Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 4v4, and FFA, best of 3. You start each match with 3 random spells you own, then draft a new card each round (cards have random rarities) until your hand holds 5.
 - 40 spells to unlock across levels 1–10. Players start with Fireball, Water Lock, and Rock Wall.
@@ -34,6 +35,7 @@ require(game.ServerScriptService.Tests.Runner)()
 | [Spells](docs/SPELLS.md) | The full dictionary, rarity, archetypes, how to add a spell |
 | [Architecture](docs/ARCHITECTURE.md) | Code layout, cast pipeline, PvP rules, data and security |
 | [Controls](docs/CONTROLS.md) | Per-device bindings, voice, accessibility |
+| [Admin commands](docs/ADMIN.md) | Who is an admin, every `;` command, adding commands |
 | [Contributing](docs/CONTRIBUTING.md) | Setup, workflow, conventions, test helpers |
 | [Changelog](CHANGELOG.md) | Release notes |
 

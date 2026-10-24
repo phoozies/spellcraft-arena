@@ -9,8 +9,57 @@ local Config = {
 
 	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.
 	GLOBAL_CAST_LOCKOUT = 0.35,
-	-- Max words a player may submit per second (chat + box + voice combined).
-	WORD_RATE_PER_SECOND = 4,
+	-- Seconds between typed/spoken words (chat + box + voice combined). Each
+	-- word adds one copy of a spell (up to MAX_HAND held, duplicates allowed).
+	TYPE_COOLDOWN = 1,
+
+	-- Movement & aiming. Players move faster than Roblox's default (16) to
+	-- keep fights lively; projectiles are sped up by the same ratio and get
+	-- a bigger hitbox so they still land.
+	WALK_SPEED = 24,
+	JUMP_POWER = 55,
+	PROJECTILE_SPEED_SCALE = 1.5,
+	-- Studs added to every projectile's hit radius (spherecast) and to
+	-- area-of-effect checks against players.
+	HITBOX_BONUS = 1.5,
+
+	-- Health regenerates only in the hub. In arenas the only healing is spells.
+	HUB_REGEN_PER_SECOND = 5,
+
+	-- Seconds of the "VS" intro before players are moved into the arena.
+	INTRO_TIME = 4,
+
+	-- Settings: the default key that focuses the "type a spell" box, and keys
+	-- that can't be bound to it (movement, chat, hotbar, menus).
+	DEFAULT_TYPE_KEY = "T",
+	RESERVED_KEYS = {
+		"W",
+		"A",
+		"S",
+		"D",
+		"Space",
+		"Escape",
+		"Slash",
+		"Backquote",
+		"Tab",
+		"Return",
+		"One",
+		"Two",
+		"Three",
+		"Four",
+		"Five",
+		"R",
+		"LeftShift",
+		"RightShift",
+		"Up",
+		"Down",
+		"Left",
+		"Right",
+	} :: { string },
+	-- After a hard crowd-control effect (Root, TimeStop, Shrink) ends, the
+	-- target can't be hit by that kind again for this long. Stops CC chains
+	-- now that spells can be re-typed every second.
+	CC_IMMUNITY = 2.5,
 
 	PLAYER_MAX_HEALTH = 100,
 	SPAWN_PROTECTION = 3,
@@ -61,6 +110,12 @@ local Config = {
 
 	-- Set true only in Studio test sessions; enables gated debug remotes.
 	DEBUG_COMMANDS_IN_STUDIO = true,
+
+	-- Admin commands (see docs/ADMIN.md). UserIds listed here, the place
+	-- owner (or group owner, rank 255), and anyone testing in Studio are admins.
+	ADMIN_PREFIX = ";",
+	ADMIN_USER_IDS = { 118721190 } :: { number },
+	ADMIN_GROUP_MIN_RANK = 255,
 }
 
 return table.freeze(Config)

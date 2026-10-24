@@ -103,6 +103,21 @@ return function(makeProp: Registrar): Model
 		end
 	end
 
+	-- Breakable brick cover: one wall in each lane, offset so teams meet them.
+	for _, lane in { { x = -38, z = -14 }, { x = 0, z = 0 }, { x = 38, z = 14 } } do
+		MapKit.blockWall(
+			model,
+			CFrame.new(lane.x, 0, lane.z),
+			4,
+			3,
+			Vector3.new(3, 2.5, 2),
+			COLORS[(lane.x // 19 % #COLORS) + 1],
+			Enum.Material.Brick,
+			30,
+			makeProp
+		)
+	end
+
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 78)
 	MapKit.ffaSpawns(spawns, Vector3.new(0, 3, 0), 40, 8)

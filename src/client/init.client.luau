@@ -11,6 +11,9 @@ local ORDER = {
 	"InputController",
 	"EffectsController",
 	"FxController",
+	"HealthController",
+	"SettingsController",
+	"PresentationController",
 }
 
 local Controllers = script:WaitForChild("Controllers")

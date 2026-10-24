@@ -20,6 +20,7 @@ local DEFINITIONS: { [string]: string } = {
 	SetQueue = "(mode: string?) join a queue by mode name, or leave with nil",
 	ClaimQuest = "(questId: string) claim a finished daily quest",
 	VoiceListen = "(listening: boolean) push-to-talk for speaking a spell",
+	SaveSettings = "(key: string, value: string) save a player setting, e.g. typeKey",
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client

@@ -1,0 +1,5 @@
+--!strict
+-- Replaces Roblox's default "Health" character script, which regenerates
+-- 1% HP per second everywhere. Wordcraft Arena only regenerates in the hub
+-- (HubService); inside arenas the only healing comes from spells.
+-- This script intentionally does nothing.

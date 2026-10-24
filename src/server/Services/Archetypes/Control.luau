@@ -49,6 +49,7 @@ function Control.cast(ctx: any): boolean?
 			stats = stats,
 			visual = ctx.def.visual,
 			spellName = ctx.def.name,
+			fxKey = ctx.def.id,
 			ignore = { ctx.character },
 		})
 		return true
@@ -82,8 +83,9 @@ function Control.cast(ctx: any): boolean?
 				DestructibleService.damage(hit.character, stats.damage, ctx.player, ctx.def.name)
 			end
 			if stats.status then
-				StatusService.apply(hit.character, stats.status, stats.statusDuration or 1)
-				bubble(hit.character, ctx.def.visual.color, stats.statusDuration or 1)
+				if StatusService.apply(hit.character, stats.status, stats.statusDuration or 1) then
+					bubble(hit.character, ctx.def.visual.color, stats.statusDuration or 1)
+				end
 			end
 		end
 	end

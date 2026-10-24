@@ -271,27 +271,43 @@ local function buildSideButtons(root: Instance)
 		Name = "SideMenu",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(120, 3 * 62),
+		Size = UDim2.fromOffset(120, 4 * 62),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = holder
+	local buttons: { [string]: TextButton } = {}
 	for _, entry in
-		{ { "Play", "▶ Play" }, { "Spellbook", "📖 Spells" }, { "Quests", "⭐ Quests" } }
+		{
+			{ "Play", "▶ Play" },
+			{ "Spellbook", "📖 Spells" },
+			{ "Quests", "⭐ Quests" },
+			{ "Settings", "⚙ Settings" },
+		}
 	do
 		local button = Theme.button(holder, entry[2], { Size = UDim2.new(1, 0, 0, Theme.TOUCH) })
 		button.Activated:Connect(function()
 			MenuController.toggle(entry[1])
 		end)
+		buttons[entry[1]] = button
 	end
-	-- Hide the Play button during matches.
+	-- Only Settings stays available during matches.
 	ClientState.MatchChanged:Connect(function()
-		holder.Visible = ClientState.match.phase == "Idle"
-		if not holder.Visible then
+		local idle = ClientState.match.phase == "Idle"
+		for name, button in buttons do
+			button.Visible = idle or name == "Settings"
+		end
+		if not idle and openName ~= "Settings" then
 			MenuController.close()
 		end
 	end)
+end
+
+-- Lets other controllers (Settings) add a standard panel.
+function MenuController.createPanel(name: string, title: string): Frame
+	local root = HudController.getGui():WaitForChild("Root")
+	return makePanel(root, name, title)
 end
 
 function MenuController.isOpen(): boolean

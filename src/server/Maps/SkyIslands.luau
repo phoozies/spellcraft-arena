@@ -93,6 +93,21 @@ return function(makeProp: Registrar): Model
 		makeProp(block, 160)
 	end
 
+	-- Breakable cloud-brick walls on the main island: knock holes for sightlines.
+	for _, angle in { 0, math.pi / 2 } do
+		MapKit.blockWall(
+			model,
+			CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, 17),
+			4,
+			2,
+			Vector3.new(3, 2.5, 2),
+			Color3.fromRGB(245, 245, 255),
+			Enum.Material.SmoothPlastic,
+			25,
+			makeProp
+		)
+	end
+
 	local spawns = MapKit.folder(model, "Spawns")
 	-- Teams start on opposite islands (1 and 3).
 	for i = 1, 4 do

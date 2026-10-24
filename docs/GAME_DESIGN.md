@@ -27,17 +27,40 @@ Hub ──► queue (pad or Play menu) ──► Match (best of 3)
 
 ### In a match
 
-1. **Start:** you get **3 random spells from the ones you own**. New players own exactly Fireball, Water Lock, and Rock Wall.
-2. **Countdown** (5s, frozen in place), then the **Round** (up to 120s). The last team standing wins the round. If time runs out, the team with the most remaining health wins.
-3. **Draft** (15s) after each round, while your hand has fewer than 5 spells. You're offered **3 cards, each with its own randomly rolled rarity**, and you pick one. If time runs out, one is picked for you. Your hand grows 3 → 4 → 5.
-4. **First to 2 round wins** takes the match. Then a Results screen with XP, and back to the hub.
+1. **Intro** (4s): a VS screen shows the mode, the map, and both teams with their avatars, then fades to black while everyone is moved into the arena. Your match **spellbook** is **3 random spells from the ones you own**. New players own exactly Fireball, Water Lock, and Rock Wall. These are the words you can type this match.
+2. **Countdown** (5s, frozen in place, with big 3 · 2 · 1 numbers), then **FIGHT!** and the **Round** (up to 120s). The last team standing wins the round. If time runs out, the team with the most remaining health wins.
+3. A round banner announces the result ("BLUE WINS ROUND 1" or "DRAW"). Then comes the **Draft** (15s), while your spellbook has fewer than 5 spells: you're offered **3 cards, each with its own randomly rolled rarity**, and you pick one. If time runs out, one is picked for you. Your spellbook grows 3 → 4 → 5.
+4. **First to 2 round wins** takes the match. The **VICTORY!** screen (with confetti), **DEFEAT**, or **DRAW** shows your XP counting up, then everything fades back to the hub.
 
-### Casting
+Players have **100 HP** and **don't regenerate in the arena**; only healing spells restore health. The hub regenerates 5 HP/s.
 
-- **Say** a spell word in chat, the spell box, or with the 🎤 push-to-talk button, or tap its hotbar slot. That spell becomes **readied**.
-- **Cast** the readied spell: click, R2, tap the world, or pull the VR trigger. It stays readied, so you can cast again once the cooldown ends.
+### Casting: type it, stockpile it, spend it
+
+- **Type** a spell word in chat or the spell box, or **say** it with 🎤, to add **one copy** of that spell to your hotbar. You can hold **up to 5 copies in any mix**, including 5 of the same spell. The new copy is readied automatically.
+- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** If you hold more copies of that spell, the next one is readied for you.
+- **Shared cooldown:** all copies of the same spell share one cast cooldown (0.5–2s for commons, 4–25s for big spells; see SPELLS.md). The hotbar shows the cooldown sweep on every slot holding that spell.
+- **Typing cooldown:** 1 second between words across chat, the spell box, and voice. Pasting into the spell box is blocked, so speed comes from actually typing. The key that opens the spell box can be changed in **Settings**.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
-- In a match, words outside your hand fizzle with a hint ("Draft it next round!"). In the hub, any spell you own works.
+- **Which words work:** in a match, words outside your spellbook fizzle with a hint ("Draft it next round!"). In the hub, any spell you own works. Each round starts empty-handed, so your first move is to type.
+- **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
+- **Spell VFX:** every cast raises the caster's arm and flashes a magic circle at their feet. Bolts trail element-themed particles (fire, sparks, ice, water, wind), and impacts burst with light and a shockwave ring.
+- **Health bars:** your own HP is shown top-left, with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
+
+### Balancing for fast play
+
+Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+1.5 studs), while still gliding over floors. Since you can stockpile up to 5 copies, the numbers are budgeted per cast cooldown:
+- No single hit takes more than 34 of your 100 HP.
+- Burst damage is capped at 20 per second, which works out to about a 6-second kill.
+- Hard crowd control can't be chained, thanks to 2.5s of immunity after it ends.
+- Shields don't stack.
+- Zones and summons are limited to one live copy per player per spell.
+- Legendaries have cooldowns of 10s or more.
+
+`tests/Balance.spec.luau` enforces all of these limits.
+
+### Breakable cover
+
+Rock Wall and Castle are built from separately breakable blocks, so you can punch holes through them. Every arena has breakable brick walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
 
 ### PvP encouragement
 

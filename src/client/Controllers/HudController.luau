@@ -105,8 +105,101 @@ end
 local function submitSpellBox()
 	local text = spellBox.Text
 	spellBox.Text = ""
-	if #text > 0 then
-		Remotes.get("SubmitWord"):FireServer(string.sub(text, 1, 64))
+	if #text == 0 then
+		return
+	end
+	-- Admin commands aren't words, so they skip the typing cooldown.
+	if string.sub(text, 1, #Config.ADMIN_PREFIX) == Config.ADMIN_PREFIX then
+		Remotes.get("SubmitWord"):FireServer(string.sub(text, 1, 120))
+		return
+	end
+	local now = os.clock()
+	if now < ClientState.typeReadyAt then
+		HudController.toast(
+			`Typing cooldown ({math.ceil((ClientState.typeReadyAt - now) * 10) / 10}s)`,
+			"cooldown"
+		)
+		return
+	end
+	ClientState.typeReadyAt = now + Config.TYPE_COOLDOWN
+	Remotes.get("SubmitWord"):FireServer(string.sub(text, 1, 64))
+end
+
+-- Blocks pasting: a real keystroke changes the text by at most one
+-- character, so any bigger jump (Ctrl+V, right-click paste, drag-drop) is
+-- undone. The server's 1s typing cooldown backs this up for chat and voice.
+local function guardAgainstPaste(box: TextBox)
+	local lastText = box.Text
+	local reverting = false
+	box:GetPropertyChangedSignal("Text"):Connect(function()
+		if reverting then
+			return
+		end
+		local text = box.Text
+		if #text - #lastText > 1 and text ~= "" then
+			reverting = true
+			box.Text = lastText
+			box.CursorPosition = #lastText + 1
+			reverting = false
+			HudController.toast("No pasting — type it out!", "fizzle")
+			return
+		end
+		lastText = text
+	end)
+	box.Focused:Connect(function()
+		lastText = box.Text
+	end)
+end
+
+-- Chips above the spell box: your match spellbook (the words you can type
+-- this match) or, in the hub, any spell still recharging.
+local wordsRow: Frame
+local wordChips: { [string]: TextLabel } = {}
+
+local function refreshWords()
+	for _, chip in wordChips do
+		chip.Parent:Destroy()
+	end
+	table.clear(wordChips)
+	local ids: { string } = {}
+	if ClientState.spellbook then
+		ids = table.clone(ClientState.spellbook)
+	else
+		for id in ClientState.cooldowns do
+			if ClientState.cooldownLeft(id) > 0 then
+				table.insert(ids, id)
+			end
+		end
+	end
+	for order, id in ids do
+		local def = SpellDefinitions.get(id)
+		if def then
+			local chip = Theme.frame(wordsRow, {
+				Size = UDim2.fromOffset(96, 26),
+				LayoutOrder = order,
+				BackgroundTransparency = 0.2,
+			})
+			Theme.corner(chip, 13)
+			local stroke = Theme.stroke(chip, Rarity.INFO[def.rarity].color, 2)
+			stroke.Transparency = 0.2
+			wordChips[id] = Theme.label(chip, string.lower(def.name), {
+				Size = UDim2.new(1, -10, 1, -4),
+				Position = UDim2.fromOffset(5, 2),
+			})
+		end
+	end
+end
+
+local function tickWords()
+	for id, label in wordChips do
+		local def = SpellDefinitions.get(id)
+		local left = ClientState.cooldownLeft(id)
+		if def then
+			label.Text = if left > 0
+				then `{string.lower(def.name)} {math.ceil(left * 10) / 10}s`
+				else string.lower(def.name)
+			label.TextColor3 = if left > 0 then Theme.COLORS.bad else Theme.COLORS.text
+		end
 	end
 end
 
@@ -183,28 +276,38 @@ local function refreshHotbar()
 			slot.icon.Text = info.glyph
 			slot.icon.TextColor3 = def.visual.color
 			slot.name.Text = def.name
-			slot.stroke.Color = if id == ClientState.readied
-				then Theme.COLORS.accent
-				else info.color
-			slot.stroke.Thickness = if id == ClientState.readied then 5 else 3
-			slot.button.BackgroundColor3 = if id == ClientState.readied
+			slot.name.TextColor3 = Theme.COLORS.text
+			local isReadied = i == ClientState.readiedSlot
+			slot.stroke.Color = if isReadied then Theme.COLORS.accent else info.color
+			slot.stroke.Thickness = if isReadied then 5 else 3
+			slot.button.BackgroundColor3 = if isReadied
 				then Color3.fromRGB(84, 80, 140)
 				else Theme.COLORS.panelLight
 		else
-			slot.button.Visible = i <= math.max(#ClientState.hand, Config.STARTING_HAND)
+			-- Empty slot: hint that typing a word fills it. All 5 slots
+			-- show, since you can stockpile up to 5 copies.
+			slot.button.Visible = true
 			slot.icon.Text = ""
-			slot.name.Text = ""
+			slot.name.Text = if i == #ClientState.hand + 1 then "type!" else ""
+			slot.name.TextColor3 = Theme.COLORS.subtext
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
+			slot.stroke.Thickness = 3
+			slot.button.BackgroundColor3 = Theme.COLORS.panel
 		end
 	end
+	refreshWords()
 end
 
+local typeBar: Frame
+
 local function tickCooldowns()
+	-- Copies of the same spell share one cooldown, so every slot holding
+	-- that spell shows the same sweep.
 	for i, slot in slots do
 		local id = ClientState.hand[i]
 		local def = id and SpellDefinitions.get(id)
 		local left = if id then ClientState.cooldownLeft(id) else 0
-		if def and left > 0 then
+		if def and left > 0 and def.cooldown > 0 then
 			slot.cooldown.Size = UDim2.fromScale(1, math.clamp(left / def.cooldown, 0, 1))
 			slot.cooldownText.Text = if left >= 1 then tostring(math.ceil(left)) else ""
 		else
@@ -212,6 +315,9 @@ local function tickCooldowns()
 			slot.cooldownText.Text = ""
 		end
 	end
+	tickWords()
+	local typeLeft = math.max(0, ClientState.typeReadyAt - os.clock())
+	typeBar.Size = UDim2.new(math.clamp(typeLeft / Config.TYPE_COOLDOWN, 0, 1), 0, 0, 4)
 	local state = ClientState.match
 	if state.phase ~= "Idle" and state.endsAt > 0 then
 		local left = math.max(0, math.ceil(state.endsAt - workspace:GetServerTimeNow()))
@@ -219,6 +325,7 @@ local function tickCooldowns()
 			then `Round {state.round} starts in {left}`
 			elseif state.phase == "Round" then `Round {state.round} — {left}s`
 			elseif state.phase == "Draft" then `Draft a spell! {left}s`
+			elseif state.phase == "Intro" then "Match starting…"
 			else "Match over"
 		matchText.Text = phaseText
 	end
@@ -238,7 +345,7 @@ local function buildSpellBox(root: Frame)
 	spellBox.BackgroundColor3 = Theme.COLORS.panel
 	spellBox.BackgroundTransparency = 0.15
 	spellBox.TextColor3 = Theme.COLORS.text
-	spellBox.PlaceholderText = "Type a spell... (T)"
+	spellBox.PlaceholderText = `Type a spell... ({Config.DEFAULT_TYPE_KEY})`
 	spellBox.PlaceholderColor3 = Theme.COLORS.subtext
 	spellBox.Font = Theme.FONT
 	spellBox.TextScaled = true
@@ -248,6 +355,28 @@ local function buildSpellBox(root: Frame)
 	Theme.stroke(spellBox, Theme.COLORS.accent, 2)
 	Theme.padding(spellBox, 8)
 	spellBox.Parent = holder
+	guardAgainstPaste(spellBox)
+	-- Thin bar under the box that drains during the typing cooldown.
+	typeBar = Theme.frame(holder, {
+		Name = "TypeCooldown",
+		Position = UDim2.new(0, 0, 1, 2),
+		Size = UDim2.new(0, 0, 0, 4),
+		BackgroundColor3 = Theme.COLORS.accent,
+	})
+	Theme.corner(typeBar, 2)
+	wordsRow = Theme.frame(root, {
+		Name = "Words",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -164),
+		Size = UDim2.fromOffset(520, 26),
+		BackgroundTransparency = 1,
+	})
+	local wordsLayout = Instance.new("UIListLayout")
+	wordsLayout.FillDirection = Enum.FillDirection.Horizontal
+	wordsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	wordsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	wordsLayout.Padding = UDim.new(0, 6)
+	wordsLayout.Parent = wordsRow
 	spellBox.FocusLost:Connect(function(enterPressed)
 		if enterPressed then
 			submitSpellBox()
@@ -459,6 +588,9 @@ end
 function HudController.start()
 	ClientState.HandChanged:Connect(refreshHotbar)
 	ClientState.ProfileChanged:Connect(refreshLevel)
+	ClientState.ProfileChanged:Connect(function()
+		spellBox.PlaceholderText = `Type a spell... ({ClientState.typeKeyName()})`
+	end)
 	ClientState.MatchChanged:Connect(refreshMatch)
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)

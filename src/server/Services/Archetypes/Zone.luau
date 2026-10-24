@@ -16,6 +16,27 @@ local Zone = {}
 
 local TICK = 0.25
 
+-- player -> spellId -> live zone discs (oldest first). Lingering zones are
+-- capped per spell (stats.maxActive, default 1); casting another replaces
+-- the oldest, so re-typing every second can't carpet the map.
+local activeZones: { [Player]: { [string]: { BasePart } } } = setmetatable({}, { __mode = "k" }) :: any
+
+local function trackZone(player: Player, spellId: string, area: BasePart, maxActive: number)
+	local bySpell = activeZones[player] or {}
+	activeZones[player] = bySpell
+	local list = bySpell[spellId] or {}
+	bySpell[spellId] = list
+	for i = #list, 1, -1 do
+		if list[i].Parent == nil then
+			table.remove(list, i)
+		end
+	end
+	while #list >= maxActive do
+		table.remove(list, 1):Destroy()
+	end
+	table.insert(list, area)
+end
+
 local function groundAt(point: Vector3, ignore: { Instance }): Vector3
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -52,6 +73,7 @@ local function burst(ctx: any, center: Vector3)
 	TweenService:Create(flash, TweenInfo.new(0.5), { Transparency = 1 }):Play()
 	Debris:AddItem(flash, 0.6)
 	DestructibleService.poof(center, ctx.def.visual.color)
+	DestructibleService.shockwave(center, radius, ctx.def.visual.color)
 
 	for _, hit in ctx.enemiesNear(center, radius) do
 		if hit.character then
@@ -111,6 +133,7 @@ function Zone.cast(ctx: any): boolean?
 	local duration = stats.duration or 3
 	local area = disc(center, radius, visual.color, visual.material, visual.transparency or 0.3)
 	area.Name = ctx.def.name
+	trackZone(ctx.player, ctx.def.id, area, stats.maxActive or 1)
 	if
 		visual.shape == "Ball"
 		or (visual.shape == "Cylinder" and not (visual.size.X < visual.size.Y))
@@ -135,7 +158,7 @@ function Zone.cast(ctx: any): boolean?
 
 	task.spawn(function()
 		local elapsed = 0
-		while elapsed < duration do
+		while elapsed < duration and area.Parent do
 			for _, hit in ctx.enemiesNear(center, radius) do
 				if hit.character then
 					if stats.status then
@@ -167,7 +190,7 @@ function Zone.cast(ctx: any): boolean?
 			end
 			if stats.heal then
 				for _, ally in ctx.alliesNear(center, radius) do
-					DestructibleService.heal(ally, stats.heal * TICK)
+					DestructibleService.heal(ally, stats.heal * TICK, ctx.player)
 				end
 			end
 			task.wait(TICK)

@@ -82,16 +82,57 @@ function DestructibleService.canHarm(attacker: Player?, target: Instance): boole
 	return relation(attacker, owner, resolved)
 end
 
+local function partsOf(target: Instance): { BasePart }
+	if target:IsA("BasePart") then
+		return { target }
+	end
+	local parts = {}
+	for _, d in target:GetDescendants() do
+		if d:IsA("BasePart") then
+			table.insert(parts, d)
+		end
+	end
+	return parts
+end
+
+-- Health bar + visible wear: damaged things darken as they lose health so
+-- players can see a wall is about to give.
 local function updateBar(target: Instance)
+	local health = target:GetAttribute("Health") :: number? or 0
+	local max = target:GetAttribute("MaxHealth") :: number? or 1
+	local ratio = math.clamp(health / max, 0, 1)
 	local bar = target:FindFirstChild("HealthBar", true)
 	if bar and bar:IsA("BillboardGui") then
 		local fill = bar:FindFirstChild("Fill", true)
-		local health = target:GetAttribute("Health") :: number? or 0
-		local max = target:GetAttribute("MaxHealth") :: number? or 1
 		if fill and fill:IsA("Frame") then
-			fill.Size = UDim2.fromScale(math.clamp(health / max, 0, 1), 1)
+			fill.Size = UDim2.fromScale(ratio, 1)
 		end
 		bar.Enabled = health < max
+	end
+	for _, part in partsOf(target) do
+		local base = part:GetAttribute("BaseColor")
+		if typeof(base) ~= "Color3" then
+			base = part.Color
+			part:SetAttribute("BaseColor", base)
+		end
+		part.Color = (base :: Color3):Lerp(Color3.new(0.1, 0.08, 0.08), (1 - ratio) * 0.45)
+	end
+end
+
+-- Floating damage/heal/shield numbers. Only the two players involved see
+-- them (the attacker and the player who owns the target), which keeps
+-- busy fights readable and network traffic small. Zone ticks below 1 point
+-- are skipped.
+local function showNumber(position: Vector3, amount: number, kind: string, a: Player?, b: Player?)
+	if amount < 1 then
+		return
+	end
+	local rounded = math.floor(amount + 0.5)
+	if a then
+		fxRemote:FireClient(a, "number", position, rounded, kind)
+	end
+	if b and b ~= a then
+		fxRemote:FireClient(b, "number", position, rounded, kind)
 	end
 end
 
@@ -102,23 +143,32 @@ local function poof(position: Vector3, color: Color3)
 end
 DestructibleService.poof = poof
 
+-- Breaks every part of `target` into tumbling chunks (client-rendered).
+-- Visual only; the caller destroys the real instance.
+function DestructibleService.shatter(target: Instance)
+	for _, part in partsOf(target) do
+		if part.Transparency < 1 then
+			fxRemote:FireAllClients("shatter", part.CFrame, part.Size, part.Color, part.Material)
+		end
+	end
+end
+
+-- Expanding ground ring for slams and area bursts (client-rendered).
+function DestructibleService.shockwave(position: Vector3, radius: number, color: Color3)
+	fxRemote:FireAllClients("shockwave", position, radius, color)
+end
+
+-- Dust ring kicked up when something rises out of the ground.
+function DestructibleService.dust(position: Vector3, width: number, color: Color3)
+	fxRemote:FireAllClients("dust", position, width, color)
+end
+
 local function breakStructure(target: Instance, destroyer: Player?)
 	if target:GetAttribute("Broken") then
 		return
 	end
 	target:SetAttribute("Broken", true)
-	local position = if target:IsA("Model")
-		then target:GetPivot().Position
-		elseif target:IsA("BasePart") then target.Position
-		else Vector3.zero
-	local color = Color3.fromRGB(200, 200, 200)
-	local part = if target:IsA("BasePart")
-		then target
-		else target:FindFirstChildWhichIsA("BasePart", true)
-	if part then
-		color = part.Color
-	end
-	poof(position, color)
+	DestructibleService.shatter(target)
 	DestructibleService.Destroyed:Fire(target, destroyer)
 	target:Destroy()
 end
@@ -147,7 +197,7 @@ function DestructibleService.damage(
 		if not humanoid or humanoid.Health <= 0 then
 			return 0
 		end
-		if character:FindFirstChildOfClass("ForceField") then
+		if character:FindFirstChildOfClass("ForceField") or character:GetAttribute("God") then
 			return 0
 		end
 		-- Shrunk players take extra damage; giants take less.
@@ -156,6 +206,7 @@ function DestructibleService.damage(
 		elseif StatusService.has(character, "Giant") then
 			amount *= 0.75
 		end
+		local position = character:GetPivot().Position
 		local shield = character:GetAttribute("Shield") :: number? or 0
 		if shield > 0 then
 			local absorbed = math.min(shield, amount)
@@ -164,14 +215,19 @@ function DestructibleService.damage(
 				"Shield",
 				if shield - absorbed > 0 then shield - absorbed else nil
 			)
+			showNumber(position, absorbed, "shield", attacker, owner)
 		end
 		if attacker then
 			lastHit[owner] = { by = attacker, at = os.clock(), spell = spellName }
 		end
+		if amount <= 0 then
+			return 0
+		end
+		showNumber(position, amount, "damage", attacker, owner)
 		if amount >= humanoid.Health and StatusService.has(character, "Revive") then
 			StatusService.clear(character, "Revive")
 			humanoid.Health = humanoid.MaxHealth / 2
-			poof(character:GetPivot().Position, Color3.fromRGB(255, 145, 0))
+			poof(position, Color3.fromRGB(255, 145, 0))
 			return amount
 		end
 		humanoid:TakeDamage(amount)
@@ -183,16 +239,36 @@ function DestructibleService.damage(
 	health -= amount
 	resolved:SetAttribute("Health", health)
 	updateBar(resolved)
+	local propPosition = if resolved:IsA("Model")
+		then resolved:GetPivot().Position
+		elseif resolved:IsA("BasePart") then resolved.Position
+		else nil
+	if propPosition then
+		showNumber(propPosition, amount, "damage", attacker, owner)
+		-- A few chips fly off on every hit (skip tiny zone ticks).
+		local part = partsOf(resolved)[1]
+		if part and amount >= 3 and health > 0 then
+			fxRemote:FireAllClients("chip", propPosition, part.Color)
+		end
+	end
 	if health <= 0 then
 		breakStructure(resolved, attacker)
 	end
 	return amount
 end
 
-function DestructibleService.heal(character: Model, amount: number)
+function DestructibleService.heal(character: Model, amount: number, healer: Player?)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health > 0 then
-		humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + amount)
+		local healed = math.min(humanoid.MaxHealth, humanoid.Health + amount) - humanoid.Health
+		humanoid.Health += healed
+		showNumber(
+			character:GetPivot().Position,
+			healed,
+			"heal",
+			healer,
+			Players:GetPlayerFromCharacter(character)
+		)
 	end
 end
 

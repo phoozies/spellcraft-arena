@@ -9,10 +9,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 
-local BASE_WALKSPEED = 18
-local BASE_JUMP = 50
+local BASE_WALKSPEED = Config.WALK_SPEED
+local BASE_JUMP = Config.JUMP_POWER
 
 local StatusService = {}
 
@@ -88,9 +89,19 @@ local function recompute(character: Model)
 	end
 end
 
+-- Hard crowd control can't be refreshed while active, and leaves the target
+-- immune to that kind for Config.CC_IMMUNITY seconds afterwards, so spells
+-- re-typed every second can't chain-lock someone.
+local HARD_CC: { [string]: boolean } = { Root = true, TimeStop = true, Shrink = true }
+
 -- Applies (or extends) an effect. `kind` is a StatusKind or a buff name
--- ("Giant", "Reflect", "Revive", "CooldownCut").
-function StatusService.apply(character: Model, kind: Types.StatusKind | string, duration: number)
+-- ("Giant", "Reflect", "Revive", "CooldownCut"). Returns false when blocked
+-- by crowd-control immunity.
+function StatusService.apply(
+	character: Model,
+	kind: Types.StatusKind | string,
+	duration: number
+): boolean
 	local list = effects[character]
 	if not list then
 		list = {}
@@ -99,7 +110,15 @@ function StatusService.apply(character: Model, kind: Types.StatusKind | string, 
 			effects[character] = nil
 		end)
 	end
-	local expires = os.clock() + duration
+	local now = os.clock()
+	local expires = now + duration
+	if HARD_CC[kind] then
+		local immuneKey = kind .. "_Immune"
+		if (list[kind] or 0) > now or (list[immuneKey] or 0) > now then
+			return false
+		end
+		list[immuneKey] = expires + Config.CC_IMMUNITY
+	end
 	list[kind] = math.max(list[kind] or 0, expires)
 	recompute(character)
 	task.delay(duration + 0.05, function()
@@ -107,6 +126,7 @@ function StatusService.apply(character: Model, kind: Types.StatusKind | string, 
 			recompute(character)
 		end
 	end)
+	return true
 end
 
 function StatusService.has(character: Model, kind: string): boolean
