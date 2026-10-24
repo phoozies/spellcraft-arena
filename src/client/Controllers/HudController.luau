@@ -1,5 +1,5 @@
 --!strict
--- The always-on HUD: hotbar (hand), spell box + mic button, level/XP bar,
+-- The always-on HUD: hotbar (hand), spell box + mic button, coins/wins wallet,
 -- match bar (phase, timer, scores), toasts, and kill feed.
 -- Layout is scale-based with a UIScale clamp so it fits phones through TVs,
 -- and respects device safe areas (ScreenInsets).
@@ -36,8 +36,8 @@ local slots: {
 	{}
 local spellBox: TextBox
 local micButton: TextButton
-local levelLabel: TextLabel
-local xpFill: Frame
+local coinsLabel: TextLabel
+local winsLabel: TextLabel
 local matchBar: Frame
 local matchText: TextLabel
 local scoreText: TextLabel
@@ -49,7 +49,6 @@ local TOAST_COLORS: { [string]: Color3 } = {
 	fizzle = Color3.fromRGB(120, 144, 156),
 	ready = Color3.fromRGB(102, 187, 106),
 	cooldown = Color3.fromRGB(255, 167, 38),
-	levelup = Color3.fromRGB(255, 202, 40),
 	reward = Color3.fromRGB(255, 202, 40),
 	victory = Color3.fromRGB(255, 202, 40),
 	round = Color3.fromRGB(66, 165, 245),
@@ -419,42 +418,49 @@ local function buildSpellBox(root: Frame)
 	})
 end
 
-local function buildLevel(root: Frame)
+-- Top-left wallet: coins (spent on crates) and wins (the leaderboard stat).
+local function buildWallet(root: Frame)
 	local holder = Theme.frame(root, {
-		Name = "Level",
+		Name = "Wallet",
 		Position = UDim2.fromOffset(12, 12),
-		Size = UDim2.fromOffset(220, 44),
+		Size = UDim2.fromOffset(240, 44),
 		BackgroundTransparency = 0.15,
 	})
 	Theme.corner(holder)
-	levelLabel = Theme.label(holder, "Lv 1", {
-		Size = UDim2.new(0, 60, 1, -8),
-		Position = UDim2.fromOffset(6, 4),
+	coinsLabel = Theme.label(holder, "💰 0", {
+		Size = UDim2.new(0.55, -8, 1, -8),
+		Position = UDim2.fromOffset(8, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.accent,
 	})
-	local back = Theme.frame(holder, {
-		Position = UDim2.new(0, 70, 0.5, -7),
-		Size = UDim2.new(1, -80, 0, 14),
-		BackgroundColor3 = Color3.fromRGB(20, 20, 40),
+	winsLabel = Theme.label(holder, "🏆 0", {
+		Size = UDim2.new(0.45, -8, 1, -8),
+		Position = UDim2.new(0.55, 0, 0, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
 	})
-	Theme.corner(back, 7)
-	xpFill = Theme.frame(back, {
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Theme.COLORS.accent,
-	})
-	Theme.corner(xpFill, 7)
 end
 
-local function refreshLevel()
+local shownCoins = 0
+local function refreshWallet()
 	local profile = ClientState.profile
 	if not profile then
 		return
 	end
-	levelLabel.Text = `Lv {profile.level}`
-	local ratio = if profile.xpNeeded > 0 then profile.xpInto / profile.xpNeeded else 1
-	TweenService
-		:Create(xpFill, TweenInfo.new(0.4), { Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1) })
-		:Play()
+	winsLabel.Text = `🏆 {profile.stats.wins}`
+	-- Count up/down to the new balance so earning and spending are felt.
+	local from, to = shownCoins, profile.coins
+	shownCoins = to
+	local start = os.clock()
+	task.spawn(function()
+		while coinsLabel.Parent and shownCoins == to do
+			local t = math.min((os.clock() - start) / 0.5, 1)
+			coinsLabel.Text = `💰 {math.floor(from + (to - from) * t + 0.5)}`
+			if t >= 1 then
+				break
+			end
+			task.wait()
+		end
+	end)
 end
 
 local function buildMatchBar(root: Frame)
@@ -515,7 +521,7 @@ local function buildFeed(root: Frame)
 end
 
 local function addFeed(killer: string?, victim: string, spell: string?)
-	local text = if killer then `{killer} ✦ {victim}` else `{victim} was knocked out`
+	local text = if killer then `{killer} ★ {victim}` else `{victim} was knocked out`
 	if killer and spell then
 		text = `{killer} [{spell}] {victim}`
 	end
@@ -559,7 +565,7 @@ function HudController.init()
 
 	buildHotbar(root)
 	buildSpellBox(root)
-	buildLevel(root)
+	buildWallet(root)
 	buildMatchBar(root)
 	buildFeed(root)
 
@@ -587,7 +593,7 @@ end
 
 function HudController.start()
 	ClientState.HandChanged:Connect(refreshHotbar)
-	ClientState.ProfileChanged:Connect(refreshLevel)
+	ClientState.ProfileChanged:Connect(refreshWallet)
 	ClientState.ProfileChanged:Connect(function()
 		spellBox.PlaceholderText = `Type a spell... ({ClientState.typeKeyName()})`
 	end)

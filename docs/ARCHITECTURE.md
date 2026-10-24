@@ -1,26 +1,28 @@
 # Architecture
 
-A Rojo project in `--!strict` Luau. The server is authoritative for everything. Clients send intent only (a word, an aim point, a placement rotation, a draft pick), and the server re-validates all of it.
+A Rojo project in `--!strict` Luau. The server is authoritative for everything. Clients send intent only (a word, an aim point, a placement rotation, a draft pick, a crate id), and the server re-validates all of it.
+
+For a machine-readable map of every feature (files, remotes, data, invariants), see [`docs/semantic/features.yaml`](semantic/features.yaml). Coins, crates, wins, and the podium are in [ECONOMY.md](ECONOMY.md).
 
 ## Layout
 
 ```
 src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sides
-  Config.luau                 all tunables (timers, XP, limits, modes)
+  Config.luau                 all tunables (timers, coins, limits, modes)
   Types.luau                  shared types (SpellDef, Profile, MatchState…)
   Net/Remotes.luau            the one registry of every RemoteEvent
-  Spells/SpellDefinitions     the 40-spell dictionary (data only)
+  Spells/SpellDefinitions     the 8-spell dictionary (data only)
   Spells/WordMatcher          text/voice → spell id
   Spells/Rarity               weights, colors, glyphs, roll()
   Spells/Placement            placement rules shared by ghost preview + server
   Match/DraftRoller           draft card rolling (injectable RNG)
-  Progression/LevelCurve      XP thresholds and unlocks
+  Economy/Crates              crate prices, odds, roll() (injectable RNG)
   Util/Signal                 tiny module-to-module event
 
 src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
   Services/
     PlayerDataService   session-locked DataStore profiles, autosave, BindToClose
-    ProgressionService  XP, levels, unlocks, daily login/quests, first win
+    EconomyService      coins, wins, daily login/quests, first win, settings (only writer of coins/wins)
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
     HandService         held spell copies (up to 5, duplicates ok), match spellbook, readied slot, shared cast cooldowns
@@ -31,23 +33,27 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     VoiceService        push-to-talk AudioSpeechToText → SpellInputService
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, drafts, teams, PvP rules
-    HubService          builds the hub, spawning, team boxes, FFA pad, dummies, board, hub regen
-    DebugService        Studio-only test commands
+    HubService          builds the hub, spawning, team boxes, FFA pad, dummies, hub regen
+    CrateService        OpenCrate: validate, spend coins, roll, unlock spell / refund duplicate
+    LeaderboardService  leaderstats (Wins, Coins), Most Wins board, top-3 podium avatars
+    DebugService        Studio-only test commands (ServerStorage.WordcraftDebug BindableFunction)
   Maps/                 MapKit + one builder per map (code-built, versioned)
 
 src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Controllers/
     ClientState         mirror of server state + change signals
-    HudController       hotbar, spell box, mic, XP bar, match bar, toasts, feed
-    MenuController      Play / Spellbook / Quests panels
+    HudController       hotbar, spell box, mic, coins/wins wallet, match bar, toasts, feed
+    MenuController      Play / Spellbook / Crates / Quests panels
+    CrateController     Crate Shop panel + spin reel (animates the server's result)
     DraftController     draft cards
     PlacementController ghost preview
+    ReticleController   hit circle + range ring for point-and-click spells (Zap)
     InputController     per-device bindings + aiming (mouse, pad, touch, VR)
     EffectsController   self boosts, slippery friction, team outlines, camera reset
-    FxController        dispatches Fx events (bolts, impacts, cast anim, shatter, chips, dust, numbers)
+    FxController        dispatches Fx events (bolts, impacts, cast anim, shatter, chips, dust, numbers, Zap strike, Heal pop)
     HealthController    own HP bar (shield + damage trail), overhead bars, hides Roblox health
     SettingsController  Settings panel: rebind the type-a-spell key (saved to profile)
-    PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat, KO, level-up
+    PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat (+coins), KO
   Fx/SpellVfx           particle/trail styles per spell, cast animation (C0 arm raise + magic circle)
   UI/Theme              shared look and builders
 
@@ -57,9 +63,16 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 
 | Model | Where it's used |
 |---|---|
-| Fireball | `FxController` bolt (Fireball, Dragon's fireballs); particles and trail attach to its invisible `Root` part |
+| Fireball | `FxController` bolt (Fireball); particles and trail attach to its invisible `Root` part |
 | WaterBubble | `FxController` bolt (Water Lock) and `TrapBubble`, welded around a trapped player and scaled to 1.5× their height |
 | RockWall | `Placeable.buildModelWall`: each mesh part is its own chunk, all sharing one 50-damage budget (`WallHealth` on the wall; chunks break at `BreakAt` thresholds, low pieces first; `DestructibleService.damageWall`). Chunks carry `HitByAll`, which makes `canHarm`/`damage` skip the owner and team rules, so every spell hits the wall. The placement ghost shows the model |
+| Grimoire | The hub's Spellbook kiosk (`Maps/InkwellPlaza.luau`), open on a lectern |
+| Gust | `FxController` bolt (Gust) |
+| Zap | `FxController` `strike`: the bolt that slams down at the end of Zap's telegraph |
+| Heal | `FxController` `modelPop`: rises over the caster's head |
+| BlackHole | `Archetypes/Zone.luau`: the swirl over the zone, tagged `SpinFx` (clients turn it) |
+| Turret | `Archetypes/Placeable.luau` `skin()`: welded onto the invisible hitbox body, turns to aim |
+| Crate | The hub's Crate Shop (five copies, trim and gem tinted by rarity) |
 | Arena | `Maps/SparringArena.luau`, a match map (not in the hub). The floor top is the model's pivot, so the map's floor is at y = 0. An invisible wall ring (radius 24.2, `CanQuery` off so spells pass) keeps players on the floor, because the seating has no ground and its gaps drop into the void |
 
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
@@ -111,17 +124,17 @@ client: aim  ──CastSpell───► CastService
 
 - **Projectile hit tests:** each bolt sweeps a thin sphere (0.75) against the world, so it glides over floors. A second, fatter sweep (radius + `Config.HITBOX_BONUS`) sees only characters and breakables the caster can hurt. The nearest hit wins. Breakables are fetched once per frame and pre-filtered by distance.
 - **Breakable blocks:** `segments` in a placeable's stats builds a grid of separately breakable blocks under an untagged parent Model, which deletes itself when empty. `DestructibleService` darkens damaged parts (`BaseColor` attribute), sends `Fx("chip")` on hits, and sends `Fx("shatter")` per part on break. Arenas use `MapKit.blockWall`.
-- **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `xpGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
+- **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `coinsGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
 
 - **Paste blocking** is client-side (`HudController.guardAgainstPaste` undoes any text change of more than one character). The server's typing cooldown is the real limit, and it also covers chat and voice.
 - **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
 - **Crowd-control immunity:** `StatusService.apply` refuses to refresh an active Root, Time Stop, or Shrink, and adds a 2.5s immunity after it ends (`Config.CC_IMMUNITY`).
 
-- **Damage** always goes through `DestructibleService.damage(target, amount, attacker, spellName)`. It resolves players, placed objects, summons, and map props the same way, and applies spawn protection, Shield, Shrink/Giant modifiers, and the Phoenix revive.
+- **Damage** always goes through `DestructibleService.damage(target, amount, attacker, spellName)`. It resolves players, placed objects, summons, and map props the same way, and applies spawn protection and the generic status modifiers (Shield, Shrink/Giant, Revive) that the archetypes still support even though no current spell uses them.
 - **Knockback is server-authoritative.** `DestructibleService.push` briefly takes network ownership of the victim's root (`SetNetworkOwner(nil)`), sets the velocity on the server, and returns ownership after 0.45s. Overlapping pushes extend the hold. A client that ignores remotes still gets knocked back, pulled, tripped, and rung out.
 - **Self-beneficial movement** (Dash, Balloon, bounce pads, jump pads) uses `DestructibleService.boost`, which the owner's client applies through the `Impulse` remote for responsiveness. Skipping a boost only hurts the cheater.
 - **Projectiles** are server-simulated sphere-casts in **one shared Heartbeat loop** (`Archetypes/Projectile.luau`), capped at 300 in flight. Each step is `pcall`-guarded, so an error ends that projectile instead of leaking it. The server creates **no Parts** for them. It fires one `Fx("projectile", …)` event at launch and one `Fx("projectileEnd", …)` at impact, and clients (`FxController`) draw the bolt along the same line. Projectiles pass through your own and allied structures and bounce off Mirror.
-- **Cosmetic effects** (debris poofs, chain-lightning beams, the Tornado and Black Hole spin) are all rendered client-side from `Fx` events or the `SpinFx` tag. Clients skip effects more than 600 studs away, so concurrent arenas don't draw each other's effects.
+- **Cosmetic effects** (debris poofs, beams, the Zap strike, the Heal pop-up, the Black Hole spin) are all rendered client-side from `Fx` events or the `SpinFx` tag. Clients skip effects more than 600 studs away, so concurrent arenas don't draw each other's effects.
 
 ## PvP rules (`MatchService.relation`)
 
@@ -142,12 +155,12 @@ client: aim  ──CastSpell───► CastService
 
 ## Data
 
-The profile (`Types.Profile`, schema 1) is stored under `PlayerProfiles_v1/u_<userId>` as `{ data, lockJobId, lockTime }`.
+The profile (`Types.Profile`, schema 2: `coins`, `ownedSpells`, `stats`, `daily`, `settings`; no XP or level) is stored under `PlayerProfiles_v1/u_<userId>` as `{ data, lockJobId, lockTime }`.
 
 - **Load:** `UpdateAsync` takes the lock if it's free, ours, or stale (> 30 min). Otherwise it retries with backoff, and finally kicks the player instead of risking a dupe.
 - **Save:** autosave every 90s, release on leave, and flush in `BindToClose`. A save never overwrites a lock owned by another server.
 - **Studio without API access:** the player gets a temporary profile that is never saved, with one retry.
-- **Migrations:** `reconcile()` fills in new fields. Bump `SCHEMA` and transform there for breaking changes.
+- **Migrations:** `reconcile()` fills in new fields. Bump `SCHEMA` and transform there for breaking changes. 1 to 2 dropped `xp`/`level`, re-rolled quests (they paid XP), dropped spell ids that no longer exist, and guarantees the starters.
 
 ## Security checklist
 
@@ -156,4 +169,5 @@ The profile (`Types.Profile`, schema 1) is stored under `PlayerProfiles_v1/u_<us
 - Debug commands only run when `RunService:IsStudio()`.
 - Admin status is decided server-side on join (UserId list, place or group owner, or Studio). A non-admin's `;` message is delivered as plain chat. Commands run in their own thread and are logged.
 - `;announce` text goes through `TextService:FilterStringAsync` before broadcast.
-- The client never reports damage, hits, cooldowns, or ownership. It only sends intent.
+- The client never reports damage, hits, cooldowns, ownership, or coins. It only sends intent.
+- `OpenCrate` is refused mid-match and while a spin is running (4s); the server rolls, spends, and saves before the client's reel starts.

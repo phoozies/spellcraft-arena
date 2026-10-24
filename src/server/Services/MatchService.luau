@@ -27,7 +27,7 @@ local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
+local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
 
 type Match = {
@@ -45,7 +45,7 @@ type Match = {
 	roundWins: { [string]: number },
 	alive: { [Player]: boolean },
 	knockouts: { [Player]: number },
-	xp: { [Player]: number },
+	coins: { [Player]: number }, -- coins earned this match (shown on Results)
 	offers: { [Player]: { Types.DraftCard } },
 	ended: boolean,
 	lastRoundWinner: string?,
@@ -62,9 +62,6 @@ local queues: { [string]: { Player } } =
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
 local matchCounter = 0
-
--- Session leaderboard (resets when the server restarts).
-MatchService.sessionKnockouts = {} :: { [Player]: number }
 
 local stateRemote: RemoteEvent
 local draftRemote: RemoteEvent
@@ -177,7 +174,7 @@ local function sendState(match: Match)
 				won = if results
 					then match.winner ~= nil and match.teams[player] == match.winner
 					else nil,
-				xpGained = if results then match.xp[player] or 0 else nil,
+				coinsGained = if results then match.coins[player] or 0 else nil,
 			}
 			stateRemote:FireClient(player, state)
 		end
@@ -230,8 +227,8 @@ local function teamHealth(match: Match, team: string): number
 	return total
 end
 
-local function grantXp(match: Match, player: Player, amount: number)
-	match.xp[player] = (match.xp[player] or 0) + amount
+local function grantCoins(match: Match, player: Player, amount: number)
+	match.coins[player] = (match.coins[player] or 0) + amount
 end
 
 ----------------------------------------------------------------------
@@ -422,32 +419,31 @@ local function finishMatch(match: Match, winner: string?)
 	match.endsAt = workspace:GetServerTimeNow() + Config.RESULTS_TIME
 
 	for _, player in connected(match) do
-		grantXp(match, player, Config.XP.PARTICIPATION)
 		local won = winner ~= nil and match.teams[player] == winner
 		local profile = PlayerDataService.get(player)
 		if profile then
 			profile.stats.matches += 1
 			profile.stats.knockouts += match.knockouts[player] or 0
 		end
-		ProgressionService.track(player, "match")
-		if won then
-			grantXp(match, player, Config.XP.MATCH_WIN)
-			if profile then
-				profile.stats.wins += 1
-			end
-			ProgressionService.track(player, "win")
-			if ProgressionService.consumeFirstWin(player) then
-				grantXp(match, player, Config.XP.FIRST_WIN_OF_DAY)
+		EconomyService.track(player, "match")
+		-- Coins are earned by winning (no XP or levels). A solo test match
+		-- (admin/debug) never pays out.
+		if won and not match.solo then
+			grantCoins(match, player, Config.COINS.MATCH_WIN)
+			EconomyService.recordWin(player)
+			EconomyService.track(player, "win")
+			if EconomyService.consumeFirstWin(player) then
+				grantCoins(match, player, Config.COINS.FIRST_WIN_OF_DAY)
 				toastRemote:FireClient(
 					player,
-					`First win of the day! +{Config.XP.FIRST_WIN_OF_DAY} XP`,
+					`First win of the day! +{Config.COINS.FIRST_WIN_OF_DAY} bonus coins`,
 					"reward"
 				)
 			end
 		end
 		-- The Victory/Defeat screen (client PresentationController) shows the
-		-- result and XP from the Results state below.
-		ProgressionService.addXp(player, match.xp[player] or 0, "match")
+		-- result and coins from the Results state below.
+		EconomyService.addCoins(player, match.coins[player] or 0, "match")
 	end
 	sendState(match)
 
@@ -496,11 +492,6 @@ local function runMatch(match: Match)
 		match.lastRoundWinner = roundWinner
 		if roundWinner then
 			match.roundWins[roundWinner] = (match.roundWins[roundWinner] or 0) + 1
-			for _, player in connected(match) do
-				if match.teams[player] == roundWinner then
-					grantXp(match, player, Config.XP.ROUND_WIN)
-				end
-			end
 			if match.roundWins[roundWinner] >= Config.ROUNDS_TO_WIN then
 				winner = roundWinner
 				break
@@ -539,7 +530,7 @@ function MatchService.startMatch(
 		roundWins = {},
 		alive = {},
 		knockouts = {},
-		xp = {},
+		coins = {},
 		offers = {},
 		ended = false,
 	}
@@ -791,7 +782,7 @@ function MatchService.start()
 		match.offers[player] = nil
 		HandService.addToSpellbook(player, card.spellId)
 		if Rarity.INFO[card.rarity].order >= 2 then
-			ProgressionService.track(player, "draftRare")
+			EconomyService.track(player, "draftRare")
 		end
 	end)
 
@@ -803,9 +794,7 @@ function MatchService.start()
 		match.alive[victim] = false
 		if killer and playerMatch[killer] == match and killer ~= victim then
 			match.knockouts[killer] = (match.knockouts[killer] or 0) + 1
-			MatchService.sessionKnockouts[killer] = (MatchService.sessionKnockouts[killer] or 0) + 1
-			grantXp(match, killer, Config.XP.KNOCKOUT)
-			ProgressionService.track(killer, "knockout")
+			EconomyService.track(killer, "knockout")
 			local streak = match.knockouts[killer]
 			if streak == 3 then
 				toastAll(match, `{killer.DisplayName} is on a SPELL STREAK!`, "streak")
@@ -823,7 +812,6 @@ function MatchService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		MatchService.leaveQueue(player)
-		MatchService.sessionKnockouts[player] = nil
 		MatchService.removeFromMatch(player)
 	end)
 

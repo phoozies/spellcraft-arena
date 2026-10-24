@@ -1,6 +1,6 @@
 # Spell Dictionary
 
-Wordcraft Arena v1 has 40 spells across 10 levels. Players start with the three ⭐ spells and unlock the rest by leveling up. In a match, any spell can also show up as a draft card, even one you haven't unlocked yet.
+Wordcraft Arena has 8 spells. Every player starts with the three ⭐ starters. The other five are unlocked from **crates**, one per rarity, bought with coins earned by winning matches (see [ECONOMY.md](ECONOMY.md)). In a match, any spell can also show up as a draft card, even one you haven't unlocked yet.
 
 > **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau).
 > This table is generated from it (see "Regenerating" below). Don't hand-edit numbers here.
@@ -29,15 +29,13 @@ Every player has **100 HP**. Since you can stockpile copies, the fastest a spell
 | Summons | 1 alive per player per spell, cooldown ≥ 5s |
 | Legendary spells | cooldown ≥ 10s |
 
-Shields don't stack: a recast refills the shield to its full value instead of adding to it.
-
 **Movement and hitboxes:**
 - Players walk at 24 (Roblox's default is 16). Every projectile flies at 1.5× its listed `speed` (`Config.PROJECTILE_SPEED_SCALE`) to keep up.
 - Bolts sweep a thin sphere against plain map geometry, so they glide over floors. Against players and breakable objects they use their radius **+1.5 studs** (`Config.HITBOX_BONUS`). The Fireball's radius is 3.5, so it hits from up to 5 studs off the center of its path. Area spells also reach 1.5 studs past their edge against players.
 
 **Health:** there's no regeneration in arenas, only healing spells. The hub regenerates 5 HP/s.
 
-**Rock Wall:** it's the imported earth-wall model, and **every spell hits it, your own included**. The whole wall has a shared **50-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones), and the wall is gone at 50. Four Fireballs bring it down. Without the model it falls back to a 3×2 grid of blocks. Castle (5×3) is a grid of blocks, each holding an equal share of `health`. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
+**Rock Wall:** it's the imported earth-wall model, and **every spell hits it, your own included**. The whole wall has a shared **50-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones), and the wall is gone at 50. Four Fireballs bring it down. Without the model it falls back to a 3×2 grid of blocks. Every arena also has breakable block walls, and the hub's Practice Grove has one that rebuilds itself. Blocks darken as they take damage, chip on each hit, and shatter when they break.
 
 ## How words are matched
 
@@ -51,59 +49,36 @@ Normal chat that isn't a spell word passes through untouched. Chat messages that
 
 ## Rarity
 
-| Rarity | Glyph | Draft weight | Color |
-|---|---|---|---|
-| Common | ● | 60% | grey |
-| Rare | ◆ | 28% | blue |
-| Epic | ★ | 10% | purple |
-| Legendary | ✦ | 2% | gold |
+| Rarity | Glyph | Draft weight | Color | Crate |
+|---|---|---|---|---|
+| Common | ● | 50% | grey | 100 coins |
+| Uncommon | ▲ | 25% | green | 250 coins |
+| Rare | ◆ | 15% | blue | 500 coins |
+| Epic | ★ | 8% | purple | 1000 coins |
+| Legendary | 👑 | 2% | gold | 2000 coins |
 
 Each glyph is a different shape, so rarity is readable without relying on color (colorblind-friendly).
 
 ## Spells
 
-| Lvl | Spell | Say or type | Archetype | Rarity | Cooldown | What it does |
+| Spell | Say or type | Archetype | Rarity | Cooldown | How you get it | What it does |
 |---|---|---|---|---|---|---|
-| 1 | **Fireball** ⭐ | fireball, fire, flame, blaze | Projectile | Common | 0.9s | Hurl a ball of fire that burns players and structures. |
-| 1 | **Water Lock** ⭐ | water lock, waterlock, water, bubble, trap | Control | Common | 3s | Trap an enemy in a bubble so they can't move for 1.5 seconds. |
-| 1 | **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Raise a rocky earth wall that blocks spells. It takes 50 damage from any spell, yours too, and breaks apart piece by piece. |
-| 2 | **Wind Gust** | wind gust, wind, gust, push | Projectile | Common | 1.5s | A blast of wind that shoves enemies away. |
-| 2 | **Wooden Crate** | wooden crate, crate, box | Placeable | Common | 0.5s | Drop a crate to hide behind or climb on. |
-| 2 | **Heal Leaf** | heal leaf, heal, leaf, medicine | Buff | Common | 4s | Restore 15 health. |
-| 2 | **Spark** | spark, zap | Projectile | Common | 0.5s | A quick little zap. Low damage, super fast. |
-| 3 | **Ice Shard** | ice shard, ice, shard, freeze | Projectile | Common | 1s | An icy spike that slows whoever it hits. |
-| 3 | **Bounce Pad** | bounce pad, trampoline, spring, bounce | Placeable | Common | 1s | A springy pad that launches anyone who steps on it. |
-| 3 | **Mud Puddle** | mud puddle, mud, swamp | Zone | Common | 3s | A sticky puddle that slows enemies inside it. |
-| 3 | **Shield** | shield, barrier, protect | Buff | Rare | 6s | A bubble that absorbs the next 25 damage (doesn't stack). |
-| 4 | **Lightning** | lightning, thunder, bolt | Projectile | Rare | 2s | A bolt that chains to a nearby enemy. Double damage on bubbled foes! |
-| 4 | **Ladder** | ladder, stairs, steps | Placeable | Common | 1s | Climbable steps to reach high ground. |
-| 4 | **Dash** | dash, sprint, zoom, run | Movement | Common | 1.5s | Zoom forward in a burst of speed. |
-| 4 | **Cannon** | cannon, turret | Placeable | Rare | 6s | A cannon that fires at the closest enemy. |
-| 5 | **Tornado** | tornado, twister, cyclone | Zone | Rare | 5s | A swirling twister that pulls enemies in. |
-| 5 | **Snowman** | snowman, decoy | Summon | Rare | 5s | A snowman decoy that cannons and summons target first. |
-| 5 | **Bridge** | bridge, plank | Placeable | Common | 1s | A long plank to cross gaps. |
-| 5 | **Banana Peel** | banana peel, banana, slip | Placeable | Common | 2s | A sneaky peel. Enemies who step on it slip and slide. |
-| 6 | **Meteor** | meteor, comet, asteroid | Zone | Epic | 4s | Call down a meteor. Big boom after a short warning. |
-| 6 | **Teleport** | teleport, blink, warp | Movement | Rare | 4s | Blink to where you're aiming. |
-| 6 | **Vine Snare** | vine snare, vine, vines, roots | Control | Rare | 5s | Roots grab every enemy in a small area. |
-| 6 | **Tower** | tower, fort, watchtower | Placeable | Rare | 4s | A tall tower for high ground. |
-| 7 | **Dragon** | dragon, wyvern | Summon | Epic | 8s | A baby dragon that flies at enemies and breathes fire. |
-| 7 | **Black Ice** | black ice, frost, glacier, icy | Zone | Rare | 4s | Super slippery ice. Enemies slide around helplessly. |
-| 7 | **Magnet** | magnet, pull, attract | Control | Rare | 3s | Yank the enemy you hit toward you. |
-| 7 | **Balloon** | balloon, float, fly | Movement | Common | 2s | Float upward to escape or get the high ground. |
-| 8 | **Volcano** | volcano, lava, magma | Placeable | Epic | 8s | A mini volcano that burns enemies nearby. |
-| 8 | **Mirror** | mirror, reflect | Buff | Epic | 8s | For 2 seconds, projectiles that hit you bounce back. |
-| 8 | **Robot** | robot, golem, bot | Summon | Epic | 8s | A clunky robot buddy that punches enemies. |
-| 8 | **Giant** | giant, grow, big, huge | Buff | Rare | 10s | Grow huge: bigger, tougher, and harder to knock back. |
-| 9 | **Black Hole** | black hole, blackhole, vortex, void | Zone | Legendary | 12s | A tiny black hole that drags everything in and crushes it. |
-| 9 | **Castle** | castle, fortress | Placeable | Epic | 10s | A big castle wall. Very hard to break, but it crumbles block by block. |
-| 9 | **Shrink** | shrink, tiny, small, mini | Control | Epic | 6s | Shrink an enemy so they're tiny and weak for 3 seconds. |
-| 9 | **Rainbow** | rainbow | Zone | Rare | 8s | A rainbow that heals you and your teammates inside it. |
-| 10 | **Phoenix** | phoenix, rebirth, revive | Buff | Legendary | 25s | If you're knocked out in the next 8 seconds, rise again at half health. |
-| 10 | **Earthquake** | earthquake, quake, tremor | Zone | Legendary | 12s | Shake the ground. Smashes structures and knocks players around. |
-| 10 | **Time Stop** | time stop, timestop, freeze time, pause, stop | Control | Legendary | 15s | Freeze every enemy near you for 1.5 seconds. |
-| 10 | **Kraken** | kraken, octopus, squid | Summon | Legendary | 12s | A giant kraken tentacle that slams enemies around it. |
-| 10 | **Wizard Hat** | wizard hat, wizard, hat, magic | Buff | Epic | 15s | All your spell cooldowns are cut in half for 6 seconds. |
+| **Fireball** ⭐ | fireball, fire, flame, blaze | Projectile | Common | 0.9s | Starter | Hurl a ball of fire that burns players and structures. |
+| **Water Lock** ⭐ | water lock, waterlock, water, bubble, trap | Control | Common | 3s | Starter | Trap an enemy in a bubble so they can't move for 1.5 seconds. |
+| **Rock Wall** ⭐ | rock wall, rockwall, wall, rock, stone | Placeable | Common | 1s | Starter | Raise a rocky earth wall that blocks spells. It breaks apart piece by piece. |
+| **Gust** | gust, wind, push, blow | Projectile | Common | 1.5s | Common crate | A wide blast of wind that shoves enemies far away. Low damage, huge hitbox. |
+| **Zap** | zap, thunder, lightning, strike | Zone | Uncommon | 2.5s | Uncommon crate | Point and click: a thunderbolt strikes the ground where you aim after a short flash. Range 60. |
+| **Heal** | heal, medic, health, cure | Buff | Rare | 4s | Rare crate | Restore 10 health. |
+| **Black Hole** | black hole, blackhole, vortex, void | Zone | Epic | 10s | Epic crate | A black hole sucks enemies in, traps them for 3 seconds, and deals 10 damage over time. |
+| **Turret** | turret, sentry, gun | Placeable | Legendary | 12s | Legendary crate | Summon a 30-health turret that shoots bullets at the nearest enemy player. |
+
+### The crate spells in detail
+
+- **Gust** (Projectile): 5 damage, radius 6 (7.5 against players with `HITBOX_BONUS`), knockback 95, range 90. Drawn with the imported `Gust` model.
+- **Zap** (Zone burst + `reticle`): while Zap is readied, a circle on the ground shows exactly where it will hit (its 5-stud radius + 1.5 bonus) and a faint ring shows its **60-stud range**; aiming past the range pulls the circle in to the limit (it turns orange). On cast, a red warning circle flashes for 0.45s, then the `Zap` bolt model slams down: 18 damage and a small knockback.
+- **Heal** (Buff): +10 HP (4s cooldown, 2.5 HP/s, inside the 5 HP/s budget). The `Heal` model pops up over your head.
+- **Black Hole** (Zone + `hold`): a 16-radius zone for 3s that pulls enemies toward the center (pull 60) and deals 10 damage in total over its life. Anyone pulled into the core (4 studs) is **Rooted until it closes**: sucked in, then trapped. The `BlackHole` model spins over the zone.
+- **Turret** (Placeable + `turret`): a 30-HP turret (the `Turret` model) that shoots a 6-damage bullet at the nearest enemy player within 80 studs every second, for 20s. One alive at a time.
 
 ## Archetypes and the stats they read
 
@@ -111,21 +86,23 @@ Each glyph is a different shape, so rarity is readable without relying on color 
 |---|---|---|
 | Projectile | `Archetypes/Projectile.luau` | `damage, speed, range, radius, knockback, status, statusDuration, chain, comboStatus, comboMultiplier` |
 | Control | `Archetypes/Control.luau` | With `speed`: a status projectile. Without: an instant area using `radius`, `status`, `statusDuration`, `damage` (`range = 0` centers it on the caster) |
-| Placeable | `Archetypes/Placeable.luau` | `health, lifetime, maxActive`, plus optional `turret` (`damage, range`), `trap` (`status`), `bounce`, `hazardDps` + `radius` |
-| Zone | `Archetypes/Zone.luau` | Lingering: `duration, radius, status, damage` (per second), `pull, heal, teamHeal, maxActive`. Burst: `delay, damage, knockback, destroysStructures` |
+| Placeable | `Archetypes/Placeable.luau` | `health, lifetime, maxActive`, plus optional `turret` (`damage, range, fireInterval`), `trap` (`status`), `bounce`, `hazardDps` + `radius` |
+| Zone | `Archetypes/Zone.luau` | Lingering: `duration, radius, status, damage` (per second), `pull, hold, heal, teamHeal, maxActive`. Burst: `delay, damage, knockback, destroysStructures`; `reticle` shows the client hit circle |
 | Buff | `Archetypes/Buff.luau` | `heal, shield, duration, reflect, scale, revive, cooldownCut` |
 | Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
 | Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
 
+Movement and Summon have no spells right now; they're kept as ready-made behaviors for future spells.
+
 `cooldown` on every spell is its **cast cooldown**, shared by every copy of that spell you hold.
 
-**Combo:** Lightning deals ×2 damage to a target that is already Water-Locked (`comboStatus = "Root"`). Add the same two fields to any projectile to create new combos.
+**`visual.model`:** any spell can name an imported model (`ReplicatedStorage.Models`) that replaces its primitive look: the bolt for projectiles, the body for placeables (the primitive stays as the invisible hitbox), the swirl for lingering zones, the strike for burst zones (Fx `strike`), and a pop-up over the caster for buffs (Fx `modelPop`). Without the model, the primitive `visual` is drawn.
 
 ## Adding a spell
 
-1. Add a row to `SpellDefinitions.luau` with a unique `id`, plain-word `aliases`, a `rarity`, an `unlockLevel` (1–10), an `archetype`, `cooldown` (cast cooldown), `stats`, and a primitive `visual`.
+1. Add a row to `SpellDefinitions.luau` with a unique `id`, plain-word `aliases`, a `rarity`, an `archetype`, `cooldown` (cast cooldown), `stats`, and a primitive `visual` (optionally `visual.model`). Leave out `starter` and it joins its rarity's **crate** automatically.
 2. Run the tests. They fail if an alias collides with another spell's or if the spell breaks a balance budget.
-3. Regenerate this table.
+3. Regenerate this table and update `docs/semantic/features.yaml` (the `spells.catalog`).
 
 ## Regenerating
 
@@ -133,9 +110,9 @@ Run this during a playtest (the server's module cache is fresh) and paste the ou
 
 ```lua
 local Defs = require(game.ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local lines = {"| Lvl | Spell | Say or type | Archetype | Rarity | Cooldown | What it does |", "|---|---|---|---|---|---|---|"}
+local lines = {"| Spell | Say or type | Archetype | Rarity | Cooldown | How you get it | What it does |", "|---|---|---|---|---|---|---|"}
 for _, d in Defs.list do
-	table.insert(lines, ("| %d | **%s**%s | %s | %s | %s | %ss | %s |"):format(d.unlockLevel, d.name, d.starter and " ⭐" or "", table.concat(d.aliases, ", "), d.archetype, d.rarity, tostring(d.cooldown), d.description))
+	table.insert(lines, ("| **%s**%s | %s | %s | %s | %ss | %s | %s |"):format(d.name, d.starter and " ⭐" or "", table.concat(d.aliases, ", "), d.archetype, d.rarity, tostring(d.cooldown), d.starter and "Starter" or (d.rarity .. " crate"), d.description))
 end
 print(table.concat(lines, "\n"))
 ```

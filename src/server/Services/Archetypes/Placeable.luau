@@ -1,11 +1,13 @@
 --!strict
 -- Placeable archetype: objects players put into the world. All have health
 -- and break when destroyed. Optional behaviors from stats:
---   turret (fires at the nearest enemy), trap (applies status to the first
+--   turret (fires at the nearest enemy every `fireInterval`s), trap (applies status to the first
 --   enemy who touches it, then breaks), bounce (launches anyone touching it),
 --   hazardDps + radius (burns nearby enemies).
 -- Each player may have `maxActive` of a given spell (oldest is removed) and
 -- Config.MAX_PLACED_PER_PLAYER total.
+-- `visual.model` (e.g. Turret) skins the body with an imported model: the
+-- primitive body stays as the invisible hitbox and the model is welded on.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -115,7 +117,7 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 	if stats.turret then
 		task.spawn(function()
 			while model.Parent do
-				task.wait(1.5)
+				task.wait(stats.fireInterval or 1.5)
 				if not model.Parent then
 					break
 				end
@@ -132,10 +134,15 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 				end
 				if best then
 					local direction = (best.position - origin).Unit
-					body.CFrame = CFrame.lookAt(
+					-- Turn to face the target (a cylinder's axis is its X, so
+					-- it needs a quarter turn; blocks and skins face -Z).
+					local facing = CFrame.lookAt(
 						body.Position,
 						body.Position + Vector3.new(direction.X, 0, direction.Z)
-					) * CFrame.Angles(0, math.pi / 2, 0)
+					)
+					body.CFrame = if ctx.def.visual.shape == "Cylinder"
+						then facing * CFrame.Angles(0, math.pi / 2, 0)
+						else facing
 					Projectile.launch({
 						caster = ctx.player,
 						origin = origin + direction * 3,
@@ -148,12 +155,12 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 						},
 						visual = {
 							shape = "Ball",
-							size = Vector3.new(1.4, 1.4, 1.4),
-							color = Color3.fromRGB(33, 33, 33),
-							material = Enum.Material.Metal,
+							size = Vector3.new(0.8, 0.8, 0.8),
+							color = Color3.fromRGB(255, 213, 79),
+							material = Enum.Material.Neon,
 						},
 						spellName = ctx.def.name,
-						fxKey = "Cannonball",
+						fxKey = "Bullet",
 						ignore = { model },
 					})
 				end
@@ -178,6 +185,34 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 			end
 		end)
 	end
+end
+
+-- Replaces the primitive look with `visual.model` (scaled to the visual's
+-- height): the body becomes an invisible hitbox and the model is welded to
+-- it, so it rises, turns (turrets), and is destroyed with the body.
+local function skin(model: Model, body: BasePart, visual: any)
+	if not visual.model then
+		return
+	end
+	local look = ModelKit.clone(visual.model, "attached")
+	if not look then
+		return
+	end
+	local _, size = look:GetBoundingBox()
+	look:ScaleTo(visual.size.Y / math.max(size.Y, 0.01))
+	look:PivotTo(body.CFrame)
+	for _, part in look:GetDescendants() do
+		if part:IsA("BasePart") then
+			part:SetAttribute("BaseColor", part.Color)
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = body
+			weld.Part1 = part
+			weld.Parent = part
+		end
+	end
+	body.Transparency = 1
+	look.Name = "Look"
+	look.Parent = model
 end
 
 -- Builds a wall out of a grid of separately breakable blocks (Rock Wall,
@@ -407,6 +442,7 @@ function Placeable.cast(ctx: any): boolean?
 	model:SetAttribute("SpellId", def.id)
 	local body = model.PrimaryPart :: BasePart
 	body.CFrame = cframe * Placement.partOffset(visual)
+	skin(model, body, visual)
 
 	-- Rise-from-the-ground animation with a dust burst.
 	DestructibleService.dust(ground, math.max(visual.size.X, visual.size.Z), visual.color)

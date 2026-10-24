@@ -1,0 +1,216 @@
+# Wordcraft Arena: semantic layer
+#
+# A machine-readable map of every gameplay feature: what it does, which
+# files own it, how data flows across the client/server boundary, the rules
+# that must stay true, and how to extend it. Written for AI agents and new
+# contributors; humans should start at docs/ARCHITECTURE.md.
+#
+# Conventions used below:
+#   paths      are repo-relative (src/shared -> ReplicatedStorage.Shared,
+#              src/server -> ServerScriptService.Server, src/client ->
+#              StarterPlayerScripts.Client; see default.project.json)
+#   remotes    are RemoteEvents registered in src/shared/Net/Remotes.luau
+#              ("c2s" = client -> server intent, never trusted; "s2c" = server -> client)
+#   owner      is the ONE module allowed to mutate that piece of state
+#   invariants are rules tests or reviewers enforce; breaking one is a bug
+#
+# Keep this file in sync when you add or change a feature (the checklist in
+# docs/CONTRIBUTING.md says so).
+
+version: "2 # bump when the shape of this file changes"
+game: Wordcraft Arena
+genre: all-ages PvP; type or say a word to get that spell, then cast it
+platforms: [PC, mobile, console, VR]
+language: Luau (--!strict), Rojo project, server-authoritative
+
+glossary:
+  copy: one use of a spell in the hotbar; typing a spell word adds one copy (max 5 held)
+  spellbook (match): the 3 random owned spells + drafted spells a player may type this match
+  owned spells: profile.ownedSpells; starters + crate unlocks; what the hub accepts and matches draw from
+  starter: Fireball, Water Lock, Rock Wall; every player owns them; never drop from crates
+  rarity: Common < Uncommon < Rare < Epic < Legendary (src/shared/Spells/Rarity.luau)
+  archetype: the server behavior a spell row uses (Projectile, Control, Placeable, Zone, Buff, Movement, Summon)
+  coins: the only currency; earned by winning; spent on crates
+  wins: profile.stats.wins; the leaderboard stat
+  hub: Inkwell Plaza, where players spawn, open crates, and pick teams (no PvP)
+  arena: an instanced match map cloned at x = slot * 2000, y = 400
+
+bootstrap:
+  server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
+  server_order: [PlayerDataService, EconomyService, StatusService, DestructibleService, HandService, CastService, SpellInputService, VoiceService, ArenaService, MatchService, HubService, CrateService, LeaderboardService, AdminService, DebugService]
+  client: src/client/init.client.luau
+  client_order: [ClientState, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, InputController, EffectsController, FxController, HealthController, SettingsController, PresentationController]
+  rules:
+    - init() wires state and looks up remotes; no yielding cross-service calls
+    - start() connects events and starts loops
+    - cycles are broken by injection (DestructibleService.setRelationResolver, CastService.setWorldHooks)
+    - command bar / Studio MCP code does NOT share module caches or _G with the running game; use instances (ServerStorage.WordcraftDebug BindableFunction) to reach live state
+
+features:
+
+  - id: spells
+    summary: The spell dictionary; 8 spells, one row each, behavior chosen by archetype.
+    source_of_truth: src/shared/Spells/SpellDefinitions.luau
+    types: src/shared/Types.luau (SpellDef, SpellStats, Visual)
+    catalog:
+      - { id: Fireball,  rarity: Common,    archetype: Projectile, starter: true,  model: Fireball,    words: [fireball, fire, flame, blaze] }
+      - { id: WaterLock, rarity: Common,    archetype: Control,    starter: true,  model: WaterBubble, words: [water lock, waterlock, water, bubble, trap] }
+      - { id: RockWall,  rarity: Common,    archetype: Placeable,  starter: true,  model: RockWall,    words: [rock wall, rockwall, wall, rock, stone] }
+      - { id: Gust,      rarity: Common,    archetype: Projectile, crate: Common,    model: Gust,      words: [gust, wind, push, blow], what: "low damage (5), huge radius (6 + 1.5 bonus), knockback 95" }
+      - { id: Zap,       rarity: Uncommon,  archetype: Zone,       crate: Uncommon,  model: Zap,       words: [zap, thunder, lightning, strike], what: "point-and-click strike; telegraph 0.45s then 18 dmg in radius 5; range limit 60; stats.reticle shows the hitbox while readied" }
+      - { id: Heal,      rarity: Rare,      archetype: Buff,       crate: Rare,      model: Heal,      words: [heal, medic, health, cure], what: "restore 10 HP; cooldown 4s" }
+      - { id: BlackHole, rarity: Epic,      archetype: Zone,       crate: Epic,      model: BlackHole, words: [black hole, blackhole, vortex, void], what: "3s zone; pull 60; 10 total damage; stats.hold Roots enemies that reach the core until it closes" }
+      - { id: Turret,    rarity: Legendary, archetype: Placeable,  crate: Legendary, model: Turret,    words: [turret, sentry, gun], what: "30 HP turret, fires a 6-dmg bullet at the nearest enemy player every 1s for 20s" }
+    stat_flags_added_for_these_spells:
+      visual.model: imported model that replaces the primitive look (bolt / placeable skin / zone swirl / strike / buff pop-up); the primitive stays the hitbox and the fallback
+      stats.reticle: client shows the ground hit circle at the clamped aim point (ReticleController)
+      stats.hold: Zone Roots enemies that reach HOLD_RADIUS (4 studs) of the center for the rest of the zone
+      stats.fireInterval: seconds between turret shots (default 1.5)
+    invariants:
+      - every alias is unique across spells and resolves via WordMatcher (tests/WordMatcher.spec.luau)
+      - balance budgets in tests/Balance.spec.luau (single hit <= 34; burst <= 20 dps; heal <= 5/s; hard CC uptime <= 60% and cooldown >= 2s; placeables 1-3 alive with a lifetime; legendary cooldown >= 10s)
+      - stats are frozen tables; never mutate a def at runtime
+      - every model use must fall back to plain shapes when ReplicatedStorage.Models lacks it
+    extend:
+      add_spell: add a row (unique id, plain-word aliases, rarity, archetype, cooldown, stats, visual); no starter flag => it joins its rarity's crate; run tests; regenerate the docs/SPELLS.md table
+      add_behavior: add an optional stat to Types.SpellStats and read it in the archetype module; document it in docs/SPELLS.md
+
+  - id: casting
+    summary: Typing grants copies; casting validates on the server and dispatches to the archetype.
+    flow: client SubmitWord -> SpellInputService (1s typing cooldown) -> WordMatcher -> HandService.grant (owned in hub / in spellbook in a match; max 5) -> client CastSpell(target, rotationY) -> CastService (alive, readied, cooldown, clamp to stats.range or PLACE_RANGE) -> Archetypes/<archetype>.cast(ctx) -> consume copy + shared cooldown -> Fx("cast")
+    files:
+      server: [src/server/Services/SpellInputService.luau, src/server/Services/HandService.luau, src/server/Services/CastService.luau, src/server/Services/Archetypes/*.luau]
+      client: [src/client/Controllers/InputController.luau, src/client/Controllers/PlacementController.luau, src/client/Controllers/ReticleController.luau]
+    remotes:
+      c2s: [SubmitWord, SelectSlot, CastSpell]
+      s2c: [HandUpdated, CooldownStarted, Toast]
+    invariants:
+      - the server clamps every target to range; the client reticle/ghost only mirror that
+      - archetype returning false keeps the copy (e.g. blocked placement)
+
+  - id: reticle
+    summary: Hover hitbox for point-and-click spells (Zap).
+    owner: src/client/Controllers/ReticleController.luau
+    behavior:
+      - active while the readied spell has stats.reticle
+      - circle radius = stats.radius + Config.HITBOX_BONUS at the aim point clamped to stats.range, snapped to the ground
+      - colors - spell color in range, orange when clamped at the limit, red while cooling down
+      - faint ring around the player shows the range limit
+      - InputController casts at ReticleController.getTarget() for mouse/gamepad (touch taps send the tap point; the server clamps)
+    server_side: Zone.cast burst branch clamps and telegraphs; Fx "strike" draws the bolt model
+
+  - id: effects
+    summary: Cosmetic visuals rendered on clients from server Fx events; the server creates no projectile parts.
+    owner: src/client/Controllers/FxController.luau (+ src/client/Fx/SpellVfx.luau styles)
+    fx_kinds: [projectile, projectileEnd, poof, beam, number, cast, shatter, chip, dust, shockwave, strike, modelPop]
+    new_kinds:
+      strike: (center, radius, delay, modelName, color) Zap bolt slams down at the burst
+      modelPop: (character, modelName, color) Heal model rises over the head and fades
+    spin: "parts/models tagged SpinFx spin locally (models about Y: Black Hole)"
+    invariants: [clients skip effects farther than 600 studs, never trust or report hits from the client]
+
+  - id: economy
+    summary: Coins (earned by winning) and wins; daily login chest and daily quests pay coins. No levels or XP.
+    owner: src/server/Services/EconomyService.luau
+    api:
+      - "addCoins(player, amount, reason, quiet?)"
+      - "spend(player, amount) -> bool"
+      - "recordWin(player)"
+      - "coins(player) / wins(player)"
+      - "track(player, event, amount?)"
+      - "consumeFirstWin(player)"
+      - "sendSummary(player)"
+    signals: { Changed: (player) fired after coins or wins change }
+    config: src/shared/Config.luau COINS { STARTING 150, MATCH_WIN 100, FIRST_WIN_OF_DAY 50, DAILY_LOGIN 25 }
+    paid_by: MatchService.finishMatch (winners only; never in solo matches)
+    remotes:
+      c2s: [ClaimQuest, SaveSettings]
+      s2c: ["ProfileUpdated (coins, ownedSpells, quests, streak, stats, settings)"]
+    invariants:
+      - only EconomyService writes profile.coins and profile.stats.wins
+      - never trust a client number for coins
+    docs: docs/ECONOMY.md
+
+  - id: crates
+    summary: Five crates (one per rarity) bought with coins; a server-decided spin unlocks a spell.
+    shared: src/shared/Economy/Crates.luau (LIST prices/odds, roll, rollRarity, possibleDrops, refundFor, SPIN_TIME 4, DUPLICATE_REFUND 0.5)
+    server: src/server/Services/CrateService.luau (open(player, crateId) -> (CrateResult?, reason?))
+    client: src/client/Controllers/CrateController.luau (shop panel + reel)
+    hub: Crate Shop stage in src/server/Maps/InkwellPlaza.luau (prompts named "Crates")
+    remotes:
+      c2s: [OpenCrate (crateId)]
+      s2c: [CrateOpened (CrateResult)]
+    rules:
+      - refused during a match and while the previous spin (4s) is running
+      - starters never drop; a duplicate refunds half the price
+      - the result is decided and saved before the reel spins; the reveal waits SPIN_TIME
+    tests: tests/Economy.spec.luau
+
+  - id: leaderboard
+    summary: Wins leaderboard - leaderstats, the hub's Most Wins board, and the top-3 podium with avatars.
+    owner: src/server/Services/LeaderboardService.luau
+    hub_tags: { WinsBoard: board part with a TextLabel "Text", PodiumSpot: pedestal part with attribute Rank (1-3) and a TextLabel "Text" on its front }
+    behavior:
+      - leaderstats Wins + Coins per player (Roblox player list)
+      - ranking = players in this server sorted by stats.wins desc, then name
+      - podium shows the top 3 with >= 1 win as their avatars (CreateHumanoidModelFromUserId, cached per user)
+      - refresh at most every Config.LEADERBOARD_REFRESH (10s), only when dirty
+    scope: per server (saved wins follow players between servers); no global board yet
+
+  - id: matches
+    summary: Team boxes / queues -> Intro -> (Countdown -> Round -> Draft)* -> Results -> hub; best of 3.
+    owner: src/server/Services/MatchService.luau
+    related:
+      - "src/server/Services/HubService.luau (team boxes, FFA pad)"
+      - "src/server/Services/ArenaService.luau (instanced maps)"
+      - src/shared/Match/DraftRoller.luau
+    rewards: winners get Config.COINS.MATCH_WIN (+ first win of the day) and +1 win; MatchState.coinsGained drives the Results screen
+    draft: 3 cards, each rarity rolled from Rarity weights (50/25/15/8/2); if a tier is empty for this player it falls back to lower, then higher tiers
+
+  - id: player_data
+    summary: Session-locked DataStore profiles with autosave and BindToClose.
+    owner: src/server/Services/PlayerDataService.luau
+    store: PlayerProfiles_v1/u_<userId> = { data, lockJobId, lockTime }
+    schema: 2
+    profile_fields:
+      - schema
+      - coins
+      - ownedSpells
+      - cosmetics
+      - "stats {matches, wins, knockouts, casts}"
+      - "daily {lastLoginDay, streak, lastFirstWinDay, questDay, quests}"
+      - "settings {typeKey}"
+    migrations:
+      "1->2": drop xp/level; re-roll quests; drop unknown spell ids; ensure starters owned
+    invariants: [bump SCHEMA and migrate in reconcile() for breaking changes, never save over another server's lock]
+
+  - id: hub
+    summary: Inkwell Plaza, built at runtime.
+    builder: src/server/Maps/InkwellPlaza.luau
+    contents:
+      - spawn
+      - team boxes 1v1-4v4
+      - FFA pad
+      - Practice Grove (BuildZone + dummies)
+      - Spellbook kiosk (Grimoire model)
+      - Daily Quests chest
+      - Crate Shop stage (Crate model x5)
+      - podium + Most Wins board
+    prompts: { Spellbook: MenuController Spellbook panel, Quests: Daily Quests panel, Crates: CrateController shop }
+
+  - id: models
+    summary: Hand-made meshes stored in the place under ReplicatedStorage.Models; ModelKit is the only reader.
+    reader: src/shared/ModelKit.luau (get, clone(name, "effect"|"solid"|"attached", scale?))
+    pipeline: Blender (scene in centimeters, 1 BU = 1 cm) -> assets/models/*.fbx -> Studio Import 3D -> tools/prepare-models.luau (scale, pivot, colors, collision) -> save the place
+    models: [Fireball, WaterBubble, RockWall, Arena, Grimoire, Gust, Zap, Heal, BlackHole, Turret, Crate]
+    docs: assets/models/README.md
+    invariants: [every use has a plain-shape fallback, model part names are the contract with prepare-models and tests/Models.spec.luau]
+
+  - id: admin_and_debug
+    admin: src/server/Services/AdminService.luau (";" commands; coins, wins, crate, give, unlock, startmatch, ...) docs/ADMIN.md
+    debug: src/server/Services/DebugService.luau (Studio only; ServerStorage.WordcraftDebug:Invoke(command, arg) with coins, wins, crate, state, solo, unlockall, knockback)
+
+testing:
+  run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
+  specs: [tests/Balance.spec.luau, tests/Economy.spec.luau, tests/Models.spec.luau, tests/WordMatcher.spec.luau]
+  live_checks: ServerStorage.WordcraftDebug:Invoke("state") / ("crate", "Common") / ("wins", 3)

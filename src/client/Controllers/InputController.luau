@@ -24,6 +24,7 @@ local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
 local MenuController = require(script.Parent.MenuController)
 local PlacementController = require(script.Parent.PlacementController)
+local ReticleController = require(script.Parent.ReticleController)
 
 local player = Players.LocalPlayer
 
@@ -103,7 +104,10 @@ local function cast(screenPoint: Vector2?)
 		Remotes.get("CastSpell"):FireServer(point, rotation)
 		return
 	end
-	local target = InputController.aimPoint(screenPoint)
+	-- Point-and-click spells (Zap) land on the reticle's clamped point.
+	local target = if ReticleController.isActive() and not screenPoint
+		then ReticleController.getTarget()
+		else InputController.aimPoint(screenPoint)
 	if target then
 		Remotes.get("CastSpell"):FireServer(target)
 	end
@@ -125,6 +129,9 @@ local SLOT_KEYS =
 function InputController.start()
 	PlacementController.setAimProvider(function()
 		return InputController.aimPoint(nil), nil
+	end)
+	ReticleController.setAimProvider(function()
+		return InputController.aimPoint(nil)
 	end)
 
 	-- Mouse clicks go through UserInputService so clicks on GUI are ignored.

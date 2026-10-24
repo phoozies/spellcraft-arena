@@ -9,8 +9,21 @@
 --   BuildZone                       placing objects allowed here
 --   DummySpot                       training dummies respawn here
 --   HubSpawn                        where players appear
---   ProximityPrompts named "Spellbook" and "Quests" open UI on the client
+--   WinsBoard                       LeaderboardService writes the top wins
+--   PodiumSpot (Rank 1-3)           LeaderboardService stands the top-3
+--                                   players' avatars on these pedestals
+--   ProximityPrompts named "Spellbook", "Quests" and "Crates" open UI on
+--   the client (MenuController / CrateController)
+--
+-- The spellbook kiosk uses the imported Grimoire model and the crate shop
+-- the Crate model (ReplicatedStorage.Models via ModelKit), with plain-shape
+-- fallbacks when the place doesn't have them.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local MapKit = require(script.Parent.MapKit)
 
 local BLUE = Color3.fromRGB(66, 165, 245)
@@ -242,16 +255,35 @@ return function(): Model
 		spot:AddTag("DummySpot")
 	end
 
-	-- Spellbook kiosk and Daily chest (south).
-	local kiosk = MapKit.part(model, {
+	-- Spellbook kiosk (south-west): the Grimoire model lying open on a lectern.
+	local lectern = MapKit.part(model, {
 		name = "SpellbookKiosk",
-		size = Vector3.new(6, 8, 2),
-		cframe = CFrame.new(-16, 4, 50),
+		size = Vector3.new(4, 4, 3),
+		cframe = CFrame.new(-16, 2, 50),
 		color = Color3.fromRGB(121, 85, 72),
 		material = Enum.Material.Wood,
 	})
-	label(kiosk, "Spellbook", 6)
-	prompt(kiosk, "Spellbook", "Open", "Spellbook")
+	local grimoire = ModelKit.clone("Grimoire", "solid", 1.5)
+	if grimoire then
+		grimoire.Name = "Spellbook"
+		-- Open book resting on the lectern, tilted toward the reader (+Z).
+		local _, size = grimoire:GetBoundingBox()
+		grimoire:PivotTo(
+			CFrame.new(-16, 4 + size.Y / 2 + 0.2, 50) * CFrame.Angles(math.rad(-20), 0, 0)
+		)
+		grimoire.Parent = model
+	else
+		-- Fallback: a big purple book shape.
+		MapKit.part(model, {
+			name = "Spellbook",
+			size = Vector3.new(5, 1.2, 3.6),
+			cframe = CFrame.new(-16, 4.8, 50) * CFrame.Angles(math.rad(-20), 0, 0),
+			color = Color3.fromRGB(96, 44, 128),
+			material = Enum.Material.Fabric,
+		})
+	end
+	label(lectern, "Spellbook", 7)
+	prompt(lectern, "Spellbook", "Open", "Spellbook")
 
 	local chest = MapKit.part(model, {
 		name = "DailyChest",
@@ -263,16 +295,109 @@ return function(): Model
 	label(chest, "Daily Quests", 5)
 	prompt(chest, "Quests", "Open", "Daily Quests")
 
-	-- Leaderboard board (north-east).
+	-- Crate shop (south-east): one crate per rarity on a stage, cheapest on
+	-- the left. Any crate's prompt opens the shop panel.
+	local SHOP = Vector3.new(50, 0, 38)
+	MapKit.part(model, {
+		name = "CrateStage",
+		size = Vector3.new(34, 1, 10),
+		cframe = CFrame.new(SHOP + Vector3.new(0, 0.5, 0)),
+		color = Color3.fromRGB(69, 39, 160),
+		material = Enum.Material.SmoothPlastic,
+	})
+	local shopSign = MapKit.part(model, {
+		name = "CrateShopSign",
+		size = Vector3.one,
+		cframe = CFrame.new(SHOP + Vector3.new(0, 10, -3)),
+		transparency = 1,
+		canCollide = false,
+	})
+	label(shopSign, "Crate Shop\nSpend coins, unlock spells!", 0, 90)
+	for index, crate in Crates.LIST do
+		local info = Rarity.INFO[crate.id]
+		local spot = SHOP + Vector3.new((index - 3) * 6.5, 1, 0)
+		local holder = MapKit.part(model, {
+			name = `Crate_{crate.id}`,
+			size = Vector3.new(4, 4, 4),
+			cframe = CFrame.new(spot + Vector3.new(0, 2, 0)),
+			color = info.color,
+			material = Enum.Material.WoodPlanks,
+		})
+		local crateModel = ModelKit.clone("Crate", "solid")
+		if crateModel then
+			-- The model replaces the block; tint its trim and gem by rarity.
+			holder.Transparency = 1
+			local _, size = crateModel:GetBoundingBox()
+			crateModel:ScaleTo(4 / math.max(size.X, 0.01))
+			crateModel:PivotTo(
+				CFrame.new(spot + Vector3.new(0, 2, 0)) * CFrame.Angles(0, math.rad(-15 + index * 6), 0)
+			)
+			for _, part in crateModel:GetDescendants() do
+				if
+					part:IsA("BasePart")
+					and (part.Name == "Crate_Trim" or part.Name == "Crate_Gem")
+				then
+					part.Color = info.color
+				end
+			end
+			crateModel.Name = `CrateModel_{crate.id}`
+			crateModel.Parent = model
+		end
+		local priceTag = label(holder, `{info.glyph} {crate.id}\n💰 {crate.price}`, 4.5, 50)
+		priceTag.TextColor3 = info.color
+		prompt(holder, "Crates", "Open shop", `{crate.id} crate`)
+	end
+
+	-- Winners' podium (north-east): gold in the middle (highest), silver on
+	-- its left, bronze on its right, all facing the plaza (+Z). Each
+	-- pedestal's front face shows its rank, name and wins (LeaderboardService
+	-- writes the "Text" label). The wins board stands to its right.
+	local PODIUM = Vector3.new(62, 0, -12)
+	for rank, spec in
+		{
+			{ x = 0, height = 6, color = Color3.fromRGB(255, 202, 40) },
+			{ x = -9, height = 4.5, color = Color3.fromRGB(207, 216, 220) },
+			{ x = 9, height = 3, color = Color3.fromRGB(205, 127, 50) },
+		}
+	do
+		local pedestal = MapKit.part(model, {
+			name = `Podium_{rank}`,
+			size = Vector3.new(8, spec.height, 7),
+			cframe = CFrame.new(PODIUM + Vector3.new(spec.x, spec.height / 2, 0)),
+			color = spec.color,
+			material = Enum.Material.Marble,
+		})
+		pedestal:SetAttribute("Rank", rank)
+		pedestal:AddTag("PodiumSpot")
+		local surface = Instance.new("SurfaceGui")
+		surface.Name = "Plate"
+		surface.Face = Enum.NormalId.Back -- faces +Z, toward the plaza
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		surface.PixelsPerStud = 40
+		surface.Parent = pedestal
+		local plate = Instance.new("TextLabel")
+		plate.Name = "Text"
+		plate.Size = UDim2.fromScale(0.9, 0.9)
+		plate.Position = UDim2.fromScale(0.05, 0.05)
+		plate.BackgroundTransparency = 1
+		plate.Font = Enum.Font.FredokaOne
+		plate.TextScaled = true
+		plate.TextColor3 = Color3.fromRGB(38, 50, 56)
+		plate.Text = `#{rank}\nWin a match to stand here!`
+		plate.Parent = surface
+	end
+
+	-- Wins board, right of the podium, angled toward the plaza.
 	local board = MapKit.part(model, {
 		name = "Leaderboard",
-		size = Vector3.new(20, 12, 1),
-		cframe = CFrame.new(40, 8, -50) * CFrame.Angles(0, math.rad(-20), 0),
+		size = Vector3.new(16, 14, 1),
+		cframe = CFrame.new(PODIUM + Vector3.new(24, 8, 2)) * CFrame.Angles(0, math.rad(-30), 0),
 		color = Color3.fromRGB(38, 50, 56),
 	})
+	board:AddTag("WinsBoard")
 	local surface = Instance.new("SurfaceGui")
 	surface.Name = "Board"
-	surface.Face = Enum.NormalId.Front
+	surface.Face = Enum.NormalId.Back -- faces +Z, toward the plaza
 	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	surface.PixelsPerStud = 30
 	surface.Parent = board
@@ -283,7 +408,7 @@ return function(): Model
 	boardText.Font = Enum.Font.FredokaOne
 	boardText.TextScaled = true
 	boardText.TextColor3 = Color3.new(1, 1, 1)
-	boardText.Text = "Top Spellcasters\n(play a match!)"
+	boardText.Text = "🏆 Most Wins\n(win a match!)"
 	boardText.Parent = surface
 
 	-- Trees for flavor.

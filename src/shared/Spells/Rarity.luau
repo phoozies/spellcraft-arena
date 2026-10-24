@@ -1,5 +1,5 @@
 --!strict
--- Rarity tiers: draft weights, UI colors, and a shape glyph so rarity is
+-- Rarity tiers (Common < Uncommon < Rare < Epic < Legendary): draft weights, UI colors, and a shape glyph so rarity is
 -- readable without relying on color alone (colorblind-friendly).
 
 local Types = require(script.Parent.Parent.Types)
@@ -14,36 +14,43 @@ export type RarityInfo = {
 
 local Rarity = {}
 
-Rarity.ORDER = { "Common", "Rare", "Epic", "Legendary" } :: { Types.Rarity }
+Rarity.ORDER = { "Common", "Uncommon", "Rare", "Epic", "Legendary" } :: { Types.Rarity }
 
 Rarity.INFO = table.freeze({
 	Common = {
 		name = "Common",
-		weight = 60,
+		weight = 50,
 		color = Color3.fromRGB(176, 190, 197),
 		glyph = "●",
 		order = 1,
 	},
+	Uncommon = {
+		name = "Uncommon",
+		weight = 25,
+		color = Color3.fromRGB(102, 187, 106),
+		glyph = "▲",
+		order = 2,
+	},
 	Rare = {
 		name = "Rare",
-		weight = 28,
+		weight = 15,
 		color = Color3.fromRGB(66, 165, 245),
 		glyph = "◆",
-		order = 2,
+		order = 3,
 	},
 	Epic = {
 		name = "Epic",
-		weight = 10,
+		weight = 8,
 		color = Color3.fromRGB(171, 71, 188),
 		glyph = "★",
-		order = 3,
+		order = 4,
 	},
 	Legendary = {
 		name = "Legendary",
 		weight = 2,
 		color = Color3.fromRGB(255, 179, 0),
-		glyph = "✦",
-		order = 4,
+		glyph = "👑",
+		order = 5,
 	},
 } :: { [Types.Rarity]: RarityInfo })
 

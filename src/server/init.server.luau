@@ -17,7 +17,7 @@ Remotes.setup()
 -- Order matters only for init(); start() runs in the same order.
 local ORDER = {
 	"PlayerDataService",
-	"ProgressionService",
+	"EconomyService",
 	"StatusService",
 	"DestructibleService",
 	"HandService",
@@ -27,6 +27,8 @@ local ORDER = {
 	"ArenaService",
 	"MatchService",
 	"HubService",
+	"CrateService",
+	"LeaderboardService",
 	"AdminService",
 	"DebugService",
 }

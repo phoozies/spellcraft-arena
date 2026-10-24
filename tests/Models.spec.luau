@@ -18,6 +18,19 @@ local EXPECTED = {
 		parts = { "Arena_Floor", "Arena_Pillars", "Arena_RuneRing", "Arena_Seating" },
 		maxSize = 90,
 	},
+	Grimoire = {
+		parts = { "Grimoire_Cover", "Grimoire_Pages", "Grimoire_Gold", "Grimoire_Gem" },
+		maxSize = 6,
+	},
+	Gust = { parts = { "Gust_Swirl", "Gust_Core", "Gust_Streaks" }, maxSize = 12 },
+	Zap = { parts = { "Zap_Bolt", "Zap_Glow" }, maxSize = 30 },
+	Heal = { parts = { "Heal_Cross", "Heal_Ring" }, maxSize = 6 },
+	BlackHole = { parts = { "BlackHole_Core", "BlackHole_Disk", "BlackHole_Ring" }, maxSize = 12 },
+	Turret = {
+		parts = { "Turret_Base", "Turret_Head", "Turret_Barrel", "Turret_Lens" },
+		maxSize = 8,
+	},
+	Crate = { parts = { "Crate_Body", "Crate_Trim", "Crate_Gem" }, maxSize = 6 },
 }
 
 -- The default colour of an imported, un-coloured mesh.
@@ -57,12 +70,14 @@ return function(t: any)
 			t.expect(math.abs(size.Z - def.visual.size.Z) < 0.2).toBeTruthy()
 		end)
 
-		t.it("every spell's model name exists when models are present", function()
-			if ModelKit.get("RockWall") == nil then
-				return
-			end
+		t.it("every spell's model names exist when models are present", function()
 			for _, def in SpellDefinitions.list do
-				if def.stats.model then
+				-- Only check spells whose models were imported into this place.
+				local name = def.visual.model or def.stats.model
+				if name and ModelKit.get("RockWall") ~= nil and ModelKit.get(name) == nil then
+					warn(`[Models] {def.name} uses model "{name}", not in ReplicatedStorage.Models (using the fallback shape)`)
+				end
+				if def.stats.model and ModelKit.get("RockWall") ~= nil then
 					t.expect(ModelKit.get(def.stats.model) ~= nil).toBeTruthy()
 				end
 			end

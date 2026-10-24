@@ -19,12 +19,17 @@ The imported models live in the place file, not the project. To add or change on
   require(game.ServerScriptService.Tests.Runner)()
   ```
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
-- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;give me all`, `;startmatch 1v1`). The older command-bar helpers also still work during Play:
+- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;give me all`, `;coins me 5000`, `;crate me Epic`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
   ```lua
-  _G.WordcraftDebug("solo", "1v1")   -- match against nobody; rounds end on the timer
-  _G.WordcraftDebug("xp", 500)
-  _G.WordcraftDebug("unlockall")
+  local debug = game.ServerStorage.WordcraftDebug
+  debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
+  debug:Invoke("coins", 500)
+  debug:Invoke("crate", "Rare")     -- returns the CrateResult (or the refusal reason)
+  debug:Invoke("wins", 3)
+  debug:Invoke("state")             -- {coins, wins, ownedSpells} per player
+  debug:Invoke("unlockall")
   ```
+  Studio playtests with API access save to the real DataStore, so these change your saved profile.
   Use **Test → Clients and Servers** (2–8 players) to check PvP, teams, and drafts.
 
 ## Code conventions
@@ -39,6 +44,6 @@ The imported models live in the place file, not the project. To add or change on
 ## Checklist for a new spell / map / system
 
 - [ ] Data row or builder added (see SPELLS.md or MapKit's arena contract)
-- [ ] Tests pass and docs are updated (SPELLS.md table regenerated)
+- [ ] Tests pass and docs are updated (SPELLS.md table regenerated, `docs/semantic/features.yaml` updated)
 - [ ] Tried on PC, plus the device emulator for phone and console
 - [ ] `roblox-dev:roblox-reviewer` audit for remote, DataStore, or performance changes

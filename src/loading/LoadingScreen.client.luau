@@ -50,7 +50,7 @@ local function label(text: string, y: number, height: number, color: Color3): Te
 	return l
 end
 
-local glyph = label("✦", 0.3, 90, Color3.fromRGB(255, 202, 40))
+local glyph = label("★", 0.3, 90, Color3.fromRGB(255, 202, 40))
 label("WORDCRAFT ARENA", 0.45, 70, Color3.new(1, 1, 1))
 local tip = label(TIPS[math.random(1, #TIPS)], 0.62, 28, Color3.fromRGB(197, 202, 233))
 

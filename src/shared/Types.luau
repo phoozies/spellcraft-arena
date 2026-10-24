@@ -2,7 +2,7 @@
 -- Shared type definitions. Types that cross the client/server boundary
 -- (remote payloads, profile schema, spell data) live here so both sides agree.
 
-export type Rarity = "Common" | "Rare" | "Epic" | "Legendary"
+export type Rarity = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary"
 
 export type Archetype =
 	"Projectile"
@@ -25,6 +25,12 @@ export type Visual = {
 	material: Enum.Material,
 	transparency: number?,
 	neon: boolean?,
+	-- Name of an imported model in ReplicatedStorage.Models (see ModelKit)
+	-- that replaces the primitive look: the bolt for projectiles, the body
+	-- for placeables (Turret), the swirl for zones (Black Hole), the strike
+	-- for Zap, the pop-up for buffs (Heal). The primitive above is always
+	-- the fallback and the hitbox.
+	model: string?,
 }
 
 -- Archetype-specific tuning. Every field is optional; each archetype
@@ -47,6 +53,7 @@ export type SpellStats = {
 	maxActive: number?,
 	-- Placeable behaviors
 	turret: boolean?,
+	fireInterval: number?, -- turret: seconds between shots (default 1.5)
 	trap: boolean?,
 	bounce: number?,
 	hazardDps: number?,
@@ -64,6 +71,12 @@ export type SpellStats = {
 	pull: number?,
 	destroysStructures: boolean?,
 	teamHeal: boolean?,
+	-- Black Hole: enemies pulled into the core are Rooted at the center
+	-- until the zone ends.
+	hold: boolean?,
+	-- Show the hit circle (radius) on the ground at the aim point while
+	-- this spell is readied, clamped to `range` (Zap).
+	reticle: boolean?,
 	-- Buff behaviors
 	shield: number?,
 	reflect: boolean?,
@@ -88,7 +101,6 @@ export type SpellDef = {
 	name: string,
 	aliases: { string },
 	rarity: Rarity,
-	unlockLevel: number,
 	archetype: Archetype,
 	cooldown: number,
 	description: string,
@@ -112,9 +124,8 @@ export type DraftCard = {
 -- PlayerDataService when changing this shape.
 export type Profile = {
 	schema: number,
-	xp: number,
-	level: number,
-	ownedSpells: { string },
+	coins: number, -- spent on crates (CrateService); earned by winning matches
+	ownedSpells: { string }, -- starters + spells unlocked from crates
 	cosmetics: { string },
 	stats: {
 		matches: number,
@@ -139,7 +150,7 @@ export type DailyQuest = {
 	text: string,
 	goal: number,
 	progress: number,
-	rewardXp: number,
+	rewardCoins: number,
 	claimed: boolean,
 }
 
@@ -158,7 +169,29 @@ export type MatchState = {
 	roundWinner: string?, -- display name of the last round's winner
 	winner: string?, -- set in Results: display name of the match winner
 	won: boolean?, -- set in Results for this player
-	xpGained: number?, -- set in Results for this player
+	coinsGained: number?, -- set in Results for this player
 }
+
+
+-- One crate tier in the shop (shared/Economy/Crates).
+export type CrateDef = {
+	id: Rarity, -- crates are named after their main rarity
+	price: number,
+	-- rarity -> weight; the spin lands on a spell of the rolled rarity.
+	odds: { [Rarity]: number },
+}
+
+-- What the server tells the opener after a crate spin (CrateOpened remote).
+export type CrateResult = {
+	crate: Rarity,
+	spellId: string,
+	rarity: Rarity,
+	duplicate: boolean, -- already owned: refunded instead
+	refund: number,
+	coins: number, -- balance after the spin
+}
+
+-- One row of the server's wins leaderboard (LeaderboardService).
+export type LeaderRow = { userId: number, name: string, wins: number }
 
 return nil

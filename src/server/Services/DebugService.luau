@@ -2,7 +2,10 @@
 -- Studio-only test helpers (roblox-testing skill: gated cheat remotes).
 -- Every command is rejected outside Studio, so this is safe to ship.
 --
---   xp <n>         grant XP
+--   coins <n>      grant coins
+--   wins <n>       add n match wins (leaderboard + podium)
+--   crate <id>     open a crate (charges coins), returns the result
+--   state          returns {coins, wins, ownedSpells} per player
 --   solo <mode>    start a match alone (rounds end on the timer)
 --   unlockall      own every spell
 --   knockback      server-push your own character (tests authoritative knockback)
@@ -14,10 +17,11 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local CrateService = require(script.Parent.CrateService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
+local EconomyService = require(script.Parent.EconomyService)
 
 local DebugService = {}
 
@@ -25,12 +29,26 @@ local function enabled(): boolean
 	return RunService:IsStudio() and Config.DEBUG_COMMANDS_IN_STUDIO
 end
 
-function DebugService.run(player: Player, command: string, arg: any)
+function DebugService.run(player: Player, command: string, arg: any): any
 	if not enabled() then
-		return
+		return nil
 	end
-	if command == "xp" and typeof(arg) == "number" then
-		ProgressionService.addXp(player, arg, "debug")
+	if command == "coins" and typeof(arg) == "number" then
+		EconomyService.addCoins(player, arg, "debug")
+	elseif command == "wins" and typeof(arg) == "number" then
+		for _ = 1, math.clamp(math.floor(arg), 0, 1000) do
+			EconomyService.recordWin(player)
+		end
+	elseif command == "crate" and typeof(arg) == "string" then
+		local result, reason = CrateService.open(player, arg)
+		if result then
+			Remotes.get("CrateOpened"):FireClient(player, result)
+		end
+		return result or reason
+	elseif command == "state" then
+		local profile = PlayerDataService.get(player)
+		return profile
+			and { coins = profile.coins, wins = profile.stats.wins, ownedSpells = profile.ownedSpells }
 	elseif command == "solo" and typeof(arg) == "string" and (Config.MODES :: any)[arg] then
 		MatchService.startMatch(arg :: any, { player }, { solo = true })
 	elseif command == "knockback" and player.Character then
@@ -42,9 +60,10 @@ function DebugService.run(player: Player, command: string, arg: any)
 			for _, def in SpellDefinitions.list do
 				table.insert(profile.ownedSpells, def.id)
 			end
-			ProgressionService.sendSummary(player)
+			EconomyService.sendSummary(player)
 		end
 	end
+	return nil
 end
 
 function DebugService.start()
@@ -61,11 +80,22 @@ function DebugService.start()
 	--   _G.WordcraftDebug("solo", "1v1")
 	-- selene: allow(global_usage)
 	local globals: any = _G
-	globals.WordcraftDebug = function(command: string, arg: any)
+	local function runAll(command: string, arg: any)
+		local results = {}
 		for _, player in Players:GetPlayers() do
-			DebugService.run(player, command, arg)
+			results[player.Name] = DebugService.run(player, command, arg)
 		end
+		return results
 	end
+	globals.WordcraftDebug = runAll
+
+	-- The command bar and the MCP don't share _G or module caches with the
+	-- running game, but they do share instances: invoke this instead, e.g.
+	--   game.ServerStorage.WordcraftDebug:Invoke("crate", "Common")
+	local bindable = Instance.new("BindableFunction")
+	bindable.Name = "WordcraftDebug"
+	bindable.OnInvoke = runAll
+	bindable.Parent = game:GetService("ServerStorage")
 end
 
 return DebugService

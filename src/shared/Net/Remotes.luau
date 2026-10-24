@@ -20,6 +20,7 @@ local DEFINITIONS: { [string]: string } = {
 	SetQueue = "(mode: string?) join a queue by mode name, or leave with nil",
 	ClaimQuest = "(questId: string) claim a finished daily quest",
 	VoiceListen = "(listening: boolean) push-to-talk for speaking a spell",
+	OpenCrate = "(crateId: string) buy and spin a crate (a Rarity name); server validates coins + rate",
 	SaveSettings = "(key: string, value: string) save a player setting, e.g. typeKey",
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
@@ -29,7 +30,8 @@ local DEFINITIONS: { [string]: string } = {
 	Toast = "(message: string, kind: string) short on-screen notification",
 	MatchStateChanged = "(state: MatchState) phase, timer, scores",
 	DraftOffered = "(cards: {DraftCard}, endsAt: number)",
-	ProfileUpdated = "(summary: {level, xp, ownedSpells, quests, streak})",
+	ProfileUpdated = "(summary: {coins, ownedSpells, quests, streak, stats, settings})",
+	CrateOpened = "(result: CrateResult) the spell a crate spin landed on (client animates the reel)",
 	QueueCounts = "(counts: {[mode]: number}) live players waiting per mode",
 	Knockout = "(killerName: string?, victimName: string, spellName: string?) kill feed",
 	Impulse = "(velocity: Vector3) self-beneficial boost (dash, pads) applied by the owning client",

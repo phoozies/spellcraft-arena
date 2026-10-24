@@ -1,6 +1,7 @@
 --!strict
 -- The central hub (Inkwell Plaza): builds it, spawns players there, and runs
--- the team boxes, the FFA queue pad, training dummies, and the leaderboard.
+-- the team boxes, the FFA queue pad, and training dummies. (The wins board
+-- and podium are LeaderboardService; the crate shop is CrateService.)
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -330,31 +331,6 @@ local function updateBoxes()
 	end
 end
 
-local function updateLeaderboard()
-	local board = hub:FindFirstChild("Leaderboard")
-	local label = board and board:FindFirstChild("Text", true)
-	if not label or not label:IsA("TextLabel") then
-		return
-	end
-	local rows = {}
-	for player, kos in MatchService.sessionKnockouts do
-		if player.Parent then
-			table.insert(rows, { name = player.DisplayName, kos = kos })
-		end
-	end
-	table.sort(rows, function(a, b)
-		return a.kos > b.kos
-	end)
-	local lines = { "Top Spellcasters" }
-	for i = 1, math.min(5, #rows) do
-		table.insert(lines, `{i}. {rows[i].name} — {rows[i].kos} KOs`)
-	end
-	if #rows == 0 then
-		table.insert(lines, "(play a match!)")
-	end
-	label.Text = table.concat(lines, "\n")
-end
-
 function HubService.init()
 	-- Replace the template baseplate at runtime (the saved place is untouched).
 	for _, name in { "Baseplate", "SpawnLocation" } do
@@ -405,9 +381,6 @@ function HubService.start()
 			updateBoxes()
 			if tick % 2 == 0 then
 				regenTick(dt * 2)
-			end
-			if tick % 20 == 0 then
-				updateLeaderboard()
 			end
 		end
 	end)

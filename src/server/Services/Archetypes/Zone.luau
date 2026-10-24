@@ -4,17 +4,31 @@
 --     toward the center (`pull`), deals damage per second (`damage`), or
 --     heals allies (`heal` + teamHeal).
 --   * delay (no duration): a telegraphed burst after `delay` seconds —
---     damage + knockback, optionally smashing structures (Meteor, Earthquake).
+--     damage + knockback, optionally smashing structures. Zap is one: with a
+--     `visual.model` the clients draw that model striking down at the burst
+--     (Fx "strike").
+--   * hold (Black Hole): enemies pulled into the core (HOLD_RADIUS) are
+--     Rooted there until the zone ends: sucked in, then trapped.
+--   * visual.model: the lingering swirl is that model (spun by clients via
+--     the SpinFx tag) instead of a primitive.
 
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
 
 local Zone = {}
 
 local TICK = 0.25
+-- Black Hole (`hold`): how close to the center counts as "in the core".
+local HOLD_RADIUS = 4
+
+local fxRemote = Remotes.get("Fx")
 
 -- player -> spellId -> live zone discs (oldest first). Lingering zones are
 -- capped per spell (stats.maxActive, default 1); casting another replaces
@@ -126,6 +140,10 @@ function Zone.cast(ctx: any): boolean?
 			):Play()
 			Debris:AddItem(rock, stats.delay)
 		end
+		if visual.model then
+			-- Clients draw the model striking down at the burst (Zap's bolt).
+			fxRemote:FireAllClients("strike", center, radius, stats.delay, visual.model, visual.color)
+		end
 		task.delay(stats.delay, burst, ctx, center)
 		return true
 	end
@@ -134,7 +152,16 @@ function Zone.cast(ctx: any): boolean?
 	local area = disc(center, radius, visual.color, visual.material, visual.transparency or 0.3)
 	area.Name = ctx.def.name
 	trackZone(ctx.player, ctx.def.id, area, stats.maxActive or 1)
-	if
+	local look = if visual.model then ModelKit.clone(visual.model, "effect") else nil
+	if look then
+		-- Imported swirl (Black Hole): sized to the visual, hovering over the
+		-- disc. Clients spin models tagged SpinFx about their vertical axis.
+		local _, size = look:GetBoundingBox()
+		look:ScaleTo(visual.size.X / math.max(size.X, size.Z, 0.01))
+		look:PivotTo(CFrame.new(center + Vector3.new(0, visual.size.Y / 2 + 1, 0)))
+		look:AddTag("SpinFx")
+		look.Parent = area
+	elseif
 		visual.shape == "Ball"
 		or (visual.shape == "Cylinder" and not (visual.size.X < visual.size.Y))
 	then
@@ -158,9 +185,18 @@ function Zone.cast(ctx: any): boolean?
 
 	task.spawn(function()
 		local elapsed = 0
+		local held: { [Model]: boolean } = {}
 		while elapsed < duration and area.Parent do
 			for _, hit in ctx.enemiesNear(center, radius) do
 				if hit.character then
+					if stats.hold and not held[hit.character] then
+						local offset = hit.position - center
+						if Vector3.new(offset.X, 0, offset.Z).Magnitude <= HOLD_RADIUS then
+							-- Trapped in the core for the rest of the zone.
+							held[hit.character] = true
+							StatusService.apply(hit.character, "Root", duration - elapsed)
+						end
+					end
 					if stats.status then
 						StatusService.apply(
 							hit.character,

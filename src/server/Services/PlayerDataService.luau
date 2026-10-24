@@ -22,7 +22,8 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 type Profile = Types.Profile
 
 local STORE_NAME = "PlayerProfiles_v1"
-local SCHEMA = 1
+-- 2: levels/XP removed; coins added (crates unlock spells).
+local SCHEMA = 2
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -39,8 +40,7 @@ local store: DataStore? = nil
 local function defaultProfile(): Profile
 	return {
 		schema = SCHEMA,
-		xp = 0,
-		level = 1,
+		coins = Config.COINS.STARTING,
 		ownedSpells = SpellDefinitions.starters(),
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
@@ -55,6 +55,16 @@ local function reconcile(data: any): Profile
 	local base = defaultProfile()
 	if typeof(data) ~= "table" then
 		return base
+	end
+	if (data.schema or 1) < 2 then
+		-- Schema 1 had levels: XP/level are gone, quests rewarded XP (re-roll
+		-- them), and unlocked spells that no longer exist are dropped below.
+		data.xp = nil
+		data.level = nil
+		if typeof(data.daily) == "table" then
+			data.daily.questDay = 0
+			data.daily.quests = {}
+		end
 	end
 	for key, value in base :: any do
 		if data[key] == nil then
@@ -76,6 +86,19 @@ local function reconcile(data: any): Profile
 			data.settings[key] = value
 		end
 	end
+	-- Owned spells: drop ids that left the dictionary, and always own the starters.
+	local owned = {}
+	for _, id in data.ownedSpells do
+		if SpellDefinitions.get(id) and not table.find(owned, id) then
+			table.insert(owned, id)
+		end
+	end
+	for _, id in SpellDefinitions.starters() do
+		if not table.find(owned, id) then
+			table.insert(owned, id)
+		end
+	end
+	data.ownedSpells = owned
 	data.schema = SCHEMA
 	return data :: Profile
 end

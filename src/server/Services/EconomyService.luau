@@ -1,33 +1,41 @@
 --!strict
--- XP, levels (1..10), spell unlocks, daily login streak, first-win bonus,
--- and daily quests. The only place that mutates profile.xp / level / owned.
+-- Coins, wins, daily login streak, first-win bonus, daily quests, and
+-- player settings. The ONLY place that mutates profile.coins or
+-- profile.stats.wins (crates spend through EconomyService.spend).
+--
+-- There are no levels or XP: players earn coins by winning matches
+-- (Config.COINS.MATCH_WIN, + FIRST_WIN_OF_DAY), from the daily login chest,
+-- and from quests, then spend them on crates (CrateService) to unlock spells.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local LevelCurve = require(ReplicatedStorage.Shared.Progression.LevelCurve)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
-local ProgressionService = {}
+local EconomyService = {}
 
--- Quest templates; three are picked per day. `event` matches ProgressionService.track().
+-- Fired with (player) whenever coins or wins change (LeaderboardService
+-- mirrors them into leaderstats and the hub podium).
+EconomyService.Changed = Signal.new() :: Signal.Signal<Player>
+
+-- Quest templates; three are picked per day. `event` matches EconomyService.track().
 local QUEST_POOL = {
-	{ id = "cast25", text = "Cast 25 spells", event = "cast", goal = 25, rewardXp = 60 },
-	{ id = "ko5", text = "Knock out 5 opponents", event = "knockout", goal = 5, rewardXp = 80 },
-	{ id = "win2", text = "Win 2 matches", event = "win", goal = 2, rewardXp = 100 },
-	{ id = "play3", text = "Play 3 matches", event = "match", goal = 3, rewardXp = 60 },
-	{ id = "place10", text = "Place 10 objects", event = "place", goal = 10, rewardXp = 50 },
-	{ id = "break10", text = "Destroy 10 objects", event = "destroy", goal = 10, rewardXp = 60 },
+	{ id = "cast25", text = "Cast 25 spells", event = "cast", goal = 25, rewardCoins = 30 },
+	{ id = "ko5", text = "Knock out 5 opponents", event = "knockout", goal = 5, rewardCoins = 40 },
+	{ id = "win2", text = "Win 2 matches", event = "win", goal = 2, rewardCoins = 60 },
+	{ id = "play3", text = "Play 3 matches", event = "match", goal = 3, rewardCoins = 30 },
+	{ id = "place10", text = "Place 10 objects", event = "place", goal = 10, rewardCoins = 25 },
+	{ id = "break10", text = "Destroy 10 objects", event = "destroy", goal = 10, rewardCoins = 30 },
 	{
 		id = "draft3",
-		text = "Draft 3 Rare or better spells",
+		text = "Draft 3 Uncommon or better spells",
 		event = "draftRare",
 		goal = 3,
-		rewardXp = 70,
+		rewardCoins = 35,
 	},
 }
 
@@ -48,12 +56,8 @@ local function sendSummary(player: Player)
 	if not profile then
 		return
 	end
-	local into, needed = LevelCurve.progress(profile.xp)
 	profileRemote:FireClient(player, {
-		level = profile.level,
-		xp = profile.xp,
-		xpInto = into,
-		xpNeeded = needed,
+		coins = profile.coins,
 		ownedSpells = profile.ownedSpells,
 		quests = profile.daily.quests,
 		streak = profile.daily.streak,
@@ -61,7 +65,55 @@ local function sendSummary(player: Player)
 		stats = profile.stats,
 	})
 end
-ProgressionService.sendSummary = sendSummary
+EconomyService.sendSummary = sendSummary
+
+-- Adds coins (amount > 0). `reason` is for logs/analytics only. `quiet`
+-- skips the client summary (crate refunds are revealed after the spin).
+function EconomyService.addCoins(player: Player, amount: number, _reason: string, quiet: boolean?)
+	local profile = PlayerDataService.get(player)
+	if not profile or amount <= 0 or amount ~= amount then
+		return
+	end
+	profile.coins += math.floor(amount)
+	if not quiet then
+		sendSummary(player)
+	end
+	EconomyService.Changed:Fire(player)
+end
+
+-- Spends coins if the player has enough. Returns true when spent.
+function EconomyService.spend(player: Player, amount: number): boolean
+	local profile = PlayerDataService.get(player)
+	if not profile or amount < 0 or profile.coins < amount then
+		return false
+	end
+	profile.coins -= amount
+	sendSummary(player)
+	EconomyService.Changed:Fire(player)
+	return true
+end
+
+function EconomyService.coins(player: Player): number
+	local profile = PlayerDataService.get(player)
+	return if profile then profile.coins else 0
+end
+
+function EconomyService.wins(player: Player): number
+	local profile = PlayerDataService.get(player)
+	return if profile then profile.stats.wins else 0
+end
+
+-- Records a match win (the leaderboard stat). Coins are granted separately
+-- by the caller so the Results screen can show the total.
+function EconomyService.recordWin(player: Player)
+	local profile = PlayerDataService.get(player)
+	if not profile then
+		return
+	end
+	profile.stats.wins += 1
+	sendSummary(player)
+	EconomyService.Changed:Fire(player)
+end
 
 local function refreshDaily(player: Player, profile: Types.Profile)
 	local day = today()
@@ -72,15 +124,15 @@ local function refreshDaily(player: Player, profile: Types.Profile)
 			profile.daily.streak = 1
 		end
 		profile.daily.lastLoginDay = day
-		local bonus = Config.XP.DAILY_LOGIN * math.min(profile.daily.streak, 7)
+		local bonus = Config.COINS.DAILY_LOGIN * math.min(profile.daily.streak, 7)
 		task.delay(3, function()
 			if player.Parent then
 				toastRemote:FireClient(
 					player,
-					`Daily chest! Day {profile.daily.streak} streak: +{bonus} XP`,
+					`Daily chest! Day {profile.daily.streak} streak: +{bonus} coins`,
 					"reward"
 				)
-				ProgressionService.addXp(player, bonus, "daily")
+				EconomyService.addCoins(player, bonus, "daily")
 			end
 		end)
 	end
@@ -97,7 +149,7 @@ local function refreshDaily(player: Player, profile: Types.Profile)
 					text = q.text,
 					goal = q.goal,
 					progress = 0,
-					rewardXp = q.rewardXp,
+					rewardCoins = q.rewardCoins,
 					claimed = false,
 				})
 			end
@@ -106,54 +158,8 @@ local function refreshDaily(player: Player, profile: Types.Profile)
 	end
 end
 
--- Makes sure the profile owns every spell its level grants (also repairs
--- profiles if spells get added to earlier levels later).
-local function syncUnlocks(profile: Types.Profile): { string }
-	local owned: { [string]: boolean } = {}
-	for _, id in profile.ownedSpells do
-		owned[id] = true
-	end
-	local newlyUnlocked = {}
-	for _, id in LevelCurve.spellsForLevel(profile.level) do
-		if not owned[id] then
-			table.insert(profile.ownedSpells, id)
-			table.insert(newlyUnlocked, id)
-		end
-	end
-	-- Drop ids that no longer exist in the dictionary.
-	for i = #profile.ownedSpells, 1, -1 do
-		if SpellDefinitions.get(profile.ownedSpells[i]) == nil then
-			table.remove(profile.ownedSpells, i)
-		end
-	end
-	return newlyUnlocked
-end
-
-function ProgressionService.addXp(player: Player, amount: number, _reason: string)
-	local profile = PlayerDataService.get(player)
-	if not profile or amount <= 0 then
-		return
-	end
-	local before = profile.level
-	profile.xp += math.floor(amount)
-	profile.level = LevelCurve.levelForXp(profile.xp)
-	if profile.level > before then
-		local unlocked = syncUnlocks(profile)
-		local names = {}
-		for _, id in unlocked do
-			local def = SpellDefinitions.get(id)
-			if def then
-				table.insert(names, def.name)
-			end
-		end
-		local suffix = if #names > 0 then " New spells: " .. table.concat(names, ", ") else ""
-		toastRemote:FireClient(player, `Level up! You're level {profile.level}.{suffix}`, "levelup")
-	end
-	sendSummary(player)
-end
-
 -- Progresses daily quests; `event` is one of the QUEST_POOL event names.
-function ProgressionService.track(player: Player, event: string, amount: number?)
+function EconomyService.track(player: Player, event: string, amount: number?)
 	local profile = PlayerDataService.get(player)
 	if not profile then
 		return
@@ -178,7 +184,7 @@ function ProgressionService.track(player: Player, event: string, amount: number?
 end
 
 -- Returns true if this is the player's first win today (and records it).
-function ProgressionService.consumeFirstWin(player: Player): boolean
+function EconomyService.consumeFirstWin(player: Player): boolean
 	local profile = PlayerDataService.get(player)
 	if not profile or profile.daily.lastFirstWinDay == today() then
 		return false
@@ -187,17 +193,16 @@ function ProgressionService.consumeFirstWin(player: Player): boolean
 	return true
 end
 
-function ProgressionService.init()
+function EconomyService.init()
 	toastRemote = Remotes.get("Toast")
 	profileRemote = Remotes.get("ProfileUpdated")
 end
 
-function ProgressionService.start()
+function EconomyService.start()
 	PlayerDataService.ProfileLoaded:Connect(function(player, profile)
-		profile.level = LevelCurve.levelForXp(profile.xp)
-		syncUnlocks(profile)
 		refreshDaily(player, profile)
 		sendSummary(player)
+		EconomyService.Changed:Fire(player)
 	end)
 
 	-- Player settings (saved with the profile). Only known keys with valid
@@ -231,7 +236,7 @@ function ProgressionService.start()
 		for _, quest in profile.daily.quests do
 			if quest.id == questId and quest.progress >= quest.goal and not quest.claimed then
 				quest.claimed = true
-				ProgressionService.addXp(player, quest.rewardXp, "quest")
+				EconomyService.addCoins(player, quest.rewardCoins, "quest")
 				return
 			end
 		end
@@ -251,4 +256,4 @@ function ProgressionService.start()
 	end)
 end
 
-return ProgressionService
+return EconomyService

@@ -17,7 +17,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
+local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
 
 export type Target = { character: Model?, instance: Instance, player: Player?, position: Vector3 }
@@ -225,9 +225,9 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if profile then
 		profile.stats.casts += 1
 	end
-	ProgressionService.track(player, "cast")
+	EconomyService.track(player, "cast")
 	if def.archetype == "Placeable" then
-		ProgressionService.track(player, "place")
+		EconomyService.track(player, "place")
 	end
 end
 
@@ -245,7 +245,7 @@ function CastService.start()
 	Remotes.get("CastSpell").OnServerEvent:Connect(onCast)
 	DestructibleService.Destroyed:Connect(function(_, destroyer)
 		if destroyer then
-			ProgressionService.track(destroyer, "destroy")
+			EconomyService.track(destroyer, "destroy")
 		end
 	end)
 end

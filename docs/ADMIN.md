@@ -1,6 +1,6 @@
 # Admin Commands
 
-Type commands in **chat** or the **spell box** with the `;` prefix, for example `;give me meteor`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
+Type commands in **chat** or the **spell box** with the `;` prefix, for example `;give me zap`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
 
@@ -30,8 +30,9 @@ Leaving the target out means `me` where that makes sense.
 | `;help [command]` | Lists the commands, or shows one command's usage |
 | `;give <player> <spell\|all>` | Gives spell copies, skipping the spellbook and recharge rules. The hotbar holds 5. |
 | `;unlock <player> <spell\|all>` | Permanently unlocks spells (saved to the profile) |
-| `;xp <player> <amount>` | Grants XP. Level-ups happen normally. |
-| `;level <player> <1-10>` | Sets the level by moving XP to that level's threshold |
+| `;coins <player> <amount>` | Grants coins (spent on crates) |
+| `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
+| `;crate <player> <Common\|Uncommon\|Rare\|Epic\|Legendary>` | Opens a crate for the player, charging their coins like the shop |
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |

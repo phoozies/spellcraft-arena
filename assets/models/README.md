@@ -9,7 +9,31 @@ into the game.
 | `WaterBubble.fbx` | The **Water Lock** bolt, and the bubble around a trapped player | `Bubble_Shell`, `Bubble_Inner`, `Bubble_Highlight` |
 | `RockWall.fbx` | The **Rock Wall** ("earth wall") spell | `Wall_Base`, `Wall_Pillars`, `Wall_Rubble` |
 | `Arena.fbx` | The **Sparring Arena** match map | `Arena_Floor`, `Arena_Pillars`, `Arena_RuneRing`, `Arena_Seating` |
-| `Grimoire.fbx` | Not used yet (stored coloured, ready for the Spellbook kiosk) | `Grimoire_Cover`, `Grimoire_Gold`, `Grimoire_Gem`, `Grimoire_Pages` |
+| `Grimoire.fbx` | The hub's **Spellbook** kiosk (open on a lectern) | `Grimoire_Cover`, `Grimoire_Gold`, `Grimoire_Gem`, `Grimoire_Pages` |
+| `Gust.fbx` | The **Gust** bolt | `Gust_Swirl`, `Gust_Core`, `Gust_Streaks` |
+| `Zap.fbx` | The **Zap** thunderbolt that slams down on the target | `Zap_Bolt`, `Zap_Glow` |
+| `Heal.fbx` | The **Heal** pop-up over the caster's head | `Heal_Cross`, `Heal_Ring` |
+| `BlackHole.fbx` | The **Black Hole** swirl (spun by clients) | `BlackHole_Core`, `BlackHole_Disk`, `BlackHole_Ring` |
+| `Turret.fbx` | The **Turret** body (turns to aim; barrel points forward) | `Turret_Base`, `Turret_Head`, `Turret_Barrel`, `Turret_Lens` |
+| `Crate.fbx` | The hub's **Crate Shop** crates (trim and gem tinted per rarity) | `Crate_Body`, `Crate_Trim`, `Crate_Gem` |
+
+`source/SpellModels.blend` is the Blender scene for the last six, built by
+[`tools/blender/build_spell_models.py`](../../tools/blender/build_spell_models.py).
+
+## Blender setup for Roblox (centimeters)
+
+The Blender scene is set up so its FBX files import into Studio at a sane size:
+
+- **Scene > Units:** Unit System **Metric**, Unit Scale **0.01**, Length **Centimeters**. One Blender unit is one centimeter.
+- Models are built at **1 stud = 28 cm** (a 4-stud turret is 112 cm), so an import lands near game size before `prepare-models` sets the exact size.
+- **FBX export:** Apply Unit Scale on, Apply Scalings **FBX Units Scale**, Forward **-Z**, Up **Y**, Mesh only, no leaf bones. Blender **+Z** becomes Roblox up, and Blender **+Y** becomes Roblox forward (a part's `LookVector`, -Z), so the Turret's barrels point along Blender +Y.
+- **Object names are the contract** with `tools/prepare-models.luau` (colours by part name) and `tests/Models.spec.luau`. Rename a part in all three places, or not at all.
+
+To rebuild them, run the script through the Blender MCP (`execute_blender_code` with the file's contents, then `main(<repo path>)`), or from a shell:
+
+```bash
+blender --background --python tools/blender/build_spell_models.py -- .
+```
 
 ## How they get into the game
 
@@ -27,6 +51,9 @@ in the Rojo project:
    result to `ReplicatedStorage.Models`.
 3. **Save/publish the place** so the models (and their uploaded mesh assets) go
    with it.
+
+Import the new FBX files the same way (select all six in one Import 3D), then run
+`tools/prepare-models.luau` once; it only touches models that are still in Workspace.
 
 Imported mesh asset ids (from the first import, for reference):
 
@@ -49,6 +76,10 @@ have them, so **every use has a fallback to plain shapes**:
 - Water Lock's trap bubble: `server/Services/TrapBubble.luau`, else a glass orb.
 - Rock Wall: `Archetypes/Placeable.luau` builds from the model (each mesh part is its own breakable chunk), else a block grid.
 - Sparring Arena map: `Maps/SparringArena.luau` builds the match map from the model, else a plain round platform with pillars.
+- Spellbook kiosk and Crate Shop: `Maps/InkwellPlaza.luau`, else a plain book shape and coloured blocks.
+- Gust bolt, Zap strike, Heal pop-up: `FxController` (`visual.model`), else the spell's plain shape, a neon column, or a sparkle burst.
+- Black Hole swirl: `Archetypes/Zone.luau`, else a dark neon ball.
+- Turret: `Archetypes/Placeable.luau` `skin()`, else a metal block (it's always the hitbox).
 
 To change a colour, edit `tools/prepare-models.luau` and re-import and prepare,
 or edit the part in `ReplicatedStorage.Models` directly (then update the script

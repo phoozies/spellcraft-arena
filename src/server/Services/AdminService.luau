@@ -16,15 +16,16 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local LevelCurve = require(ReplicatedStorage.Shared.Progression.LevelCurve)
+local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
+local CrateService = require(script.Parent.CrateService)
 local DestructibleService = require(script.Parent.DestructibleService)
+local EconomyService = require(script.Parent.EconomyService)
 local HandService = require(script.Parent.HandService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
 local SpellInputService = require(script.Parent.SpellInputService)
 local StatusService = require(script.Parent.StatusService)
 
@@ -186,53 +187,78 @@ COMMANDS.unlock = {
 						table.insert(profile.ownedSpells, id)
 					end
 				end
-				ProgressionService.sendSummary(target)
+				EconomyService.sendSummary(target)
 			end
 		end
 		return `Unlocked {#spells} spell(s) for {names(targets)}.`
 	end,
 }
 
-COMMANDS.xp = {
-	usage = "xp <player> <amount>",
-	help = "Grant XP (levels up normally).",
+COMMANDS.coins = {
+	usage = "coins <player> <amount>",
+	help = "Grant coins (spent on crates).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local amount = tonumber(args[2])
 		if #targets == 0 or not amount or amount <= 0 then
-			return "Usage: xp <player> <amount>"
+			return "Usage: coins <player> <amount>"
 		end
 		for _, target in targets do
-			ProgressionService.addXp(target, math.min(amount, 100000), "admin")
+			EconomyService.addCoins(target, math.min(amount, 1000000), "admin")
 		end
-		return `Gave {amount} XP to {names(targets)}.`
+		return `Gave {amount} coins to {names(targets)}.`
 	end,
 }
 
-COMMANDS.level = {
-	usage = "level <player> <1-10>",
-	help = "Set a player's level (sets XP to that level's threshold).",
+COMMANDS.wins = {
+	usage = "wins <player> <amount>",
+	help = "Set a player's win count (leaderboard + podium).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local level = tonumber(args[2])
-		if #targets == 0 or not level then
-			return "Usage: level <player> <1-10>"
+		local amount = tonumber(args[2])
+		if #targets == 0 or not amount or amount < 0 then
+			return "Usage: wins <player> <amount>"
 		end
-		level = math.clamp(math.floor(level), 1, Config.MAX_LEVEL)
 		for _, target in targets do
 			local profile = PlayerDataService.get(target)
 			if profile then
-				local needed = LevelCurve.THRESHOLDS[level]
-				if needed > profile.xp then
-					ProgressionService.addXp(target, needed - profile.xp, "admin")
+				local wanted = math.floor(math.min(amount, 1000000))
+				-- recordWin is the only writer that notifies the leaderboard;
+				-- set one below the target, then record the last win.
+				profile.stats.wins = math.max(0, wanted - 1)
+				if wanted > 0 then
+					EconomyService.recordWin(target)
 				else
-					profile.xp = needed
-					profile.level = level
-					ProgressionService.sendSummary(target)
+					EconomyService.sendSummary(target)
+					EconomyService.Changed:Fire(target)
 				end
 			end
 		end
-		return `Set {names(targets)} to level {level}.`
+		return `Set {names(targets)} to {amount} wins.`
+	end,
+}
+
+COMMANDS.crate = {
+	usage = "crate <player> <Common|Uncommon|Rare|Epic|Legendary>",
+	help = "Open a crate for a player (charges their coins, like the shop).",
+	run = function(admin, args)
+		local targets = findPlayers(admin, args[1])
+		local word = args[2] or ""
+		local crateId = string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2))
+		if #targets == 0 or not Crates.get(crateId) then
+			return "Usage: crate <player> <Common|Uncommon|Rare|Epic|Legendary>"
+		end
+		local opened = 0
+		for _, target in targets do
+			local result, reason = CrateService.open(target, crateId)
+			if result then
+				opened += 1
+				Remotes.get("CrateOpened"):FireClient(target, result)
+			elseif reason then
+				reply(admin, `{target.Name}: {reason}`)
+			end
+		end
+		return `Opened {opened} {crateId} crate(s).`
 	end,
 }
 

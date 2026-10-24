@@ -10,7 +10,9 @@
 --   chip           (position, color)                               chips off a damaged block
 --   dust           (position, width, color)                        dust ring under a placed object
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
--- and spins parts tagged "SpinFx" (Tornado, Black Hole) locally.
+--   strike         (center, radius, delay, modelName, color)       Zap: a bolt model slams down after `delay`
+--   modelPop       (character, modelName, color)                   Heal: model pops up over a head and fades
+-- and spins parts/models tagged "SpinFx" (Black Hole) locally.
 -- The looks live in Fx/SpellVfx.
 --
 -- The server stays authoritative for hits; visuals here are a straight-line
@@ -42,12 +44,13 @@ local FxController = {}
 local DRAW_DISTANCE = 600
 local MAX_DEBRIS = 120
 
--- Spells whose bolt is drawn with an imported model (ReplicatedStorage.Models)
--- instead of a plain shape: model name, and bolt width as a multiple of the
--- spell's visual size.
-local BOLT_MODELS: { [string]: { model: string, widthPerSize: number } } = {
-	Fireball = { model = "Fireball", widthPerSize = 1.6 },
-	WaterLock = { model = "WaterBubble", widthPerSize = 1.3 },
+-- A bolt whose visual has `model` is drawn with that imported model
+-- (ReplicatedStorage.Models) instead of a plain shape. Its width is the
+-- spell's visual size times this factor (default 1).
+local BOLT_WIDTH: { [string]: number } = {
+	Fireball = 1.6,
+	WaterBubble = 1.3,
+	Gust = 1,
 }
 
 type Bolt = {
@@ -94,12 +97,12 @@ local function onProjectile(
 	local facing = CFrame.lookAt(origin, origin + direction)
 	local part: BasePart? = nil
 	local model: Model? = nil
-	local modelInfo = fxKey and BOLT_MODELS[fxKey]
-	if modelInfo then
-		model = ModelKit.clone(modelInfo.model, "effect")
+	local modelName = visual.model
+	if modelName then
+		model = ModelKit.clone(modelName, "effect")
 		if model then
 			local width = model:GetExtentsSize().X
-			model:ScaleTo((visual.size.X * modelInfo.widthPerSize) / math.max(width, 0.01))
+			model:ScaleTo((visual.size.X * (BOLT_WIDTH[modelName] or 1)) / math.max(width, 0.01))
 			model:PivotTo(facing)
 			part = model.PrimaryPart
 			model.Parent = folder
@@ -266,6 +269,96 @@ local function onNumber(position: Vector3, amount: number, kind: string)
 	Debris:AddItem(anchor, 1)
 end
 
+-- Zap: after the server's telegraph delay, the bolt model drops from the
+-- sky onto the circle, flashes, and fades.
+local function onStrike(center: Vector3, radius: number, delay: number, modelName: string, color: Color3)
+	if not near(center) then
+		return
+	end
+	task.delay(math.max(0, delay - 0.12), function()
+		local bolt = ModelKit.clone(modelName, "effect")
+		local height = radius * 4.5
+		local landing = CFrame.new(center + Vector3.new(0, height / 2, 0))
+		if bolt then
+			local _, size = bolt:GetBoundingBox()
+			bolt:ScaleTo(height / math.max(size.Y, 0.01))
+			bolt:PivotTo(landing + Vector3.new(0, height, 0))
+			bolt.Parent = folder
+			-- Slam down in a blink, then fade out.
+			local start = os.clock()
+			local connection: RBXScriptConnection
+			connection = RunService.RenderStepped:Connect(function()
+				local t = math.min((os.clock() - start) / 0.12, 1)
+				bolt:PivotTo(landing + Vector3.new(0, height * (1 - t), 0))
+				if t >= 1 then
+					connection:Disconnect()
+				end
+			end)
+			task.delay(0.15, function()
+				for _, part in bolt:GetDescendants() do
+					if part:IsA("BasePart") then
+						TweenService:Create(part, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+					end
+				end
+			end)
+			Debris:AddItem(bolt, 0.6)
+		else
+			-- Fallback: a plain neon column.
+			local column = Instance.new("Part")
+			column.Anchored = true
+			column.CanCollide = false
+			column.CanQuery = false
+			column.CanTouch = false
+			column.Material = Enum.Material.Neon
+			column.Color = color
+			column.Size = Vector3.new(1.2, height, 1.2)
+			column.CFrame = landing
+			column.Parent = folder
+			TweenService:Create(column, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+			Debris:AddItem(column, 0.5)
+		end
+		task.delay(0.12, function()
+			SpellVfx.impact(folder, center, "Zap", color)
+		end)
+	end)
+end
+
+-- Heal: the model pops up over the character's head, bobs, and fades.
+local function onModelPop(character: Model, modelName: string, color: Color3)
+	local head = typeof(character) == "Instance" and character:FindFirstChild("Head")
+	if not head or not head:IsA("BasePart") or not near(head.Position) then
+		return
+	end
+	local look = ModelKit.clone(modelName, "effect")
+	if not look then
+		SpellVfx.impact(folder, head.Position + Vector3.new(0, 2, 0), nil, color)
+		return
+	end
+	local _, size = look:GetBoundingBox()
+	look:ScaleTo(2.5 / math.max(size.X, size.Y, size.Z, 0.01))
+	look.Parent = folder
+	local start = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - start
+		if not head.Parent or t > 1.2 then
+			connection:Disconnect()
+			look:Destroy()
+			return
+		end
+		-- Rise, spin, and shrink away in the last third.
+		local rise = 2.5 + math.min(t, 0.4) * 5 + t * 0.6
+		look:PivotTo(
+			CFrame.new(head.Position + Vector3.new(0, rise, 0))
+				* CFrame.Angles(0, t * math.pi * 2, 0)
+		)
+		if t > 0.8 then
+			look:ScaleTo(math.max(look:GetScale() * 0.9, 0.05))
+		end
+	end)
+	SpellVfx.impact(folder, head.Position, nil, color)
+end
+
 local function step(dt: number)
 	local now = os.clock()
 	for id, bolt in bolts do
@@ -284,9 +377,13 @@ local function step(dt: number)
 		end
 	end
 	local spin = CFrame.Angles(math.pi * dt, 0, 0)
-	for _, part in CollectionService:GetTagged("SpinFx") do
-		if part:IsA("BasePart") then
-			part.CFrame *= spin
+	local turn = CFrame.Angles(0, math.pi * 1.5 * dt, 0)
+	for _, thing in CollectionService:GetTagged("SpinFx") do
+		if thing:IsA("BasePart") then
+			thing.CFrame *= spin
+		elseif thing:IsA("Model") then
+			-- Imported swirls (Black Hole) turn about their vertical axis.
+			thing:PivotTo(thing:GetPivot() * turn)
 		end
 	end
 end
@@ -311,6 +408,10 @@ function FxController.start()
 			onNumber(...)
 		elseif kind == "cast" then
 			onCast(...)
+		elseif kind == "strike" then
+			onStrike(...)
+		elseif kind == "modelPop" then
+			onModelPop(...)
 		elseif kind == "shatter" then
 			local cframe: CFrame = (...)
 			if near(cframe.Position) then

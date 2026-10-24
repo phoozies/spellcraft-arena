@@ -1,7 +1,8 @@
 --!strict
 -- Side menu + panels: Play (queues), Spellbook (collection, shows locked
--- spells and their unlock level), and Daily Quests. Hub kiosks open the
--- matching panel through ProximityPrompts.
+-- spells and which crate unlocks them), Crates (built by CrateController
+-- through createPanel), and Daily Quests. Hub kiosks open the matching
+-- panel through ProximityPrompts ("Spellbook", "Crates", "Quests").
 
 local GuiService = game:GetService("GuiService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -48,7 +49,7 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.accent,
 	})
-	local close = Theme.button(panel, "✕", {
+	local close = Theme.button(panel, "X", {
 		Name = "Close",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -10, 0, 10),
@@ -183,8 +184,8 @@ local function refreshSpellbook()
 		local info = Rarity.INFO[def.rarity]
 		local has = owned[def.id] == true
 		local button =
-			Theme.button(spellbookGrid, if has then def.name else `🔒 Lv {def.unlockLevel}`, {
-				LayoutOrder = def.unlockLevel * 100 + index,
+			Theme.button(spellbookGrid, if has then def.name else `🔒 {def.name}`, {
+				LayoutOrder = info.order * 100 + index,
 				BackgroundColor3 = if has
 					then Theme.COLORS.panelLight
 					else Color3.fromRGB(45, 45, 60),
@@ -196,10 +197,15 @@ local function refreshSpellbook()
 		end
 		button.Activated:Connect(function()
 			local words = table.concat(def.aliases, ", ")
+			local source = if def.starter
+				then "Starter spell"
+				else `Unlocked from a {def.rarity} crate`
+			local locked =
+				`\n\n<i>Locked: open a {def.rarity} crate in the Crate Shop, or draft it in a match!</i>`
 			detailLabel.Text = `<b>{def.name}</b>  <font color="#{info.color:ToHex()}">{info.glyph} {def.rarity}</font>\n`
-				.. `Level {def.unlockLevel} · {def.archetype}\n\n{def.description}\n\n`
+				.. `{source} · {def.archetype}\n\n{def.description}\n\n`
 				.. `<b>Say or type:</b> {words}\n<b>Cooldown:</b> {def.cooldown}s`
-				.. (if has then "" else "\n\n<i>Locked — or draft it in a match!</i>")
+				.. (if has then "" else locked)
 		end)
 	end
 end
@@ -240,7 +246,7 @@ local function refreshQuests()
 			BackgroundColor3 = Theme.COLORS.panelLight,
 		})
 		Theme.corner(row)
-		Theme.label(row, `{quest.text}  ({quest.progress}/{quest.goal})  +{quest.rewardXp} XP`, {
+		Theme.label(row, `{quest.text}  ({quest.progress}/{quest.goal})  +{quest.rewardCoins} coins`, {
 			Size = UDim2.new(1, -150, 1, -16),
 			Position = UDim2.fromOffset(10, 8),
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -272,7 +278,7 @@ local function buildSideButtons(root: Instance)
 		Name = "SideMenu",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(120, 4 * 62),
+		Size = UDim2.fromOffset(120, 5 * 62),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
@@ -283,6 +289,7 @@ local function buildSideButtons(root: Instance)
 		{
 			{ "Play", "▶ Play" },
 			{ "Spellbook", "📖 Spells" },
+			{ "Crates", "🎁 Crates" },
 			{ "Quests", "⭐ Quests" },
 			{ "Settings", "⚙ Settings" },
 		}
@@ -332,7 +339,7 @@ function MenuController.start()
 	refreshPlay()
 	refreshSpellbook()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
-		if prompt.Name == "Spellbook" or prompt.Name == "Quests" then
+		if prompt.Name == "Spellbook" or prompt.Name == "Quests" or prompt.Name == "Crates" then
 			MenuController.open(prompt.Name)
 		end
 	end)

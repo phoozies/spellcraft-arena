@@ -3,7 +3,6 @@
 -- and the server never trusts a client-reported value from this file.
 
 local Config = {
-	MAX_LEVEL = 10,
 	STARTING_HAND = 3,
 	MAX_HAND = 5,
 
@@ -97,14 +96,19 @@ local Config = {
 
 	AUTOSAVE_INTERVAL = 90,
 
-	XP = {
-		PARTICIPATION = 40,
-		ROUND_WIN = 20,
-		MATCH_WIN = 40,
-		KNOCKOUT = 10,
-		FIRST_WIN_OF_DAY = 100,
-		DAILY_LOGIN = 25,
+	-- Coins: earned by winning matches (plus daily login and quests), spent
+	-- on crates (shared/Economy/Crates). There are no levels or XP.
+	COINS = {
+		STARTING = 150, -- a new player can open a Common crate right away
+		MATCH_WIN = 100,
+		FIRST_WIN_OF_DAY = 50,
+		DAILY_LOGIN = 25, -- x streak day, capped at 7
 	},
+
+	-- Hub wins podium + board (LeaderboardService): seconds between refreshes
+	-- and how many rows the board lists.
+	LEADERBOARD_REFRESH = 10,
+	LEADERBOARD_ROWS = 10,
 
 	-- Shown when a word doesn't match any spell.
 	FIZZLE_HINTS = {

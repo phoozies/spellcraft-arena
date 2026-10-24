@@ -4,6 +4,26 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (coins, crates, wins podium)
+- **Coins.** Winning a match pays 100 coins (+50 for the first win of the day); the daily login chest and daily quests pay coins too. New players start with 150. The HUD's top-left wallet shows coins and wins, and the Victory screen counts up the coins you won.
+- **Crates** (`Economy/Crates`, `CrateService`, `CrateController`): a Common, Uncommon, Rare, Epic, and Legendary crate (100 / 250 / 500 / 1000 / 2000 coins). Each spin is decided on the server and unlocks a spell of the crate's rarity (with a 15–20% chance of one tier up); a spell you already own refunds half the price. Open them from the new 🎁 Crates menu or the Crate Shop stage in the hub; a reel of spell cards spins and lands on your prize.
+- **Five new spells**, one per crate: **Gust** (Common: low damage, huge hitbox, big shove), **Zap** (Uncommon: point-and-click thunder strike with a hover hitbox and a 60-stud range limit), **Heal** (Rare: +10 HP), **Black Hole** (Epic: sucks enemies in, traps them for 3 seconds, 10 damage over time), **Turret** (Legendary: a 30-HP turret that shoots the nearest enemy player).
+- **Wins leaderboard** (`LeaderboardService`): Wins and Coins in the player list, a Most Wins board, and a gold/silver/bronze podium in the hub where the server's top 3 players stand as their avatars.
+- **Spellbook kiosk uses the Grimoire model**, open on a lectern (plain-shape fallback without it).
+- **Semantic layer for AI agents:** `CLAUDE.md`, `docs/semantic/features.yaml` (every feature's files, remotes, data, invariants), and `docs/ECONOMY.md`.
+- Admin `;coins`, `;wins`, `;crate`; Studio debug through `ServerStorage.WordcraftDebug:Invoke(...)` (`coins`, `wins`, `crate`, `state`).
+- New rarity tier **Uncommon** (▲, green). The Legendary glyph is now 👑 (✦ didn't render in Roblox's font); the coin icon is 💰.
+
+### Removed (coins, crates, wins podium)
+- **Levels and XP** (`LevelCurve`, `ProgressionService`): no level bar, level-up banner, or XP rewards. Profiles migrate to schema 2 (XP and level dropped, quests re-rolled).
+- **35 spells.** Only Fireball, Water Lock, and Rock Wall remain from the old dictionary; the Movement and Summon archetypes stay in code for future spells.
+- The session knockouts board (replaced by the wins board).
+
+### Changed (coins, crates, wins podium)
+- `ProgressionService` is now `EconomyService`, the only writer of coins and wins.
+- Draft rarity weights are 50 / 25 / 15 / 8 / 2, and a draft card falls back to a higher tier when every spell of its tier is already in your spellbook.
+- Bolts, placeables, zones, and buffs can name an imported model in `visual.model` (Turret's body, Black Hole's swirl, Zap's strike, Heal's pop-up, Gust's bolt).
+
 ### Added (team boxes, 3v3, Sparring Arena map)
 - **Team boxes in the hub** for 1v1, 2v2, 3v3 and 4v4. Each has a Blue side and a Red side with one spot per teammate. Standing on a side picks your team, and the labels show how full it is (`BLUE 1/2`). When both sides are full, a 5-second countdown runs (it restarts if anyone steps off or swaps), then the match starts with exactly those teams (`MatchService.startMatch(..., { teams })`).
 - **3v3 mode**, with the Play menu and the admin `;startmatch` updated.

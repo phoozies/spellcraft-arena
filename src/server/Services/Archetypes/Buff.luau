@@ -2,8 +2,13 @@
 -- Buff archetype: effects on the caster.
 -- Reads stats: heal, shield (absorb HP), duration, reflect, scale (Giant),
 -- revive (Phoenix), cooldownCut (Wizard Hat).
+-- With `visual.model` (Heal) every nearby client pops that model up over
+-- the caster's head (Fx "modelPop").
 
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
@@ -70,6 +75,9 @@ function Buff.cast(ctx: any): boolean?
 		StatusService.apply(character, "CooldownCut", duration)
 	end
 	aura(ctx, duration)
+	if ctx.def.visual.model then
+		Remotes.get("Fx"):FireAllClients("modelPop", ctx.character, ctx.def.visual.model, ctx.def.visual.color)
+	end
 	return true
 end
 

@@ -127,7 +127,7 @@ function HandService.grant(player: Player, spellId: string, bypass: boolean?): (
 				return false, `{def.name} isn't in your spellbook this match. Draft it next round!`
 			end
 		elseif not owns(player, spellId) then
-			return false, `You haven't unlocked {def.name} yet (level {def.unlockLevel}).`
+			return false, `You haven't unlocked {def.name} yet. Open a {def.rarity} crate in the hub!`
 		end
 	end
 	if #state.copies >= Config.MAX_HAND then

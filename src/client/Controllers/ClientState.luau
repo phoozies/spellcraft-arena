@@ -10,10 +10,7 @@ local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 export type ProfileSummary = {
-	level: number,
-	xp: number,
-	xpInto: number,
-	xpNeeded: number,
+	coins: number,
 	ownedSpells: { string },
 	quests: { Types.DailyQuest },
 	streak: number,

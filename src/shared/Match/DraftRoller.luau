@@ -21,19 +21,26 @@ function DraftRoller.roll(hand: { string }, rng: Random): { Types.DraftCard }
 	for _ = 1, CARD_COUNT do
 		local rarity = Rarity.roll(rng:NextNumber())
 		local pool = {}
-		-- Fall back to lower rarities if every spell of this tier is excluded.
-		local tier = Rarity.INFO[rarity].order
-		while #pool == 0 and tier >= 1 do
+		-- If every spell of this tier is excluded, try lower tiers, then
+		-- higher ones (tiers are small: one or two spells each).
+		local rolled = Rarity.INFO[rarity].order
+		local tiers = {}
+		for tier = rolled, 1, -1 do
+			table.insert(tiers, tier)
+		end
+		for tier = rolled + 1, #Rarity.ORDER do
+			table.insert(tiers, tier)
+		end
+		for _, tier in tiers do
 			local tierName = Rarity.ORDER[tier]
 			for _, id in SpellDefinitions.ofRarity(tierName) do
 				if not excluded[id] then
 					table.insert(pool, id)
 				end
 			end
-			if #pool == 0 then
-				tier -= 1
-			else
+			if #pool > 0 then
 				rarity = tierName
+				break
 			end
 		end
 		if #pool > 0 then
