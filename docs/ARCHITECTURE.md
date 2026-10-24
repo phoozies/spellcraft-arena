@@ -59,7 +59,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 |---|---|
 | Fireball | `FxController` bolt (Fireball, Dragon's fireballs); particles and trail attach to its invisible `Root` part |
 | WaterBubble | `FxController` bolt (Water Lock) and `TrapBubble`, welded around a trapped player and scaled to 1.5× their height |
-| RockWall | `Placeable.buildModelWall`: each mesh part is its own breakable chunk (health is half by volume, half equal), and the placement ghost shows the model |
+| RockWall | `Placeable.buildModelWall`: each mesh part is its own chunk, all sharing one 50-damage budget (`WallHealth` on the wall; chunks break at `BreakAt` thresholds, low pieces first; `DestructibleService.damageWall`). Chunks carry `HitByAll`, which makes `canHarm`/`damage` skip the owner and team rules, so every spell hits the wall. The placement ghost shows the model |
 | Arena | `HubService.placeSparringArena`: replaces the old mat and posts; the floor top sits at the old mat height |
 
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.

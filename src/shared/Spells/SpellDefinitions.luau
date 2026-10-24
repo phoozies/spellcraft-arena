@@ -36,10 +36,12 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Projectile",
 		cooldown = 0.9,
 		description = "Hurl a ball of fire that burns players and structures.",
-		stats = { damage = 16, speed = 95, range = 160, radius = 2, knockback = 18 },
+		-- radius is the bolt's hit radius (plus Config.HITBOX_BONUS against targets):
+		-- a big, forgiving fireball. The visual is sized to match.
+		stats = { damage = 16, speed = 95, range = 160, radius = 3.5, knockback = 18 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(2, 2, 2),
+			size = Vector3.new(3.2, 3.2, 3.2),
 			color = rgb(255, 112, 40),
 			material = M.Neon,
 		},
@@ -82,9 +84,10 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 1,
 		description = "Raise a rocky earth wall that blocks spells. It breaks apart piece by piece.",
 		stats = {
-			health = 150,
+			health = 50, -- total damage the whole wall takes before it's gone
 			lifetime = 20,
 			maxActive = 3,
+			hitByAll = true, -- every spell hits it, your own included
 			model = "RockWall",
 			segments = { x = 3, y = 2 }, -- fallback when the model isn't in the place
 		},

@@ -58,6 +58,8 @@ export type SpellStats = {
 	-- own breakable chunk, with `segments` as the fallback; Water Lock uses
 	-- it for the bubble around its victim.
 	model: string?,
+	-- Placeables only: every spell hits it, the owner's and allies' too (walls).
+	hitByAll: boolean?,
 	-- Zone behaviors
 	pull: number?,
 	destroysStructures: boolean?,

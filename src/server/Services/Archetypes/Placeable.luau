@@ -208,6 +208,7 @@ local function buildSegmented(ctx: any, cframe: CFrame): Model
 				ctx.player,
 				ctx.team
 			)
+			block:SetAttribute("HitByAll", stats.hitByAll)
 			local body = block.PrimaryPart :: BasePart
 			-- Slight per-block color variation so the wall looks hand-built.
 			local shade = 1 + (math.random() - 0.5) * 0.12
@@ -251,10 +252,12 @@ local function buildSegmented(ctx: any, cframe: CFrame): Model
 end
 
 -- Builds a wall from an imported model (stats.model): every mesh part of the
--- model becomes its own breakable chunk (e.g. Rock Wall = base, pillars,
--- rubble), so the wall breaks apart piece by piece. Health is shared out
--- between chunks, half by volume and half equally, so no chunk is trivially
--- weak. Returns nil when the model isn't in the place (caller falls back).
+-- model becomes its own chunk (e.g. Rock Wall = base, pillars, rubble). The
+-- chunks share ONE damage budget (stats.health, on the wall as WallHealth):
+-- a hit on any chunk drains it, chunks break one by one as it drains (lowest
+-- pieces first, the tall stones when it's gone), and the whole wall is gone
+-- once it reaches 0. Returns nil when the model isn't in the place (caller
+-- falls back).
 local function buildModelWall(ctx: any, cframe: CFrame): Model?
 	local def = ctx.def
 	local stats = def.stats
@@ -263,34 +266,42 @@ local function buildModelWall(ctx: any, cframe: CFrame): Model?
 		return nil
 	end
 	local meshParts: { BasePart } = {}
-	local totalVolume = 0
 	for _, child in source:GetChildren() do
-		if child:IsA("BasePart") then
+		if child:IsA("BasePart") and child.CanCollide then
 			table.insert(meshParts, child)
-			totalVolume += child.Size.X * child.Size.Y * child.Size.Z
 		end
 	end
 	if #meshParts == 0 then
 		return nil
 	end
+	-- Lowest pieces first: they break earlier as the budget drains.
+	table.sort(meshParts, function(a, b)
+		return a.Size.Y < b.Size.Y
+	end)
 
+	local budget = stats.health or 100
 	local wall = Instance.new("Model")
 	wall.Name = def.name
 	wall:SetAttribute("SpellId", def.id)
 	wall:SetAttribute("OwnerUserId", ctx.player.UserId)
+	wall:SetAttribute("WallHealth", budget)
+	wall:SetAttribute("WallMaxHealth", budget)
 	wall.Parent = ctx.structures
 
 	local height = def.visual.size.Y
-	for _, part in meshParts do
-		local volumeShare = part.Size.X * part.Size.Y * part.Size.Z / totalVolume
-		local health = (stats.health or 100) * (0.5 * volumeShare + 0.5 / #meshParts)
+	for index, part in meshParts do
 		local chunk = Instance.new("Model")
 		chunk.Name = `{def.name}Chunk`
 		part.Parent = chunk
 		chunk.PrimaryPart = part
 		part:SetAttribute("BaseColor", part.Color)
 		local final = cframe * part.CFrame
-		DestructibleService.wrap(chunk, part, health, ctx.player, ctx.team, part.Size.Y)
+		-- Every chunk's bar shows the wall's remaining budget.
+		DestructibleService.wrap(chunk, part, budget, ctx.player, ctx.team, part.Size.Y)
+		chunk:SetAttribute("HitByAll", stats.hitByAll)
+		-- Breaks when the remaining budget falls to this share of it:
+		-- 2/3, 1/3, ... for the low pieces, 0 for the tallest.
+		chunk:SetAttribute("BreakAt", (#meshParts - index) / #meshParts)
 		-- Rises out of the ground, tall pieces a beat after the low ones.
 		part.CFrame = final - Vector3.new(0, height, 0)
 		chunk.Parent = wall
