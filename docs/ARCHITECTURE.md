@@ -129,7 +129,7 @@ client: aim  ──CastSpell───► CastService
 - **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `coinsGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
 
 - **Drawing** is recorded by `DrawController` (mouse, touch, or the right stick) in screen-height units and sent once, when the stroke ends. The server never trusts the client's verdict: `GlyphResult` is feedback only. Admin chat commands (`;`) still travel through chat, handled by `SpellInputService`'s `ShouldDeliverCallback`.
-- **Audio and mood:** `AudioController` plays cues by name (`Audio/Cues`, spells point at theirs with `sfx`), places them in the world with falloff, and runs the hub ambience. `LightingController` fades between the hub's night and the arenas' daylight on the client only.
+- **Audio and mood:** `AudioController` plays cues by name (`Audio/Cues`, spells point at theirs with `sfx`), places them in the world with falloff, and runs the hub ambience. `LightingController` fades between the hub's warm afternoon light and the arenas' neutral daylight on the client only.
 - **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
 - **Crowd-control immunity:** `StatusService.apply` refuses to refresh an active Root, Time Stop, or Shrink, and adds a 2.5s immunity after it ends (`Config.CC_IMMUNITY`).
 

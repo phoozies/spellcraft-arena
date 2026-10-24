@@ -1,6 +1,6 @@
 --!strict
--- Inkwell Plaza — the central hub, a moonlit stone courtyard that opens into
--- the Great Hall of Glyphs. Everything is on one axis so players always know
+-- Inkwell Plaza — the central hub, a sunlit sandstone arena: a round sand
+-- plaza with a grandstand behind it that opens into the Champions' Concourse. Everything is on one axis so players always know
 -- where to go (north is -Z):
 --
 --   Spawn plaza (round, inkwell fountain, 4 element shrines that list what to
@@ -27,8 +27,8 @@
 --
 -- The spellbook kiosk uses the imported Grimoire model and the crate shop
 -- the Crate model (ReplicatedStorage.Models via ModelKit), with plain-shape
--- fallbacks when the place doesn't have them. The night look itself
--- (sky, fog, glow) is the client's LightingController.
+-- fallbacks when the place doesn't have them. The warm afternoon light is the
+-- client's LightingController.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -42,14 +42,14 @@ local MapKit = require(script.Parent.MapKit)
 local BLUE = Color3.fromRGB(66, 165, 245)
 local RED = Color3.fromRGB(239, 83, 80)
 
-local STONE = Color3.fromRGB(122, 114, 158)
-local STONE_DARK = Color3.fromRGB(78, 72, 112)
-local STONE_LIGHT = Color3.fromRGB(168, 160, 204)
-local FLOOR = Color3.fromRGB(96, 90, 128)
-local CARPET = Color3.fromRGB(128, 28, 64)
+local STONE = Color3.fromRGB(214, 194, 156) -- sandstone
+local STONE_DARK = Color3.fromRGB(160, 136, 100)
+local STONE_LIGHT = Color3.fromRGB(240, 232, 214) -- pale marble
+local FLOOR = Color3.fromRGB(226, 206, 160) -- arena sand
+local CARPET = Color3.fromRGB(160, 36, 40)
 local GOLD = Color3.fromRGB(255, 202, 40)
-local WINDOW_GLOW = Color3.fromRGB(255, 160, 40)
-local RUNE_GLOW = Color3.fromRGB(180, 110, 255)
+local SKY_GLASS = Color3.fromRGB(140, 200, 255)
+local GOLD_GLOW = Color3.fromRGB(255, 210, 90)
 
 -- Layout (studs). North is -Z.
 local PLAZA = Vector3.new(0, 0, 38) -- center of the spawn plaza
@@ -137,7 +137,7 @@ local function column(
 		size = Vector3.new(height, diameter, diameter),
 		cframe = CFrame.new(position + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
 		color = color,
-		material = Enum.Material.Slate,
+		material = Enum.Material.Limestone,
 	})
 end
 
@@ -156,7 +156,7 @@ local function beam(
 		size = Vector3.new(thickness, thickness, length),
 		cframe = CFrame.lookAt(a, b) * CFrame.new(0, 0, -length / 2),
 		color = color,
-		material = Enum.Material.Slate,
+		material = Enum.Material.Limestone,
 		canCollide = collide or false,
 	})
 end
@@ -180,7 +180,7 @@ local function pointedArch(
 			size = Vector3.new(thickness, height, thickness),
 			cframe = CFrame.new(base + Vector3.new(0, height / 2, 0)) * (frame - frame.Position),
 			color = color,
-			material = Enum.Material.Slate,
+			material = Enum.Material.Limestone,
 		})
 	end
 	local apex = frame:PointToWorldSpace(Vector3.new(0, height + width * 0.45, 0))
@@ -188,34 +188,31 @@ local function pointedArch(
 	beam(parent, right + Vector3.new(0, height, 0), apex, thickness, color)
 end
 
--- A glowing diamond window set into a wall; `frame` faces out of the wall
--- (local -Z is the way the window looks).
+-- A sky-blue glass diamond window set into a wall; `frame` faces out of the
+-- wall (local -Z is the way the window looks).
 local function runeWindow(parent: Instance, frame: CFrame, size: number)
-	local pane = MapKit.part(parent, {
-		name = "RuneWindow",
+	MapKit.part(parent, {
+		name = "ArenaWindow",
 		size = Vector3.new(size, size, 0.6),
 		cframe = frame * CFrame.Angles(0, 0, math.pi / 4),
-		color = WINDOW_GLOW,
-		material = Enum.Material.Neon,
+		color = SKY_GLASS,
+		material = Enum.Material.Glass,
+		transparency = 0.25,
 		canCollide = false,
 	})
-	glow(pane, WINDOW_GLOW, 26, 1.2)
-	MapKit.part(parent, {
-		name = "RuneCross",
-		size = Vector3.new(size * 0.07, size * 0.9, 0.8),
-		cframe = frame,
-		color = Color3.fromRGB(40, 34, 70),
-		material = Enum.Material.Slate,
-		canCollide = false,
-	})
-	MapKit.part(parent, {
-		name = "RuneCross",
-		size = Vector3.new(size * 0.9, size * 0.07, 0.8),
-		cframe = frame,
-		color = STONE_DARK,
-		material = Enum.Material.Slate,
-		canCollide = false,
-	})
+	for _, cross in {
+		Vector3.new(size * 0.07, size * 0.9, 0.8),
+		Vector3.new(size * 0.9, size * 0.07, 0.8),
+	} do
+		MapKit.part(parent, {
+			name = "WindowBar",
+			size = cross,
+			cframe = frame,
+			color = GOLD,
+			material = Enum.Material.Metal,
+			canCollide = false,
+		})
+	end
 end
 
 -- A hanging cloth banner showing a spell's glyph.
@@ -225,7 +222,7 @@ local function glyphBanner(parent: Instance, frame: CFrame, spellIndex: number)
 		name = "GlyphBanner",
 		size = Vector3.new(6, 10, 0.4),
 		cframe = frame,
-		color = Color3.fromRGB(46, 30, 90),
+		color = Color3.fromRGB(34, 48, 104),
 		material = Enum.Material.Fabric,
 		canCollide = false,
 	})
@@ -278,34 +275,32 @@ local function torch(parent: Instance, position: Vector3)
 	glow(flame, Color3.fromRGB(255, 160, 70), 22, 1.4)
 end
 
-local function pumpkin(parent: Instance, position: Vector3, scale: number)
-	local body = MapKit.part(parent, {
-		name = "Pumpkin",
-		shape = Enum.PartType.Ball,
-		size = Vector3.new(3.2, 2.6, 3.2) * scale,
-		cframe = CFrame.new(position + Vector3.new(0, 1.3 * scale, 0)),
-		color = Color3.fromRGB(240, 120, 20),
-		material = Enum.Material.SmoothPlastic,
+-- A tall flag pole with a banner in a team color.
+local function flagPole(parent: Instance, position: Vector3, color: Color3)
+	MapKit.part(parent, {
+		name = "FlagPole",
+		size = Vector3.new(0.7, 18, 0.7),
+		cframe = CFrame.new(position + Vector3.new(0, 9, 0)),
+		color = STONE_LIGHT,
+		material = Enum.Material.Metal,
 	})
 	MapKit.part(parent, {
-		name = "PumpkinStem",
-		size = Vector3.new(0.5, 0.9, 0.5) * scale,
-		cframe = CFrame.new(position + Vector3.new(0, 2.8 * scale, 0)),
-		color = Color3.fromRGB(70, 120, 50),
-		material = Enum.Material.Wood,
+		name = "FlagTop",
+		shape = Enum.PartType.Ball,
+		size = Vector3.new(1.4, 1.4, 1.4),
+		cframe = CFrame.new(position + Vector3.new(0, 18.4, 0)),
+		color = GOLD,
+		material = Enum.Material.Metal,
 		canCollide = false,
 	})
-	for _, side in { -1, 1 } do
-		MapKit.part(parent, {
-			name = "PumpkinEye",
-			size = Vector3.new(0.5, 0.6, 0.3) * scale,
-			cframe = CFrame.new(position + Vector3.new(side * 0.65 * scale, 1.5 * scale, 1.45 * scale)),
-			color = Color3.fromRGB(255, 220, 90),
-			material = Enum.Material.Neon,
-			canCollide = false,
-		})
-	end
-	glow(body, Color3.fromRGB(255, 150, 50), 12, 0.8)
+	MapKit.part(parent, {
+		name = "Flag",
+		size = Vector3.new(5, 3.4, 0.2),
+		cframe = CFrame.new(position + Vector3.new(2.7, 15.8, 0)),
+		color = color,
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
 end
 
 return function(): Model
@@ -319,7 +314,7 @@ return function(): Model
 		name = "Grass",
 		size = Vector3.new(340, 4, 340),
 		cframe = CFrame.new(0, -2, -40),
-		color = Color3.fromRGB(46, 70, 74),
+		color = Color3.fromRGB(98, 168, 74),
 		material = Enum.Material.Grass,
 	})
 	MapKit.part(model, {
@@ -328,18 +323,18 @@ return function(): Model
 		size = Vector3.new(0.4, PLAZA_RADIUS * 2, PLAZA_RADIUS * 2),
 		cframe = CFrame.new(PLAZA.X, 0.2, PLAZA.Z) * CFrame.Angles(0, 0, math.pi / 2),
 		color = FLOOR,
-		material = Enum.Material.Cobblestone,
+		material = Enum.Material.Sand,
 	})
-	-- A glowing rune ring set into the plaza floor, around the inkwell.
+	-- Gold and stone rings inlaid in the arena floor, around the inkwell.
 	for index, ring in { { 24, 0.9 }, { 19, 0.8 }, { 14, 0.7 } } do
 		MapKit.part(model, {
 			name = "PlazaRing",
 			shape = Enum.PartType.Cylinder,
 			size = Vector3.new(0.12, ring[1] * 2, ring[1] * 2),
 			cframe = CFrame.new(PLAZA.X, 0.42 + index * 0.02, PLAZA.Z) * CFrame.Angles(0, 0, math.pi / 2),
-			color = if index == 2 then STONE_DARK else RUNE_GLOW,
-			material = if index == 2 then Enum.Material.Slate else Enum.Material.Neon,
-			transparency = if index == 2 then 0 else 0.78,
+			color = if index == 2 then STONE_DARK else Color3.fromRGB(190, 150, 72),
+			material = if index == 2 then Enum.Material.Limestone else Enum.Material.Metal,
+			transparency = 0,
 			canCollide = false,
 		})
 	end
@@ -349,14 +344,14 @@ return function(): Model
 		size = Vector3.new(HALL_HALF_WIDTH * 2 + 4, 0.4, hallLength),
 		cframe = CFrame.new(0, 0.2, HALL_START + 10 - hallLength / 2),
 		color = FLOOR,
-		material = Enum.Material.Cobblestone,
+		material = Enum.Material.Sandstone,
 	})
 	MapKit.part(model, {
 		name = "HallInlay",
 		size = Vector3.new(HALL_HALF_WIDTH * 2 - 10, 0.1, hallLength - 12),
 		cframe = CFrame.new(0, 0.42, HALL_START + 10 - hallLength / 2),
 		color = STONE_DARK,
-		material = Enum.Material.Slate,
+		material = Enum.Material.Limestone,
 		canCollide = false,
 	})
 	MapKit.part(model, {
@@ -383,7 +378,7 @@ return function(): Model
 	for _, wall in model:GetChildren() do
 		if wall.Name == "RingWall" and wall:IsA("BasePart") then
 			wall.Name = "OuterWall"
-			wall.Material = Enum.Material.Slate
+			wall.Material = Enum.Material.Limestone
 			wall.Transparency = 0
 		end
 	end
@@ -397,7 +392,7 @@ return function(): Model
 		size = Vector3.new(2, 20, 20),
 		cframe = CFrame.new(PLAZA.X, 1, PLAZA.Z) * CFrame.Angles(0, 0, math.pi / 2),
 		color = STONE,
-		material = Enum.Material.Slate,
+		material = Enum.Material.Limestone,
 	})
 	MapKit.part(model, {
 		name = "Inkwell",
@@ -412,18 +407,18 @@ return function(): Model
 		shape = Enum.PartType.Cylinder,
 		size = Vector3.new(0.3, 13, 13),
 		cframe = CFrame.new(PLAZA.X, 9.1, PLAZA.Z) * CFrame.Angles(0, 0, math.pi / 2),
-		color = RUNE_GLOW,
+		color = GOLD_GLOW,
 		material = Enum.Material.Neon,
 		transparency = 0.2,
 		canCollide = false,
 	})
-	glow(ink, RUNE_GLOW, 40, 1.6)
+	glow(ink, GOLD_GLOW, 40, 1.6)
 	local quill = MapKit.part(model, {
 		name = "Quill",
-		size = Vector3.new(1.5, 22, 4),
-		cframe = CFrame.new(PLAZA.X + 2, 20, PLAZA.Z) * CFrame.Angles(0, 0, math.rad(-15)),
-		color = Color3.fromRGB(255, 255, 255),
-		material = Enum.Material.SmoothPlastic,
+		size = Vector3.new(1.2, 16, 3),
+		cframe = CFrame.new(PLAZA.X + 1.5, 17, PLAZA.Z) * CFrame.Angles(0, 0, math.rad(-15)),
+		color = GOLD,
+		material = Enum.Material.Metal,
 		canCollide = false,
 	})
 	label(quill, "WORDCRAFT ARENA", 15)
@@ -449,8 +444,8 @@ return function(): Model
 			name = `Shrine_{element.id}`,
 			size = Vector3.new(13, 9.5, 1.4),
 			cframe = CFrame.lookAt(position + Vector3.new(0, 5, 0), PLAZA + Vector3.new(0, 5, 0)),
-			color = STONE_DARK,
-			material = Enum.Material.Slate,
+			color = Color3.fromRGB(38, 46, 78), -- dark slate so the colored text pops
+			material = Enum.Material.Concrete,
 		})
 		local gui = Instance.new("SurfaceGui")
 		gui.Name = "Spells"
@@ -517,7 +512,7 @@ return function(): Model
 			size = Vector3.new(4, WALL_HEIGHT, wallLength),
 			cframe = CFrame.new(side * (HALL_HALF_WIDTH + 2), WALL_HEIGHT / 2, (HALL_START + HALL_END) / 2),
 			color = STONE,
-			material = Enum.Material.Concrete,
+			material = Enum.Material.Sandstone,
 		})
 		MapKit.part(model, {
 			name = "WallCap",
@@ -528,7 +523,7 @@ return function(): Model
 				(HALL_START + HALL_END) / 2
 			),
 			color = STONE_LIGHT,
-			material = Enum.Material.Slate,
+			material = Enum.Material.Limestone,
 		})
 		-- Arched bays: frame, window, banner. The arch looks into the hall.
 		local innerX = side * (HALL_HALF_WIDTH - 0.6)
@@ -558,7 +553,7 @@ return function(): Model
 		size = Vector3.new(HALL_HALF_WIDTH * 2 + 8, WALL_HEIGHT + 6, 4),
 		cframe = CFrame.new(0, (WALL_HEIGHT + 6) / 2, HALL_END - 2),
 		color = STONE,
-		material = Enum.Material.Concrete,
+		material = Enum.Material.Sandstone,
 	})
 	-- Big pointed ribs across the hall, high overhead (no collision).
 	for _, z in { -34, -92, -150 } do
@@ -572,11 +567,11 @@ return function(): Model
 			shape = Enum.PartType.Ball,
 			size = Vector3.new(3, 3, 3),
 			cframe = CFrame.new(0, WALL_HEIGHT + 8, z),
-			color = RUNE_GLOW,
+			color = GOLD_GLOW,
 			material = Enum.Material.Neon,
 			canCollide = false,
 		})
-		glow(lantern, RUNE_GLOW, 44, 1.4)
+		glow(lantern, GOLD_GLOW, 44, 1.4)
 		MapKit.part(model, {
 			name = "LanternChain",
 			size = Vector3.new(0.3, 14, 0.3),
@@ -594,20 +589,20 @@ return function(): Model
 			size = Vector3.new(7, WALL_HEIGHT + 8, 7),
 			cframe = CFrame.new(side * (HALL_HALF_WIDTH + 2), (WALL_HEIGHT + 8) / 2, HALL_START + 3),
 			color = STONE_LIGHT,
-			material = Enum.Material.Slate,
+			material = Enum.Material.Limestone,
 		})
 		local orb = MapKit.part(model, {
 			name = "PylonOrb",
 			shape = Enum.PartType.Ball,
 			size = Vector3.new(4, 4, 4),
 			cframe = CFrame.new(side * (HALL_HALF_WIDTH + 2), WALL_HEIGHT + 11, HALL_START + 3),
-			color = RUNE_GLOW,
+			color = GOLD_GLOW,
 			material = Enum.Material.Neon,
 			canCollide = false,
 		})
-		glow(orb, RUNE_GLOW, 36, 1.4)
+		glow(orb, GOLD_GLOW, 36, 1.4)
 	end
-	label(signAnchor(model, "HallSign", Vector3.new(0, 36, HALL_START + 3)), "THE GREAT HALL\nof Glyphs", 0, 260)
+	label(signAnchor(model, "HallSign", Vector3.new(0, 36, HALL_START + 3)), "THE ARENA\nChampions' Concourse", 0, 260)
 
 	----------------------------------------------------------------------
 	-- The Arena Gate (end of the hall): a red portal frame
@@ -622,7 +617,7 @@ return function(): Model
 		size = Vector3.new(38, 4, 5),
 		cframe = CFrame.new(0, 38, gateZ),
 		color = STONE_LIGHT,
-		material = Enum.Material.Slate,
+		material = Enum.Material.Limestone,
 	})
 	local portal = MapKit.part(model, {
 		name = "ArenaGate",
@@ -647,7 +642,7 @@ return function(): Model
 	end
 	label(
 		signAnchor(model, "GateSign", Vector3.new(0, 44, gateZ + 4)),
-		"THE ARENAS\nPick a team box to duel!",
+		"THE ARENA GATE\nPick a team box to duel!",
 		0,
 		260
 	)
@@ -758,8 +753,8 @@ return function(): Model
 		name = "GroveFloor",
 		size = Vector3.new(64, 0.4, 76),
 		cframe = CFrame.new(PRACTICE.X, 0.2, PRACTICE.Z),
-		color = Color3.fromRGB(70, 96, 108),
-		material = Enum.Material.Slate,
+		color = Color3.fromRGB(204, 186, 148),
+		material = Enum.Material.Limestone,
 	})
 	for _, corner in {
 		Vector3.new(-1, 0, -1),
@@ -932,22 +927,6 @@ return function(): Model
 		plate.Text = `#{rank}\nWin a match to stand here!`
 		plate.Parent = surface
 	end
-	local spotlight = MapKit.part(model, {
-		name = "PodiumLight",
-		size = Vector3.one,
-		cframe = CFrame.new(PODIUM + Vector3.new(0, 24, 8)),
-		transparency = 1,
-		canCollide = false,
-	})
-	local lamp = Instance.new("SpotLight")
-	lamp.Face = Enum.NormalId.Bottom
-	lamp.Angle = 70
-	lamp.Range = 40
-	lamp.Brightness = 3
-	lamp.Color = Color3.fromRGB(255, 240, 200)
-	lamp.Shadows = false
-	lamp.Parent = spotlight
-
 	-- Wins board, right side of the entrance, angled toward the plaza.
 	local board = MapKit.part(model, {
 		name = "Leaderboard",
@@ -977,29 +956,63 @@ return function(): Model
 			size = Vector3.new(1.2, 10, 1.2),
 			cframe = CFrame.new(23 + side * 7, 5, -20.6) * CFrame.Angles(0, math.rad(-12), 0),
 			color = STONE_DARK,
-			material = Enum.Material.Slate,
+			material = Enum.Material.Limestone,
 		})
 	end
 
 	----------------------------------------------------------------------
-	-- Night dressing: pumpkins and dead trees
+	-- Arena dressing: a grandstand behind the plaza, flag poles, and trees
 	----------------------------------------------------------------------
+	-- Three tiers of stepped seating around the south side of the plaza.
+	for tier = 1, 3 do
+		local radius = PLAZA_RADIUS + 8 + tier * 7
+		local height = tier * 3
+		for degrees = -50, 50, 10 do
+			local a = math.rad(degrees)
+			local position = Vector3.new(PLAZA.X + math.sin(a) * radius, height / 2, PLAZA.Z + math.cos(a) * radius)
+			MapKit.part(model, {
+				name = "Grandstand",
+				size = Vector3.new(radius * math.rad(10) + 1, height, 7),
+				cframe = CFrame.lookAt(position, Vector3.new(PLAZA.X, position.Y, PLAZA.Z)),
+				color = if (degrees / 10 + tier) % 2 == 0 then STONE_LIGHT else STONE,
+				material = Enum.Material.Limestone,
+			})
+		end
+		-- A colored pennant band along the front of each tier.
+		for degrees = -50, 50, 20 do
+			local a = math.rad(degrees)
+			local inner = radius - 3.6
+			MapKit.part(model, {
+				name = "StandBanner",
+				size = Vector3.new(radius * math.rad(10) * 0.9, 1.4, 0.3),
+				cframe = CFrame.lookAt(
+					Vector3.new(PLAZA.X + math.sin(a) * inner, height - 0.2, PLAZA.Z + math.cos(a) * inner),
+					Vector3.new(PLAZA.X, height - 0.2, PLAZA.Z)
+				),
+				color = if (degrees / 20 + tier) % 2 == 0 then Color3.fromRGB(66, 120, 220) else Color3.fromRGB(220, 70, 60),
+				material = Enum.Material.Fabric,
+				canCollide = false,
+			})
+		end
+	end
+
 	local rng = MapKit.rng(42)
-	for _, spot in {
-		Vector3.new(-10, 0, 74),
-		Vector3.new(11, 0, 75),
-		Vector3.new(-34, 0, 60),
-		Vector3.new(36, 0, 58),
+	local flagColors = { Color3.fromRGB(66, 165, 245), Color3.fromRGB(239, 83, 80) }
+	for index, spot in {
+		Vector3.new(-12, 0, 76),
+		Vector3.new(12, 0, 76),
+		Vector3.new(-37, 0, 62),
+		Vector3.new(37, 0, 62),
 		Vector3.new(-37, 0, -8),
 		Vector3.new(37, 0, -8),
 		Vector3.new(-6, 0, -12),
 		Vector3.new(6, 0, -14),
 		Vector3.new(58, 0, 24),
-		Vector3.new(92, 0, 26),
-		Vector3.new(-60, 0, 66),
-		Vector3.new(-118, 0, 70),
+		Vector3.new(92, 0, 24),
+		Vector3.new(-56, 0, 8),
+		Vector3.new(-122, 0, 8),
 	} do
-		pumpkin(model, spot, 0.9 + rng:NextNumber() * 0.7)
+		flagPole(model, spot, flagColors[(index % 2) + 1])
 	end
 	for _ = 1, 22 do
 		local a = rng:NextNumber() * math.pi * 2
@@ -1011,7 +1024,7 @@ return function(): Model
 				name = "Trunk",
 				size = Vector3.new(2, 10, 2),
 				cframe = CFrame.new(pos + Vector3.new(0, 5, 0)),
-				color = Color3.fromRGB(60, 44, 56),
+				color = Color3.fromRGB(110, 80, 56),
 				material = Enum.Material.Wood,
 			})
 			MapKit.part(model, {
@@ -1019,7 +1032,7 @@ return function(): Model
 				shape = Enum.PartType.Ball,
 				size = Vector3.new(11, 9, 11),
 				cframe = CFrame.new(pos + Vector3.new(0, 12, 0)),
-				color = Color3.fromRGB(104, 58, 122),
+				color = Color3.fromRGB(72, 150, 72),
 				material = Enum.Material.Grass,
 			})
 		end

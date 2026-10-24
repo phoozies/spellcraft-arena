@@ -25,7 +25,11 @@ end
 -- A sloppy attempt at a glyph: random start point (closed shapes), direction,
 -- rotation, size, position, and hand wobble (a fraction of the shape's size).
 local function attempt(glyph: Glyphs.Glyph, rng: Random, wobble: number): { Vector2 }
-	local points = densify(glyph.points, math.max(6, math.ceil(40 / (#glyph.points - 1))))
+	local source = glyph.points
+	if glyph.variants and rng:NextInteger(0, #glyph.variants) > 0 then
+		source = glyph.variants[rng:NextInteger(1, #glyph.variants)]
+	end
+	local points = densify(source, math.max(6, math.ceil(40 / (#source - 1))))
 	if glyph.closed then
 		table.remove(points) -- last == first
 		local shift = rng:NextInteger(0, #points - 1)
@@ -182,6 +186,7 @@ return function(t)
 			t.expect(Glyphs.ROLE.fast).toBe("slash")
 			t.expect(Glyphs.ROLE.movement).toBe("wave")
 			t.expect(Glyphs.ROLE.stun).toBe("triangle")
+			t.expect(Glyphs.ROLE.boost).toBe("spiral") -- a swirl
 			for _, def in SpellDefinitions.list do
 				if def.stats.status == "Stun" then
 					t.expect(def.role).toBe("stun")

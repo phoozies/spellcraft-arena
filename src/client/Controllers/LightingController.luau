@@ -1,8 +1,8 @@
 --!strict
--- The mood of the world. The hub is a moonlit courtyard (deep purple night,
--- glowing windows and lanterns, soft bloom); match arenas keep the server's
--- bright daylight so fights are easy to read. This only changes the local
--- player's Lighting, and fades between the two when a match starts or ends.
+-- The mood of the world. The hub is a sunlit arena (a warm late-afternoon sun
+-- and a touch of glow); match arenas keep the server's neutral daylight so
+-- fights are easy to read. This only changes the local player's Lighting, and
+-- fades between the two when a match starts or ends.
 
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
@@ -22,22 +22,22 @@ type Mood = {
 
 local HUB: Mood = {
 	lighting = {
-		ClockTime = 0,
-		Brightness = 0.9,
-		Ambient = Color3.fromRGB(64, 52, 112),
-		OutdoorAmbient = Color3.fromRGB(86, 74, 150),
-		ExposureCompensation = 0.25,
+		ClockTime = 15.5,
+		Brightness = 2.8,
+		Ambient = Color3.fromRGB(150, 146, 140),
+		OutdoorAmbient = Color3.fromRGB(165, 160, 150),
+		ExposureCompensation = 0.1,
 	},
 	atmosphere = {
-		Density = 0.32,
+		Density = 0.22,
 		Offset = 0.1,
-		Color = Color3.fromRGB(96, 74, 160),
-		Decay = Color3.fromRGB(58, 40, 110),
-		Glare = 0.1,
-		Haze = 1.4,
+		Color = Color3.fromRGB(214, 226, 245),
+		Decay = Color3.fromRGB(232, 208, 170),
+		Glare = 0.2,
+		Haze = 0.5,
 	},
-	bloom = { Intensity = 0.55, Size = 28, Threshold = 1.05 },
-	color = { Saturation = 0.12, Contrast = 0.1, TintColor = Color3.fromRGB(236, 226, 255) },
+	bloom = { Intensity = 0.25, Size = 24, Threshold = 1.4 },
+	color = { Saturation = 0.1, Contrast = 0.05, TintColor = Color3.fromRGB(255, 248, 235) },
 }
 
 local arena: Mood = {

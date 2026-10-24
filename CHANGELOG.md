@@ -4,6 +4,10 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (arena hub, swirl for boosts)
+- **Boost and defense spells are drawn as a swirl** (the spiral): Fire Boost, Water Body, Earth Wall, and Air Shield. The V (chevron) moves to the area attacks (Fire Pillar, Earth Pillar). A swirl is accepted with 1 to 3 turns, drawn in or out, so it is forgiving to draw.
+- **The hub is an arena, not a dark Halloween scene.** Sunny warm light, a sand plaza with gold-and-stone rings, a three-tier grandstand with blue and red pennants, sandstone and marble walls with sky-glass windows, team flag poles, and green trees. The pumpkins, purple trees, glowing orange windows, and night lighting are gone, and the hub's ambience is a quiet arena crowd instead of crickets. The hall is now the Champions' Concourse.
+
 ### Changed (shapes by kind of move, bigger hitboxes)
 - **Every spell's shape now says what kind of move it is, and no element repeats a shape:** a circle is a basic attack (Fireball, Rock Throw, Gust), a diagonal slash a fast attack (Fire Slash, Water Slice), a squiggly line movement (Air Boost), a triangle a stun (Water Lock), a V a boost or defense, a lightning bolt a heavy attack, a spiral an area attack, and a star an ultimate. New `slash` shape (any straight stroke, recognized by straightness), `Glyphs.ROLE`, and a `role` on every spell. Only the equipped element's five shapes are recognized.
 - **Bigger hitboxes on every move** (about 40% wider, with the visuals scaled to match): Fireball 3.5 to 5, Fire Slash and Water Slice 3 to 4.5, Fire Bomb 7 to 10, Water Wave 8 to 11, Rock Throw 4.2 to 6, Gust 3.2 to 4.6, Whirlwind 7 to 10, Tornado 6 to 8.5, Water Lock 2.5 to 4, Fire Pillar 9 to 12, Water Nebula 10 to 13, Earth Punch 5 to 7, Earth Pillar 4.5 to 6.5 (pillars 9 studs apart), Earthquake 22 to 25. The bonus against players (`HITBOX_BONUS`) goes from 1.5 to 2.

@@ -194,25 +194,31 @@ for _, glyph in Glyphs.LIST do
 	if glyph.line then
 		continue -- a straight line has no shape to match; see isStraight
 	end
-	local base = resample(glyph.points, SAMPLES)
-	local shapes = { base }
-	if glyph.closed then
-		-- Every start point around the outline (the shape's last point repeats
-		-- its first, so rotate through the first SAMPLES - 1).
-		shapes = {}
-		for k = 0, START_VARIANTS - 1 do
-			local shift = math.floor(k * (SAMPLES - 1) / START_VARIANTS)
-			local shifted = {}
-			for i = 1, SAMPLES - 1 do
-				shifted[i] = base[((i - 1 + shift) % (SAMPLES - 1)) + 1]
-			end
-			table.insert(shifted, shifted[1])
-			table.insert(shapes, shifted)
-		end
+	local sources = { glyph.points }
+	for _, variant in glyph.variants or {} do
+		table.insert(sources, variant)
 	end
-	for _, shape in shapes do
-		table.insert(templates, { glyphId = glyph.id, points = prepare(shape) })
-		table.insert(templates, { glyphId = glyph.id, points = prepare(reversed(shape)) })
+	for _, source in sources do
+		local base = resample(source, SAMPLES)
+		local shapes = { base }
+		if glyph.closed then
+			-- Every start point around the outline (the shape's last point repeats
+			-- its first, so rotate through the first SAMPLES - 1).
+			shapes = {}
+			for k = 0, START_VARIANTS - 1 do
+				local shift = math.floor(k * (SAMPLES - 1) / START_VARIANTS)
+				local shifted = {}
+				for i = 1, SAMPLES - 1 do
+					shifted[i] = base[((i - 1 + shift) % (SAMPLES - 1)) + 1]
+				end
+				table.insert(shifted, shifted[1])
+				table.insert(shapes, shifted)
+			end
+		end
+		for _, shape in shapes do
+			table.insert(templates, { glyphId = glyph.id, points = prepare(shape) })
+			table.insert(templates, { glyphId = glyph.id, points = prepare(reversed(shape)) })
+		end
 	end
 end
 

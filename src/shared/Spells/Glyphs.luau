@@ -15,6 +15,8 @@ export type Glyph = {
 	name: string,
 	-- A closed shape can be started anywhere on its outline.
 	closed: boolean,
+	-- Other accepted versions of the same shape (a swirl can have more or fewer turns).
+	variants: { { Vector2 } }?,
 	-- A straight line: recognized by straightness, not by template matching.
 	line: boolean?,
 	points: { Vector2 },
@@ -58,11 +60,11 @@ local function wave(): { Vector2 }
 	return points
 end
 
-local function spiral(): { Vector2 }
+local function spiral(turns: number): { Vector2 }
 	local points = {}
 	for i = 0, 60 do
 		local f = i / 60
-		local a = f * math.pi * 4
+		local a = f * math.pi * 2 * turns
 		local r = 0.06 + f * 0.44
 		table.insert(points, Vector2.new(0.5 + math.cos(a) * r, 0.5 + math.sin(a) * r))
 	end
@@ -104,7 +106,13 @@ Glyphs.LIST = {
 	},
 	{ id = "infinity", name = "Infinity", closed = true, points = infinity() },
 	{ id = "star", name = "Star", closed = true, points = star() },
-	{ id = "spiral", name = "Spiral", closed = false, points = spiral() },
+	{
+		id = "spiral",
+		name = "Swirl",
+		closed = false,
+		points = spiral(2),
+		variants = { spiral(1.25), spiral(1.6), spiral(2.8) },
+	},
 } :: { Glyph }
 
 -- Which shape each KIND of move uses, the same in every element, so a shape
@@ -117,9 +125,9 @@ Glyphs.ROLE = table.freeze({
 	fast = "slash",
 	movement = "wave",
 	stun = "triangle",
-	boost = "chevron", -- buffs and defenses
+	boost = "spiral", -- buffs and defenses: a swirl
 	heavy = "bolt",
-	area = "spiral",
+	area = "chevron",
 	ultimate = "star",
 })
 

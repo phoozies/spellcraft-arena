@@ -117,12 +117,12 @@ function AudioController.playSpell(spellId: string, which: "cast" | "impact", at
 end
 
 local function startAmbience()
-	local cue = Cues.hubNight
+	local cue = Cues.hubCrowd
 	if not cue or cue.id == "" then
 		return
 	end
 	local sound = Instance.new("Sound")
-	sound.Name = "HubNight"
+	sound.Name = "HubCrowd"
 	sound.SoundId = cue.id
 	sound.Looped = true
 	sound.Volume = 0
@@ -132,10 +132,10 @@ local function startAmbience()
 	ambience = sound
 end
 
--- The hub hums with night air; matches are loud enough without it.
+-- The hub murmurs with a distant arena crowd; matches are loud enough without it.
 local function refreshAmbience()
 	local sound = ambience
-	local cue = Cues.hubNight
+	local cue = Cues.hubCrowd
 	if not sound or not cue then
 		return
 	end

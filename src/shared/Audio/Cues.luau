@@ -85,8 +85,8 @@ local Cues: { [string]: Cue } = {
 	glyphBad = sound(TWINKLE, 0.5, false, 0.55, 0.9),
 	crateReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
 
-	-- Hub ambience (a quiet loop of crickets and night air)
-	hubNight = { id = "rbxassetid://9112764546", volume = 0.35, world = false, loop = true },
+	-- Hub ambience (a distant arena crowd, kept quiet)
+	hubCrowd = { id = "rbxassetid://9119562311", volume = 0.22, world = false, loop = true },
 }
 
 return table.freeze(Cues)

@@ -22,7 +22,7 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 - **No levels or XP.** Winning a match pays **coins** (`Config.COINS`) and +1 **win**. Coins buy **Element Crates**; a server-decided spin unlocks an element you don't own yet.
 - **Leaderboard:** `leaderstats.Wins`/`Coins`, a Most Wins board, and a top-3 podium with avatars in the hub (`LeaderboardService`).
 - **Matches:** hub team boxes or queues → best of 3 rounds → your equipped element's 5 spells; between rounds you pick 1 of 3 **boosts** (Power, Vitality, Swiftness, Focus, Health Potion) instead of earning spells.
-- **Casting:** press **F** (or tap ✏ Draw) and trace a shape. The shape is the KIND of move, the same in every element: circle = a basic attack, a diagonal slash = a fast attack, a squiggly line = movement, a triangle = a stun, a V = a boost or defense, a lightning bolt = a heavy attack, a spiral = an area attack, a star = your ultimate. The server recognizes the stroke and readies the spell; there is no typing or voice input.
+- **Casting:** press **F** (or tap ✏ Draw) and trace a shape. The shape is the KIND of move, the same in every element: circle = a basic attack, a diagonal slash = a fast attack, a squiggly line = movement, a triangle = a stun, a swirl = a boost or defense, a lightning bolt = a heavy attack, a V = an area attack, a star = your ultimate. The server recognizes the stroke and readies the spell; there is no typing or voice input.
 
 ## Rules that must stay true
 

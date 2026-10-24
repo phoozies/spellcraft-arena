@@ -90,7 +90,7 @@ The **Play menu** also queues for any mode, including 3v3, with the teams balanc
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | A moonlit courtyard around a giant inkwell that opens into the Great Hall of Glyphs: arched bays with glowing rune windows and glyph banners, a red carpet to the Arena Gate | Eight glyph stones around the fountain, team boxes (1v1–4v4) and the FFA portal in the hall, Spell Practice pavilion (build anything, smash dummies), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the hall entrance |
+| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell with a three-tier grandstand behind it, opening into the Champions' Concourse (arched bays with sky-glass windows and glyph banners, a red carpet to the Arena Gate) | Four element shrines around the fountain, team boxes (1v1–4v4) and the FFA portal in the concourse, Spell Practice pavilion (build anything, smash dummies), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |

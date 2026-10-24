@@ -36,8 +36,8 @@ glossary:
   archetype: the server behavior a spell row uses (Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon)
   coins: the only currency; earned by winning; spent on Element Crates
   wins: profile.stats.wins; the leaderboard stat
-  hub: Inkwell Plaza, a moonlit courtyard plus the Great Hall of Glyphs, where players spawn, pick elements, open crates, and pick teams (no PvP)
-  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, movement squiggle, stun triangle, boost V, heavy bolt, area spiral, ultimate star"
+  hub: Inkwell Plaza, a sunlit sandstone arena (round plaza, grandstand, Champions' Concourse), where players spawn, pick elements, open crates, and pick teams (no PvP)
+  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, movement squiggle, stun triangle, boost swirl (spiral), heavy bolt, area V (chevron), ultimate star"
   arena: an instanced match map cloned at x = slot * 2000, y = 400
 
 bootstrap:
@@ -61,26 +61,26 @@ features:
       Fire:
         - { id: Fireball,   role: basic,    glyph: circle,   archetype: Projectile, model: Fireball, what: "medium hitbox r5, 15 dmg, cd 0.9" }
         - { id: FireSlash,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
-        - { id: FireBoost,  role: boost,    glyph: chevron,  archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
-        - { id: FirePillar, role: area,     glyph: spiral,   archetype: Zone,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
+        - { id: FireBoost,  role: boost,    glyph: spiral,  archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
+        - { id: FirePillar, role: area,     glyph: chevron,   archetype: Zone,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
         - { id: FireBomb,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
       Water:
         - { id: WaterSlice,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
-        - { id: WaterBody,   role: boost,    glyph: chevron,  archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
+        - { id: WaterBody,   role: boost,    glyph: spiral,  archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
         - { id: WaterLock,   role: stun,     glyph: triangle, archetype: Control,    model: WaterBubble, what: "r4, 5 dmg + Stun 1.5s, cd 4" }
         - { id: WaterWave,   role: heavy,    glyph: bolt,     archetype: Projectile, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
         - { id: WaterNebula, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
       Earth:
         - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, what: "large rock, r6, 15 dmg, cd 1.1" }
-        - { id: EarthWall,  role: boost,    glyph: chevron,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
+        - { id: EarthWall,  role: boost,    glyph: spiral,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
         - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
-        - { id: EarthPillar, role: area,    glyph: spiral,   archetype: Line,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
+        - { id: EarthPillar, role: area,    glyph: chevron,   archetype: Line,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
         - { id: Earthquake, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: centered on the caster, r25, 40 dmg, 2s cast with the caster rooted, cd 22 (channel, pillar)" }
       Air:
         - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 0.9" }
         - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
         - { id: AirBoost,  role: movement, glyph: wave,     archetype: Buff,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
-        - { id: AirShield, role: boost,    glyph: chevron,  archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
+        - { id: AirShield, role: boost,    glyph: spiral,  archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
         - { id: Tornado,   role: ultimate, glyph: star,     archetype: Projectile, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
     stat_flags_added_for_these_spells:
       visual.model: imported model that replaces the primitive look (bolt / placeable skin / zone swirl); the primitive stays the hitbox and the fallback
@@ -242,13 +242,14 @@ features:
     invariants: [bump SCHEMA and migrate in reconcile() for breaking changes, never save over another server's lock]
 
   - id: hub
-    summary: Inkwell Plaza, built at runtime; the client fades it to night (LightingController).
+    summary: Inkwell Plaza, a sunlit arena built at runtime; the client warms the light for the hub (LightingController).
     builder: src/server/Maps/InkwellPlaza.luau
-    layout: north is -Z; round spawn plaza at (0,0,38); Great Hall from z=-4 to the Arena Gate at z=-190
+    layout: north is -Z; round spawn plaza at (0,0,38); Champions' Concourse from z=-4 to the Arena Gate at z=-190; grandstand behind the plaza (south)
     contents:
       - spawn
       - inkwell fountain + 4 element shrines (each lists its 5 spells and shapes; prompt opens the Spellbook)
-      - Great Hall - arched bays with rune windows and glyph banners, red carpet, Arena Gate
+      - Champions' Concourse - arched sandstone bays with sky-glass windows and glyph banners, red carpet, Arena Gate
+      - grandstand (3 tiers) and team flag poles
       - team boxes 1v1-4v4 in the hall
       - FFA portal pad in the hall
       - Spell Practice pavilion (BuildZone + dummies)
@@ -261,7 +262,7 @@ features:
   - id: drawing
     summary: Players trace a glyph; the server recognizes it and readies the spell. Replaced typing, chat casting, and voice.
     owners: [src/shared/Spells/Glyphs.luau, src/shared/Spells/GlyphRecognizer.luau, src/server/Services/SpellInputService.luau, src/client/Controllers/DrawController.luau]
-    glyphs: { circle: basic, slash: fast, wave: movement, triangle: stun, chevron: boost, bolt: heavy, spiral: area, star: ultimate }  # by role; the equipped element decides which spell
+    glyphs: { circle: basic, slash: fast, wave: movement, triangle: stun, spiral: boost, bolt: heavy, chevron: area, star: ultimate }  # by role; the equipped element decides which spell
     straight_strokes: "a stroke whose points all stay within 22% of the line between its ends (and whose ends are far apart) is a slash, in any direction"
     remotes:
       c2s: [DrawSpell]
@@ -278,7 +279,7 @@ features:
     summary: Every spell has a cast and an impact sound plus particle effects; all local to each client.
     audio: src/shared/Audio/Cues.luau (cue table) + src/client/Controllers/AudioController.luau (play, falloff, throttle, hub ambience); spells name cues in SpellDefinitions `sfx = { cast, impact }`
     vfx: src/client/Fx/SpellVfx.luau (glyphEmblem, pillar, rise, quake, glyph imprint in castAnimation, per-spell bolt styles) driven from FxController (Fx kinds pillar, rise, quake, glyph); effects are chosen by spell stats (pillar, rise, channel), not by name
-    mood: src/client/Controllers/LightingController.luau (hub night vs arena daylight)
+    mood: src/client/Controllers/LightingController.luau (warm afternoon in the hub vs the arenas' neutral daylight)
     invariants: [a cue with an empty id is silent, every effect works without imported models]
 
   - id: models
