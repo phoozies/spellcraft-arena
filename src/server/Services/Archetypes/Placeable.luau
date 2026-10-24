@@ -53,7 +53,12 @@ end
 
 local function enemyCharacterFrom(ctx: any, part: BasePart): Model?
 	local target, owner, isCharacter = DestructibleService.resolve(part)
-	if target and isCharacter and owner ~= ctx.player and DestructibleService.canHarm(ctx.player, target) then
+	if
+		target
+		and isCharacter
+		and owner ~= ctx.player
+		and DestructibleService.canHarm(ctx.player, target)
+	then
 		return target :: Model
 	end
 	return nil
@@ -66,7 +71,11 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 		local debounce: { [Model]: number } = {}
 		body.Touched:Connect(function(part)
 			local character = part.Parent
-			if character and character:IsA("Model") and Players:GetPlayerFromCharacter(character) then
+			if
+				character
+				and character:IsA("Model")
+				and Players:GetPlayerFromCharacter(character)
+			then
 				local now = os.clock()
 				if (debounce[character] or 0) < now then
 					debounce[character] = now + 0.6
@@ -91,7 +100,10 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 				end
 				local root = victim:FindFirstChild("HumanoidRootPart") :: BasePart?
 				if root then
-					DestructibleService.push(victim, root.CFrame.LookVector * 60 + Vector3.new(0, 20, 0))
+					DestructibleService.push(
+						victim,
+						root.CFrame.LookVector * 60 + Vector3.new(0, 20, 0)
+					)
 				end
 				DestructibleService.poof(body.Position, body.Color)
 				model:Destroy()
@@ -119,13 +131,20 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 				end
 				if best then
 					local direction = (best.position - origin).Unit
-					body.CFrame = CFrame.lookAt(body.Position, body.Position + Vector3.new(direction.X, 0, direction.Z))
-						* CFrame.Angles(0, math.pi / 2, 0)
+					body.CFrame = CFrame.lookAt(
+						body.Position,
+						body.Position + Vector3.new(direction.X, 0, direction.Z)
+					) * CFrame.Angles(0, math.pi / 2, 0)
 					Projectile.launch({
 						caster = ctx.player,
 						origin = origin + direction * 3,
 						direction = direction,
-						stats = { damage = stats.damage or 10, speed = 110, range = (stats.range or 60) + 10, radius = 1 },
+						stats = {
+							damage = stats.damage or 10,
+							speed = 110,
+							range = (stats.range or 60) + 10,
+							radius = 1,
+						},
 						visual = {
 							shape = "Ball",
 							size = Vector3.new(1.4, 1.4, 1.4),
@@ -146,7 +165,12 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 				task.wait(0.5)
 				for _, hit in ctx.enemiesNear(body.Position, stats.radius or 10) do
 					if hit.character then
-						DestructibleService.damage(hit.character, stats.hazardDps * 0.5, ctx.player, ctx.def.name)
+						DestructibleService.damage(
+							hit.character,
+							stats.hazardDps * 0.5,
+							ctx.player,
+							ctx.def.name
+						)
 					end
 				end
 			end
@@ -163,7 +187,8 @@ function Placeable.cast(ctx: any): boolean?
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { ctx.character }
-	local down = workspace:Raycast(ctx.target + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
+	local down =
+		workspace:Raycast(ctx.target + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then
 		return false
 	end
@@ -184,17 +209,23 @@ function Placeable.cast(ctx: any): boolean?
 	end
 	-- Don't entomb anyone.
 	for _, player in Players:GetPlayers() do
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local root = player.Character
+			and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if root then
 			local localPoint = cframe:PointToObjectSpace(root.Position)
 			local half = Placement.boundsSize(visual) / 2 + Vector3.new(1, 2, 1)
-			if math.abs(localPoint.X) < half.X and math.abs(localPoint.Y) < half.Y and math.abs(localPoint.Z) < half.Z then
+			if
+				math.abs(localPoint.X) < half.X
+				and math.abs(localPoint.Y) < half.Y
+				and math.abs(localPoint.Z) < half.Z
+			then
 				return false
 			end
 		end
 	end
 
-	local model = DestructibleService.build(def.name, visual, stats.health or 100, ctx.player, ctx.team)
+	local model =
+		DestructibleService.build(def.name, visual, stats.health or 100, ctx.player, ctx.team)
 	model:SetAttribute("SpellId", def.id)
 	local body = model.PrimaryPart :: BasePart
 	body.CFrame = cframe * Placement.partOffset(visual)

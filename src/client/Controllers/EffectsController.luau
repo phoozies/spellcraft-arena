@@ -80,7 +80,10 @@ local function resetCamera(character: Model)
 		return
 	end
 	task.wait(0.2)
-	camera.CFrame = CFrame.lookAt(root.Position - root.CFrame.LookVector * 14 + Vector3.new(0, 6, 0), root.Position)
+	camera.CFrame = CFrame.lookAt(
+		root.Position - root.CFrame.LookVector * 14 + Vector3.new(0, 6, 0),
+		root.Position
+	)
 end
 
 function EffectsController.start()

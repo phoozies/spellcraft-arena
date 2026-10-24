@@ -76,7 +76,11 @@ end
 function MapKit.ffaSpawns(spawns: Instance, center: Vector3, radius: number, count: number)
 	for i = 1, count do
 		local a = (i / count) * math.pi * 2
-		MapKit.spawn(spawns, `FFA_{i}`, center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius))
+		MapKit.spawn(
+			spawns,
+			`FFA_{i}`,
+			center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
+		)
 	end
 end
 
@@ -90,7 +94,13 @@ function MapKit.teamSpawns(spawns: Instance, center: Vector3, distance: number, 
 end
 
 -- Low perimeter wall square (used for SmallModeWalls to shrink an arena).
-function MapKit.ring(parent: Instance, center: Vector3, halfSize: number, height: number, color: Color3)
+function MapKit.ring(
+	parent: Instance,
+	center: Vector3,
+	halfSize: number,
+	height: number,
+	color: Color3
+)
 	for _, side in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
 		local sx, sz = side[1], side[2]
 		local size = if sx ~= 0

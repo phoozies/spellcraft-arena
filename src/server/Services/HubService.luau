@@ -12,7 +12,8 @@ local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
-local buildHub = require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("InkwellPlaza")) :: any
+local buildHub =
+	require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("InkwellPlaza")) :: any
 
 local HUB_RESPAWN_DELAY = 3
 local DUMMY_HEALTH = 250
@@ -47,7 +48,8 @@ local function spawnDummy(spot: BasePart)
 	body.Color = Color3.fromRGB(255, 204, 128)
 	body.Material = Enum.Material.Fabric
 	body.Anchored = true
-	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, math.pi / 2, 0)
+	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0))
+		* CFrame.Angles(0, math.pi / 2, 0)
 	body.Parent = model
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -135,8 +137,11 @@ local function updateSparring()
 		end
 	end
 	for _, player in Players:GetPlayers() do
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local inside = root ~= nil and not MatchService.isInMatch(player) and Placement.inRegions(root.Position, zones)
+		local root = player.Character
+			and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local inside = root ~= nil
+			and not MatchService.isInMatch(player)
+			and Placement.inRegions(root.Position, zones)
 		if (player:GetAttribute("InSparring") == true) ~= inside then
 			player:SetAttribute("InSparring", if inside then true else nil)
 		end

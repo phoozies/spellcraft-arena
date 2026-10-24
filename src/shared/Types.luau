@@ -4,7 +4,14 @@
 
 export type Rarity = "Common" | "Rare" | "Epic" | "Legendary"
 
-export type Archetype = "Projectile" | "Control" | "Placeable" | "Zone" | "Buff" | "Movement" | "Summon"
+export type Archetype =
+	"Projectile"
+	| "Control"
+	| "Placeable"
+	| "Zone"
+	| "Buff"
+	| "Movement"
+	| "Summon"
 
 -- Status effects the server can apply to a character.
 export type StatusKind = "Root" | "Slow" | "Shrink" | "TimeStop" | "Slippery"

@@ -75,7 +75,14 @@ return function(makeProp: Registrar): Model
 		})
 		makeProp(pillar, 160)
 	end
-	for _, offset in { Vector3.new(10, 3, 0), Vector3.new(-10, 3, 0), Vector3.new(0, 3, 10), Vector3.new(0, 3, -10) } do
+	for _, offset in
+		{
+			Vector3.new(10, 3, 0),
+			Vector3.new(-10, 3, 0),
+			Vector3.new(0, 3, 10),
+			Vector3.new(0, 3, -10),
+		}
+	do
 		local block = MapKit.part(model, {
 			name = "CloudBlock",
 			size = Vector3.new(5, 6, 5),

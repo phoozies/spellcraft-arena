@@ -29,7 +29,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 1.2,
 		description = "Hurl a ball of fire that burns players and structures.",
 		stats = { damage = 22, speed = 90, range = 160, radius = 2, knockback = 25 },
-		visual = { shape = "Ball", size = Vector3.new(2, 2, 2), color = rgb(255, 112, 40), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(2, 2, 2),
+			color = rgb(255, 112, 40),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "WaterLock",
@@ -41,7 +46,14 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Control",
 		cooldown = 6,
 		description = "Trap an enemy in a bubble so they can't move for 2 seconds.",
-		stats = { damage = 5, speed = 70, range = 120, radius = 2.5, status = "Root", statusDuration = 2 },
+		stats = {
+			damage = 5,
+			speed = 70,
+			range = 120,
+			radius = 2.5,
+			status = "Root",
+			statusDuration = 2,
+		},
 		visual = {
 			shape = "Ball",
 			size = Vector3.new(2.5, 2.5, 2.5),
@@ -61,7 +73,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 5,
 		description = "Raise a sturdy stone wall that blocks spells.",
 		stats = { health = 300, lifetime = 45, maxActive = 3 },
-		visual = { shape = "Block", size = Vector3.new(12, 8, 2), color = rgb(128, 120, 112), material = M.Slate },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(12, 8, 2),
+			color = rgb(128, 120, 112),
+			material = M.Slate,
+		},
 	},
 
 	-- Level 2
@@ -93,7 +110,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 2.5,
 		description = "Drop a crate to hide behind or climb on.",
 		stats = { health = 150, lifetime = 60, maxActive = 4 },
-		visual = { shape = "Block", size = Vector3.new(5, 5, 5), color = rgb(160, 110, 60), material = M.WoodPlanks },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(5, 5, 5),
+			color = rgb(160, 110, 60),
+			material = M.WoodPlanks,
+		},
 	},
 	{
 		id = "HealLeaf",
@@ -105,7 +127,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 10,
 		description = "Restore some of your health.",
 		stats = { heal = 30 },
-		visual = { shape = "Ball", size = Vector3.new(1.5, 1.5, 1.5), color = rgb(102, 187, 106), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(1.5, 1.5, 1.5),
+			color = rgb(102, 187, 106),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Spark",
@@ -117,7 +144,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 0.5,
 		description = "A quick little zap. Low damage, fast fire.",
 		stats = { damage = 8, speed = 160, range = 140, radius = 1 },
-		visual = { shape = "Ball", size = Vector3.new(1, 1, 1), color = rgb(255, 238, 88), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(1, 1, 1),
+			color = rgb(255, 238, 88),
+			material = M.Neon,
+		},
 	},
 
 	-- Level 3
@@ -130,8 +162,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Projectile",
 		cooldown = 2,
 		description = "An icy spike that slows whoever it hits.",
-		stats = { damage = 14, speed = 120, range = 150, radius = 1.5, status = "Slow", statusDuration = 3 },
-		visual = { shape = "Wedge", size = Vector3.new(1, 1, 3), color = rgb(178, 235, 242), material = M.Ice },
+		stats = {
+			damage = 14,
+			speed = 120,
+			range = 150,
+			radius = 1.5,
+			status = "Slow",
+			statusDuration = 3,
+		},
+		visual = {
+			shape = "Wedge",
+			size = Vector3.new(1, 1, 3),
+			color = rgb(178, 235, 242),
+			material = M.Ice,
+		},
 	},
 	{
 		id = "BouncePad",
@@ -143,7 +187,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 4,
 		description = "A springy pad that launches anyone who steps on it.",
 		stats = { health = 80, lifetime = 40, maxActive = 2, bounce = 110 },
-		visual = { shape = "Cylinder", size = Vector3.new(1, 8, 8), color = rgb(236, 64, 122), material = M.SmoothPlastic },
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(1, 8, 8),
+			color = rgb(236, 64, 122),
+			material = M.SmoothPlastic,
+		},
 	},
 	{
 		id = "MudPuddle",
@@ -155,7 +204,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 7,
 		description = "A sticky puddle that slows enemies inside it.",
 		stats = { radius = 10, duration = 6, status = "Slow", statusDuration = 1, range = 60 },
-		visual = { shape = "Cylinder", size = Vector3.new(0.4, 20, 20), color = rgb(109, 76, 65), material = M.Mud },
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(0.4, 20, 20),
+			color = rgb(109, 76, 65),
+			material = M.Mud,
+		},
 	},
 	{
 		id = "Shield",
@@ -195,7 +249,12 @@ local DEFINITIONS: { SpellDef } = {
 			comboStatus = "Root",
 			comboMultiplier = 2,
 		},
-		visual = { shape = "Block", size = Vector3.new(0.6, 0.6, 4), color = rgb(255, 241, 118), material = M.Neon },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(0.6, 0.6, 4),
+			color = rgb(255, 241, 118),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Ladder",
@@ -207,7 +266,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 3,
 		description = "Climbable steps to reach high ground.",
 		stats = { health = 100, lifetime = 45, maxActive = 2 },
-		visual = { shape = "Wedge", size = Vector3.new(6, 10, 12), color = rgb(188, 140, 90), material = M.Wood },
+		visual = {
+			shape = "Wedge",
+			size = Vector3.new(6, 10, 12),
+			color = rgb(188, 140, 90),
+			material = M.Wood,
+		},
 	},
 	{
 		id = "Dash",
@@ -219,7 +283,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 4,
 		description = "Zoom forward in a burst of speed.",
 		stats = { dashSpeed = 120 },
-		visual = { shape = "Ball", size = Vector3.new(1, 1, 1), color = rgb(255, 255, 255), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(1, 1, 1),
+			color = rgb(255, 255, 255),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Cannon",
@@ -230,8 +299,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Placeable",
 		cooldown = 12,
 		description = "A cannon that fires at the closest enemy.",
-		stats = { health = 200, lifetime = 30, maxActive = 1, turret = true, damage = 12, range = 80 },
-		visual = { shape = "Cylinder", size = Vector3.new(5, 3, 3), color = rgb(69, 90, 100), material = M.Metal },
+		stats = {
+			health = 200,
+			lifetime = 30,
+			maxActive = 1,
+			turret = true,
+			damage = 12,
+			range = 80,
+		},
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(5, 3, 3),
+			color = rgb(69, 90, 100),
+			material = M.Metal,
+		},
 	},
 
 	-- Level 5
@@ -263,7 +344,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 12,
 		description = "A snowman decoy that cannons and summons target first.",
 		stats = { health = 120, lifetime = 20, decoy = true },
-		visual = { shape = "Ball", size = Vector3.new(4, 4, 4), color = rgb(250, 250, 250), material = M.Snow },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(4, 4, 4),
+			color = rgb(250, 250, 250),
+			material = M.Snow,
+		},
 	},
 	{
 		id = "Bridge",
@@ -275,7 +361,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 5,
 		description = "A long plank to cross gaps.",
 		stats = { health = 120, lifetime = 45, maxActive = 2 },
-		visual = { shape = "Block", size = Vector3.new(6, 1, 24), color = rgb(161, 136, 127), material = M.WoodPlanks },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(6, 1, 24),
+			color = rgb(161, 136, 127),
+			material = M.WoodPlanks,
+		},
 	},
 	{
 		id = "BananaPeel",
@@ -286,8 +377,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Placeable",
 		cooldown = 6,
 		description = "A sneaky peel. Enemies who step on it slip and slide.",
-		stats = { health = 20, lifetime = 40, maxActive = 3, trap = true, status = "Slippery", statusDuration = 2.5 },
-		visual = { shape = "Block", size = Vector3.new(2, 0.3, 1.2), color = rgb(255, 235, 59), material = M.SmoothPlastic },
+		stats = {
+			health = 20,
+			lifetime = 40,
+			maxActive = 3,
+			trap = true,
+			status = "Slippery",
+			statusDuration = 2.5,
+		},
+		visual = {
+			shape = "Block",
+			size = Vector3.new(2, 0.3, 1.2),
+			color = rgb(255, 235, 59),
+			material = M.SmoothPlastic,
+		},
 	},
 
 	-- Level 6
@@ -300,8 +403,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Zone",
 		cooldown = 14,
 		description = "Call down a meteor. Big boom after a short warning.",
-		stats = { radius = 14, damage = 45, delay = 1.5, range = 120, knockback = 80, destroysStructures = false },
-		visual = { shape = "Ball", size = Vector3.new(8, 8, 8), color = rgb(255, 87, 34), material = M.CrackedLava },
+		stats = {
+			radius = 14,
+			damage = 45,
+			delay = 1.5,
+			range = 120,
+			knockback = 80,
+			destroysStructures = false,
+		},
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(8, 8, 8),
+			color = rgb(255, 87, 34),
+			material = M.CrackedLava,
+		},
 	},
 	{
 		id = "Teleport",
@@ -313,7 +428,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 8,
 		description = "Blink to where you're aiming.",
 		stats = { teleport = true, range = 50 },
-		visual = { shape = "Ball", size = Vector3.new(3, 3, 3), color = rgb(149, 117, 205), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(3, 3, 3),
+			color = rgb(149, 117, 205),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "VineSnare",
@@ -325,7 +445,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 8,
 		description = "Roots grab every enemy in a small area.",
 		stats = { radius = 10, status = "Root", statusDuration = 1.5, range = 70, damage = 8 },
-		visual = { shape = "Cylinder", size = Vector3.new(0.5, 20, 20), color = rgb(56, 142, 60), material = M.Grass },
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(0.5, 20, 20),
+			color = rgb(56, 142, 60),
+			material = M.Grass,
+		},
 	},
 	{
 		id = "Tower",
@@ -337,7 +462,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 14,
 		description = "A tall tower for high ground.",
 		stats = { health = 500, lifetime = 50, maxActive = 1 },
-		visual = { shape = "Block", size = Vector3.new(8, 18, 8), color = rgb(141, 110, 99), material = M.Brick },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(8, 18, 8),
+			color = rgb(141, 110, 99),
+			material = M.Brick,
+		},
 	},
 
 	-- Level 7
@@ -351,7 +481,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 20,
 		description = "A baby dragon that flies at enemies and breathes fire.",
 		stats = { health = 150, lifetime = 15, flier = true, damage = 10, range = 60 },
-		visual = { shape = "Block", size = Vector3.new(4, 3, 6), color = rgb(229, 57, 53), material = M.SmoothPlastic },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(4, 3, 6),
+			color = rgb(229, 57, 53),
+			material = M.SmoothPlastic,
+		},
 	},
 	{
 		id = "BlackIce",
@@ -381,7 +516,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 9,
 		description = "Yank the enemy you hit toward you.",
 		stats = { damage = 6, speed = 100, range = 100, radius = 2, knockback = -90 },
-		visual = { shape = "Block", size = Vector3.new(2, 2, 1), color = rgb(198, 40, 40), material = M.Metal },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(2, 2, 1),
+			color = rgb(198, 40, 40),
+			material = M.Metal,
+		},
 	},
 	{
 		id = "Balloon",
@@ -393,7 +533,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 7,
 		description = "Float upward to escape or get the high ground.",
 		stats = { lift = 70 },
-		visual = { shape = "Ball", size = Vector3.new(3, 3.5, 3), color = rgb(244, 67, 54), material = M.SmoothPlastic },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(3, 3.5, 3),
+			color = rgb(244, 67, 54),
+			material = M.SmoothPlastic,
+		},
 	},
 
 	-- Level 8
@@ -407,7 +552,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 18,
 		description = "A mini volcano that burns enemies nearby.",
 		stats = { health = 250, lifetime = 20, maxActive = 1, hazardDps = 12, radius = 12 },
-		visual = { shape = "Wedge", size = Vector3.new(10, 7, 10), color = rgb(93, 64, 55), material = M.Basalt },
+		visual = {
+			shape = "Wedge",
+			size = Vector3.new(10, 7, 10),
+			color = rgb(93, 64, 55),
+			material = M.Basalt,
+		},
 	},
 	{
 		id = "Mirror",
@@ -437,7 +587,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 20,
 		description = "A clunky robot buddy that punches enemies.",
 		stats = { health = 220, lifetime = 18, melee = true, damage = 14, range = 60 },
-		visual = { shape = "Block", size = Vector3.new(4, 6, 3), color = rgb(144, 164, 174), material = M.DiamondPlate },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(4, 6, 3),
+			color = rgb(144, 164, 174),
+			material = M.DiamondPlate,
+		},
 	},
 	{
 		id = "Giant",
@@ -449,7 +604,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 18,
 		description = "Grow huge: bigger, tougher, and harder to knock back.",
 		stats = { scale = 1.6, shield = 50, duration = 8 },
-		visual = { shape = "Ball", size = Vector3.new(2, 2, 2), color = rgb(255, 167, 38), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(2, 2, 2),
+			color = rgb(255, 167, 38),
+			material = M.Neon,
+		},
 	},
 
 	-- Level 9
@@ -463,7 +623,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 24,
 		description = "A tiny black hole that drags everything in and crushes it.",
 		stats = { radius = 22, duration = 4, pull = 70, damage = 10, range = 80 },
-		visual = { shape = "Ball", size = Vector3.new(5, 5, 5), color = rgb(20, 0, 40), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(5, 5, 5),
+			color = rgb(20, 0, 40),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Castle",
@@ -475,7 +640,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 22,
 		description = "A big castle wall. Very hard to break.",
 		stats = { health = 800, lifetime = 50, maxActive = 1 },
-		visual = { shape = "Block", size = Vector3.new(20, 14, 4), color = rgb(176, 168, 160), material = M.Cobblestone },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(20, 14, 4),
+			color = rgb(176, 168, 160),
+			material = M.Cobblestone,
+		},
 	},
 	{
 		id = "Shrink",
@@ -486,8 +656,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Control",
 		cooldown = 14,
 		description = "Shrink an enemy so they're tiny and weak for 4 seconds.",
-		stats = { damage = 4, speed = 100, range = 110, radius = 2, status = "Shrink", statusDuration = 4 },
-		visual = { shape = "Ball", size = Vector3.new(1.5, 1.5, 1.5), color = rgb(240, 98, 146), material = M.Neon },
+		stats = {
+			damage = 4,
+			speed = 100,
+			range = 110,
+			radius = 2,
+			status = "Shrink",
+			statusDuration = 4,
+		},
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(1.5, 1.5, 1.5),
+			color = rgb(240, 98, 146),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Rainbow",
@@ -519,7 +701,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 40,
 		description = "If you're knocked out in the next 10 seconds, rise again at half health.",
 		stats = { revive = true, duration = 10 },
-		visual = { shape = "Ball", size = Vector3.new(3, 3, 3), color = rgb(255, 145, 0), material = M.Neon },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(3, 3, 3),
+			color = rgb(255, 145, 0),
+			material = M.Neon,
+		},
 	},
 	{
 		id = "Earthquake",
@@ -530,8 +717,20 @@ local DEFINITIONS: { SpellDef } = {
 		archetype = "Zone",
 		cooldown = 30,
 		description = "Shake the ground. Smashes structures and knocks players around.",
-		stats = { radius = 30, damage = 20, delay = 0.5, knockback = 60, destroysStructures = true, range = 40 },
-		visual = { shape = "Cylinder", size = Vector3.new(0.5, 60, 60), color = rgb(121, 85, 72), material = M.Ground },
+		stats = {
+			radius = 30,
+			damage = 20,
+			delay = 0.5,
+			knockback = 60,
+			destroysStructures = true,
+			range = 40,
+		},
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(0.5, 60, 60),
+			color = rgb(121, 85, 72),
+			material = M.Ground,
+		},
 	},
 	{
 		id = "TimeStop",
@@ -561,7 +760,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 30,
 		description = "A giant kraken tentacle that slams enemies around it.",
 		stats = { health = 300, lifetime = 12, damage = 18, radius = 16, range = 60 },
-		visual = { shape = "Cylinder", size = Vector3.new(14, 3, 3), color = rgb(123, 31, 162), material = M.SmoothPlastic },
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(14, 3, 3),
+			color = rgb(123, 31, 162),
+			material = M.SmoothPlastic,
+		},
 	},
 	{
 		id = "WizardHat",
@@ -573,7 +777,12 @@ local DEFINITIONS: { SpellDef } = {
 		cooldown = 30,
 		description = "All your cooldowns are cut in half for 8 seconds.",
 		stats = { cooldownCut = 0.5, duration = 8 },
-		visual = { shape = "Wedge", size = Vector3.new(2, 3, 2), color = rgb(63, 81, 181), material = M.Fabric },
+		visual = {
+			shape = "Wedge",
+			size = Vector3.new(2, 3, 2),
+			color = rgb(63, 81, 181),
+			material = M.Fabric,
+		},
 	},
 }
 

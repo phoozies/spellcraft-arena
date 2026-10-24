@@ -24,7 +24,13 @@ local function groundAt(point: Vector3, ignore: { Instance }): Vector3
 	return if hit then hit.Position else point
 end
 
-local function disc(center: Vector3, radius: number, color: Color3, material: Enum.Material, transparency: number): Part
+local function disc(
+	center: Vector3,
+	radius: number,
+	color: Color3,
+	material: Enum.Material,
+	transparency: number
+): Part
 	local part = Instance.new("Part")
 	part.Shape = Enum.PartType.Cylinder
 	part.Size = Vector3.new(0.3, radius * 2, radius * 2)
@@ -54,7 +60,10 @@ local function burst(ctx: any, center: Vector3)
 				local away = hit.position - center
 				local flat = Vector3.new(away.X, 0, away.Z)
 				local dir = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zero
-				DestructibleService.push(hit.character, dir * stats.knockback + Vector3.new(0, stats.knockback * 0.6, 0))
+				DestructibleService.push(
+					hit.character,
+					dir * stats.knockback + Vector3.new(0, stats.knockback * 0.6, 0)
+				)
 			end
 		elseif stats.destroysStructures then
 			DestructibleService.damage(hit.instance, 10000, ctx.player, ctx.def.name)
@@ -86,9 +95,13 @@ function Zone.cast(ctx: any): boolean?
 			rock.CanQuery = false
 			rock.CFrame = CFrame.new(center + Vector3.new(0, 80, 0))
 			rock.Parent = workspace
-			TweenService:Create(rock, TweenInfo.new(stats.delay, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				CFrame = CFrame.new(center),
-			}):Play()
+			TweenService:Create(
+				rock,
+				TweenInfo.new(stats.delay, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{
+					CFrame = CFrame.new(center),
+				}
+			):Play()
 			Debris:AddItem(rock, stats.delay)
 		end
 		task.delay(stats.delay, burst, ctx, center)
@@ -98,7 +111,10 @@ function Zone.cast(ctx: any): boolean?
 	local duration = stats.duration or 3
 	local area = disc(center, radius, visual.color, visual.material, visual.transparency or 0.3)
 	area.Name = ctx.def.name
-	if visual.shape == "Ball" or (visual.shape == "Cylinder" and not (visual.size.X < visual.size.Y)) then
+	if
+		visual.shape == "Ball"
+		or (visual.shape == "Cylinder" and not (visual.size.X < visual.size.Y))
+	then
 		-- Vertical swirl (Tornado, Black Hole) on top of the ground disc.
 		local swirl = Instance.new("Part")
 		swirl.Shape = if visual.shape == "Ball" then Enum.PartType.Ball else Enum.PartType.Cylinder
@@ -109,7 +125,8 @@ function Zone.cast(ctx: any): boolean?
 		swirl.Anchored = true
 		swirl.CanCollide = false
 		swirl.CanQuery = false
-		swirl.CFrame = CFrame.new(center + Vector3.new(0, visual.size.X / 2 + 1, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		swirl.CFrame = CFrame.new(center + Vector3.new(0, visual.size.X / 2 + 1, 0))
+			* CFrame.Angles(0, 0, math.pi / 2)
 		-- Clients spin anything tagged SpinFx locally (no per-frame replication).
 		swirl:AddTag("SpinFx")
 		swirl.Parent = area
@@ -122,16 +139,28 @@ function Zone.cast(ctx: any): boolean?
 			for _, hit in ctx.enemiesNear(center, radius) do
 				if hit.character then
 					if stats.status then
-						StatusService.apply(hit.character, stats.status, stats.statusDuration or TICK * 2)
+						StatusService.apply(
+							hit.character,
+							stats.status,
+							stats.statusDuration or TICK * 2
+						)
 					end
 					if stats.damage then
-						DestructibleService.damage(hit.character, stats.damage * TICK, ctx.player, ctx.def.name)
+						DestructibleService.damage(
+							hit.character,
+							stats.damage * TICK,
+							ctx.player,
+							ctx.def.name
+						)
 					end
 					if stats.pull then
 						local toCenter = center - hit.position
 						local flat = Vector3.new(toCenter.X, 0, toCenter.Z)
 						if flat.Magnitude > 2 then
-							DestructibleService.push(hit.character, flat.Unit * stats.pull + Vector3.new(0, 6, 0))
+							DestructibleService.push(
+								hit.character,
+								flat.Unit * stats.pull + Vector3.new(0, 6, 0)
+							)
 						end
 					end
 				end

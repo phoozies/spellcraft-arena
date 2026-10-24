@@ -71,7 +71,19 @@ local function recompute(character: Model)
 		end)
 	end
 
-	for _, kind in { "Root", "Slow", "Shrink", "TimeStop", "Slippery", "Giant", "Reflect", "Revive", "CooldownCut" } do
+	for _, kind in
+		{
+			"Root",
+			"Slow",
+			"Shrink",
+			"TimeStop",
+			"Slippery",
+			"Giant",
+			"Reflect",
+			"Revive",
+			"CooldownCut",
+		}
+	do
 		character:SetAttribute("Status_" .. kind, if active(character, kind) then true else nil)
 	end
 end

@@ -66,7 +66,8 @@ return function(makeProp: Registrar): Model
 			ramp.Name = "Ramp"
 			ramp.Anchored = true
 			ramp.Size = Vector3.new(16, 14, 22)
-			ramp.CFrame = CFrame.new(x, 7, z * 56) * CFrame.Angles(0, if z > 0 then math.pi else 0, 0)
+			ramp.CFrame = CFrame.new(x, 7, z * 56)
+				* CFrame.Angles(0, if z > 0 then math.pi else 0, 0)
 			ramp.Color = Color3.fromRGB(255, 183, 77)
 			ramp.Material = Enum.Material.Sandstone
 			ramp.Parent = model

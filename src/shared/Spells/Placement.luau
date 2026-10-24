@@ -51,7 +51,8 @@ function Placement.isClear(visual: Types.Visual, cframe: CFrame, ignore: { Insta
 	params.FilterDescendantsInstances = ignore
 	params.RespectCanCollide = true
 	local bounds = Placement.boundsSize(visual)
-	local size = Vector3.new(bounds.X * 0.85, math.max(bounds.Y * 0.85 - 0.3, 0.05), bounds.Z * 0.85)
+	local size =
+		Vector3.new(bounds.X * 0.85, math.max(bounds.Y * 0.85 - 0.3, 0.05), bounds.Z * 0.85)
 	local hits = workspace:GetPartBoundsInBox(cframe, size, params)
 	return #hits == 0
 end
@@ -61,7 +62,11 @@ function Placement.inRegions(point: Vector3, regions: { BasePart }): boolean
 	for _, region in regions do
 		local localPoint = region.CFrame:PointToObjectSpace(point)
 		local half = region.Size / 2
-		if math.abs(localPoint.X) <= half.X and math.abs(localPoint.Z) <= half.Z and math.abs(localPoint.Y) <= half.Y then
+		if
+			math.abs(localPoint.X) <= half.X
+			and math.abs(localPoint.Z) <= half.Z
+			and math.abs(localPoint.Y) <= half.Y
+		then
 			return true
 		end
 	end

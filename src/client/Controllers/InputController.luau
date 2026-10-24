@@ -119,7 +119,8 @@ local function cycleSlot(direction: number)
 	Remotes.get("SelectSlot"):FireServer(index)
 end
 
-local SLOT_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five }
+local SLOT_KEYS =
+	{ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five }
 
 function InputController.start()
 	PlacementController.setAimProvider(function()
@@ -169,7 +170,9 @@ function InputController.start()
 
 	ContextActionService:BindAction("WordcraftRotate", function(_, state, input)
 		if state == Enum.UserInputState.Begin and PlacementController.isActive() then
-			PlacementController.rotate(if input.KeyCode == Enum.KeyCode.ButtonL1 then -math.pi / 4 else math.pi / 4)
+			PlacementController.rotate(
+				if input.KeyCode == Enum.KeyCode.ButtonL1 then -math.pi / 4 else math.pi / 4
+			)
 			return Enum.ContextActionResult.Sink
 		end
 		return Enum.ContextActionResult.Pass

@@ -35,7 +35,9 @@ local function addKey(key: string, id: string)
 	end
 	local existing = exact[key]
 	if existing ~= nil and existing ~= id then
-		warn(`[WordMatcher] alias "{key}" is claimed by both {existing} and {id}; keeping {existing}`)
+		warn(
+			`[WordMatcher] alias "{key}" is claimed by both {existing} and {id}; keeping {existing}`
+		)
 		return
 	end
 	if existing == nil then

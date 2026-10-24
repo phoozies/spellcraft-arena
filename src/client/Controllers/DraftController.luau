@@ -80,7 +80,14 @@ local function show(cards: { Types.DraftCard })
 			uiScale.Parent = button
 			TweenService:Create(
 				uiScale,
-				TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, index * 0.12),
+				TweenInfo.new(
+					0.35,
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.Out,
+					0,
+					false,
+					index * 0.12
+				),
 				{ Scale = 1 }
 			):Play()
 			first = first or button

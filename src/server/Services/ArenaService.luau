@@ -48,7 +48,11 @@ local function wireJumpPad(pad: Instance)
 	local debounce: { [Model]: number } = setmetatable({}, { __mode = "k" }) :: any
 	pad.Touched:Connect(function(hit)
 		local character = hit.Parent
-		if not character or not character:IsA("Model") or not Players:GetPlayerFromCharacter(character) then
+		if
+			not character
+			or not character:IsA("Model")
+			or not Players:GetPlayerFromCharacter(character)
+		then
 			return
 		end
 		local now = os.clock()

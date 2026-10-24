@@ -72,14 +72,26 @@ local function enemiesNear(caster: Player, position: Vector3, radius: number): {
 			and (root.Position - position).Magnitude <= radius
 			and DestructibleService.canHarm(caster, character)
 		then
-			table.insert(results, { character = character, instance = character, player = other, position = root.Position })
+			table.insert(results, {
+				character = character,
+				instance = character,
+				player = other,
+				position = root.Position,
+			})
 		end
 	end
 	for _, thing in CollectionService:GetTagged("Destructible") do
 		if thing:IsA("Model") or thing:IsA("BasePart") then
-			local pos = if thing:IsA("Model") then thing:GetPivot().Position else (thing :: BasePart).Position
-			if (pos - position).Magnitude <= radius and DestructibleService.canHarm(caster, thing) then
-				table.insert(results, { character = nil, instance = thing, player = nil, position = pos })
+			local pos = if thing:IsA("Model")
+				then thing:GetPivot().Position
+				else (thing :: BasePart).Position
+			if
+				(pos - position).Magnitude <= radius and DestructibleService.canHarm(caster, thing)
+			then
+				table.insert(
+					results,
+					{ character = nil, instance = thing, player = nil, position = pos }
+				)
 			end
 		end
 	end
@@ -120,7 +132,9 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if not isFiniteVector(target) then
 		return
 	end
-	local rotation = if typeof(rotationY) == "number" and rotationY == rotationY then rotationY % (2 * math.pi) else 0
+	local rotation = if typeof(rotationY) == "number" and rotationY == rotationY
+		then rotationY % (2 * math.pi)
+		else 0
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")

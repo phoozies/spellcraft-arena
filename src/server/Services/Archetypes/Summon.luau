@@ -45,7 +45,8 @@ function Summon.cast(ctx: any): boolean?
 	end
 	local ground = down.Position
 
-	local model = DestructibleService.build(def.name, visual, stats.health or 100, ctx.player, ctx.team)
+	local model =
+		DestructibleService.build(def.name, visual, stats.health or 100, ctx.player, ctx.team)
 	model:SetAttribute("SpellId", def.id)
 	if stats.decoy then
 		model:SetAttribute("Decoy", true)
@@ -53,7 +54,8 @@ function Summon.cast(ctx: any): boolean?
 	local body = model.PrimaryPart :: BasePart
 	local hover = if stats.flier then 8 else 0
 	local height = Placement.height(visual)
-	body.CFrame = CFrame.new(ground + Vector3.new(0, height / 2 + hover, 0)) * Placement.partOffset(visual)
+	body.CFrame = CFrame.new(ground + Vector3.new(0, height / 2 + hover, 0))
+		* Placement.partOffset(visual)
 
 	-- Simple face so summons read as creatures, not crates.
 	local face = Instance.new("Decal")
@@ -84,11 +86,20 @@ function Summon.cast(ctx: any): boolean?
 			if stats.melee then
 				if flat.Magnitude > 4 then
 					local stepVec = flat.Unit * math.min(WALK_SPEED * STEP, flat.Magnitude - 3)
-					body.CFrame = CFrame.lookAt(body.Position + stepVec, body.Position + stepVec + flat.Unit)
+					body.CFrame =
+						CFrame.lookAt(body.Position + stepVec, body.Position + stepVec + flat.Unit)
 				elseif now >= nextAttack then
 					nextAttack = now + 1
-					DestructibleService.damage(target.instance, stats.damage or 10, ctx.player, def.name)
-					DestructibleService.push(target.instance, flat.Unit * 50 + Vector3.new(0, 20, 0))
+					DestructibleService.damage(
+						target.instance,
+						stats.damage or 10,
+						ctx.player,
+						def.name
+					)
+					DestructibleService.push(
+						target.instance,
+						flat.Unit * 50 + Vector3.new(0, 20, 0)
+					)
 				end
 			elseif stats.flier then
 				local desired = target.position + Vector3.new(0, 10, 0) - flat.Unit * 12
@@ -100,7 +111,12 @@ function Summon.cast(ctx: any): boolean?
 						caster = ctx.player,
 						origin = body.Position + direction * 4,
 						direction = direction,
-						stats = { damage = stats.damage or 10, speed = 90, range = 90, radius = 1.5 },
+						stats = {
+							damage = stats.damage or 10,
+							speed = 90,
+							range = 90,
+							radius = 1.5,
+						},
 						visual = {
 							shape = "Ball",
 							size = Vector3.new(1.6, 1.6, 1.6),
@@ -118,7 +134,12 @@ function Summon.cast(ctx: any): boolean?
 				DestructibleService.poof(body.Position, visual.color)
 				for _, hit in ctx.enemiesNear(body.Position, radius) do
 					if hit.character then
-						DestructibleService.damage(hit.character, stats.damage or 15, ctx.player, def.name)
+						DestructibleService.damage(
+							hit.character,
+							stats.damage or 15,
+							ctx.player,
+							def.name
+						)
 						local away = hit.position - body.Position
 						local awayFlat = Vector3.new(away.X, 0, away.Z)
 						local dir = if awayFlat.Magnitude > 0.1 then awayFlat.Unit else Vector3.zero

@@ -61,7 +61,11 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 		return
 	end
 	local damage = stats.damage or 0
-	if isCharacter and stats.comboStatus and StatusService.has(target :: Model, stats.comboStatus) then
+	if
+		isCharacter
+		and stats.comboStatus
+		and StatusService.has(target :: Model, stats.comboStatus)
+	then
 		damage *= stats.comboMultiplier or 1
 	end
 	local dealt = DestructibleService.damage(target, damage, opts.caster, opts.spellName)
@@ -76,12 +80,20 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 		if stats.knockback and stats.knockback ~= 0 then
 			local flat = Vector3.new(direction.X, 0, direction.Z)
 			local push = if flat.Magnitude > 0 then flat.Unit else Vector3.zero
-			DestructibleService.push(character, push * stats.knockback + Vector3.new(0, math.abs(stats.knockback) * 0.35, 0))
+			DestructibleService.push(
+				character,
+				push * stats.knockback + Vector3.new(0, math.abs(stats.knockback) * 0.35, 0)
+			)
 		end
 	end
 end
 
-local function chainFrom(opts: LaunchOptions, from: Vector3, already: { [Instance]: boolean }, remaining: number)
+local function chainFrom(
+	opts: LaunchOptions,
+	from: Vector3,
+	already: { [Instance]: boolean },
+	remaining: number
+)
 	if remaining <= 0 or not opts.caster then
 		return
 	end
@@ -90,7 +102,12 @@ local function chainFrom(opts: LaunchOptions, from: Vector3, already: { [Instanc
 	for _, other in Players:GetPlayers() do
 		local character = other.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if character and root and not already[character] and DestructibleService.canHarm(opts.caster, character) then
+		if
+			character
+			and root
+			and not already[character]
+			and DestructibleService.canHarm(opts.caster, character)
+		then
 			local d = (root.Position - from).Magnitude
 			if d < bestDist then
 				best, bestDist = character, d
@@ -209,7 +226,15 @@ function Projectile.launch(opts: LaunchOptions)
 		params = params,
 	}
 	table.insert(live, p)
-	fxRemote:FireAllClients("projectile", p.id, p.position, direction, p.speed, p.range, opts.visual)
+	fxRemote:FireAllClients(
+		"projectile",
+		p.id,
+		p.position,
+		direction,
+		p.speed,
+		p.range,
+		opts.visual
+	)
 	if not loop then
 		loop = RunService.Heartbeat:Connect(tick)
 	end

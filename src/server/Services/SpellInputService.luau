@@ -37,11 +37,17 @@ local function allow(player: Player): boolean
 end
 
 -- Returns the spell id that was readied, or nil.
-function SpellInputService.submit(player: Player, text: string, source: "chat" | "box" | "voice"): string?
+function SpellInputService.submit(
+	player: Player,
+	text: string,
+	source: "chat" | "box" | "voice"
+): string?
 	if not allow(player) then
 		return nil
 	end
-	local spellId = if source == "voice" then WordMatcher.findInText(text) else WordMatcher.matchWord(text)
+	local spellId = if source == "voice"
+		then WordMatcher.findInText(text)
+		else WordMatcher.matchWord(text)
 	if not spellId then
 		if source ~= "chat" then
 			local hints = Config.FIZZLE_HINTS
@@ -63,7 +69,9 @@ end
 
 local function hookChat()
 	if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService then
-		warn("[SpellInput] Legacy chat detected; chat casting disabled (spell box and voice still work).")
+		warn(
+			"[SpellInput] Legacy chat detected; chat casting disabled (spell box and voice still work)."
+		)
 		return
 	end
 	local channels = TextChatService:WaitForChild("TextChannels", 30)

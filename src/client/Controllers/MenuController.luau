@@ -181,11 +181,14 @@ local function refreshSpellbook()
 	for index, def in SpellDefinitions.list do
 		local info = Rarity.INFO[def.rarity]
 		local has = owned[def.id] == true
-		local button = Theme.button(spellbookGrid, if has then def.name else `🔒 Lv {def.unlockLevel}`, {
-			LayoutOrder = def.unlockLevel * 100 + index,
-			BackgroundColor3 = if has then Theme.COLORS.panelLight else Color3.fromRGB(45, 45, 60),
-			TextColor3 = if has then Theme.COLORS.text else Theme.COLORS.subtext,
-		})
+		local button =
+			Theme.button(spellbookGrid, if has then def.name else `🔒 Lv {def.unlockLevel}`, {
+				LayoutOrder = def.unlockLevel * 100 + index,
+				BackgroundColor3 = if has
+					then Theme.COLORS.panelLight
+					else Color3.fromRGB(45, 45, 60),
+				TextColor3 = if has then Theme.COLORS.text else Theme.COLORS.subtext,
+			})
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			stroke.Color = info.color
@@ -242,13 +245,19 @@ local function refreshQuests()
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
 		local done = quest.progress >= quest.goal
-		local claim = Theme.button(row, if quest.claimed then "Claimed" elseif done then "Claim!" else "In progress", {
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -10, 0.5, 0),
-			Size = UDim2.fromOffset(130, Theme.TOUCH),
-			BackgroundColor3 = if done and not quest.claimed then Theme.COLORS.good else Theme.COLORS.panel,
-			Active = done and not quest.claimed,
-		})
+		local claim = Theme.button(
+			row,
+			if quest.claimed then "Claimed" elseif done then "Claim!" else "In progress",
+			{
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -10, 0.5, 0),
+				Size = UDim2.fromOffset(130, Theme.TOUCH),
+				BackgroundColor3 = if done and not quest.claimed
+					then Theme.COLORS.good
+					else Theme.COLORS.panel,
+				Active = done and not quest.claimed,
+			}
+		)
 		claim.Activated:Connect(function()
 			if done and not quest.claimed then
 				Remotes.get("ClaimQuest"):FireServer(quest.id)
@@ -268,7 +277,9 @@ local function buildSideButtons(root: Instance)
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = holder
-	for _, entry in { { "Play", "▶ Play" }, { "Spellbook", "📖 Spells" }, { "Quests", "⭐ Quests" } } do
+	for _, entry in
+		{ { "Play", "▶ Play" }, { "Spellbook", "📖 Spells" }, { "Quests", "⭐ Quests" } }
+	do
 		local button = Theme.button(holder, entry[2], { Size = UDim2.new(1, 0, 0, Theme.TOUCH) })
 		button.Activated:Connect(function()
 			MenuController.toggle(entry[1])

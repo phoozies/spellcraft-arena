@@ -56,10 +56,12 @@ function DebugService.start()
 			DebugService.run(player, command, arg)
 		end
 	end)
+
 	-- Handy from the Studio command bar / MCP execute_luau:
 	--   _G.WordcraftDebug("solo", "1v1")
 	-- selene: allow(global_usage)
-	;(_G :: any).WordcraftDebug = function(command: string, arg: any)
+	local globals: any = _G
+	globals.WordcraftDebug = function(command: string, arg: any)
 		for _, player in Players:GetPlayers() do
 			DebugService.run(player, command, arg)
 		end

@@ -17,10 +17,34 @@ local Rarity = {}
 Rarity.ORDER = { "Common", "Rare", "Epic", "Legendary" } :: { Types.Rarity }
 
 Rarity.INFO = table.freeze({
-	Common = { name = "Common", weight = 60, color = Color3.fromRGB(176, 190, 197), glyph = "●", order = 1 },
-	Rare = { name = "Rare", weight = 28, color = Color3.fromRGB(66, 165, 245), glyph = "◆", order = 2 },
-	Epic = { name = "Epic", weight = 10, color = Color3.fromRGB(171, 71, 188), glyph = "★", order = 3 },
-	Legendary = { name = "Legendary", weight = 2, color = Color3.fromRGB(255, 179, 0), glyph = "✦", order = 4 },
+	Common = {
+		name = "Common",
+		weight = 60,
+		color = Color3.fromRGB(176, 190, 197),
+		glyph = "●",
+		order = 1,
+	},
+	Rare = {
+		name = "Rare",
+		weight = 28,
+		color = Color3.fromRGB(66, 165, 245),
+		glyph = "◆",
+		order = 2,
+	},
+	Epic = {
+		name = "Epic",
+		weight = 10,
+		color = Color3.fromRGB(171, 71, 188),
+		glyph = "★",
+		order = 3,
+	},
+	Legendary = {
+		name = "Legendary",
+		weight = 2,
+		color = Color3.fromRGB(255, 179, 0),
+		glyph = "✦",
+		order = 4,
+	},
 } :: { [Types.Rarity]: RarityInfo })
 
 -- Rolls a rarity using the weights above. `roll` is a number in [0, 1);

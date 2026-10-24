@@ -53,7 +53,7 @@ type Match = {
 local MatchService = {}
 
 -- Fired with (player, mode) when someone joins/leaves a queue, for UI.
-MatchService.QueueChanged = Signal.new() :: Signal.Signal<>
+MatchService.QueueChanged = Signal.new()
 
 local queues: { [string]: { Player } } = { ["1v1"] = {}, ["2v2"] = {}, ["4v4"] = {}, ["FFA"] = {} }
 local ffaReadySince: number? = nil
@@ -218,7 +218,9 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 		-- Unowned map props: breakable only by players in that arena's match.
 		if attacker then
 			local match = playerMatch[attacker]
-			return match ~= nil and match.phase == "Round" and target:IsDescendantOf(match.arena.model)
+			return match ~= nil
+				and match.phase == "Round"
+				and target:IsDescendantOf(match.arena.model)
 		end
 		return true
 	end
@@ -273,7 +275,12 @@ local function spawnRound(match: Match)
 	end
 end
 
-local function waitPhase(match: Match, phase: Types.MatchPhase, seconds: number, stopEarly: (() -> boolean)?)
+local function waitPhase(
+	match: Match,
+	phase: Types.MatchPhase,
+	seconds: number,
+	stopEarly: (() -> boolean)?
+)
 	match.phase = phase
 	match.endsAt = workspace:GetServerTimeNow() + seconds
 	sendState(match)
@@ -310,7 +317,11 @@ local function runDraft(match: Match)
 			local card = cards[math.random(1, #cards)]
 			HandService.addToMatchHand(player, card.spellId)
 			local def = SpellDefinitions.get(card.spellId)
-			toastRemote:FireClient(player, `Auto-picked {if def then def.name else card.spellId}`, "ready")
+			toastRemote:FireClient(
+				player,
+				`Auto-picked {if def then def.name else card.spellId}`,
+				"ready"
+			)
 		end
 	end
 	table.clear(match.offers)
@@ -333,9 +344,15 @@ local function playRound(match: Match): string?
 	waitPhase(match, "Round", Config.ROUND_TIME, function()
 		-- Ring-outs: anyone who fell into the void is knocked out.
 		for _, player in connected(match) do
-			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local root = player.Character
+				and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if root and humanoid and humanoid.Health > 0 and ArenaService.isBelowVoid(match.arena, root.Position) then
+			if
+				root
+				and humanoid
+				and humanoid.Health > 0
+				and ArenaService.isBelowVoid(match.arena, root.Position)
+			then
 				humanoid.Health = 0
 			end
 		end
@@ -390,7 +407,11 @@ local function finishMatch(match: Match, winner: string?)
 			ProgressionService.track(player, "win")
 			if ProgressionService.consumeFirstWin(player) then
 				grantXp(match, player, Config.XP.FIRST_WIN_OF_DAY)
-				toastRemote:FireClient(player, `First win of the day! +{Config.XP.FIRST_WIN_OF_DAY} XP`, "reward")
+				toastRemote:FireClient(
+					player,
+					`First win of the day! +{Config.XP.FIRST_WIN_OF_DAY} XP`,
+					"reward"
+				)
 			end
 		end
 		toastRemote:FireClient(
@@ -409,12 +430,15 @@ local function finishMatch(match: Match, winner: string?)
 				if player.Parent then
 					HandService.clearMatchHand(player)
 					MatchService.spawnInHub(player)
-					stateRemote:FireClient(player, {
-						phase = "Idle",
-						round = 0,
-						endsAt = 0,
-						scores = {},
-					} :: Types.MatchState)
+					stateRemote:FireClient(
+						player,
+						{
+							phase = "Idle",
+							round = 0,
+							endsAt = 0,
+							scores = {},
+						} :: Types.MatchState
+					)
 				end
 			end
 		end
@@ -458,7 +482,11 @@ local function runMatch(match: Match)
 	finishMatch(match, winner)
 end
 
-function MatchService.startMatch(mode: Types.MatchMode, players: { Player }, options: { solo: boolean? }?)
+function MatchService.startMatch(
+	mode: Types.MatchMode,
+	players: { Player },
+	options: { solo: boolean? }?
+)
 	matchCounter += 1
 	local arena = ArenaService.create(ArenaService.pickMap(mode), mode)
 	local match: Match = {
@@ -507,7 +535,11 @@ function MatchService.startMatch(mode: Types.MatchMode, players: { Player }, opt
 			table.insert(hand, id)
 		end
 		HandService.setMatchHand(player, hand)
-		toastRemote:FireClient(player, `Match found: {mode} on {ArenaService.DISPLAY_NAMES[arena.mapName]}!`, "round")
+		toastRemote:FireClient(
+			player,
+			`Match found: {mode} on {ArenaService.DISPLAY_NAMES[arena.mapName]}!`,
+			"round"
+		)
 	end
 	task.spawn(runMatch, match)
 end
@@ -588,7 +620,10 @@ local function processQueues()
 		if mode == "FFA" then
 			if #list >= info.minPlayers then
 				ffaReadySince = ffaReadySince or os.clock()
-				if #list >= info.maxPlayers or os.clock() - (ffaReadySince :: number) >= Config.FFA_FILL_WAIT then
+				if
+					#list >= info.maxPlayers
+					or os.clock() - (ffaReadySince :: number) >= Config.FFA_FILL_WAIT
+				then
 					local group = {}
 					for i = 1, math.min(#list, info.maxPlayers) do
 						table.insert(group, list[i])

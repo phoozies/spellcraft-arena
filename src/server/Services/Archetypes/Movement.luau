@@ -31,12 +31,15 @@ function Movement.cast(ctx: any): boolean?
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = { ctx.character }
-		local down = workspace:Raycast(ctx.target + Vector3.new(0, 5, 0), Vector3.new(0, -50, 0), params)
+		local down =
+			workspace:Raycast(ctx.target + Vector3.new(0, 5, 0), Vector3.new(0, -50, 0), params)
 		if not down or not Placement.inRegions(down.Position, ctx.buildRegions) then
 			return false
 		end
 		trail(ctx)
-		ctx.character:PivotTo(CFrame.new(down.Position + Vector3.new(0, 3.5, 0)) * root.CFrame.Rotation)
+		ctx.character:PivotTo(
+			CFrame.new(down.Position + Vector3.new(0, 3.5, 0)) * root.CFrame.Rotation
+		)
 		trail(ctx)
 		return true
 	end
@@ -57,7 +60,10 @@ function Movement.cast(ctx: any): boolean?
 		weld.Parent = balloon
 		balloon.Parent = ctx.character
 		Debris:AddItem(balloon, 2)
-		DestructibleService.boost(ctx.character, Vector3.new(0, stats.lift, 0) + root.CFrame.LookVector * 10)
+		DestructibleService.boost(
+			ctx.character,
+			Vector3.new(0, stats.lift, 0) + root.CFrame.LookVector * 10
+		)
 		return true
 	end
 	return false

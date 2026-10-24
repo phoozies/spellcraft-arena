@@ -69,8 +69,11 @@ function Control.cast(ctx: any): boolean?
 	ring.CanCollide = false
 	ring.CanQuery = false
 	ring.Parent = workspace
-	TweenService:Create(ring, TweenInfo.new(0.35), { Size = Vector3.new(0.4, radius * 2, radius * 2), Transparency = 0.8 })
-		:Play()
+	TweenService:Create(
+		ring,
+		TweenInfo.new(0.35),
+		{ Size = Vector3.new(0.4, radius * 2, radius * 2), Transparency = 0.8 }
+	):Play()
 	Debris:AddItem(ring, 0.6)
 
 	for _, hit in ctx.enemiesNear(center, radius) do

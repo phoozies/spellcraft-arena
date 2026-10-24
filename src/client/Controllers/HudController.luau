@@ -23,7 +23,16 @@ local player = Players.LocalPlayer
 local HudController = {}
 
 local gui: ScreenGui
-local slots: { { button: TextButton, cooldown: Frame, cooldownText: TextLabel, icon: TextLabel, name: TextLabel, stroke: UIStroke } } =
+local slots: {
+	{
+		button: TextButton,
+		cooldown: Frame,
+		cooldownText: TextLabel,
+		icon: TextLabel,
+		name: TextLabel,
+		stroke: UIStroke,
+	}
+} =
 	{}
 local spellBox: TextBox
 local micButton: TextButton
@@ -60,7 +69,11 @@ function HudController.toast(message: string, kind: string?)
 	})
 	Theme.corner(frame, 10)
 	Theme.stroke(frame, Color3.fromRGB(20, 20, 40), 2)
-	Theme.label(frame, message, { Size = UDim2.new(1, -16, 1, -8), Position = UDim2.fromOffset(8, 4) })
+	Theme.label(
+		frame,
+		message,
+		{ Size = UDim2.new(1, -16, 1, -8), Position = UDim2.fromOffset(8, 4) }
+	)
 	-- Keep at most 4 toasts.
 	local count = 0
 	for _, child in toastHolder:GetChildren() do
@@ -149,7 +162,14 @@ local function buildHotbar(root: Frame)
 		button.Activated:Connect(function()
 			Remotes.get("SelectSlot"):FireServer(i)
 		end)
-		slots[i] = { button = button, cooldown = cooldown, cooldownText = cooldownText, icon = icon, name = name, stroke = stroke }
+		slots[i] = {
+			button = button,
+			cooldown = cooldown,
+			cooldownText = cooldownText,
+			icon = icon,
+			name = name,
+			stroke = stroke,
+		}
 	end
 end
 
@@ -163,7 +183,9 @@ local function refreshHotbar()
 			slot.icon.Text = info.glyph
 			slot.icon.TextColor3 = def.visual.color
 			slot.name.Text = def.name
-			slot.stroke.Color = if id == ClientState.readied then Theme.COLORS.accent else info.color
+			slot.stroke.Color = if id == ClientState.readied
+				then Theme.COLORS.accent
+				else info.color
 			slot.stroke.Thickness = if id == ClientState.readied then 5 else 3
 			slot.button.BackgroundColor3 = if id == ClientState.readied
 				then Color3.fromRGB(84, 80, 140)
@@ -301,7 +323,9 @@ local function refreshLevel()
 	end
 	levelLabel.Text = `Lv {profile.level}`
 	local ratio = if profile.xpNeeded > 0 then profile.xpInto / profile.xpNeeded else 1
-	TweenService:Create(xpFill, TweenInfo.new(0.4), { Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1) }):Play()
+	TweenService
+		:Create(xpFill, TweenInfo.new(0.4), { Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1) })
+		:Play()
 end
 
 local function buildMatchBar(root: Frame)
@@ -314,7 +338,11 @@ local function buildMatchBar(root: Frame)
 		Visible = false,
 	})
 	Theme.corner(matchBar)
-	matchText = Theme.label(matchBar, "", { Size = UDim2.new(1, -16, 0.5, 0), Position = UDim2.fromOffset(8, 2) })
+	matchText = Theme.label(
+		matchBar,
+		"",
+		{ Size = UDim2.new(1, -16, 0.5, 0), Position = UDim2.fromOffset(8, 2) }
+	)
 	scoreText = Theme.label(matchBar, "", {
 		Size = UDim2.new(1, -16, 0.45, 0),
 		Position = UDim2.new(0, 8, 0.52, 0),
@@ -328,7 +356,10 @@ local function refreshMatch()
 	matchBar.Visible = state.phase ~= "Idle"
 	local parts = {}
 	for team, wins in state.scores do
-		local color = if team == "Blue" then "#42A5F5" elseif team == "Red" then "#EF5350" else "#FFCA28"
+		local color = if team == "Blue"
+			then "#42A5F5"
+			elseif team == "Red" then "#EF5350"
+			else "#FFCA28"
 		local mine = if team == state.myTeam then " (you)" else ""
 		table.insert(parts, `<font color="{color}">{team}{mine}: {wins}</font>`)
 	end
@@ -359,7 +390,8 @@ local function addFeed(killer: string?, victim: string, spell: string?)
 	if killer and spell then
 		text = `{killer} [{spell}] {victim}`
 	end
-	local row = Theme.frame(feedHolder, { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 0.3 })
+	local row =
+		Theme.frame(feedHolder, { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 0.3 })
 	Theme.corner(row, 8)
 	Theme.label(row, text, { Size = UDim2.new(1, -10, 1, -4), Position = UDim2.fromOffset(5, 2) })
 	task.delay(5, function()

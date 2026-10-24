@@ -76,7 +76,14 @@ return function(makeProp: Registrar): Model
 	end
 
 	-- Slippery ice patches.
-	for _, pos in { Vector3.new(-40, 0.1, 0), Vector3.new(40, 0.1, 0), Vector3.new(0, 0.1, -30), Vector3.new(0, 0.1, 30) } do
+	for _, pos in
+		{
+			Vector3.new(-40, 0.1, 0),
+			Vector3.new(40, 0.1, 0),
+			Vector3.new(0, 0.1, -30),
+			Vector3.new(0, 0.1, 30),
+		}
+	do
 		local ice = MapKit.part(model, {
 			name = "IcePatch",
 			shape = Enum.PartType.Cylinder,
@@ -105,7 +112,14 @@ return function(makeProp: Registrar): Model
 	end
 
 	-- Snow drifts as soft cover.
-	for _, pos in { Vector3.new(-30, 2, -20), Vector3.new(30, 2, 20), Vector3.new(-30, 2, 20), Vector3.new(30, 2, -20) } do
+	for _, pos in
+		{
+			Vector3.new(-30, 2, -20),
+			Vector3.new(30, 2, 20),
+			Vector3.new(-30, 2, 20),
+			Vector3.new(30, 2, -20),
+		}
+	do
 		local drift = MapKit.part(model, {
 			name = "SnowDrift",
 			shape = Enum.PartType.Ball,

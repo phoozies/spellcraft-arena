@@ -49,7 +49,14 @@ local function shapeOf(shape: string): Enum.PartType
 		else Enum.PartType.Block
 end
 
-local function onProjectile(id: number, origin: Vector3, direction: Vector3, speed: number, range: number, visual: Types.Visual)
+local function onProjectile(
+	id: number,
+	origin: Vector3,
+	direction: Vector3,
+	speed: number,
+	range: number,
+	visual: Types.Visual
+)
 	if not near(origin) then
 		return
 	end
@@ -71,7 +78,14 @@ local function onProjectile(id: number, origin: Vector3, direction: Vector3, spe
 	light.Brightness = 1.5
 	light.Parent = part
 	part.Parent = folder
-	bolts[id] = { part = part, origin = origin, direction = direction, speed = speed, range = range, born = os.clock() }
+	bolts[id] = {
+		part = part,
+		origin = origin,
+		direction = direction,
+		speed = speed,
+		range = range,
+		born = os.clock(),
+	}
 end
 
 local function onProjectileEnd(id: number, position: Vector3)
@@ -100,8 +114,11 @@ local function onPoof(position: Vector3, color: Color3)
 		bit.CanQuery = false
 		bit.CanTouch = false
 		bit.CastShadow = false
-		bit.CFrame = CFrame.new(position + Vector3.new(math.random(-2, 2), math.random(0, 2), math.random(-2, 2)))
-		bit.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), math.random(15, 35), math.random(-20, 20))
+		bit.CFrame = CFrame.new(
+			position + Vector3.new(math.random(-2, 2), math.random(0, 2), math.random(-2, 2))
+		)
+		bit.AssemblyLinearVelocity =
+			Vector3.new(math.random(-20, 20), math.random(15, 35), math.random(-20, 20))
 		bit.Parent = folder
 		bit.Destroying:Connect(function()
 			debrisCount -= 1

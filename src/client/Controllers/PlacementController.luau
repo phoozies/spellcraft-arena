@@ -140,7 +140,8 @@ local function update()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { character :: Model, part }
-	local down = workspace:Raycast((point :: Vector3) + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
+	local down =
+		workspace:Raycast((point :: Vector3) + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then
 		part.Transparency = 1
 		valid = false
@@ -157,7 +158,8 @@ local function update()
 			table.insert(ignore, other.Character)
 		end
 	end
-	valid = Placement.inRegions(down.Position, regions()) and Placement.isClear(def.visual, cframe, ignore)
+	valid = Placement.inRegions(down.Position, regions())
+		and Placement.isClear(def.visual, cframe, ignore)
 	local left = ClientState.cooldownLeft(def.id)
 	local color = if valid and left <= 0 then Theme.COLORS.good else Theme.COLORS.bad
 	part.Color = color

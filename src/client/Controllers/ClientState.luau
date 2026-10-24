@@ -27,10 +27,10 @@ local ClientState = {
 	match = { phase = "Idle", round = 0, endsAt = 0, scores = {} } :: Types.MatchState,
 	queueCounts = {} :: { [string]: number },
 
-	HandChanged = Signal.new() :: Signal.Signal<>,
-	ProfileChanged = Signal.new() :: Signal.Signal<>,
-	MatchChanged = Signal.new() :: Signal.Signal<>,
-	QueueChanged = Signal.new() :: Signal.Signal<>,
+	HandChanged = Signal.new(),
+	ProfileChanged = Signal.new(),
+	MatchChanged = Signal.new(),
+	QueueChanged = Signal.new(),
 }
 
 function ClientState.cooldownLeft(spellId: string): number

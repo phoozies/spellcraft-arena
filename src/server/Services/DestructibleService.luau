@@ -28,7 +28,11 @@ DestructibleService.Destroyed = Signal.new() :: Signal.Signal<Instance, Player?>
 
 -- Returns true if `attacker` may damage `victimOwner` (a player, or nil for
 -- unowned things like dummies and map props). Replaced by MatchService.
-local relation: (attacker: Player?, victimOwner: Player?, target: Instance) -> boolean = function()
+local relation: (attacker: Player?, victimOwner: Player?, target: Instance) -> boolean = function(
+	_attacker: Player?,
+	_victimOwner: Player?,
+	_target: Instance
+)
 	return true
 end
 
@@ -57,7 +61,9 @@ function DestructibleService.resolve(instance: Instance): (Instance?, Player?, b
 		end
 		if CollectionService:HasTag(node, TAG) then
 			local ownerId = node:GetAttribute("OwnerUserId")
-			local owner = if typeof(ownerId) == "number" then Players:GetPlayerByUserId(ownerId) else nil
+			local owner = if typeof(ownerId) == "number"
+				then Players:GetPlayerByUserId(ownerId)
+				else nil
 			return node, owner, false
 		end
 		node = node.Parent
@@ -106,7 +112,9 @@ local function breakStructure(target: Instance, destroyer: Player?)
 		elseif target:IsA("BasePart") then target.Position
 		else Vector3.zero
 	local color = Color3.fromRGB(200, 200, 200)
-	local part = if target:IsA("BasePart") then target else target:FindFirstChildWhichIsA("BasePart", true)
+	local part = if target:IsA("BasePart")
+		then target
+		else target:FindFirstChildWhichIsA("BasePart", true)
 	if part then
 		color = part.Color
 	end
@@ -116,7 +124,12 @@ local function breakStructure(target: Instance, destroyer: Player?)
 end
 
 -- Applies damage. Returns the damage actually dealt (0 if not allowed).
-function DestructibleService.damage(target: Instance, amount: number, attacker: Player?, spellName: string?): number
+function DestructibleService.damage(
+	target: Instance,
+	amount: number,
+	attacker: Player?,
+	spellName: string?
+): number
 	local resolved, owner, isCharacter = DestructibleService.resolve(target)
 	if not resolved or amount <= 0 then
 		return 0
@@ -147,7 +160,10 @@ function DestructibleService.damage(target: Instance, amount: number, attacker: 
 		if shield > 0 then
 			local absorbed = math.min(shield, amount)
 			amount -= absorbed
-			character:SetAttribute("Shield", if shield - absorbed > 0 then shield - absorbed else nil)
+			character:SetAttribute(
+				"Shield",
+				if shield - absorbed > 0 then shield - absorbed else nil
+			)
 		end
 		if attacker then
 			lastHit[owner] = { by = attacker, at = os.clock(), spell = spellName }
@@ -215,7 +231,12 @@ function DestructibleService.push(target: Instance, velocity: Vector3)
 	if took then
 		-- Only the latest push returns ownership (overlapping pushes extend it).
 		task.delay(PUSH_OWNERSHIP_TIME, function()
-			if pushTokens[character] == token and root.Parent and owner.Parent and not root.Anchored then
+			if
+				pushTokens[character] == token
+				and root.Parent
+				and owner.Parent
+				and not root.Anchored
+			then
 				pcall(function()
 					root:SetNetworkOwner(owner)
 				end)

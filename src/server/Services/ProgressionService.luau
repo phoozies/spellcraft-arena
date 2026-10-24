@@ -22,7 +22,13 @@ local QUEST_POOL = {
 	{ id = "play3", text = "Play 3 matches", event = "match", goal = 3, rewardXp = 60 },
 	{ id = "place10", text = "Place 10 objects", event = "place", goal = 10, rewardXp = 50 },
 	{ id = "break10", text = "Destroy 10 objects", event = "destroy", goal = 10, rewardXp = 60 },
-	{ id = "draft3", text = "Draft 3 Rare or better spells", event = "draftRare", goal = 3, rewardXp = 70 },
+	{
+		id = "draft3",
+		text = "Draft 3 Rare or better spells",
+		event = "draftRare",
+		goal = 3,
+		rewardXp = 70,
+	},
 }
 
 local questEvents: { [string]: string } = {}
@@ -68,7 +74,11 @@ local function refreshDaily(player: Player, profile: Types.Profile)
 		local bonus = Config.XP.DAILY_LOGIN * math.min(profile.daily.streak, 7)
 		task.delay(3, function()
 			if player.Parent then
-				toastRemote:FireClient(player, `Daily chest! Day {profile.daily.streak} streak: +{bonus} XP`, "reward")
+				toastRemote:FireClient(
+					player,
+					`Daily chest! Day {profile.daily.streak} streak: +{bonus} XP`,
+					"reward"
+				)
 				ProgressionService.addXp(player, bonus, "daily")
 			end
 		end)
@@ -153,7 +163,11 @@ function ProgressionService.track(player: Player, event: string, amount: number?
 			quest.progress = math.min(quest.goal, quest.progress + (amount or 1))
 			changed = true
 			if quest.progress >= quest.goal then
-				toastRemote:FireClient(player, `Quest complete: {quest.text}! Claim it in Quests.`, "reward")
+				toastRemote:FireClient(
+					player,
+					`Quest complete: {quest.text}! Claim it in Quests.`,
+					"reward"
+				)
 			end
 		end
 	end

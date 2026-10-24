@@ -16,7 +16,9 @@ local function aura(ctx: any, duration: number)
 	orb.Shape = Enum.PartType.Ball
 	orb.Size = Vector3.new(7, 7, 7)
 	orb.Color = visual.color
-	orb.Material = if visual.material == Enum.Material.Neon then Enum.Material.ForceField else visual.material
+	orb.Material = if visual.material == Enum.Material.Neon
+		then Enum.Material.ForceField
+		else visual.material
 	orb.Transparency = math.max(visual.transparency or 0.5, 0.5)
 	orb.CanCollide = false
 	orb.CanQuery = false
