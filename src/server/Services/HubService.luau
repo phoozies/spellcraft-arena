@@ -1,56 +1,29 @@
 --!strict
 -- The central hub (Inkwell Plaza): builds it, spawns players there, and runs
--- queue pads, training dummies, the sparring ring, and the leaderboard.
+-- the team boxes, the FFA queue pad, training dummies, and the leaderboard.
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Placement = require(ReplicatedStorage.Shared.Spells.Placement)
 local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
 local buildHub = require(MapsFolder:WaitForChild("InkwellPlaza")) :: any
-local MapKit = require(MapsFolder:WaitForChild("MapKit")) :: any
 
 local HUB_RESPAWN_DELAY = 3
 local DUMMY_HEALTH = 250
-local PRACTICE_WALL_CFRAME = CFrame.new(-62, 0, -28) * CFrame.Angles(0, math.rad(90), 0)
-local PRACTICE_WALL_REBUILD = 20
 
 local HubService = {}
 
 local hub: Model
-
--- A breakable block wall in the Practice Grove (anyone may break it, like
--- the dummies). It rebuilds itself a while after it's been damaged.
-local practiceWall: Folder? = nil
-
-local function buildPracticeWall()
-	if practiceWall then
-		practiceWall:Destroy()
-	end
-	practiceWall = MapKit.blockWall(
-		hub,
-		PRACTICE_WALL_CFRAME,
-		5,
-		3,
-		Vector3.new(3, 2.5, 2),
-		Color3.fromRGB(176, 120, 90),
-		Enum.Material.Brick,
-		30,
-		function(block: Instance, health: number)
-			block:SetAttribute("Dummy", true)
-			DestructibleService.makeProp(block, health)
-		end
-	)
-end
+local toastRemote: RemoteEvent
 
 -- Health only regenerates in the hub; arenas rely on healing spells.
 -- (The default Roblox regen script is replaced by StarterCharacterScripts.Health.)
@@ -64,27 +37,6 @@ local function regenTick(dt: number)
 			end
 		end
 	end
-end
-
--- The sparring arena: a colosseum (imported "Arena" model) around the
--- Sparring Ring. Its 46-stud floor sits where the old red mat was, so the
--- 50x50 SparringZone (PvP) still lines up; the pillars ring the edge. If the
--- model isn't in the place, the plain mat and posts from the map builder stay.
-local ARENA_CENTER = Vector3.new(80, 0.6, 0)
-
-local function placeSparringArena()
-	local arena = ModelKit.clone("Arena", "solid")
-	if not arena then
-		return
-	end
-	for _, child in hub:GetChildren() do
-		if child.Name == "RingFloor" or child.Name == "RingPost" then
-			child:Destroy()
-		end
-	end
-	arena.Name = "SparringArena"
-	arena:PivotTo(CFrame.new(ARENA_CENTER))
-	arena.Parent = hub
 end
 
 local function setupLighting()
@@ -194,21 +146,186 @@ local function refreshPadLabels()
 	end
 end
 
-local function updateSparring()
-	local zones = {}
-	for _, zone in CollectionService:GetTagged("SparringZone") do
-		if zone:IsA("BasePart") then
-			table.insert(zones, zone)
+----------------------------------------------------------------------
+-- Team boxes
+--
+-- Each team mode (1v1..4v4) has a box with a Blue side and a Red side, one
+-- spot per teammate. Players stand on a side to pick their team, so friends
+-- can line up together before the match. When both sides are full a short
+-- countdown runs (it resets if anyone steps off or swaps), then the match
+-- starts with exactly those teams.
+----------------------------------------------------------------------
+
+type Pad = {
+	part: BasePart,
+	team: string,
+	slots: number,
+	members: { Player },
+	label: TextLabel?,
+}
+
+type Box = {
+	mode: string,
+	pads: { Pad },
+	header: TextLabel?,
+	signature: string,
+	startsAt: number?,
+}
+
+local boxes: { [string]: Box } = {}
+local lastFullToast: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+local function labelOf(part: Instance): TextLabel?
+	local label = part:FindFirstChild("Text", true)
+	return if label and label:IsA("TextLabel") then label else nil
+end
+
+local function collectBoxes()
+	table.clear(boxes)
+	for _, instance in CollectionService:GetTagged("TeamPad") do
+		local mode = instance:GetAttribute("Mode")
+		local team = instance:GetAttribute("Team")
+		local slots = instance:GetAttribute("Slots")
+		if
+			instance:IsA("BasePart")
+			and typeof(mode) == "string"
+			and typeof(team) == "string"
+			and typeof(slots) == "number"
+		then
+			local box = boxes[mode]
+			if not box then
+				box = { mode = mode, pads = {}, header = nil, signature = "", startsAt = nil }
+				boxes[mode] = box
+			end
+			table.insert(box.pads, {
+				part = instance,
+				team = team,
+				slots = slots,
+				members = {},
+				label = labelOf(instance),
+			})
 		end
 	end
-	for _, player in Players:GetPlayers() do
-		local root = player.Character
-			and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local inside = root ~= nil
-			and not MatchService.isInMatch(player)
-			and Placement.inRegions(root.Position, zones)
-		if (player:GetAttribute("InSparring") == true) ~= inside then
-			player:SetAttribute("InSparring", if inside then true else nil)
+	for _, header in CollectionService:GetTagged("TeamBoxHeader") do
+		local mode = header:GetAttribute("Mode")
+		local box = if typeof(mode) == "string" then boxes[mode] else nil
+		if box then
+			box.header = labelOf(header)
+		end
+	end
+end
+
+-- True when a point is over a pad (and not far above it).
+local function onPad(position: Vector3, pad: BasePart): boolean
+	local p = pad.CFrame:PointToObjectSpace(position)
+	local half = pad.Size / 2
+	return math.abs(p.X) <= half.X and math.abs(p.Z) <= half.Z and p.Y > -2 and p.Y < 8
+end
+
+local function eligibleRoot(player: Player): BasePart?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 or MatchService.isInMatch(player) then
+		return nil
+	end
+	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+local function startBox(box: Box)
+	local players: { Player } = {}
+	local teams: { [Player]: string } = {}
+	for _, pad in box.pads do
+		for _, player in pad.members do
+			table.insert(players, player)
+			teams[player] = pad.team
+		end
+		pad.members = {}
+	end
+	box.startsAt = nil
+	box.signature = ""
+	local ok, err = pcall(MatchService.startMatch, box.mode :: any, players, { teams = teams })
+	if not ok then
+		warn(`[Hub] couldn't start {box.mode} from its box: {err}`)
+	end
+end
+
+local function updateBoxes()
+	local now = os.clock()
+	for _, box in boxes do
+		local allFull = true
+		local ids: { string } = {}
+		for _, pad in box.pads do
+			-- Re-read the size every tick so a pad's Slots attribute can be
+			-- tuned (or overridden for testing) while the game runs.
+			local attribute = pad.part:GetAttribute("Slots")
+			pad.slots = if typeof(attribute) == "number" then attribute else pad.slots
+			-- Keep who's still standing here (in arrival order), then add newcomers.
+			local kept: { Player } = {}
+			for _, player in pad.members do
+				local root = eligibleRoot(player)
+				if root and onPad(root.Position, pad.part) then
+					table.insert(kept, player)
+				end
+			end
+			for _, player in Players:GetPlayers() do
+				local root = eligibleRoot(player)
+				if root and not table.find(kept, player) and onPad(root.Position, pad.part) then
+					if #kept < pad.slots then
+						table.insert(kept, player)
+					elseif (lastFullToast[player] or 0) + 3 < now then
+						lastFullToast[player] = now
+						toastRemote:FireClient(
+							player,
+							`The {pad.team} side is full. Try the other side!`,
+							"fizzle"
+						)
+					end
+				end
+			end
+			pad.members = kept
+			if #kept < pad.slots then
+				allFull = false
+			end
+			for _, player in kept do
+				table.insert(ids, `{pad.team}:{player.UserId}`)
+			end
+			if pad.label then
+				pad.label.Text = `{string.upper(pad.team)} {#kept}/{pad.slots}`
+			end
+		end
+
+		if allFull then
+			table.sort(ids)
+			local signature = table.concat(ids, ",")
+			if box.startsAt == nil or box.signature ~= signature then
+				-- First time full, or someone swapped sides: restart the countdown.
+				box.signature = signature
+				box.startsAt = now + Config.TEAM_BOX_COUNTDOWN
+				for _, pad in box.pads do
+					for _, player in pad.members do
+						toastRemote:FireClient(
+							player,
+							`{box.mode} starts in {Config.TEAM_BOX_COUNTDOWN}s: stay on your side!`,
+							"round"
+						)
+					end
+				end
+			end
+			local left = math.max(0, math.ceil((box.startsAt :: number) - now))
+			if box.header then
+				box.header.Text = `{box.mode}\nStarting in {left}…`
+			end
+			if now >= (box.startsAt :: number) then
+				startBox(box)
+			end
+		else
+			if box.startsAt ~= nil then
+				box.startsAt = nil
+				box.signature = ""
+			end
+			if box.header then
+				box.header.Text = box.mode
+			end
 		end
 	end
 end
@@ -248,8 +365,8 @@ function HubService.init()
 	end
 	hub = buildHub()
 	hub.Parent = workspace
-	placeSparringArena()
 	setupLighting()
+	toastRemote = Remotes.get("Toast")
 end
 
 function HubService.start()
@@ -264,7 +381,7 @@ function HubService.start()
 		end
 	end
 	MatchService.QueueChanged:Connect(refreshPadLabels)
-	buildPracticeWall()
+	collectBoxes()
 
 	PlayerDataService.ProfileLoaded:Connect(function(player)
 		MatchService.spawnInHub(player)
@@ -282,23 +399,15 @@ function HubService.start()
 
 	task.spawn(function()
 		local tick = 0
-		local wallDamagedAt: number? = nil
 		while true do
-			local dt = task.wait(0.5)
+			local dt = task.wait(0.25)
 			tick += 1
-			updateSparring()
-			regenTick(dt)
-			if tick % 10 == 0 then
-				updateLeaderboard()
+			updateBoxes()
+			if tick % 2 == 0 then
+				regenTick(dt * 2)
 			end
-			-- Rebuild the practice wall a while after it first takes damage.
-			local wall = practiceWall
-			if wall and #wall:GetChildren() < 15 then
-				wallDamagedAt = wallDamagedAt or os.clock()
-				if os.clock() - wallDamagedAt >= PRACTICE_WALL_REBUILD then
-					wallDamagedAt = nil
-					buildPracticeWall()
-				end
+			if tick % 20 == 0 then
+				updateLeaderboard()
 			end
 		end
 	end)

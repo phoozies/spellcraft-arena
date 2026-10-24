@@ -13,7 +13,7 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 local EXPECTED = {
 	Fireball = { parts = { "Fireball_Core", "Fireball_Outer", "Fireball_Tail" }, maxSize = 12 },
 	WaterBubble = { parts = { "Bubble_Shell", "Bubble_Inner", "Bubble_Highlight" }, maxSize = 12 },
-	RockWall = { parts = { "Wall_Base", "Wall_Pillars", "Wall_Rubble" }, maxSize = 20 },
+	RockWall = { parts = { "Wall_Base", "Wall_Pillars", "Wall_Rubble" }, maxSize = 30 },
 	Arena = {
 		parts = { "Arena_Floor", "Arena_Pillars", "Arena_RuneRing", "Arena_Seating" },
 		maxSize = 90,

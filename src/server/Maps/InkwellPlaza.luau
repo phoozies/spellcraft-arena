@@ -1,30 +1,40 @@
 --!strict
 -- Inkwell Plaza — the central hub. Players can be playing within seconds:
--- queue pads are right in front of the spawn.
+-- the team boxes are right in front of the spawn.
 --
 -- Tags/attributes HubService relies on:
---   QueuePad  (Mode attribute)      step on to join that queue
+--   TeamPad   (Mode, Team, Slots)   one side of a team box: players stand on
+--                                   a side to pick their team (1v1..4v4)
+--   QueuePad  (Mode attribute)      step on to join that queue (FFA)
 --   BuildZone                       placing objects allowed here
---   SparringZone                    PvP allowed between players inside
 --   DummySpot                       training dummies respawn here
 --   HubSpawn                        where players appear
 --   ProximityPrompts named "Spellbook" and "Quests" open UI on the client
 
 local MapKit = require(script.Parent.MapKit)
 
-local MODES = {
-	{ mode = "1v1", color = Color3.fromRGB(66, 165, 245) },
-	{ mode = "2v2", color = Color3.fromRGB(102, 187, 106) },
-	{ mode = "4v4", color = Color3.fromRGB(255, 167, 38) },
-	{ mode = "FFA", color = Color3.fromRGB(236, 64, 122) },
-}
+local BLUE = Color3.fromRGB(66, 165, 245)
+local RED = Color3.fromRGB(239, 83, 80)
 
-local function label(part: BasePart, text: string, offset: number): TextLabel
+-- Team boxes: {mode, players per team, center x, center z}. Each box is two
+-- side-by-side pads, Blue then Red, one spot per teammate. Their open front
+-- faces the spawn (+Z).
+local BOXES = {
+	{ mode = "1v1", perTeam = 1, x = -38, z = -30 },
+	{ mode = "2v2", perTeam = 2, x = -6, z = -30 },
+	{ mode = "3v3", perTeam = 3, x = 30, z = -30 },
+	{ mode = "4v4", perTeam = 4, x = 0, z = -60 },
+}
+local PAD_DEPTH = 8
+local PAD_GAP = 2
+
+-- `maxDistance` hides the label from far away so crowded signs don't pile up.
+local function label(part: BasePart, text: string, offset: number, maxDistance: number?): TextLabel
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromOffset(220, 70)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, offset, 0)
-	gui.MaxDistance = 150
+	gui.MaxDistance = maxDistance or 150
 	gui.Parent = part
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Name = "Text"
@@ -108,21 +118,92 @@ return function(): Model
 	})
 	spawn:AddTag("HubSpawn")
 
-	-- Queue pads in an arc in front of spawn.
-	for i, info in MODES do
-		local x = (i - 2.5) * 18
-		local pad = MapKit.part(model, {
-			name = `Queue_{info.mode}`,
-			shape = Enum.PartType.Cylinder,
-			size = Vector3.new(1, 12, 12),
-			cframe = CFrame.new(x, 0.5, -24) * CFrame.Angles(0, 0, math.pi / 2),
-			color = info.color,
-			material = Enum.Material.Neon,
+	-- Team boxes: stand on the Blue or Red side to pick your team. The match
+	-- starts when both sides are full.
+	for _, box in BOXES do
+		local width = math.max(8, box.perTeam * 5.5)
+		for side, team in { "Blue", "Red" } do
+			local color = if team == "Blue" then BLUE else RED
+			local x = box.x + (if side == 1 then -1 else 1) * (width / 2 + PAD_GAP / 2)
+			local pad = MapKit.part(model, {
+				name = `TeamPad_{box.mode}_{team}`,
+				size = Vector3.new(width, 0.6, PAD_DEPTH),
+				cframe = CFrame.new(x, 0.5, box.z),
+				color = color,
+				material = Enum.Material.Neon,
+				transparency = 0.35,
+			})
+			pad:SetAttribute("Mode", box.mode)
+			pad:SetAttribute("Team", team)
+			pad:SetAttribute("Slots", box.perTeam)
+			pad:AddTag("TeamPad")
+			label(pad, `{string.upper(team)} 0/{box.perTeam}`, 5, 38)
+			-- Low glass walls on the back and sides; the front stays open.
+			for _, wall in
+				{
+					{
+						size = Vector3.new(width, 3, 0.6),
+						offset = Vector3.new(0, 1.8, -PAD_DEPTH / 2),
+					},
+					{
+						size = Vector3.new(0.6, 3, PAD_DEPTH),
+						offset = Vector3.new(-width / 2, 1.8, 0),
+					},
+					{
+						size = Vector3.new(0.6, 3, PAD_DEPTH),
+						offset = Vector3.new(width / 2, 1.8, 0),
+					},
+				}
+			do
+				MapKit.part(model, {
+					name = "TeamBoxWall",
+					size = wall.size,
+					cframe = CFrame.new(Vector3.new(x, 0, box.z) + wall.offset),
+					color = color,
+					material = Enum.Material.Glass,
+					transparency = 0.6,
+				})
+			end
+		end
+		local header = MapKit.part(model, {
+			name = `TeamBoxHeader_{box.mode}`,
+			size = Vector3.one,
+			cframe = CFrame.new(box.x, 8, box.z - PAD_DEPTH / 2),
+			transparency = 1,
+			canCollide = false,
 		})
-		pad:SetAttribute("Mode", info.mode)
-		pad:AddTag("QueuePad")
-		label(pad, `{info.mode}\n0 waiting`, 6)
+		header:SetAttribute("Mode", box.mode)
+		header:AddTag("TeamBoxHeader")
+		label(header, box.mode, 0, 70)
 	end
+
+	-- One instruction sign instead of repeating it over every box.
+	local boxSign = MapKit.part(model, {
+		name = "TeamBoxSign",
+		size = Vector3.one,
+		cframe = CFrame.new(0, 7, -14),
+		transparency = 1,
+		canCollide = false,
+	})
+	label(
+		boxSign,
+		"Pick your team: stand on a Blue or Red side.\nThe match starts when both sides are full.",
+		0,
+		60
+	)
+
+	-- Free-for-all: step on the pad to join the queue.
+	local ffa = MapKit.part(model, {
+		name = "Queue_FFA",
+		shape = Enum.PartType.Cylinder,
+		size = Vector3.new(1, 12, 12),
+		cframe = CFrame.new(-50, 0.5, -60) * CFrame.Angles(0, 0, math.pi / 2),
+		color = Color3.fromRGB(236, 64, 122),
+		material = Enum.Material.Neon,
+	})
+	ffa:SetAttribute("Mode", "FFA")
+	ffa:AddTag("QueuePad")
+	label(ffa, "FFA\n0 waiting", 6, 60)
 
 	-- Practice Grove (west): build anything, smash dummies.
 	local grove = MapKit.part(model, {
@@ -160,42 +241,6 @@ return function(): Model
 		})
 		spot:AddTag("DummySpot")
 	end
-
-	-- Sparring Ring (east): opt-in PvP.
-	local ring = MapKit.part(model, {
-		name = "SparringRing",
-		size = Vector3.new(50, 30, 50),
-		cframe = CFrame.new(80, 15, 0),
-		transparency = 1,
-		canCollide = false,
-	})
-	ring.CanQuery = false
-	ring.CanTouch = false
-	ring:AddTag("SparringZone")
-	ring:AddTag("BuildZone")
-	MapKit.part(model, {
-		name = "RingFloor",
-		size = Vector3.new(50, 1, 50),
-		cframe = CFrame.new(80, 0.5, 0),
-		color = Color3.fromRGB(239, 83, 80),
-		material = Enum.Material.Fabric,
-	})
-	for _, corner in { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } do
-		MapKit.part(model, {
-			name = "RingPost",
-			size = Vector3.new(2, 6, 2),
-			cframe = CFrame.new(80 + corner[1] * 24, 3, corner[2] * 24),
-			color = Color3.fromRGB(255, 255, 255),
-		})
-	end
-	local ringSign = MapKit.part(model, {
-		name = "RingSign",
-		size = Vector3.new(1, 1, 1),
-		cframe = CFrame.new(80, 10, -26),
-		transparency = 1,
-		canCollide = false,
-	})
-	label(ringSign, "Sparring Ring\nPvP inside!", 0)
 
 	-- Spellbook kiosk and Daily chest (south).
 	local kiosk = MapKit.part(model, {

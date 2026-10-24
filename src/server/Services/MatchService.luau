@@ -57,7 +57,8 @@ local MatchService = {}
 -- Fired with (player, mode) when someone joins/leaves a queue, for UI.
 MatchService.QueueChanged = Signal.new()
 
-local queues: { [string]: { Player } } = { ["1v1"] = {}, ["2v2"] = {}, ["4v4"] = {}, ["FFA"] = {} }
+local queues: { [string]: { Player } } =
+	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {}, ["FFA"] = {} }
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
 local matchCounter = 0
@@ -237,10 +238,6 @@ end
 -- Relations (who can hurt whom) and world hooks for casting
 ----------------------------------------------------------------------
 
-local function inSparring(player: Player): boolean
-	return player:GetAttribute("InSparring") == true
-end
-
 local function relation(attacker: Player?, victimOwner: Player?, target: Instance): boolean
 	if victimOwner == nil then
 		if target:GetAttribute("Dummy") then
@@ -265,8 +262,8 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 			and a.phase == "Round"
 			and a.teams[attacker] ~= a.teams[victimOwner]
 	end
-	-- Hub: PvP only inside the sparring ring.
-	return inSparring(attacker) and inSparring(victimOwner)
+	-- No PvP in the hub; players fight in matches (the sparring arena is a map).
+	return false
 end
 
 local function areAllies(a: Player, b: Player): boolean
@@ -518,10 +515,12 @@ local function runMatch(match: Match)
 	finishMatch(match, winner)
 end
 
+-- `options.teams` (team modes only) maps each player to "Blue" or "Red", for
+-- premade teams (the hub's team boxes); otherwise teams are shuffled.
 function MatchService.startMatch(
 	mode: Types.MatchMode,
 	players: { Player },
-	options: { solo: boolean? }?
+	options: { solo: boolean?, teams: { [Player]: string }? }?
 )
 	matchCounter += 1
 	local arena = ArenaService.create(ArenaService.pickMap(mode), mode)
@@ -553,8 +552,12 @@ function MatchService.startMatch(
 		end
 	else
 		match.teamOrder = { "Blue", "Red" }
+		local chosen = options and options.teams
 		for i, player in shuffle(players) do
-			match.teams[player] = if i % 2 == 1 then "Blue" else "Red"
+			local team = chosen and chosen[player]
+			match.teams[player] = if team == "Blue" or team == "Red"
+				then team
+				else if i % 2 == 1 then "Blue" else "Red"
 		end
 	end
 

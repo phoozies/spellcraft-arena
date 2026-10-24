@@ -8,7 +8,7 @@ into the game.
 | `Fireball.fbx` | The **Fireball** bolt (also the Dragon's fireballs) | `Fireball_Core`, `Fireball_Outer`, `Fireball_Tail` |
 | `WaterBubble.fbx` | The **Water Lock** bolt, and the bubble around a trapped player | `Bubble_Shell`, `Bubble_Inner`, `Bubble_Highlight` |
 | `RockWall.fbx` | The **Rock Wall** ("earth wall") spell | `Wall_Base`, `Wall_Pillars`, `Wall_Rubble` |
-| `Arena.fbx` | The hub's **sparring arena** around the Sparring Ring | `Arena_Floor`, `Arena_Pillars`, `Arena_RuneRing`, `Arena_Seating` |
+| `Arena.fbx` | The **Sparring Arena** match map | `Arena_Floor`, `Arena_Pillars`, `Arena_RuneRing`, `Arena_Seating` |
 | `Grimoire.fbx` | Not used yet (stored coloured, ready for the Spellbook kiosk) | `Grimoire_Cover`, `Grimoire_Gold`, `Grimoire_Gem`, `Grimoire_Pages` |
 
 ## How they get into the game
@@ -48,7 +48,7 @@ have them, so **every use has a fallback to plain shapes**:
 - Fireball / Water Lock bolts: `FxController` (`BOLT_MODELS`) draws the model, else a plain shape.
 - Water Lock's trap bubble: `server/Services/TrapBubble.luau`, else a glass orb.
 - Rock Wall: `Archetypes/Placeable.luau` builds from the model (each mesh part is its own breakable chunk), else a block grid.
-- Sparring arena: `HubService.placeSparringArena` swaps in the model, else the red mat and corner posts stay.
+- Sparring Arena map: `Maps/SparringArena.luau` builds the match map from the model, else a plain round platform with pillars.
 
 To change a colour, edit `tools/prepare-models.luau` and re-import and prepare,
 or edit the part in `ReplicatedStorage.Models` directly (then update the script

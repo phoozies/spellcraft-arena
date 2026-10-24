@@ -94,7 +94,7 @@ local DEFINITIONS: { SpellDef } = {
 		visual = {
 			shape = "Block",
 			-- Matches the RockWall model's size so placement rules fit it.
-			size = Vector3.new(14.4, 7.7, 6.1),
+			size = Vector3.new(23.04, 12.38, 9.72),
 			color = rgb(140, 112, 84),
 			material = M.Ground,
 		},

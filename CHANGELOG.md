@@ -4,6 +4,20 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (team boxes, 3v3, Sparring Arena map)
+- **Team boxes in the hub** for 1v1, 2v2, 3v3 and 4v4. Each has a Blue side and a Red side with one spot per teammate. Standing on a side picks your team, and the labels show how full it is (`BLUE 1/2`). When both sides are full, a 5-second countdown runs (it restarts if anyone steps off or swaps), then the match starts with exactly those teams (`MatchService.startMatch(..., { teams })`).
+- **3v3 mode**, with the Play menu and the admin `;startmatch` updated.
+- **Sparring Arena is now a match map** (`Maps/SparringArena.luau`), weighted ×2 for 1v1 and 2v2 and never picked for 4v4. Invisible walls keep players on its floor.
+
+### Changed (team boxes, 3v3, Sparring Arena map)
+- **Rock Wall is 1.6× bigger:** 23 × 12.4 × 9.7 studs (it was 14.4 × 7.7 × 6.1).
+- **The old queue pads for 1v1, 2v2 and 4v4 are replaced by the team boxes.** FFA keeps its pad, and the Play menu still queues for every mode.
+- **The Sparring Ring/Arena is gone from the hub**, and so is hub PvP, since the ring was its only place.
+
+### Removed
+- The brick wall in the hub's Practice Grove.
+- The starter Baseplate and SpawnLocation from the place (the hub and arenas are built at runtime, so press Play to see them).
+
 ### Changed (wall + Fireball)
 - **Every spell hits the Rock Wall, your own included** (`HitByAll`), where before your own spells passed through your own structures.
 - **The Rock Wall takes 50 damage in total** (it was 150), shared across its pieces: the base breaks first, then the rubble, then the stones, and the whole wall is gone at 50.
