@@ -26,7 +26,8 @@ You get a spell by **drawing its shape**, which adds **one copy** to your hotbar
 
 ## Dash and spectating
 
-- **Dash** bursts you about 24 studs the way you are moving (or facing) with a dash animation, then needs 4 seconds to recharge (`Config.DASH`). The button shows the countdown.
+- **Dash** is a low leap about 28 studs the way you are moving (or facing): arms out, three pale wind streaks trailing behind you. It needs 2 seconds to recharge (`Config.DASH`). The button shows the countdown.
+- **Spectate duels from the hub:** walk to the island's rim (the four 👁 SPECTATE overlooks) and look down. Every duel is fought on an arena below the island, with a sign naming the mode and map.
 - **Watch** (side menu, in the hub) lists the other players and where they are; pick one to follow them with the camera, and use ◀ ▶ or Stop at the top of the screen. It ends by itself when you join a fight.
 - On a phone or tablet, fights hide the menu, wallet, party, kill feed, and boost icons; the hotbar, spell cards, Draw and Dash buttons, health, and (in the Battleground) Return to Hub stay.
 

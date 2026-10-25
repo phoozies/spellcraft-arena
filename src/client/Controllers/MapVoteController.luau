@@ -68,9 +68,7 @@ local function show(state: State?)
 		local mine = state.myPick == choice.id
 		card.stroke.Color = if mine then Theme.COLORS.accent else Color3.fromRGB(20, 20, 40)
 		card.stroke.Thickness = if mine then 5 else 2
-		card.button.BackgroundColor3 = if mine
-			then Theme.COLORS.purple
-			else Theme.COLORS.panelLight
+		card.button.BackgroundColor3 = if mine then Theme.COLORS.purple else Theme.COLORS.panelLight
 	end
 end
 
@@ -82,7 +80,7 @@ function MapVoteController.init()
 		Name = "MapVote",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.45),
-		Size = UDim2.fromOffset(440, 270),
+		Size = UDim2.fromOffset(780, 300),
 		BackgroundTransparency = 0.05,
 		Visible = false,
 		ZIndex = 20,
@@ -108,7 +106,8 @@ function MapVoteController.init()
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.new(0.5, -6, 0.5, -6)
+	-- Four maps across, two down: eight maps.
+	layout.CellSize = UDim2.new(0.25, -6, 0.5, -6)
 	layout.CellPadding = UDim2.fromOffset(8, 8)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid

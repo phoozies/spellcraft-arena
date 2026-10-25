@@ -501,6 +501,49 @@ function SpellVfx.dust(parent: Instance, position: Vector3, width: number, color
 	Debris:AddItem(anchor, 1)
 end
 
+-- Thin pale wind streaks that trail behind a character while it dashes: `count`
+-- ribbons spread across its back that curve with the dash's arc, then fade out.
+function SpellVfx.windStreaks(character: Model, count: number, seconds: number)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	local lifetime = 0.45
+	for i = 1, count do
+		local spread = if count > 1 then (i - 1) / (count - 1) * 2 - 1 else 0 -- -1..1
+		local x = spread * 1.5
+		local y = 0.4 - math.abs(spread) * 0.5
+		local top = Instance.new("Attachment")
+		top.Position = Vector3.new(x, y + 0.12, 0.6)
+		top.Parent = root
+		local bottom = Instance.new("Attachment")
+		bottom.Position = Vector3.new(x, y - 0.12, 0.6)
+		bottom.Parent = root
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = top
+		trail.Attachment1 = bottom
+		trail.Lifetime = lifetime
+		trail.FaceCamera = true
+		trail.LightEmission = 0.5
+		trail.Color = ColorSequence.new(Color3.fromRGB(235, 250, 240))
+		trail.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.15),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		trail.WidthScale = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(1, 0.2),
+		})
+		trail.Parent = root
+		task.delay(seconds, function()
+			trail.Enabled = false
+		end)
+		Debris:AddItem(trail, seconds + lifetime + 0.2)
+		Debris:AddItem(top, seconds + lifetime + 0.2)
+		Debris:AddItem(bottom, seconds + lifetime + 0.2)
+	end
+end
+
 -- The glyph a player just drew pops up over their head, rises, and fades,
 -- so everyone can see which spell they readied.
 function SpellVfx.glyphEmblem(parent: Instance, character: Model, glyphId: string, color: Color3)

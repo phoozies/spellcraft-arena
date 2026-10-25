@@ -30,6 +30,7 @@ local RunService = game:GetService("RunService")
 
 local TweenService = game:GetService("TweenService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
@@ -48,8 +49,9 @@ local NUMBER_COLORS: { [string]: Color3 } = {
 
 local FxController = {}
 
--- Don't draw effects in arenas far from us (matches run side by side).
-local DRAW_DISTANCE = 600
+-- Don't draw effects in arenas far from us (matches run side by side). Wide
+-- enough that the hub's far rim still sees the duels fought below the island.
+local DRAW_DISTANCE = 900
 local MAX_DEBRIS = 120
 
 -- A bolt whose visual has `model` is drawn with that imported model
@@ -266,6 +268,7 @@ local function onDash(character: Model, direction: Vector3)
 		return
 	end
 	CastAnimations.play(character, "Dash")
+	SpellVfx.windStreaks(character, Config.DASH.TRAILS, Config.DASH.DURATION)
 	local feet = root.Position - Vector3.new(0, 2.8, 0)
 	SpellVfx.dust(folder, feet, 5, Color3.fromRGB(220, 220, 230))
 	SpellVfx.dust(folder, feet - direction * 3, 4, Color3.fromRGB(220, 220, 230))
@@ -478,7 +481,7 @@ local function step(dt: number)
 		end
 		-- Safety net if the end event is lost: drop it shortly after max range.
 		if travelled >= bolt.range and now - bolt.born > bolt.range / bolt.speed + 0.5 then
-			bolts[id] = nil;
+			bolts[id] = nil
 			(bolt.model or bolt.part):Destroy()
 		end
 	end

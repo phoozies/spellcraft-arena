@@ -29,12 +29,14 @@ local HUB: Mood = {
 		ExposureCompensation = 0.1,
 	},
 	atmosphere = {
-		Density = 0.22,
+		-- Thin air: duels are fought on arenas hundreds of studs below the island,
+		-- and hub players should see them clearly.
+		Density = 0.12,
 		Offset = 0.1,
 		Color = Color3.fromRGB(214, 226, 245),
 		Decay = Color3.fromRGB(232, 208, 170),
 		Glare = 0.2,
-		Haze = 0.5,
+		Haze = 0.2,
 	},
 	bloom = { Intensity = 0.25, Size = 24, Threshold = 1.4 },
 	color = { Saturation = 0.1, Contrast = 0.05, TintColor = Color3.fromRGB(255, 248, 235) },

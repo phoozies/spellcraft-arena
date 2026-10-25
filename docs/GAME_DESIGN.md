@@ -39,7 +39,7 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 - **Draw** a spell's glyph (hold **F** or tap ✏ Draw, then trace it) to add **one copy** of that spell to your hotbar. You hold **at most one copy of each spell**. The new copy is readied automatically. **You can only draw in the hub's Training Grove, the rounds of a match, and the Battleground.**
 - **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.**
 - **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, the rest up to 9s, ultimates 16-22s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
-- **Dash:** press **Q** (or the Dash button) to burst forward; 4 second cooldown.
+- **Dash:** press **Q** (or the Dash button) to leap forward with three wind streaks behind you; 2 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground where you aim, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
@@ -95,14 +95,19 @@ A blue **Battleground portal** in the concourse teleports you to a big open worl
 - **Knocking out an NPC pays coins** (3 / 5 / 12 / 40), up to 120 coins per 5 minutes so camps can't be farmed endlessly.
 - You fight with your equipped element's spells and can raise Earth Walls anywhere. There are no wins or boosts; health regenerates slowly after 5 seconds without damage. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
 
-## Maps (designed for 8 players; the Sparring Arena suits smaller matches)
+## Maps (8 duel maps plus the hub; the compact ones suit smaller matches)
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell topped by a stone wizard statue, with a three-tier grandstand behind it, opening into the Training Concourse (a red carpet to the Arena Gate between wooden fences, hay bales, and archery targets). The hub has no stone walls: it is a training-ground map | Four element shrines around the fountain, team boxes (1v1–4v4) and the Battleground portal in the concourse, the Training Grove (build anything, smash dummies, and the one hub place to draw and cast), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
+| **Inkwell Plaza** (hub) | A round **floating island** over the ocean: a grass top with a sand beach, a dark rock cone underneath, a wooden rail, and a stepped white-marble amphitheatre, leaning pillars, a ruined arch and bare trees. A sand plaza with a giant inkwell and a stone wizard statue is at the centre | Four element shrines, Spellbook kiosk, Daily Quest chest and gift box on the plaza; the team boxes (1v1–4v4) in an arc to the north with the Arena Gate behind them; the Battleground portal to the south; the Training Grove (west: build, smash dummies, the one hub place to draw and cast); the Crate Shop (east); the wins podium + Most Wins board; four rim overlooks to **spectate the duels fought on arenas below the island** |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
 | **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
+| **Frost Hollow** | A round sheet of ice with frozen spires | No rim wall: ring-outs; breakable ice cubes and spires |
+| **Ember Forge** | A basalt floor in a lava moat, around a stepped anvil | Obsidian pillars and brick walls as cover; rim wall |
+| **Moss Ruins** | An overgrown courtyard with broken marble arches | Lots of cover: toppled columns, mossy blocks, trees; rim wall |
+| **Tidal Temple** | A sandy island around a three-step temple in shallow sea | Coral pillars and giant clams as cover; torches; rim wall |
+| **Sky Bridge** | Two round platforms joined by a plank bridge, with a small island midway | No rim walls: ring-outs; breakable bridge planks |
 
 Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and identical on every server.
 

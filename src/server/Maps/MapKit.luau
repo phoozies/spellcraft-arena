@@ -8,6 +8,10 @@
 --   SmallModeWalls  Folder of walls enabled only for 1v1 / 2v2
 --   Structures      Folder (created by ArenaService) for placed objects
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+
 local MapKit = {}
 
 export type PartProps = {
@@ -142,6 +146,128 @@ function MapKit.blockWall(
 		end
 	end
 	return folder
+end
+
+-- A flat round disc whose TOP face is at `top` (a point on its axis).
+function MapKit.disc(
+	parent: Instance,
+	top: Vector3,
+	radius: number,
+	thickness: number,
+	color: Color3,
+	material: Enum.Material,
+	name: string?
+): Part
+	return MapKit.part(parent, {
+		name = name or "Disc",
+		shape = Enum.PartType.Cylinder,
+		size = Vector3.new(thickness, radius * 2, radius * 2),
+		cframe = CFrame.new(top - Vector3.new(0, thickness / 2, 0))
+			* CFrame.Angles(0, 0, math.pi / 2),
+		color = color,
+		material = material,
+	})
+end
+
+-- A tapering rock underside (stacked discs) hanging from a round floor, so an
+-- arena or island looks like it floats. `topY` is where the first layer's top
+-- sits; it narrows from `radius` to about a sixth of it over `depth` studs.
+-- `center` (default the origin) moves it sideways to a floor not at the origin.
+function MapKit.underside(
+	parent: Instance,
+	topY: number,
+	radius: number,
+	depth: number,
+	color: Color3,
+	material: Enum.Material,
+	center: Vector3?
+)
+	local layers = 6
+	local offset = center or Vector3.zero
+	local step = depth / layers
+	for i = 1, layers do
+		local r = radius * (1 - (i - 1) / layers * 0.85)
+		MapKit.disc(
+			parent,
+			Vector3.new(offset.X, topY - (i - 1) * step, offset.Z),
+			r,
+			step + 0.2,
+			color,
+			material,
+			"Underside"
+		)
+	end
+end
+
+-- An upright round column standing on `base`.
+function MapKit.pillar(
+	parent: Instance,
+	base: Vector3,
+	height: number,
+	diameter: number,
+	color: Color3,
+	material: Enum.Material?
+): Part
+	return MapKit.part(parent, {
+		name = "Pillar",
+		shape = Enum.PartType.Cylinder,
+		size = Vector3.new(height, diameter, diameter),
+		cframe = CFrame.new(base + Vector3.new(0, height / 2, 0))
+			* CFrame.Angles(0, 0, math.pi / 2),
+		color = color,
+		material = material or Enum.Material.Marble,
+	})
+end
+
+-- A ring of invisible walls (spells pass through: CanQuery off) whose inner
+-- face is at `radius`, keeping everyone on a round floor. `y` is the wall's
+-- bottom.
+function MapKit.barrierRing(parent: Instance, radius: number, height: number, y: number?)
+	local barriers = MapKit.folder(parent, "Barriers")
+	local segments = math.max(12, math.ceil(radius / 4))
+	local width = 2 * math.pi * (radius + 1) / segments + 1
+	for i = 1, segments do
+		local a = (i / segments) * math.pi * 2
+		local position = Vector3.new(
+			math.cos(a) * (radius + 1),
+			(y or 0) + height / 2,
+			math.sin(a) * (radius + 1)
+		)
+		local wall = MapKit.part(barriers, {
+			name = "Barrier",
+			size = Vector3.new(width, height, 2),
+			cframe = CFrame.lookAt(position, Vector3.new(0, position.Y, 0)),
+			transparency = 1,
+		})
+		wall.CanQuery = false
+	end
+end
+
+-- A tree standing on `position`: a block-model oak, birch or pine, or a plain
+-- trunk-and-ball when the model isn't available.
+function MapKit.tree(parent: Instance, position: Vector3, scale: number, rng: Random, kind: string?)
+	local kinds = { "TreeOak", "TreeBirch", "TreePine" }
+	local tree = ModelKit.clone(kind or kinds[rng:NextInteger(1, #kinds)], "solid", scale)
+	if tree then
+		tree:PivotTo(CFrame.new(position) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+		tree.Parent = parent
+		return
+	end
+	MapKit.part(parent, {
+		name = "Trunk",
+		size = Vector3.new(2 * scale, 10 * scale, 2 * scale),
+		cframe = CFrame.new(position + Vector3.new(0, 5 * scale, 0)),
+		color = Color3.fromRGB(110, 80, 56),
+		material = Enum.Material.Wood,
+	})
+	MapKit.part(parent, {
+		name = "Leaves",
+		shape = Enum.PartType.Ball,
+		size = Vector3.new(11, 9, 11) * scale,
+		cframe = CFrame.new(position + Vector3.new(0, 12 * scale, 0)),
+		color = Color3.fromRGB(72, 150, 72),
+		material = Enum.Material.Grass,
+	})
 end
 
 -- Scatter helper with a fixed seed so maps are identical everywhere.

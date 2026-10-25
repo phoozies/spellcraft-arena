@@ -41,9 +41,9 @@ glossary:
   archetype: the server behavior a spell row uses (Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon)
   coins: the only currency; earned by winning; spent on elements and Spell Crate spins
   wins: profile.stats.wins; the leaderboard stat
-  hub: Inkwell Plaza, a sunlit sandstone arena (round plaza, grandstand, Champions' Concourse), where players spawn, pick elements, open crates, and pick teams (no PvP)
+  hub: Inkwell Plaza, a round floating island (sand plaza, marble amphitheatre, rim overlooks) over open ocean, where players spawn, pick elements, open crates, and pick teams (no PvP)
   glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), support heart, storm zigzag M, summon hook J, ward X, vortex spiral, ultimate star"
-  arena: an instanced match map cloned at x = slot * 2000, y = 400
+  arena: an instanced match map summoned below the hub island (ArenaService.slotOrigin: Config.ARENA ring of slots at y = -300, radius 380), so hub players can spectate it
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
@@ -321,18 +321,19 @@ features:
     invariants: [bump SCHEMA and migrate in reconcile() for breaking changes, never save over another server's lock]
 
   - id: hub
-    summary: Inkwell Plaza, a sunlit arena built at runtime; the client warms the light for the hub (LightingController).
+    summary: Inkwell Plaza, a round floating island built at runtime (grass top, sand beach, rock cone underneath, ocean far below at Config.HUB.OCEAN_Y); the client warms the light and thins the haze for the hub (LightingController).
     builder: src/server/Maps/InkwellPlaza.luau
-    layout: north is -Z; round spawn plaza at (0,0,38); Champions' Concourse from z=-4 to the Arena Gate at z=-190; grandstand behind the plaza (south)
+    layout: centred on the origin, top at y = 0, radius Config.HUB.RADIUS (180); bearings are degrees clockwise from north (-Z). Sand plaza r 46 at the centre; amphitheatre (3 marble tiers, bearing 125-235) to the south; team-box arc at r 105 to the north; Battleground portal at bearing 180 r 130; Training Grove west; Crate Shop east; rim rail at r 170
     contents:
-      - spawn
-      - inkwell fountain + 4 element shrines (each lists its 3 base spells, shapes, and price; prompt opens the Spellbook)
-      - Champions' Concourse - arched sandstone bays with sky-glass windows and glyph banners, red carpet, Arena Gate
-      - grandstand (3 tiers) and team flag poles
-      - Training Grove (west, 100 x 110, tag PracticeZone + BuildZone: the only hub place to draw and cast; 11 dummies, archery targets, fence, hay)
-      - no stone walls: wooden fences, hay bales, and archery targets line the concourse; team boxes are open training mats
+      - spawn (HubSpawn, on the plaza's south side)
+      - inkwell fountain + 4 element shrines (each lists its 3 base spells, shapes, and price; prompt opens the Spellbook), Spellbook kiosk, Daily Quests chest, Like & Favourite gift box
+      - team boxes in an arc facing the centre: two 1v1, two 2v2, one 3v3, one 4v4 (pads carry Box, Mode, Team, Slots); the red Arena Gate behind them
+      - amphitheatre, leaning marble pillars, ruined arch, bare and block-model trees, flag poles
+      - Training Grove (west, 76 x 84, tag PracticeZone + BuildZone: the only hub place to draw and cast; 7 dummies, archery targets, fence, hay)
+      - winners' podium (tag PodiumSpot) and Most Wins board (tag WinsBoard), both facing the centre
+      - four SPECTATE overlooks on the rim: duels are fought on arenas summoned below the island (ArenaService.slotOrigin)
+      - rock cone, stalactites and crystals underneath; an ocean tile grid at Config.HUB.OCEAN_Y
       - wizard statue on the inkwell (the hub centerpiece)
-      - team boxes in the hall: two 1v1, two 2v2, one 3v3, one 4v4 (pads carry Box, Mode, Team, Slots)
       - Battleground portal (BattlegroundPortal tag) in the concourse
       - Training Grove (BuildZone + PracticeZone + dummies)
       - Spellbook kiosk (Grimoire model)
@@ -455,12 +456,21 @@ features:
       - orange = primary/accent, green = go, red = stop/close, blue = everything else
 
   - id: dash
-    summary: A short burst forward on Q / B / the Dash button, with a dash animation and a cooldown.
+    summary: A short leap forward on Q / B / the Dash button: arms out, three pale wind streaks behind you, a cooldown.
     server: src/server/Services/DashService.luau (dash(player, direction): alive, not anchored, no Stun/Root/TimeStop/Channel, off cooldown; replies DashStarted(endsAt, direction); Fx "dash" to everyone)
-    client: src/client/Controllers/DashController.luau (key Q, gamepad ButtonB, the button with a cooldown readout; moves the player's own character with a LinearVelocity for Config.DASH.DURATION)
-    config: Config.DASH { COOLDOWN 4, SPEED 96, DURATION 0.25 } (about 24 studs); Q is a reserved key (can't be the draw key)
+    client: src/client/Controllers/DashController.luau (key Q, gamepad ButtonB, the button with a cooldown readout; moves the player's own character with a LinearVelocity for Config.DASH.DURATION and pops it up Config.DASH.HOP)
+    config: Config.DASH { COOLDOWN 2, SPEED 70, DURATION 0.4, HOP 38, TRAILS 3 } (about 28 studs, airborne about as long as the dash); Q is a reserved key (can't be the draw key)
     remotes: { c2s: [Dash], s2c: [DashStarted] }
-    animation: CastPoses.Dash through Fx/CastAnimations; puff and whoosh from FxController onDash
+    animation: CastPoses.Dash (arms wide) through Fx/CastAnimations; SpellVfx.windStreaks (Config.DASH.TRAILS Trails), puff and whoosh from FxController onDash
+
+  - id: duel_maps
+    summary: Eight duel maps, each summoned as an instanced arena below the floating hub so hub players can watch the fight.
+    server: src/server/Services/ArenaService.luau (MAP_NAMES, DISPLAY_NAMES, pickMap weights, slotOrigin(slot), create/destroy/rebuild, the SpectatorSign billboard); MapVoteService lists every map
+    maps: src/server/Maps/{CrayonCanyon,SkyIslands,SparringArena,FrostHollow,EmberForge,MossRuins,TidalTemple,SkyBridge}.luau; shared builders in Maps/MapKit.luau (disc, pillar, barrierRing, underside, tree, blockWall)
+    config: Config.ARENA { Y -300, RADIUS 380, RING_STEP 420, PER_RING 8 }; Config.HUB { RADIUS 180, OCEAN_Y -450 }
+    client: MapVoteController (4 x 2 card grid); FxController.DRAW_DISTANCE 900 so the hub's far rim still sees the fights; LightingController thins the hub haze
+    invariants: [every map has Bounds, Spawns/Team1_1-4 and Team2_1-4, SmallModeWalls, floor top at y = 0, every model has a fallback, the ocean stays above FallenPartsDestroyHeight, arenas stay outside the island's footprint and 280+ studs apart]
+    tests: tests/Maps.spec.luau
 
   - id: spectate
     summary: Watch another player: a camera-only feature, no server involvement.

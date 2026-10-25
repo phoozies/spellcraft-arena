@@ -173,10 +173,12 @@ local function updatePodium(rows: { Types.LeaderRow })
 			if avatar and shown[rank] == row.userId then
 				avatar.Name = "Avatar"
 				avatar:SetAttribute("UserId", row.userId)
-				-- Stand on the pedestal top, facing the plaza (+Z): place it,
-				-- then lift it so its feet touch the top.
+				-- Stand on the pedestal top, facing where the pedestal's front
+				-- faces (the island's centre): place it, then lift it so its feet
+				-- touch the top.
 				local top = spot.Position + Vector3.new(0, spot.Size.Y / 2, 0)
-				avatar:PivotTo(CFrame.lookAt(top, top + Vector3.new(0, 0, 1)))
+				local front = spot.CFrame.LookVector
+				avatar:PivotTo(CFrame.lookAt(top, top + Vector3.new(front.X, 0, front.Z)))
 				local box, size = avatar:GetBoundingBox()
 				local lift = top.Y - (box.Position.Y - size.Y / 2)
 				avatar:PivotTo(avatar:GetPivot() + Vector3.new(0, lift, 0))
