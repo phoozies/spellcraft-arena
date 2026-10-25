@@ -4,6 +4,17 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (store art)
+- **New icons and thumbnails in the classic blocky Roblox style** (`assets/marketing/`: two 512px icons, three 1920x1080 thumbnails: key art, action, spell crates). They are drawn by `tools/make-marketing-art.py` (needs Pillow), so edit a scene there and re-run. They replace the old "Wordcraft Arena" art.
+
+### Added (Admin panel)
+- **A clickable Admin panel** in the classic Roblox admin style: a draggable window with an **X** to close it, a **Target** list (Me, All, Others, every player), tabs (Player, Spells, Economy, Match, Server) of buttons, a command box, and a log of replies. Open it with the purple **🛡 Admin** button or the **`** key. Danger buttons (kill, kick, ban, end match) need a second click. Chat `;` commands still work. Buttons live in `Shared/Admin/Catalog`; the client sends only a command string (`AdminCommand` remote), and the server re-checks admin status, length (200), and rate on every call. New `AdminLog` remote carries replies to the panel.
+- Admin commands now prefer an exact username over a prefix match, and `ban` refuses `all` / `others`.
+
+### Changed (heal cooldown, GUI colours)
+- **Heal's cooldown is 30s** (was 10s).
+- **GUI uses a pastel palette with dark ink text** (from the supplied swatches): Blue Grey `#DBE1F1` panels, Blue `#96ADFC` buttons and cards, Orange `#EDDD6E` for primary / selected, Green `#A8F29A` for go, Red `#E0A6AA` for stop, Purple `#B987DC`, plus Peach, Turquoise, Yellow, and Grey. Text is near-black ink (7.5:1 or better on every swatch), borders are thick near-black, studs are faint, and titles are deep purple. Text over the world or dark overlays stays white with a dark outline (`Theme.COLORS.onDark`). The loading screen matches.
+
 ### Added (five new shapes)
 - **Heart, spiral, zigzag (M), hook (J), and X** join the seven shapes (12 in all). Heal is a **heart**, Lightning a **zigzag**, Turret a **hook**, Air Shield an **X** (drawn in one unbroken stroke: down, up the side, down), and Black Hole a **spiral**. Their roles are `support`, `storm`, `summon`, `ward`, and `vortex`. All five are unused by any base spell, so every crate spell now fits next to every element's base trio; only Water Wave (bolt), Fire Pillar and Earth Pillar (V) can still clash.
 - **Black Hole is now Legendary.** It drags every enemy it catches to the exact center and holds them there for 3 seconds. Held enemies can still cast spells (it roots, it does not stun). 10 damage in total.

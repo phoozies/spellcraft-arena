@@ -100,7 +100,7 @@ function SettingsController.init()
 	keyLabel = Theme.label(keyBox, Config.DEFAULT_DRAW_KEY, {
 		Size = UDim2.new(1, -8, 1, -8),
 		Position = UDim2.fromOffset(4, 4),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	changeButton = Theme.button(row, "Change", {
 		AnchorPoint = Vector2.new(1, 0.5),

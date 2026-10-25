@@ -29,6 +29,7 @@ local DEFINITIONS: { [string]: string } = {
 	Dash = "(direction: Vector3?) dash the way the player is heading (their move direction); the server checks the cooldown and state",
 	MapVote = "(mapName: string) your pick in the pre-match map vote (duels); can be changed until the vote closes",
 	PartyAction = "(action: string, userId: number?) party intent: invite / accept / decline / kick take a userId, leave takes none",
+	AdminCommand = "(text: string) run an admin command from the admin panel (the ; prefix is optional); ignored unless the server says you are an admin",
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
@@ -38,6 +39,7 @@ local DEFINITIONS: { [string]: string } = {
 	MapVoteState = "(state: {mode, maps: {{id, name, votes}}, myPick: string?, endsAt: number}?) the open map vote and its tally; nil closes it",
 	PartyState = "(state: {leaderId: number?, members: {{userId, name}}, invites: {{userId, name, secondsLeft}}}) your party and pending invites",
 	Toast = "(message: string, kind: string) short on-screen notification",
+	AdminLog = "(message: string) a command's result, shown in the admin panel's log (admins only)",
 	MatchStateChanged = "(state: MatchState) phase, timer, scores",
 	DraftOffered = "(cards: {DraftCard}, endsAt: number)",
 	ProfileUpdated = "(summary: {coins, elements, element, spells, loadout, tutorial, quests, streak, stats, settings, rewards: {likeFav, likeReadyAt}})",

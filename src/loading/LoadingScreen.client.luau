@@ -2,7 +2,7 @@
 -- Custom join screen (ReplicatedFirst runs before anything else loads).
 -- Shows the game title, a bouncing spell glyph, a rotating tip, and a
 -- progress bar that fills as the game loads, then fades into the hub. Same
--- studded blue look as the rest of the UI (client/UI/Theme).
+-- studded pastel look as the rest of the UI (client/UI/Theme).
 
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
@@ -27,7 +27,7 @@ local TIPS = {
 
 -- The stud tile (assets/ui/studs.png, the same id as Theme.STUD_IMAGE).
 local STUD_IMAGE = "rbxassetid://111722228846947"
-local NAVY = Color3.fromRGB(10, 48, 110)
+local INK = Color3.fromRGB(20, 20, 28)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "SpellcraftLoading"
@@ -38,11 +38,11 @@ gui.ResetOnSpawn = false
 local back = Instance.new("Frame")
 back.Size = UDim2.fromScale(1, 1)
 back.BorderSizePixel = 0
-back.BackgroundColor3 = Color3.fromRGB(24, 118, 205)
+back.BackgroundColor3 = Color3.fromRGB(219, 225, 241)
 back.Parent = gui
 local gradient = Instance.new("UIGradient")
 gradient.Rotation = 90
-gradient.Color = ColorSequence.new(Color3.fromRGB(70, 175, 255), Color3.fromRGB(18, 96, 180))
+gradient.Color = ColorSequence.new(Color3.fromRGB(219, 225, 241), Color3.fromRGB(150, 173, 252))
 gradient.Parent = back
 local studs = Instance.new("ImageLabel")
 studs.Size = UDim2.fromScale(1, 1)
@@ -50,7 +50,7 @@ studs.BackgroundTransparency = 1
 studs.Image = STUD_IMAGE
 studs.ScaleType = Enum.ScaleType.Tile
 studs.TileSize = UDim2.fromOffset(44, 44)
-studs.ImageTransparency = 0.2
+studs.ImageTransparency = 0.6
 studs.Parent = back
 
 local function label(text: string, y: number, height: number, color: Color3): TextLabel
@@ -62,34 +62,33 @@ local function label(text: string, y: number, height: number, color: Color3): Te
 	l.Font = Enum.Font.FredokaOne
 	l.TextScaled = true
 	l.TextColor3 = color
-	l.TextStrokeColor3 = NAVY
-	l.TextStrokeTransparency = 0.35
+	l.TextStrokeTransparency = 1
 	l.Text = text
 	l.Parent = back
 	return l
 end
 
-local glyph = label("★", 0.3, 90, Color3.fromRGB(255, 202, 40))
-label("SPELLCRAFT ARENA", 0.45, 70, Color3.new(1, 1, 1))
-local tip = label(TIPS[math.random(1, #TIPS)], 0.62, 28, Color3.fromRGB(226, 242, 255))
+local glyph = label("★", 0.3, 90, Color3.fromRGB(185, 135, 220))
+label("SPELLCRAFT ARENA", 0.45, 70, Color3.fromRGB(72, 44, 128))
+local tip = label(TIPS[math.random(1, #TIPS)], 0.62, 28, INK)
 
 local barBack = Instance.new("Frame")
 barBack.AnchorPoint = Vector2.new(0.5, 0.5)
 barBack.Position = UDim2.fromScale(0.5, 0.72)
 barBack.Size = UDim2.new(0.4, 0, 0, 14)
-barBack.BackgroundColor3 = Color3.fromRGB(14, 70, 150)
+barBack.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 barBack.BorderSizePixel = 0
 barBack.Parent = back
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0.5, 0)
 corner.Parent = barBack
 local barStroke = Instance.new("UIStroke")
-barStroke.Color = NAVY
-barStroke.Thickness = 2
+barStroke.Color = INK
+barStroke.Thickness = 3
 barStroke.Parent = barBack
 local barFill = Instance.new("Frame")
 barFill.Size = UDim2.fromScale(0, 1)
-barFill.BackgroundColor3 = Color3.fromRGB(60, 185, 70)
+barFill.BackgroundColor3 = Color3.fromRGB(168, 242, 154)
 barFill.BorderSizePixel = 0
 barFill.Parent = barBack
 corner:Clone().Parent = barFill

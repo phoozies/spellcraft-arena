@@ -51,14 +51,14 @@ local battleLabel: TextLabel
 local battleLeave: TextButton
 
 local TOAST_COLORS: { [string]: Color3 } = {
-	fizzle = Color3.fromRGB(120, 144, 156),
-	ready = Color3.fromRGB(102, 187, 106),
-	cooldown = Color3.fromRGB(255, 167, 38),
-	reward = Color3.fromRGB(255, 202, 40),
-	victory = Color3.fromRGB(255, 202, 40),
-	round = Color3.fromRGB(66, 165, 245),
-	streak = Color3.fromRGB(236, 64, 122),
-	info = Color3.fromRGB(57, 55, 98),
+	fizzle = Theme.COLORS.grey,
+	ready = Theme.COLORS.good,
+	cooldown = Theme.COLORS.peach,
+	reward = Theme.COLORS.accent,
+	victory = Theme.COLORS.yellow,
+	round = Theme.COLORS.blue,
+	streak = Theme.COLORS.purple,
+	info = Theme.COLORS.panel,
 }
 
 function HudController.getGui(): ScreenGui
@@ -84,10 +84,10 @@ function HudController.toast(message: string, kind: string?)
 	local frame = Theme.frame(toastHolder, {
 		Size = UDim2.new(1, 0, 0, 40),
 		BackgroundColor3 = TOAST_COLORS[kind or "info"] or Theme.COLORS.panelLight,
-		BackgroundTransparency = 0.1,
+		BackgroundTransparency = 0.05,
 	})
 	Theme.corner(frame, 10)
-	Theme.stroke(frame, Color3.fromRGB(20, 20, 40), 2)
+	Theme.stroke(frame, Theme.COLORS.outline, 3)
 	Theme.label(
 		frame,
 		message,
@@ -247,7 +247,12 @@ local function buildHotbar(root: Frame)
 			ZIndex = 3,
 		})
 		Theme.corner(cooldown)
-		local cooldownText = Theme.label(button, "", { Name = "CooldownText", ZIndex = 4 })
+		local cooldownText = Theme.label(button, "", {
+			Name = "CooldownText",
+			ZIndex = 4,
+			TextColor3 = Theme.COLORS.onDark,
+			TextStrokeTransparency = 0.3,
+		})
 		button.Activated:Connect(function()
 			Remotes.get("SelectSlot"):FireServer(i)
 		end)
@@ -288,7 +293,7 @@ local function refreshHotbar()
 			slot.stroke.Color = if isReadied then Theme.COLORS.accent else color
 			slot.stroke.Thickness = if isReadied then 5 else 3
 			slot.button.BackgroundColor3 = if isReadied
-				then Color3.fromRGB(84, 80, 140)
+				then Theme.COLORS.purple
 				else Theme.COLORS.panelLight
 		else
 			-- Empty slot: hint that drawing a glyph fills it. All 5 slots
@@ -382,7 +387,7 @@ local function buildWallet(root: Frame)
 		Size = UDim2.new(0.55, -8, 1, -8),
 		Position = UDim2.fromOffset(8, 4),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	winsLabel = Theme.label(holder, "🏆 0", {
 		Size = UDim2.new(0.45, -8, 1, -8),
@@ -456,9 +461,9 @@ local function refreshMatch()
 	local parts = {}
 	for team, wins in state.scores do
 		local color = if team == "Blue"
-			then "#42A5F5"
-			elseif team == "Red" then "#EF5350"
-			else "#FFCA28"
+			then "#2F55C8"
+			elseif team == "Red" then "#B3262E"
+			else "#8A6A00"
 		local mine = if team == state.myTeam then " (you)" else ""
 		table.insert(parts, `<font color="{color}">{team}{mine}: {wins}</font>`)
 	end
@@ -476,7 +481,7 @@ local function buildBattleBanner(root: Frame)
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 8),
 		Size = UDim2.fromOffset(560, 36),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.yellow,
 		TextStrokeTransparency = 0.3,
 		Visible = false,
 	})
@@ -499,6 +504,7 @@ local function buildBoosts(root: Frame)
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 76),
 		Size = UDim2.fromOffset(300, 28),
+		TextColor3 = Theme.COLORS.onDark,
 		TextStrokeTransparency = 0.4,
 		Visible = false,
 	})

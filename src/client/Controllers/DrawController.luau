@@ -391,6 +391,7 @@ local function buildCanvas()
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.05),
 		Size = UDim2.new(0.9, 0, 0, 44),
+		TextColor3 = Theme.COLORS.onDark,
 		TextStrokeTransparency = 0.4,
 		ZIndex = 4,
 	})
@@ -451,7 +452,7 @@ local function buildButton()
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -4, 0, 2),
 		Size = UDim2.fromOffset(22, 18),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 		ZIndex = 5,
 	})
 	drawButton.Activated:Connect(function()

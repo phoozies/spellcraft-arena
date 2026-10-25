@@ -81,7 +81,7 @@ function SpellCard.create(parent: Instance, spellId: string, options: Options?):
 			Name = "Rarity",
 			Size = UDim2.new(1, -6, 0, 14),
 			Position = UDim2.new(0, 3, 1, -20),
-			TextColor3 = color,
+			TextColor3 = Theme.COLORS.text,
 		})
 	end
 	return card

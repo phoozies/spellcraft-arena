@@ -1,6 +1,8 @@
 --!strict
 -- Admin commands, typed in chat with Config.ADMIN_PREFIX
--- (";"), e.g. ";give me fireball" or ";startmatch 2v2". See docs/ADMIN.md.
+-- (";"), e.g. ";give me fireball" or ";startmatch 2v2", or clicked in the admin
+-- panel (client AdminController), which sends the same text through the
+-- AdminCommand remote. See docs/ADMIN.md.
 --
 -- Who is an admin: UserIds in Config.ADMIN_USER_IDS, the place owner (or
 -- group members at rank >= ADMIN_GROUP_MIN_RANK), and anyone playtesting
@@ -40,7 +42,13 @@ type Command = {
 local AdminService = {}
 
 local admins: { [Player]: boolean } = {}
+local lastPanelCommand: { [Player]: number } = {}
 local toastRemote: RemoteEvent
+local logRemote: RemoteEvent
+
+-- Panel commands: at most one per this many seconds, and this long at most.
+local PANEL_COOLDOWN = 0.1
+local PANEL_MAX_LENGTH = 200
 
 ----------------------------------------------------------------------
 -- Helpers
@@ -68,6 +76,7 @@ end
 
 local function reply(admin: Player, message: string)
 	toastRemote:FireClient(admin, message, "info")
+	logRemote:FireClient(admin, message)
 end
 
 -- Resolves a target word to players.
@@ -76,6 +85,12 @@ local function findPlayers(admin: Player, word: string?): { Player }
 		return { admin }
 	end
 	local lower = string.lower(word)
+	-- An exact username wins over a prefix ("bob" over "bobby").
+	for _, p in Players:GetPlayers() do
+		if string.lower(p.Name) == lower then
+			return { p }
+		end
+	end
 	if lower == "all" then
 		return Players:GetPlayers()
 	end
@@ -543,6 +558,10 @@ COMMANDS.ban = {
 	usage = "ban <player> <minutes|perm> [reason]",
 	help = "Ban a player from the whole experience (Players:BanAsync).",
 	run = function(admin, args)
+		local who = string.lower(args[1] or "")
+		if who == "all" or who == "others" then
+			return "Ban one player at a time."
+		end
 		local target = findPlayers(admin, args[1])[1]
 		if not target or target == admin then
 			return "Usage: ban <player> <minutes|perm> [reason]"
@@ -626,16 +645,46 @@ AdminService.COMMANDS = COMMANDS
 
 function AdminService.init()
 	toastRemote = Remotes.get("Toast")
+	logRemote = Remotes.get("AdminLog")
 	SpellInputService.setCommandHandler(AdminService.handle)
+
+	-- The admin panel's clicks. Untrusted: only admins, one short string, rate limited.
+	Remotes.get("AdminCommand").OnServerEvent:Connect(function(player: Player, text: any)
+		if not admins[player] or typeof(text) ~= "string" then
+			return
+		end
+		text = string.gsub(text, "^%s+", "")
+		text = string.gsub(text, "%s+$", "")
+		if #text == 0 or #text > PANEL_MAX_LENGTH then
+			return
+		end
+		local now = os.clock()
+		if now - (lastPanelCommand[player] or 0) < PANEL_COOLDOWN then
+			return
+		end
+		lastPanelCommand[player] = now
+		if string.sub(text, 1, #Config.ADMIN_PREFIX) ~= Config.ADMIN_PREFIX then
+			text = Config.ADMIN_PREFIX .. text
+		end
+		AdminService.handle(player, text)
+	end)
 end
 
 function AdminService.start()
 	local function check(player: Player)
 		admins[player] = checkAdmin(player)
 		if admins[player] then
+			-- Tells the client to show the admin panel button. Cosmetic only: every
+			-- command is checked against `admins` on the server.
+			player:SetAttribute("IsAdmin", true)
 			task.delay(4, function()
 				if player.Parent then
-					reply(player, `You're an admin. Type {Config.ADMIN_PREFIX}help for commands.`)
+					reply(
+						player,
+						"You're an admin. Open the Admin panel with the 🛡 button or the ` key, or type "
+							.. Config.ADMIN_PREFIX
+							.. "help."
+					)
 				end
 			end)
 		end
@@ -646,6 +695,7 @@ function AdminService.start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		admins[player] = nil
+		lastPanelCommand[player] = nil
 	end)
 end
 

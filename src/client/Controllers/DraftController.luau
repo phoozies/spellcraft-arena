@@ -52,7 +52,7 @@ local function show(cards: { Types.DraftCard })
 			Theme.label(button, boost.name, {
 				Size = UDim2.new(1, -12, 0, 32),
 				Position = UDim2.fromOffset(6, 92),
-				TextColor3 = Theme.COLORS.accent,
+				TextColor3 = Theme.COLORS.heading,
 			})
 			Theme.label(button, boost.description, {
 				Size = UDim2.new(1, -16, 0, 70),
@@ -115,7 +115,7 @@ function DraftController.init()
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0.18, 0),
 		Size = UDim2.fromOffset(620, 44),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	row = Theme.frame(overlay, {
 		AnchorPoint = Vector2.new(0.5, 0.5),

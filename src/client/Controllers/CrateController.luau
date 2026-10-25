@@ -56,7 +56,7 @@ local function oddsText(): string
 		local color = Rarity.color(row.rarity)
 		table.insert(
 			parts,
-			`<font color="#{color:ToHex()}"><b>{row.rarity}</b> {math.floor(row.percent + 0.5)}%</font>`
+			`<font color="#{color:Lerp(Color3.new(0, 0, 0), 0.45):ToHex()}"><b>{row.rarity}</b> {math.floor(row.percent + 0.5)}%</font>`
 		)
 	end
 	return table.concat(parts, "   ")
@@ -94,7 +94,7 @@ end
 local function reveal(result: Types.CrateResult)
 	local def = SpellDefinitions.get(result.spell)
 	local color = Rarity.color(result.rarity)
-	resultLabel.TextColor3 = color
+	resultLabel.TextColor3 = Theme.COLORS.text
 	local name = if def then def.name else result.spell
 	resultLabel.Text = if result.duplicate
 		then `Duplicate {name}! +{result.refund} coins back.`
@@ -204,7 +204,7 @@ local function build()
 		Position = UDim2.new(1, -76, 0, 14),
 		Size = UDim2.fromOffset(200, 34),
 		TextXAlignment = Enum.TextXAlignment.Right,
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 
 	local card = Theme.frame(panel, {
@@ -219,7 +219,7 @@ local function build()
 		Size = UDim2.new(1, -16, 0, 34),
 		Position = UDim2.fromOffset(8, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	Theme.label(
 		card,

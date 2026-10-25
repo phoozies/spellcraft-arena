@@ -79,7 +79,7 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		Size = UDim2.new(1, -80, 0, 44),
 		Position = UDim2.fromOffset(16, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	local close = Theme.button(panel, "X", {
 		Name = "Close",
@@ -427,7 +427,7 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 			else ""
 		button.Text = `{if element then element.icon else ""} {id}\n{mark}`
 		button.BackgroundColor3 = if id == selectedElement
-			then Color3.fromRGB(84, 80, 140)
+			then Theme.COLORS.purple
 			else Theme.COLORS.panelLight
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke and element then
@@ -443,7 +443,7 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 		return
 	end
 	local owned = table.find(ownedList, selectedElement) ~= nil
-	local color = `#{element.color:ToHex()}`
+	local color = `#{element.color:Lerp(Color3.new(0, 0, 0), 0.45):ToHex()}`
 	headerLabel.Text = `<b><font color="{color}">{element.icon} {element.name}</font></b>  {element.tagline}\n`
 		.. (
 			if firstPick
@@ -639,7 +639,7 @@ setLoadoutDetail = function(spellId: string?, profile: ClientState.ProfileSummar
 	end
 	if not owned then
 		loadoutDetail.Text = text
-			.. '  <font color="#ffd54f">Not won yet: spin the Spell Crate!</font>'
+			.. '  <font color="#7A5A00">Not won yet: spin the Spell Crate!</font>'
 		return
 	end
 	local equippedSlot = table.find(profile.loadout, def.id)
@@ -661,7 +661,7 @@ setLoadoutDetail = function(spellId: string?, profile: ClientState.ProfileSummar
 	end
 	local problem = Loadout.problem(def.id, others)
 	if problem then
-		loadoutDetail.Text = text .. `  <font color="#ff8a80">{problem}</font>`
+		loadoutDetail.Text = text .. `  <font color="#B3262E">{problem}</font>`
 		loadoutButton.Text = "Can't equip"
 		loadoutButton.BackgroundColor3 = Theme.COLORS.panel
 	else
@@ -753,7 +753,7 @@ local function refreshQuests()
 	end
 	Theme.label(questList, `🔥 Login streak: {profile.streak} day(s)`, {
 		Size = UDim2.new(1, 0, 0, 30),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	for _, quest in profile.quests do

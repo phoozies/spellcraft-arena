@@ -80,7 +80,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat (+coins), KO
   Fx/SpellVfx           bolt trails, impact bursts, buff auras, model columns/boulders/cracks, magic circle
   Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator
-  UI/Theme              the studded-Roblox look: studded blue panels and buttons, bevels, outlined text
+  UI/Theme              the studded-Roblox look: studded pastel panels and buttons, bevels, dark ink text
 
 ## Block models (the classic blocky look)
 

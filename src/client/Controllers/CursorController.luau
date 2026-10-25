@@ -135,13 +135,15 @@ local function build()
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 1, 10),
 		Size = UDim2.fromOffset(170, 24),
+		TextStrokeTransparency = 0.3,
 	})
 	hintLabel = Theme.label(root, "Click to cast", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 1, 34),
 		Size = UDim2.fromOffset(170, 18),
 		Font = Theme.BODY_FONT,
-		TextColor3 = Theme.COLORS.subtext,
+		TextColor3 = Theme.COLORS.onDark,
+		TextStrokeTransparency = 0.3,
 	})
 end
 

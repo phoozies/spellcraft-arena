@@ -606,7 +606,7 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.support,
 		sfx = { cast = "healChime" },
 		archetype = "Buff",
-		cooldown = 10,
+		cooldown = 30,
 		description = "A warm light mends you: restore 25 health.",
 		stats = { heal = 25, duration = 1.5 }, -- `duration` is just how long the green glow lasts
 		visual = {

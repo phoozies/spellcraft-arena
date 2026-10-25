@@ -42,7 +42,7 @@ local function cardFor(choice: MapChoice, order: number)
 	local votes = Theme.label(button, "", {
 		Size = UDim2.new(1, -12, 0.3, 0),
 		Position = UDim2.new(0, 6, 0.62, 0),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	button.Activated:Connect(function()
 		voteRemote:FireServer(choice.id)
@@ -69,7 +69,7 @@ local function show(state: State?)
 		card.stroke.Color = if mine then Theme.COLORS.accent else Color3.fromRGB(20, 20, 40)
 		card.stroke.Thickness = if mine then 5 else 2
 		card.button.BackgroundColor3 = if mine
-			then Color3.fromRGB(84, 80, 140)
+			then Theme.COLORS.purple
 			else Theme.COLORS.panelLight
 	end
 end
@@ -99,7 +99,7 @@ function MapVoteController.init()
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.fromScale(1, 0),
 		Size = UDim2.new(0.25, 0, 0, 36),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 		TextXAlignment = Enum.TextXAlignment.Right,
 	})
 	grid = Theme.frame(panel, {

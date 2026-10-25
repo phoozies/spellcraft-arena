@@ -441,7 +441,7 @@ local function buildUi()
 		Position = UDim2.fromOffset(14, 6),
 		Size = UDim2.new(1, -150, 0, 28),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.heading,
 	})
 	bodyLabel = Theme.label(card, "", {
 		Position = UDim2.fromOffset(14, 36),
@@ -514,7 +514,7 @@ local function buildUi()
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.36),
 		Size = UDim2.fromOffset(760, 90),
-		TextColor3 = Theme.COLORS.accent,
+		TextColor3 = Theme.COLORS.yellow,
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
 	})
@@ -535,6 +535,7 @@ local function buildUi()
 			TextWrapped = true,
 			TextScaled = false,
 			TextSize = 24,
+			TextColor3 = Theme.COLORS.onDark,
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
 		}

@@ -69,7 +69,8 @@ local function buildHud()
 	hpText = Theme.label(back, "100 / 100", {
 		Size = UDim2.new(1, -8, 1, 0),
 		Position = UDim2.fromOffset(4, 0),
-		TextStrokeTransparency = 0.4,
+		TextColor3 = Theme.COLORS.onDark,
+		TextStrokeTransparency = 0.3,
 		ZIndex = 5,
 	})
 	regenNote = Theme.label(
@@ -78,7 +79,7 @@ local function buildHud()
 		{
 			Position = UDim2.new(0, 0, 1, 2),
 			Size = UDim2.new(1, 0, 0, 16),
-			TextColor3 = Theme.COLORS.text,
+			TextColor3 = Theme.COLORS.onDark,
 			TextStrokeTransparency = 0.2,
 			Visible = false,
 		}

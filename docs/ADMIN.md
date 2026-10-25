@@ -1,8 +1,25 @@
 # Admin Commands
 
-Type commands in **chat** or the **chat** with the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
+There are two ways to run a command, and both go through the same server code:
+
+- **The Admin panel (click).** Admins see a purple **🛡 Admin** button under the wallet. Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
+- **Chat (type).** Use the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
+
+## The Admin panel
+
+- **Target (left):** `Me`, `All`, `Others`, or any other player in the server. Every button that acts on a player uses the picked target.
+- **Tabs (right):**
+  - **Player:** heal, god mode, free cast, knockback, kill, bring / go to / send to hub, walk speed, status effects, kick, ban.
+  - **Spells:** give any spell (grouped by element, crate spells under Arcane) or all of them.
+  - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, spin a Spell Crate, unlock elements.
+  - **Match:** start 1v1 to 4v4 now, end a match, send everyone to the hub, clear hub objects.
+  - **Server:** announce a message, unban a UserId, list commands.
+- **Danger buttons** (kill, kick, ban, end match, everyone to hub) change to **Sure?** and need a second click within 2 seconds.
+- **Command box (bottom):** type any command from the table below (no `;` needed) and press Enter. The log above it shows what you ran and what the server answered.
+
+The panel only draws buttons from `src/shared/Admin/Catalog.luau`. Each button is just a command string, so it can't do anything chat can't. The server re-checks that you are an admin on every click (the `AdminCommand` remote: admins only, 200 characters at most, 10 per second at most).
 
 ## Who is an admin
 
@@ -53,6 +70,8 @@ Leaving the target out means `me` where that makes sense.
 
 Spell names can be any alias and can be more than one word, for example `;give me fire bomb`. `;give` readies a copy of the spell on your hotbar even if it isn't in your element.
 
+`ban` takes one player at a time (not `all` or `others`). A player named exactly like the target word always wins over a longer name that starts the same way.
+
 ## Adding a command
 
 Add an entry to `COMMANDS` in [`src/server/Services/AdminService.luau`](../src/server/Services/AdminService.luau):
@@ -69,3 +88,5 @@ COMMANDS.example = {
 ```
 
 Commands run in their own thread, so yielding inside them (DataStores, filtering, bans) is fine.
+
+To give it a button, add an entry in `src/shared/Admin/Catalog.luau`: `button("Label", "example {t}")`, or `input(...)` for a command that needs typed text (`{t}` is the picked target, `{v}` the typed value).

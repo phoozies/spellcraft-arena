@@ -1,14 +1,16 @@
 --!strict
--- Shared UI look and small builders: the classic studded-Roblox style. Bright
--- blue panels and buttons with a grid of studs, a lighter top edge and darker
--- bottom edge (a bevel), small square-ish corners, bold white text with a navy
--- outline, and orange / green / red for primary / go / stop. High contrast so
--- it reads well for all ages and on small phone screens.
+-- Shared UI look and small builders: the classic studded-Roblox style in a
+-- pastel palette. Pastel panels and buttons with a faint grid of studs, a
+-- lighter top edge and slightly darker bottom edge (a bevel), small square-ish
+-- corners, thick near-black borders, bold dark ink text, and yellow / green /
+-- red for primary / go / stop. Dark text on pastel is 7.5:1 or better, so it
+-- reads well for all ages and on small phone screens. Text over the world or a
+-- dark overlay uses COLORS.onDark (white) with a dark stroke instead.
 --
 -- Studs are one tiled image (assets/ui/studs.png, made by
 -- tools/make-stud-texture.py) laid over any opaque panel or button; they hide
 -- themselves on small, see-through, or dark frames (health bars, overlays).
--- If the image can't load the UI is simply flat blue.
+-- If the image can't load the UI is simply flat pastel.
 
 local Theme = {}
 
@@ -21,16 +23,24 @@ Theme.STUD_IMAGE = "rbxassetid://111722228846947"
 Theme.STUD_SIZE = 22
 
 Theme.COLORS = {
-	panel = Color3.fromRGB(24, 118, 205), -- deep studded blue: panels, disabled buttons
-	panelLight = Color3.fromRGB(46, 150, 240), -- bright studded blue: buttons, rows, cards
-	accent = Color3.fromRGB(255, 170, 0), -- orange: titles, primary buttons, highlights
-	text = Color3.fromRGB(255, 255, 255),
-	subtext = Color3.fromRGB(200, 232, 255),
-	good = Color3.fromRGB(60, 185, 70),
-	bad = Color3.fromRGB(235, 64, 52),
-	blue = Color3.fromRGB(30, 160, 255),
-	red = Color3.fromRGB(235, 64, 52),
-	outline = Color3.fromRGB(10, 48, 110), -- navy outlines and text strokes
+	-- Pastel palette (all take dark text: 7.5:1 to 19:1 against black).
+	panel = Color3.fromRGB(219, 225, 241), -- Blue Grey #DBE1F1: panels, disabled buttons
+	panelLight = Color3.fromRGB(150, 173, 252), -- Blue #96ADFC: buttons, rows, cards
+	accent = Color3.fromRGB(237, 221, 110), -- Orange #EDDD6E: primary buttons, highlights, selected
+	text = Color3.fromRGB(24, 24, 36), -- ink: all text on pastel panels
+	subtext = Color3.fromRGB(50, 58, 84), -- dark slate: secondary text on pastel
+	heading = Color3.fromRGB(72, 44, 128), -- deep purple: titles on pastel
+	onDark = Color3.fromRGB(255, 255, 255), -- text over the world or dark overlays
+	good = Color3.fromRGB(168, 242, 154), -- Green #A8F29A
+	bad = Color3.fromRGB(224, 166, 170), -- Red #E0A6AA
+	blue = Color3.fromRGB(150, 173, 252),
+	red = Color3.fromRGB(224, 166, 170),
+	purple = Color3.fromRGB(185, 135, 220), -- Purple #B987DC
+	peach = Color3.fromRGB(237, 209, 176), -- Peach #EDD1B0
+	turquoise = Color3.fromRGB(165, 247, 225), -- Turquoise #A5F7E1
+	yellow = Color3.fromRGB(248, 253, 137), -- Yellow #F8FD89
+	grey = Color3.fromRGB(216, 211, 214), -- Grey #D8D3D6
+	outline = Color3.fromRGB(20, 20, 28), -- thick near-black borders
 }
 
 -- Minimum touch target in pixels (before UIScale).
@@ -78,8 +88,8 @@ function Theme.bevel(target: GuiObject)
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(235, 240, 248)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(176, 190, 214)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(247, 248, 252)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 220, 236)),
 	})
 	gradient.Parent = target
 end
@@ -98,7 +108,7 @@ function Theme.studs(target: GuiObject, tile: number?): ImageLabel?
 	studs.Image = Theme.STUD_IMAGE
 	studs.ScaleType = Enum.ScaleType.Tile
 	studs.TileSize = UDim2.fromOffset(tile or Theme.STUD_SIZE, tile or Theme.STUD_SIZE)
-	studs.ImageTransparency = 0.12
+	studs.ImageTransparency = 0.55 -- faint on pastel so text stays crisp
 	studs.Active = false
 	studs.Selectable = false
 	studs.Visible = false
@@ -137,7 +147,7 @@ function Theme.label(parent: Instance, text: string, props: { [string]: any }?):
 	l.Font = Theme.FONT
 	l.TextColor3 = Theme.COLORS.text
 	l.TextStrokeColor3 = Theme.COLORS.outline
-	l.TextStrokeTransparency = 0.55
+	l.TextStrokeTransparency = 1 -- dark ink on pastel needs no outline
 	l.TextScaled = true
 	l.Text = text
 	l.Size = UDim2.fromScale(1, 1)
@@ -177,7 +187,7 @@ local function addFace(button: TextButton)
 	face.Size = UDim2.new(1, -10, 1, -6)
 	face.Active = false
 	face.TextStrokeColor3 = Theme.COLORS.outline
-	face.TextStrokeTransparency = 0.45
+	face.TextStrokeTransparency = 1
 	for _, prop in MIRRORED do
 		(face :: any)[prop] = (button :: any)[prop]
 		button:GetPropertyChangedSignal(prop):Connect(function()
@@ -209,7 +219,7 @@ function Theme.button(parent: Instance, text: string, props: { [string]: any }?)
 	Theme.bevel(b)
 	Theme.studs(b, 18)
 	Theme.corner(b)
-	Theme.stroke(b, Theme.COLORS.outline, 2)
+	Theme.stroke(b, Theme.COLORS.outline, 3)
 	addFace(b)
 	b.Parent = parent
 	return b
