@@ -197,16 +197,16 @@ local ENTRIES: { [string]: Entry } = {
 	},
 	BlackHole = {
 		vfx = "BlackHole",
-		fx = { "spin", "shockwave", "cast" },
+		fx = { "vortex", "suck", "spin", "shockwave", "cast" },
 		animation = "Conjure",
-		note = "Purple warning circle, then a spinning black hole drags enemies in and holds them",
+		note = "Purple warning circle, then a spinning black hole: motes spiral in, rings ripple inward, victims (players, NPCs, dummies) stream into it, and it collapses with a boom",
 	},
 	Turret = {
 		vfx = "Turret",
-		fx = { "projectile", "dust", "cast" },
+		fx = { "deploy", "muzzle", "projectile", "dust", "cast" },
 		animation = "Deploy",
 		noImpact = true,
-		note = "A metal turret rises from the ground, turns to its target and fires yellow bullets",
+		note = "Kneel and bolt it down: scan ring and chime when it rises, muzzle flash and shell per shot at players, NPCs and dummies, sparks where bullets land",
 	},
 }
 

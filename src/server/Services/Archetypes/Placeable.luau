@@ -1,7 +1,8 @@
 --!strict
 -- Placeable archetype: objects players put into the world. All have health
 -- and break when destroyed. Optional behaviors from stats:
---   turret (fires at the nearest enemy every `fireInterval`s), trap (applies status to the first
+--   turret (fires at the nearest enemy every `fireInterval`s: a player, a
+--   decoy, a training dummy, or a Battleground NPC), trap (applies status to the first
 --   enemy who touches it, then breaks), bounce (launches anyone touching it),
 --   hazardDps + radius (burns nearby enemies).
 -- Each player may have `maxActive` of a given spell (oldest is removed) and
@@ -129,7 +130,10 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 					-- Decoys draw fire first.
 					local isDecoy = hit.instance:GetAttribute("Decoy") == true
 					local d = (hit.position - origin).Magnitude - (if isDecoy then 1000 else 0)
-					if (hit.character or isDecoy) and d < bestDist then
+					local targetable = hit.character ~= nil
+						or isDecoy
+						or DestructibleService.isTrainingTarget(hit.instance)
+					if targetable and d < bestDist then
 						best, bestDist = hit, d
 					end
 				end
@@ -144,7 +148,9 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 					body.CFrame = if ctx.def.visual.shape == "Cylinder"
 						then facing * CFrame.Angles(0, math.pi / 2, 0)
 						else facing
-					Remotes.get("Fx"):FireAllClients("sfx", "turretShot", origin)
+					-- Muzzle flash, smoke, and the shot's sound at the barrel.
+					Remotes.get("Fx")
+						:FireAllClients("muzzle", origin + direction * 3, direction, ctx.def.id)
 					Projectile.launch({
 						caster = ctx.player,
 						origin = origin + direction * 3,
@@ -461,6 +467,12 @@ function Placeable.cast(ctx: any): boolean?
 
 	track(ctx.player, model, def.id, stats.maxActive or 2)
 	addBehaviors(ctx, model, body)
+	if stats.turret then
+		-- Clients play the "online" scan ring and chime as it finishes rising.
+		task.delay(0.15, function()
+			Remotes.get("Fx"):FireAllClients("deploy", ground, visual.color, def.id)
+		end)
+	end
 	if stats.lifetime then
 		task.delay(stats.lifetime, function()
 			if model.Parent then

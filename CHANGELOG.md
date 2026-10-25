@@ -4,6 +4,17 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (Black Hole and Turret: effects, sounds, animations, dummy and NPC targeting)
+- **Black Hole now hurts and pulls training dummies and Battleground NPCs**, not just players (`DestructibleService.isTrainingTarget`). NPCs go limp so their walking can't fight the pull, are dragged to the core, rooted there, and stand back up when the hole closes; dummies are posts, so they take the damage but stay put.
+- **Black Hole vortex** (`SpellVfx.blackHole`, Fx `vortex`): a dark core with a glow and two spinning accretion discs hangs over the target, 30 glowing motes with trails spiral in on three arms, rings ripple inward over the ground, and particles stream into the core. When it ends it implodes and blows out in a flash, a shockwave and sparks.
+- **Suction on every victim** (Fx `suck`): whoever is caught glows purple, drags a streak, and motes peel off them and whip into the core.
+- **Black Hole sounds:** a looping low hum at the hole while it is open (`AudioController.loop`, cue `blackHoleHum`), a pull whoosh when someone is caught (`voidPull`), and a layered collapse boom that finally plays (`blackHoleCollapse`).
+- **Black Hole cast:** feet planted wide, arms flung out then dragged together while dark sparks stream into both hands (the `gather` beat now supports two hands).
+- **Turret now shoots training dummies and Battleground NPCs** as well as players and decoys.
+- **Turret effects:** it kneels to bolt the turret down (new `Deploy` pose, `build` beat with hand sparks and dust); when it finishes rising a scan ring, a sweeping radar arm, rising sparks and a chime play (Fx `deploy`); every shot gets a muzzle flash, sparks, smoke, a flipped brass casing and a layered crack (Fx `muzzle`); bullets that land throw sparks and play a hit sound (`bulletHit`).
+- Studio QA: debug command `cast` (`SpellcraftDebug:Invoke("cast", {spell = "...", target = Vector3})`) gives you a spell and casts it through the normal pipeline.
+- `tests/Vortex.spec.luau`.
+
 ### Added (a cast pose and a hit effect for every spell)
 - **Each spell has its own cast animation** (20 new or reworked poses in `CastPoses`): Fireball held overhead then thrown with a lunge, a diagonal Fire Slash chop, a flat Water Slice sweep, Water Body's rippling arms, the Water Wave heave, Rock Throw's scoop-and-heave, stomps for Earth Wall, Earth Pillar and Earthquake, an Earth Punch lunge, a Gust fan, Whirlwind and Tornado body twists, Air Boost's lean, and more. The animator gained **leg poses** (hips, knees) and **waist twist**; a pose with no legs still leaves the walk cycle alone.
 - **Cast beats** (`CastPoses.BEATS`, `SpellVfx.castBeat`): a glowing fireball or boulder grows in the raised hand and is released into the throw, slashes leave a hand trail, stomps kick up dust and a ring (with a thud), big spells and Lightning draw sparks into the hand and flash, spins whirl rings of wind, water moves spray droplets, Gust shoves a ring of air.

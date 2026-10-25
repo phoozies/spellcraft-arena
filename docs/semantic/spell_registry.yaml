@@ -375,12 +375,12 @@ spells:
     cooldown: 10
     model: BlackHole
     vfx: BlackHole
-    fx: [spin, shockwave, cast]
+    fx: [vortex, suck, spin, shockwave, cast]
     animation: Conjure
     sfx:
       cast: blackHoleOpen
       impact: blackHoleCollapse
-    note: "Purple warning circle, then a spinning black hole drags enemies in and holds them"
+    note: "Purple warning circle, then a spinning black hole: motes spiral in, rings ripple inward, victims (players, NPCs, dummies) stream into it, and it collapses with a boom"
   - id: Turret
     name: Turret
     element: Arcane
@@ -391,9 +391,9 @@ spells:
     cooldown: 12
     model: Turret
     vfx: Turret
-    fx: [projectile, dust, cast]
+    fx: [deploy, muzzle, projectile, dust, cast]
     animation: Deploy
     sfx:
       cast: turretDeploy
       impact: turretShot
-    note: "A metal turret rises from the ground, turns to its target and fires yellow bullets"
+    note: "Kneel and bolt it down: scan ring and chime when it rises, muzzle flash and shell per shot at players, NPCs and dummies, sparks where bullets land"

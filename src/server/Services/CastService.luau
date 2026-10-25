@@ -244,6 +244,18 @@ local function onCast(player: Player, target: any, rotationY: any)
 	end
 end
 
+-- Studio QA (DebugService "cast"): hands the player a copy of the spell and
+-- casts it at `target` through the normal pipeline, so range, cooldowns,
+-- placement and every archetype rule still apply.
+function CastService.castFor(player: Player, spellId: string, target: Vector3): boolean
+	local ok = HandService.grant(player, spellId, true)
+	if not ok then
+		return false
+	end
+	onCast(player, target, 0)
+	return true
+end
+
 function CastService.init()
 	toastRemote = Remotes.get("Toast")
 	fxRemote = Remotes.get("Fx")

@@ -46,6 +46,7 @@ export type Style = {
 	secondary: string?, -- extra emitter texture (e.g. smoke behind fire)
 	hit: string?, -- how it looks on impact, one of VfxStyles.HITS (nil = plain burst)
 	hitScale: number?, -- how big that impact is (default 1)
+	hitCue: string?, -- a sound (Audio/Cues) for impacts of bolts with no spell sound of their own
 }
 
 -- Buff aura on the caster for the buff's duration.
@@ -212,6 +213,7 @@ VfxStyles.STYLES = {
 		burst = 10,
 		tint = Color3.fromRGB(255, 213, 79),
 		hit = "spark",
+		hitCue = "bulletHit",
 	},
 
 	-- Zones, lines, walls, and buffs: these have no bolt, so the style colors

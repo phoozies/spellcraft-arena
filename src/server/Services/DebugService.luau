@@ -11,6 +11,7 @@
 --   solo <mode>    start a match alone (rounds end on the timer)
 --   unlockall      own every element
 --   element <id>   equip an element (grants it first)
+--   cast {spell, target}  give yourself the spell and cast it at a Vector3
 --   knockback      server-push your own character (tests authoritative knockback)
 
 local Players = game:GetService("Players")
@@ -21,6 +22,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local CastService = require(script.Parent.CastService)
 local CrateService = require(script.Parent.CrateService)
 local ElementService = require(script.Parent.ElementService)
 local DestructibleService = require(script.Parent.DestructibleService)
@@ -68,6 +70,11 @@ function DebugService.run(player: Player, command: string, arg: any): any
 			}
 	elseif command == "solo" and typeof(arg) == "string" and (Config.MODES :: any)[arg] then
 		MatchService.startMatch(arg :: any, { player }, { solo = true })
+	elseif command == "cast" and typeof(arg) == "table" then
+		local spell, target = (arg :: any).spell, (arg :: any).target
+		if typeof(spell) == "string" and typeof(target) == "Vector3" then
+			return CastService.castFor(player, spell, target)
+		end
 	elseif command == "knockback" and player.Character then
 		DestructibleService.push(player.Character, Vector3.new(0, 80, 60))
 	elseif command == "unlockall" then
