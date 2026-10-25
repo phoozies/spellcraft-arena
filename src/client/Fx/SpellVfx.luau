@@ -622,6 +622,398 @@ function SpellVfx.impact(parent: Instance, position: Vector3, fxKey: string?, co
 	Debris:AddItem(anchor, 1)
 end
 
+-- The visible glow of a spell whose own color is nearly black (Black Hole).
+local VORTEX = Color3.fromRGB(150, 70, 255)
+
+-- Black Hole: a dark core ringed by spinning discs hangs over the target.
+-- Motes spiral in from the edge to the core on three arms, ripples run
+-- inward over the ground, and the whole thing implodes in a flash when
+-- `duration` is over.
+function SpellVfx.blackHole(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	duration: number,
+	color: Color3,
+	coreHeight: number
+)
+	local glow = VORTEX
+	local dark = Color3.fromRGB(6, 0, 12)
+	local core = center + Vector3.new(0, coreHeight, 0)
+	local holder = Instance.new("Folder")
+	holder.Name = "Vortex"
+	holder.Parent = parent
+	Debris:AddItem(holder, duration + 0.1)
+
+	local function part(
+		shape: Enum.PartType,
+		size: Vector3,
+		material: Enum.Material,
+		tint: Color3
+	): Part
+		local p = Instance.new("Part")
+		p.Shape = shape
+		p.Size = size
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = material
+		p.Color = tint
+		p.Parent = holder
+		return p
+	end
+
+	-- The core, its glow, and two accretion discs (one flat, one tilted).
+	local sphere = part(Enum.PartType.Ball, Vector3.one * 0.5, Enum.Material.SmoothPlastic, dark)
+	local halo = part(Enum.PartType.Ball, Vector3.one * 0.5, Enum.Material.Neon, glow)
+	halo.Transparency = 0.8
+	local discs: { { part: Part, tilt: number, speed: number, size: number } } = {}
+	for _, spec in { { tilt = 0, speed = 3, size = 1 }, { tilt = 1.1, speed = -2.2, size = 0.72 } } do
+		local disc = part(Enum.PartType.Cylinder, Vector3.new(0.2, 1, 1), Enum.Material.Neon, glow)
+		disc.Transparency = 0.45
+		table.insert(discs, { part = disc, tilt = spec.tilt, speed = spec.speed, size = spec.size })
+	end
+	local light = Instance.new("PointLight")
+	light.Color = glow
+	light.Range = radius * 1.2
+	light.Brightness = 3
+	light.Parent = sphere
+
+	-- Particles pulled inward from a sphere around the core.
+	local field =
+		part(Enum.PartType.Ball, Vector3.one * radius * 1.4, Enum.Material.SmoothPlastic, glow)
+	field.Transparency = 1
+	field.Position = core
+	local stream = Instance.new("ParticleEmitter")
+	stream.Texture = TEX.sparkle
+	stream.Color = ColorSequence.new(glow, WHITE)
+	stream.LightEmission = 1
+	stream.Shape = Enum.ParticleEmitterShape.Sphere
+	stream.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	stream.Speed = NumberRange.new(-radius * 0.9, -radius * 0.6)
+	stream.Lifetime = NumberRange.new(0.5, 0.8)
+	stream.Rate = 70
+	stream.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	stream.Parent = field
+
+	-- Motes on three spiral arms.
+	local motes: { { part: Part, angle: number, offset: number } } = {}
+	local count = 30
+	for i = 1, count do
+		local mote = part(Enum.PartType.Block, Vector3.one * 0.6, Enum.Material.Neon, glow)
+		local top = Instance.new("Attachment")
+		top.Position = Vector3.new(0, 0.3, 0)
+		top.Parent = mote
+		local bottom = Instance.new("Attachment")
+		bottom.Position = Vector3.new(0, -0.3, 0)
+		bottom.Parent = mote
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = top
+		trail.Attachment1 = bottom
+		trail.Lifetime = 0.35
+		trail.LightEmission = 1
+		trail.FaceCamera = true
+		trail.Color = ColorSequence.new(glow, color:Lerp(glow, 0.5))
+		trail.Transparency = NumberSequence.new(0.1, 1)
+		trail.Parent = mote
+		table.insert(motes, {
+			part = mote,
+			angle = (i % 3) * math.pi * 2 / 3 + math.random() * 0.3,
+			offset = i / count,
+		})
+	end
+
+	local nextRipple = 0
+	every(duration, function(t)
+		if not holder.Parent then
+			return false
+		end
+		-- Swells open over the first third of a second.
+		local open = math.min(t / 0.35, 1)
+		local pulse = 1 + math.sin(t * 9) * 0.05
+		sphere.Size = Vector3.one * 4.6 * open * pulse
+		sphere.Position = core
+		halo.Size = Vector3.one * 6.6 * open * pulse
+		halo.Position = core
+		light.Brightness = 3 + math.sin(t * 7)
+		for _, d in discs do
+			d.part.Size = Vector3.new(0.2, 11 * d.size * open, 11 * d.size * open)
+			d.part.CFrame = CFrame.new(core)
+				* CFrame.Angles(0, t * d.speed, 0)
+				* CFrame.Angles(d.tilt, 0, 0)
+				* CFrame.Angles(0, 0, math.pi / 2)
+		end
+		for _, m in motes do
+			local p = (t * 0.8 + m.offset) % 1
+			local r = radius * (1 - p) ^ 1.6 + 0.8
+			local angle = m.angle + p * math.pi * 2.6 + t * 0.4
+			local height = center.Y + 0.6 + (coreHeight - 0.6) * p ^ 1.3
+			m.part.Size = Vector3.one * (0.7 - 0.4 * p)
+			m.part.Color = glow:Lerp(WHITE, p * p)
+			m.part.CFrame = CFrame.new(
+				center.X + math.cos(angle) * r,
+				height,
+				center.Z + math.sin(angle) * r
+			) * CFrame.Angles(t * 3, t * 2, 0)
+		end
+		-- Ripples run inward over the ground, the pull made visible.
+		if t >= nextRipple then
+			nextRipple = t + 0.45
+			local ripple = part(
+				Enum.PartType.Cylinder,
+				Vector3.new(0.12, radius * 2, radius * 2),
+				Enum.Material.Neon,
+				glow
+			)
+			ripple.Transparency = 0.85
+			ripple.CFrame = CFrame.new(center + Vector3.new(0, 0.25, 0))
+				* CFrame.Angles(0, 0, math.pi / 2)
+			TweenService
+				:Create(
+					ripple,
+					TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{
+						Size = Vector3.new(0.12, 3, 3),
+						Transparency = 0.3,
+					}
+				)
+				:Play()
+			Debris:AddItem(ripple, 0.95)
+		end
+		return true
+	end)
+
+	-- It implodes, then blows outward.
+	task.delay(duration, function()
+		local ghost = Instance.new("Part")
+		ghost.Shape = Enum.PartType.Ball
+		ghost.Anchored = true
+		ghost.CanCollide = false
+		ghost.CanQuery = false
+		ghost.CanTouch = false
+		ghost.CastShadow = false
+		ghost.Color = dark
+		ghost.Size = Vector3.one * 4.6
+		ghost.Position = core
+		ghost.Parent = parent
+		TweenService
+			:Create(ghost, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Size = Vector3.one * 0.4,
+			})
+			:Play()
+		Debris:AddItem(ghost, 0.6)
+		task.delay(0.15, function()
+			ghost:Destroy()
+			flash(parent, core, 2, radius * 0.9, 0.35, glow:Lerp(WHITE, 0.3), 0.1)
+			SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius, glow)
+			airRing(parent, core, radius * 0.8, glow:Lerp(WHITE, 0.4), 0, 0.45)
+			local anchor = anchorAt(parent, core)
+			local burst = emitter(anchor, TEX.sparkle, glow, STYLES.BlackHole)
+			burst.Rate = 0
+			burst.Speed = NumberRange.new(20, 40)
+			burst.Size = NumberSequence.new(0.8, 0)
+			burst:Emit(40)
+			Debris:AddItem(anchor, 1)
+		end)
+	end)
+end
+
+-- Something caught by a Black Hole (a player, an NPC, a dummy): it glows, drags
+-- a streak, and little motes peel off it and spiral into the core.
+function SpellVfx.suck(
+	parent: Instance,
+	victim: Model,
+	center: Vector3,
+	seconds: number,
+	color: Color3,
+	coreHeight: number
+)
+	local root = victim:FindFirstChild("HumanoidRootPart")
+		or victim.PrimaryPart
+		or victim:FindFirstChildWhichIsA("BasePart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	local core = center + Vector3.new(0, coreHeight, 0)
+	local glow = VORTEX
+	local highlight = Instance.new("Highlight")
+	highlight.FillColor = glow
+	highlight.FillTransparency = 0.75
+	highlight.OutlineColor = glow:Lerp(WHITE, 0.4)
+	highlight.OutlineTransparency = 0.2
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Parent = victim
+	Debris:AddItem(highlight, seconds)
+
+	local top = Instance.new("Attachment")
+	top.Position = Vector3.new(0, 1.8, 0)
+	top.Parent = root
+	local bottom = Instance.new("Attachment")
+	bottom.Position = Vector3.new(0, -1.8, 0)
+	bottom.Parent = root
+	local streak = Instance.new("Trail")
+	streak.Attachment0 = top
+	streak.Attachment1 = bottom
+	streak.Lifetime = 0.5
+	streak.LightEmission = 0.8
+	streak.FaceCamera = true
+	streak.Color = ColorSequence.new(glow, color:Lerp(glow, 0.4))
+	streak.Transparency = NumberSequence.new(0.3, 1)
+	streak.Parent = root
+	Debris:AddItem(streak, seconds + 0.6)
+	Debris:AddItem(top, seconds + 0.6)
+	Debris:AddItem(bottom, seconds + 0.6)
+
+	local life = 0.55
+	local live: { { part: Part, from: Vector3, phase: number, born: number } } = {}
+	local nextSpawn = 0
+	every(seconds + life, function(t)
+		if not root.Parent then
+			for _, m in live do
+				m.part:Destroy()
+			end
+			return false
+		end
+		if t < seconds and t >= nextSpawn then
+			nextSpawn = t + 0.06
+			local mote = Instance.new("Part")
+			mote.Anchored = true
+			mote.CanCollide = false
+			mote.CanQuery = false
+			mote.CanTouch = false
+			mote.CastShadow = false
+			mote.Material = Enum.Material.Neon
+			mote.Color = glow
+			mote.Size = Vector3.one * 0.5
+			mote.Parent = parent
+			Debris:AddItem(mote, life + 0.2)
+			table.insert(live, {
+				part = mote,
+				from = root.Position + Vector3.new(
+					math.random(-15, 15) / 10,
+					math.random(-20, 20) / 10,
+					math.random(-15, 15) / 10
+				),
+				phase = math.random() * math.pi * 2,
+				born = t,
+			})
+		end
+		for i = #live, 1, -1 do
+			local m = live[i]
+			local p = (t - m.born) / life
+			if p >= 1 then
+				m.part:Destroy()
+				table.remove(live, i)
+			else
+				-- Slow at first, then whipped into the core, swirling as it goes.
+				local along = p * p
+				local swirl = (1 - along) * 2.2
+				local angle = m.phase + p * 7
+				m.part.Position = m.from:Lerp(core, along)
+					+ Vector3.new(
+						math.cos(angle) * swirl,
+						math.sin(angle) * swirl * 0.6,
+						math.sin(angle) * swirl
+					)
+				m.part.Size = Vector3.one * (0.55 - 0.4 * p)
+				m.part.Color = glow:Lerp(WHITE, p)
+			end
+		end
+		return true
+	end)
+end
+
+-- Turret shot: a bright flash at the barrel, sparks and smoke thrown forward,
+-- and a brass casing flipped out to the side.
+function SpellVfx.muzzle(parent: Instance, position: Vector3, direction: Vector3)
+	flash(parent, position, 0.6, 2.4, 0.09, Color3.fromRGB(255, 235, 150), 0.1)
+	local anchor = anchorAt(parent, position)
+	anchor.CFrame = CFrame.lookAt(position, position + direction)
+	local sparks = emitter(anchor, TEX.sparkle, Color3.fromRGB(255, 220, 110), STYLES.Bullet)
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new(0.35, 0)
+	sparks.Lifetime = NumberRange.new(0.15, 0.25)
+	sparks.Speed = NumberRange.new(25, 45)
+	sparks.SpreadAngle = Vector2.new(16, 16)
+	sparks.EmissionDirection = Enum.NormalId.Front
+	sparks:Emit(8)
+	local smoke = emitter(anchor, TEX.smoke, Color3.fromRGB(150, 150, 150), STYLES.Bullet)
+	smoke.Rate = 0
+	smoke.LightEmission = 0
+	smoke.Size = NumberSequence.new(0.8, 2.2)
+	smoke.Lifetime = NumberRange.new(0.4, 0.6)
+	smoke.Speed = NumberRange.new(3, 8)
+	smoke.SpreadAngle = Vector2.new(25, 25)
+	smoke.EmissionDirection = Enum.NormalId.Front
+	smoke:Emit(3)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 220, 120)
+	light.Range = 12
+	light.Brightness = 4
+	light.Parent = anchor
+	TweenService:Create(light, TweenInfo.new(0.1), { Brightness = 0 }):Play()
+	local side = direction:Cross(Vector3.yAxis)
+	if side.Magnitude > 0.01 then
+		fling(
+			parent,
+			position - direction * 1.5 + Vector3.new(0, 0.5, 0),
+			side.Unit * 6 + Vector3.new(0, 7, 0),
+			Vector3.new(0.15, 0.15, 0.35),
+			Color3.fromRGB(214, 170, 70),
+			Enum.Material.Metal,
+			0.7,
+			false
+		)
+	end
+	Debris:AddItem(anchor, 1)
+end
+
+-- Turret online: a scan ring runs out over the ground, a radar arm sweeps
+-- once round, and sparks rise from the new turret.
+function SpellVfx.deploy(parent: Instance, position: Vector3, color: Color3)
+	local scan = Color3.fromRGB(255, 226, 120)
+	SpellVfx.shockwave(parent, position + Vector3.new(0, 0.2, 0), 9, scan)
+	task.delay(0.12, function()
+		SpellVfx.shockwave(parent, position + Vector3.new(0, 0.2, 0), 6, color:Lerp(WHITE, 0.5))
+	end)
+	flash(parent, position + Vector3.new(0, 3, 0), 1, 4, 0.25, Color3.fromRGB(255, 244, 200), 0.3)
+	local anchor = anchorAt(parent, position + Vector3.new(0, 1, 0))
+	local rise = emitter(anchor, TEX.sparkle, scan, STYLES.Bullet)
+	rise.Rate = 0
+	rise.Size = NumberSequence.new(0.5, 0)
+	rise.Lifetime = NumberRange.new(0.5, 0.8)
+	rise.Speed = NumberRange.new(10, 18)
+	rise.EmissionDirection = Enum.NormalId.Top
+	rise.SpreadAngle = Vector2.new(30, 30)
+	rise.Acceleration = Vector3.new(0, -20, 0)
+	rise:Emit(20)
+	Debris:AddItem(anchor, 1.2)
+
+	local arm = Instance.new("Part")
+	arm.Anchored = true
+	arm.CanCollide = false
+	arm.CanQuery = false
+	arm.CanTouch = false
+	arm.CastShadow = false
+	arm.Material = Enum.Material.Neon
+	arm.Color = scan
+	arm.Size = Vector3.new(0.2, 0.2, 8)
+	arm.Parent = parent
+	every(0.8, function(t)
+		arm.CFrame = CFrame.new(position + Vector3.new(0, 0.4, 0))
+			* CFrame.Angles(0, t / 0.8 * math.pi * 3, 0)
+			* CFrame.new(0, 0, -4)
+		arm.Transparency = t / 0.8
+		return arm.Parent ~= nil
+	end)
+	Debris:AddItem(arm, 0.85)
+end
+
 -- Cast beats: the body effect that rides on a cast pose (Spells/CastPoses
 -- BEATS). Each runs from the moment of the cast and lands at beat.at seconds.
 local BEATS: { [string]: (Instance, Model, CastPoses.Beat, Color3) -> () } = {}
@@ -757,8 +1149,19 @@ end
 -- Big spells: sparks stream into the raised hand, then flash as it comes down.
 function BEATS.gather(parent, character, beat, color)
 	local hand = handOf(character, "Right")
+	local other = if beat.two then handOf(character, "Left") else nil
 	if not hand then
 		return
+	end
+	-- Dark spells (Black Hole) still need sparks you can see.
+	if color.R + color.G + color.B < 0.9 then
+		color = color:Lerp(WHITE, 0.5)
+	end
+	local function center(): Vector3
+		local at = if other and other.Parent
+			then (hand.Position + other.Position) / 2
+			else hand.Position
+		return at + Vector3.new(0, 1, 0)
 	end
 	local zone = Instance.new("Part")
 	zone.Anchored = true
@@ -767,7 +1170,7 @@ function BEATS.gather(parent, character, beat, color)
 	zone.CanTouch = false
 	zone.Transparency = 1
 	zone.Size = Vector3.one * 7
-	zone.Position = hand.Position
+	zone.Position = center()
 	zone.Parent = parent
 	local stream = Instance.new("ParticleEmitter")
 	stream.Texture = TEX.sparkle
@@ -789,13 +1192,13 @@ function BEATS.gather(parent, character, beat, color)
 			zone:Destroy()
 			return false
 		end
-		zone.Position = hand.Position + Vector3.new(0, 1, 0)
+		zone.Position = center()
 		return true
 	end)
 	task.delay(beat.at, function()
 		stream.Enabled = false
 		if hand.Parent then
-			local at = hand.Position + Vector3.new(0, 1, 0)
+			local at = center()
 			flash(parent, at, 0.8, 4.5, 0.22, color:Lerp(WHITE, 0.4), 0.2)
 			stream.Speed = NumberRange.new(12, 22)
 			stream:Emit(14)
@@ -931,6 +1334,33 @@ function BEATS.push(parent, character, beat, color)
 		puffs.EmissionDirection = Enum.NormalId.Front
 		puffs:Emit(12)
 		Debris:AddItem(anchor, 1)
+	end)
+end
+
+-- Turret: sparks fly off both hands as it is bolted down, with a puff of dust.
+function BEATS.build(parent, character, beat, color)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	task.delay(beat.at, function()
+		for _, side in { "Right", "Left" } do
+			local hand = handOf(character, side)
+			if hand then
+				local anchor = anchorAt(parent, hand.Position)
+				local sparks =
+					emitter(anchor, TEX.sparkle, Color3.fromRGB(255, 226, 120), STYLES.Bullet)
+				sparks.Rate = 0
+				sparks.Size = NumberSequence.new(0.45, 0)
+				sparks.Lifetime = NumberRange.new(0.3, 0.5)
+				sparks.Speed = NumberRange.new(12, 24)
+				sparks.Acceleration = Vector3.new(0, -45, 0)
+				sparks:Emit(12)
+				flash(parent, hand.Position, 0.5, 2, 0.15, Color3.fromRGB(255, 240, 190), 0.3)
+				Debris:AddItem(anchor, 1)
+			end
+		end
+		if root and root:IsA("BasePart") and root.Parent then
+			local feet = root.Position - Vector3.new(0, 2.8, 0)
+			SpellVfx.dust(parent, feet + root.CFrame.LookVector * 2, 3, color)
+		end
 	end)
 end
 

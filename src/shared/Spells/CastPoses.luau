@@ -42,7 +42,8 @@ export type Key = {
 --         picks neon fire or slate rock, `two` holds it in both hands)
 -- trail   the hand leaves a glowing streak from `at` for a moment
 -- stomp   a dust ring and shockwave burst at the feet (or `reach` studs ahead)
--- gather  sparks stream into the raised hand, then flash at `at`
+-- gather  sparks stream into the raised hand (`two`: the middle of both), then flash at `at`
+-- build   sparks fly off both hands and dust kicks up (setting a turret down)
 -- swirl   rings of wind spin out around the body
 -- splash  droplets spray from the hands
 -- push    a ring of wind shoves out in front of the caster
@@ -402,25 +403,45 @@ CastPoses.POSES = {
 			lean = -6,
 		},
 	},
-	-- Arms flung wide, then dragged together as if pulling the air in (Black Hole).
+	-- Feet planted wide, arms flung out, then dragged together as if pulling the
+	-- air (and everything in it) into a point (Black Hole).
 	Conjure = {
-		{ d = 0.12, right = { fwd = 80, side = 90 }, left = { fwd = 80, side = 90 }, lean = -6 },
+		{
+			d = 0.12,
+			right = { fwd = 80, side = 95 },
+			left = { fwd = 80, side = 95 },
+			rightLeg = { side = 14 },
+			leftLeg = { side = 14 },
+			lean = -6,
+		},
 		{
 			d = 0.12,
 			hold = 0.3,
 			right = { fwd = 100, side = 5, elbow = 20 },
 			left = { fwd = 100, side = 5, elbow = 20 },
+			rightLeg = { side = 14 },
+			leftLeg = { side = 14 },
 			lean = 8,
 		},
 	},
-	-- Both hands pushed down and out, setting something on the ground (Turret).
+	-- Down on one knee, hands to the ground to bolt a turret in place (Turret).
 	Deploy = {
 		{
 			d = 0.12,
-			hold = 0.35,
-			right = { fwd = 55, side = 15, elbow = 25 },
-			left = { fwd = 55, side = 15, elbow = 25 },
-			lean = 20,
+			right = { fwd = 60, side = 15, elbow = 40 },
+			left = { fwd = 60, side = 15, elbow = 40 },
+			rightLeg = { fwd = 35, knee = 75 },
+			leftLeg = { fwd = -15, knee = 30 },
+			lean = 24,
+		},
+		{
+			d = 0.08,
+			hold = 0.3,
+			right = { fwd = 35, elbow = 10 },
+			left = { fwd = 35, elbow = 10 },
+			rightLeg = { fwd = 35, knee = 75 },
+			leftLeg = { fwd = -15, knee = 30 },
+			lean = 28,
 		},
 	},
 	-- One arm shot to the sky, then thrown down at the target (Lightning).
@@ -462,8 +483,10 @@ CastPoses.BEATS = {
 	Spin = { kind = "swirl", at = 0.12, cue = "spinWhoosh" },
 	Cyclone = { kind = "swirl", at = 0.15, cue = "spinWhoosh" },
 	Surge = { kind = "swirl", at = 0.08, cue = "spinWhoosh" },
+	Conjure = { kind = "gather", at = 0.24, two = true, cue = "voidPull" },
+	Deploy = { kind = "build", at = 0.2, cue = "buildClank" },
 } :: { [string]: Beat }
 
-CastPoses.BEAT_KINDS = { "orb", "trail", "stomp", "gather", "swirl", "splash", "push" }
+CastPoses.BEAT_KINDS = { "orb", "trail", "stomp", "gather", "swirl", "splash", "push", "build" }
 
 return CastPoses

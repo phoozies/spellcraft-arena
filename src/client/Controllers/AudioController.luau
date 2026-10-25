@@ -117,6 +117,50 @@ function AudioController.play(cueName: string, at: Vector3?)
 	end
 end
 
+-- Plays a looping cue (one marked `loop`, like the black hole's hum) from a
+-- place in the world for `seconds`, fading in and out.
+function AudioController.loop(cueName: string, at: Vector3, seconds: number)
+	local cue = Cues[cueName]
+	local camera = workspace.CurrentCamera
+	if
+		not cue
+		or cue.id == ""
+		or not cue.world
+		or not camera
+		or (camera.CFrame.Position - at).Magnitude > HEAR_DISTANCE
+	then
+		return
+	end
+	local anchor = Instance.new("Part")
+	anchor.Name = "SoundAnchor"
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one * 0.2
+	anchor.CFrame = CFrame.new(at)
+	anchor.Parent = folder
+	local sound = Instance.new("Sound")
+	sound.SoundId = cue.id
+	sound.Looped = true
+	sound.Volume = 0
+	sound.PlaybackSpeed = cue.pitch or 1
+	sound.SoundGroup = sfxGroup
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMinDistance = ROLLOFF_MIN
+	sound.RollOffMaxDistance = ROLLOFF_MAX
+	sound.Parent = anchor
+	sound:Play()
+	TweenService:Create(sound, TweenInfo.new(0.4), { Volume = cue.volume }):Play()
+	task.delay(math.max(0, seconds - 0.4), function()
+		if sound.Parent then
+			TweenService:Create(sound, TweenInfo.new(0.4), { Volume = 0 }):Play()
+		end
+	end)
+	Debris:AddItem(anchor, seconds + 0.1)
+end
+
 -- Plays a spell's own cue ("cast" or "impact") from SpellDefinitions.sfx.
 function AudioController.playSpell(spellId: string, which: "cast" | "impact", at: Vector3?)
 	local def = SpellDefinitions.get(spellId)

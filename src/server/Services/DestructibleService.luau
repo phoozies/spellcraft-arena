@@ -89,6 +89,14 @@ function DestructibleService.canHarm(attacker: Player?, target: Instance): boole
 	return relation(attacker, owner, resolved)
 end
 
+-- True for a training dummy or a Battleground NPC: the unowned things that
+-- stand in for an enemy player, so area and auto-targeting spells go for them.
+function DestructibleService.isTrainingTarget(instance: Instance): boolean
+	local resolved = DestructibleService.resolve(instance)
+	return resolved ~= nil
+		and (resolved:GetAttribute("Dummy") == true or resolved:GetAttribute("NpcType") ~= nil)
+end
+
 local function partsOf(target: Instance): { BasePart }
 	if target:IsA("BasePart") then
 		return { target }
@@ -376,7 +384,7 @@ function DestructibleService.damage(
 	end
 
 	-- Structures / summons / props
-	local health =(resolved:GetAttribute("Health") :: number?) or 0
+	local health = (resolved:GetAttribute("Health") :: number?) or 0
 	health -= amount
 	resolved:SetAttribute("Health", health)
 	updateBar(resolved)

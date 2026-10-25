@@ -11,7 +11,10 @@
 --     Those three draw `visual.model` themselves (SpellVfx); any other burst
 --     with a model has it strike down from the sky.
 --   * hold (Black Hole): enemies pulled into the core (HOLD_RADIUS) are
---     Rooted there until the zone ends: sucked in, then trapped.
+--     Rooted there until the zone ends: sucked in, then trapped. Players,
+--     Battleground NPCs, and training dummies all feel it (dummies are posts:
+--     they take the damage but do not move). Clients draw the vortex (Fx
+--     "vortex") and a spiral of motes streaming off each victim ("suck").
 --   * visual.model: the lingering swirl is that model (spun by clients via
 --     the SpinFx tag) instead of a primitive.
 
@@ -205,6 +208,19 @@ function Zone.cast(ctx: any): boolean?
 	end
 
 	local duration = stats.duration or 3
+	-- Black Hole: clients draw the whirling vortex hovering over the disc.
+	local coreHeight = visual.size.Y / 2 + 1
+	if stats.hold then
+		fxRemote:FireAllClients(
+			"vortex",
+			center,
+			radius,
+			duration,
+			visual.color,
+			coreHeight,
+			ctx.def.id
+		)
+	end
 	local area = disc(center, radius, visual.color, visual.material, visual.transparency or 0.3)
 	area.Name = ctx.def.name
 	trackZone(ctx.player, ctx.def.id, area, stats.maxActive or 1)
@@ -242,46 +258,77 @@ function Zone.cast(ctx: any): boolean?
 	task.spawn(function()
 		local elapsed = 0
 		local held: { [Model]: boolean } = {}
+		local sucked: { [Model]: boolean } = {}
+		local limp: { [Humanoid]: boolean } = {}
 		while elapsed < duration and area.Parent do
 			for _, hit in ctx.enemiesNear(center, radius) do
-				if hit.character then
-					if stats.hold and not held[hit.character] then
-						local offset = hit.position - center
+				-- A player, or a dummy / Battleground NPC standing in for one.
+				local victim: Model? = hit.character
+				if not victim and DestructibleService.isTrainingTarget(hit.instance) then
+					victim = if hit.instance:IsA("Model") then hit.instance else nil
+				end
+				if victim then
+					-- Only things that can move (players, NPCs) are pulled and held.
+					local mover = StatusService.targetOf(victim)
+					local root = victim:FindFirstChild("HumanoidRootPart")
+					if stats.hold and not sucked[victim] then
+						-- Everyone caught gets the streaming spiral, once.
+						sucked[victim] = true
+						fxRemote:FireAllClients(
+							"suck",
+							victim,
+							center,
+							duration - elapsed,
+							ctx.def.visual.color,
+							coreHeight
+						)
+					end
+					if
+						stats.hold
+						and mover
+						and root
+						and root:IsA("BasePart")
+						and not held[victim]
+					then
+						local offset = root.Position - center
 						if Vector3.new(offset.X, 0, offset.Z).Magnitude <= HOLD_RADIUS then
 							-- Dragged to the very center and held for the rest of the
 							-- zone. Root stops moving, not casting.
-							held[hit.character] = true
-							StatusService.apply(hit.character, "Root", duration - elapsed)
-							local root = hit.character:FindFirstChild("HumanoidRootPart")
-							if root and root:IsA("BasePart") then
-								root.CFrame = CFrame.new(center.X, root.Position.Y, center.Z)
-									* root.CFrame.Rotation
-							end
+							held[victim] = true
+							StatusService.apply(victim, "Root", duration - elapsed)
+							root.AssemblyLinearVelocity = Vector3.zero
+							root.CFrame = CFrame.new(center.X, root.Position.Y, center.Z)
+								* root.CFrame.Rotation
 						end
 					end
-					if stats.status then
-						StatusService.apply(
-							hit.character,
-							stats.status,
-							stats.statusDuration or TICK * 2
-						)
+					if stats.status and mover then
+						StatusService.apply(victim, stats.status, stats.statusDuration or TICK * 2)
 					end
 					if stats.damage then
 						DestructibleService.damage(
-							hit.character,
+							victim,
 							stats.damage * TICK,
 							ctx.player,
 							ctx.def.name
 						)
 					end
-					if stats.pull then
+					if stats.pull and mover and not held[victim] then
 						local toCenter = center - hit.position
 						local flat = Vector3.new(toCenter.X, 0, toCenter.Z)
 						if flat.Magnitude > 2 then
-							DestructibleService.push(
-								hit.character,
-								flat.Unit * stats.pull + Vector3.new(0, 6, 0)
-							)
+							local pull = flat.Unit * stats.pull + Vector3.new(0, 6, 0)
+							if hit.character then
+								DestructibleService.push(victim, pull)
+							elseif root and root:IsA("BasePart") then
+								-- A Battleground NPC: the server owns it. It goes limp so its
+								-- walking can't fight the pull, then is flung toward the core.
+								local npcHumanoid = victim:FindFirstChildOfClass("Humanoid")
+								if npcHumanoid then
+									npcHumanoid.PlatformStand = true
+									limp[npcHumanoid] = true
+								end
+								root.AssemblyLinearVelocity = pull
+							end
 						end
 					end
 				end
@@ -293,6 +340,12 @@ function Zone.cast(ctx: any): boolean?
 			end
 			task.wait(TICK)
 			elapsed += TICK
+		end
+		-- Pulled NPCs get back on their feet when the hole closes.
+		for npcHumanoid in limp do
+			if npcHumanoid.Parent then
+				npcHumanoid.PlatformStand = false
+			end
 		end
 	end)
 	return true

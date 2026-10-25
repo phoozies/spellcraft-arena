@@ -122,9 +122,23 @@ local Cues: { [string]: Cue } = {
 	zapCrackle = sound(TWINKLE, 0.5, true, 2, 0.5),
 	healChime = sound(CHIME, 0.7, true, 1.6, 1.6),
 	blackHoleOpen = sound(RUMBLE, 0.8, true, 0.5, 2.5),
-	blackHoleCollapse = sound(EXPLOSION, 0.9, true, 0.45, 2.2),
+	-- The hum while the hole is open: AudioController.loop repeats it for the
+	-- hole's whole life, so `loop` keeps AudioController.play from using it.
+	blackHoleHum = {
+		id = `rbxassetid://{RUMBLE}`,
+		volume = 0.5,
+		pitch = 0.5,
+		world = true,
+		loop = true,
+	},
+	voidPull = sound(WIND, 0.5, true, 0.5, 1),
+	blackHoleCollapse = layered(sound(EXPLOSION, 0.9, true, 0.45, 2.2), "waveRumble", "thump"),
 	turretDeploy = sound(GRIND, 0.6, true, 1.9, 0.9),
-	turretShot = sound(HIT, 0.4, true, 2, 0.3),
+	turretOnline = sound(TWINKLE, 0.6, true, 1.6, 0.8),
+	buildClank = sound(HIT, 0.5, true, 1.1, 0.3),
+	turretShot = layered(sound(HIT, 0.4, true, 2, 0.3), "shotCrack"),
+	shotCrack = sound(EXPLOSION, 0.22, true, 2, 0.22),
+	bulletHit = layered(sound(HIT, 0.35, true, 1.6, 0.2), "zapCrackle"),
 
 	-- Movement
 	dash = sound(WIND, 0.6, true, 1.9, 0.5),

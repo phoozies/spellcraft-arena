@@ -629,7 +629,7 @@ local DEFINITIONS: { SpellDef } = {
 		sfx = { cast = "blackHoleOpen", impact = "blackHoleCollapse" },
 		archetype = "Zone",
 		cooldown = 10,
-		description = "Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70.",
+		description = "Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Training dummies and Battleground NPCs get sucked in and hurt too. Range 70.",
 		-- `hold`: enemies pulled into the core are Rooted (trapped) at the
 		-- center until the hole closes. 10 damage over its 3 seconds.
 		stats = {
@@ -662,7 +662,7 @@ local DEFINITIONS: { SpellDef } = {
 		sfx = { cast = "turretDeploy", impact = "turretShot" },
 		archetype = "Placeable",
 		cooldown = 12,
-		description = "Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds.",
+		description = "Summon a 30-health turret that shoots bullets at the nearest enemy, training dummy, or Battleground NPC for 20 seconds.",
 		stats = {
 			health = 30,
 			lifetime = 20,

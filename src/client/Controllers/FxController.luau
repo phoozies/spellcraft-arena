@@ -17,6 +17,10 @@
 --   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)
 --   rise           (center, radius, delay, color, kind, height, model?)  boulder/pillar rises from the ground
 --   quake          (center, radius, duration, color, model?)       Earthquake wind-up rumble and cracks
+--   vortex         (center, radius, duration, color, coreHeight, spellId)  Black Hole swirl, hum, and collapse
+--   suck           (victim, center, seconds, color, coreHeight)    streaming motes off something caught by a Black Hole
+--   muzzle         (position, direction, spellId)                  turret muzzle flash and shot sound
+--   deploy         (position, color, spellId)                      turret online: scan ring, radar sweep, chime
 -- and spins parts/models tagged "SpinFx" locally.
 -- The looks live in Fx/SpellVfx.
 --
@@ -178,6 +182,11 @@ local function onProjectileEnd(id: number, position: Vector3)
 			SpellVfx.impact(folder, position, bolt.fxKey, bolt.color)
 			if bolt.fxKey then
 				AudioController.playSpell(bolt.fxKey, "impact", position)
+				-- Bolts with no spell of their own (turret bullets) use their style's cue.
+				local hitCue = SpellVfx.styleFor(bolt.fxKey).hitCue
+				if hitCue then
+					AudioController.play(hitCue, position)
+				end
 			end
 		end
 	end
@@ -270,6 +279,65 @@ local function onQuake(
 	if near(center) then
 		SpellVfx.quake(folder, center, radius, duration, color, modelName)
 	end
+end
+
+-- Black Hole: the vortex, its hum while open, and the collapse boom at the end.
+local function onVortex(
+	center: Vector3,
+	radius: number,
+	duration: number,
+	color: Color3,
+	coreHeight: number,
+	spellId: string?
+)
+	if not near(center) then
+		return
+	end
+	SpellVfx.blackHole(folder, center, radius, duration, color, coreHeight)
+	AudioController.loop("blackHoleHum", center, duration)
+	if spellId then
+		task.delay(duration + 0.15, function()
+			AudioController.playSpell(spellId, "impact", center)
+		end)
+	end
+end
+
+-- Something was caught by a Black Hole: motes stream off it into the core.
+local function onSuck(
+	victim: Model,
+	center: Vector3,
+	seconds: number,
+	color: Color3,
+	coreHeight: number
+)
+	if typeof(victim) ~= "Instance" or not victim:IsA("Model") or not victim.Parent then
+		return
+	end
+	if not near(center) then
+		return
+	end
+	SpellVfx.suck(folder, victim, center, math.min(seconds, 10), color, coreHeight)
+	AudioController.play("voidPull", victim:GetPivot().Position)
+end
+
+-- A turret fired.
+local function onMuzzle(position: Vector3, direction: Vector3, spellId: string?)
+	if not near(position) then
+		return
+	end
+	SpellVfx.muzzle(folder, position, direction)
+	if spellId then
+		AudioController.playSpell(spellId, "impact", position)
+	end
+end
+
+-- A turret finished rising.
+local function onDeploy(position: Vector3, color: Color3, _spellId: string?)
+	if not near(position) then
+		return
+	end
+	SpellVfx.deploy(folder, position, color)
+	AudioController.play("turretOnline", position)
 end
 
 -- A player dashed: the dash pose, a puff at their feet, and a whoosh.
@@ -548,6 +616,14 @@ function FxController.start()
 			onRise(...)
 		elseif kind == "quake" then
 			onQuake(...)
+		elseif kind == "vortex" then
+			onVortex(...)
+		elseif kind == "suck" then
+			onSuck(...)
+		elseif kind == "muzzle" then
+			onMuzzle(...)
+		elseif kind == "deploy" then
+			onDeploy(...)
 		elseif kind == "glyph" then
 			onGlyph(...)
 		elseif kind == "dash" then
