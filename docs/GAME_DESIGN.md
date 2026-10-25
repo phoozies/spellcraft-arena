@@ -39,7 +39,7 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 - **Draw** a spell's glyph (hold **F** or tap ✏ Draw, then trace it) to add **one copy** of that spell to your hotbar. You hold **at most one copy of each spell**. The new copy is readied automatically. **You can only draw in the hub's Training Grove, the rounds of a match, and the Battleground.**
 - **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.**
 - **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, the rest up to 9s, ultimates 16-22s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
-- **Dash:** press **Q** (or the Dash button) to leap forward with three wind streaks behind you; 2 second cooldown.
+- **Dash:** press **Q** (or the Dash button) to leap forward with three wind streaks behind you; 8 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground where you aim, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.

@@ -1,7 +1,8 @@
 --!strict
 -- Moss Ruins — an overgrown courtyard: broken marble arches, toppled columns,
 -- mossy blocks and trees ringing a stone dais. Lots of cover (some of it
--- breakable). A wall at the rim keeps everyone on the grass.
+-- breakable). A wall at the rim keeps everyone on the grass. The grass floor
+-- is breakable terrain.
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -17,10 +18,20 @@ return function(makeProp: Registrar): Model
 	model.Name = "MossRuins"
 	local rng = MapKit.rng(77)
 
-	MapKit.disc(model, Vector3.zero, RADIUS, 6, GRASS, Enum.Material.Grass, "Floor")
+	MapKit.terrainDisc(
+		model,
+		Vector3.zero,
+		RADIUS,
+		6,
+		GRASS,
+		Enum.Material.Grass,
+		"Floor",
+		MapKit.groundTerrain(makeProp)
+	)
 	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(110, 90, 72), Enum.Material.Rock)
 	MapKit.disc(model, Vector3.new(0, 0.9, 0), 14, 1, MARBLE, Enum.Material.Marble, "Dais")
-	MapKit.disc(
+	-- Painted flagstones: not solid, so they never float over a hole.
+	local flagstones = MapKit.disc(
 		model,
 		Vector3.new(0, 0.12, 0),
 		24,
@@ -29,6 +40,8 @@ return function(makeProp: Registrar): Model
 		Enum.Material.Cobblestone,
 		"Flagstones"
 	)
+	flagstones.CanCollide = false
+	flagstones.CanQuery = false
 
 	-- Four broken arches (two posts and a half-lintel) facing the dais.
 	for i = 1, 4 do

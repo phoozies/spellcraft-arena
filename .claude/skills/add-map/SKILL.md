@@ -29,7 +29,7 @@ Use `MapKit.disc`, `pillar`, `underside` (the rock cone that makes a floor look 
 
 ## Where arenas go (spectating from the hub)
 
-Do not position arenas inside the map. `ArenaService.slotOrigin(slot)` summons them in rings below the floating hub (`Config.ARENA`: `Y`, `RADIUS`, `RING_STEP`, `PER_RING`) so players on the hub rim can look down and watch. Keep a map within roughly 150 studs of its origin so neighbours (280+ studs apart) never overlap. Each arena automatically gets a `SpectatorSign` billboard and persistent streaming.
+Do not position arenas inside the map. `ArenaService.slotOrigin(slot)` summons them in rings below the floating hub (`Config.ARENA`: `Y`, `RADIUS`, `RING_STEP`, `PER_RING`) so players on the hub rim can look down and watch. Maps are built at design size and then scaled by `Config.ARENA_SCALE` (2): keep a map within roughly 95 design studs of its origin so the scaled arena never overlaps its neighbours (400+ studs apart). Make floors and cover breakable with `MapKit.terrainDisc` / `MapKit.terrain` (`MapKit.groundTerrain(makeProp)`); jump pads should set a `LaunchTo` attribute so scaling can re-aim them. Each arena automatically gets a `SpectatorSign` billboard and persistent streaming.
 
 ## The hub island
 

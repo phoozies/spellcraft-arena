@@ -1,7 +1,8 @@
 --!strict
 -- Frost Hollow — a round sheet of ice with frozen spires and breakable ice
 -- cubes for cover. There is no wall at the rim, so knockback ring-outs decide
--- close fights. Compact: good for duels, fine for 4v4.
+-- close fights. Compact: good for duels, fine for 4v4. The ice sheet is
+-- breakable terrain; cracks drop you onto the rock below.
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -17,8 +18,18 @@ return function(makeProp: Registrar): Model
 	model.Name = "FrostHollow"
 	local rng = MapKit.rng(2024)
 
-	MapKit.disc(model, Vector3.zero, RADIUS, 6, ICE, Enum.Material.Ice, "Floor")
-	MapKit.disc(
+	MapKit.terrainDisc(
+		model,
+		Vector3.zero,
+		RADIUS,
+		6,
+		ICE,
+		Enum.Material.Ice,
+		"Floor",
+		MapKit.groundTerrain(makeProp)
+	)
+	-- A painted pond on the ice: not solid, so it never floats over a hole.
+	local pond = MapKit.disc(
 		model,
 		Vector3.new(0, 0.05, 0),
 		18,
@@ -27,6 +38,8 @@ return function(makeProp: Registrar): Model
 		Enum.Material.Glacier,
 		"FrozenPond"
 	)
+	pond.CanCollide = false
+	pond.CanQuery = false
 	MapKit.disc(model, Vector3.new(0, -0.5, 0), RADIUS + 5, 5, SNOW, Enum.Material.Snow, "SnowRim")
 	MapKit.underside(
 		model,

@@ -94,7 +94,7 @@ return function(t: any)
 				t.expect(Vector3.new(position.X, 0, position.Z).Magnitude > Config.HUB.RADIUS + 100)
 					.toBeTruthy()
 				for _, other in origins do
-					t.expect((other - position).Magnitude >= 280).toBeTruthy()
+					t.expect((other - position).Magnitude >= 400).toBeTruthy()
 				end
 				table.insert(origins, position)
 			end

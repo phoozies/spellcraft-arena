@@ -4,6 +4,14 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (breakable terrain, bigger arenas)
+- **Terrain breaks.** The floors of Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple and Sky Bridge (platforms, middle island), Crayon Canyon's floor, mesas and ramps, Sky Islands' island tops, and six new rock outcrops in the Sparring Arena are made of cells (`MapKit.terrain`) that take spell damage like any prop. The hit cell takes the full damage and the cells touching it take half (`Config.TERRAIN.SPLASH`), so a heavy spell breaks through faster and opens a wider hole; blast the floor out and players fall (ring-outs). Cliffs, end walls, and the Sparring Arena's imported floor mesh stay solid. Every round starts on a fresh arena, so the terrain respawns. Terrain gives no quest credit, and a bolt skimming over the floor does not break it (`GroundTile`).
+- **Arenas are twice as big** (`Config.ARENA_SCALE`, applied by `MapKit.scale` in `ArenaService.init`, all 8 maps); Sky Islands jump pads are re-aimed for the longer hops. The summon ring below the hub is wider to fit them (`Config.ARENA.RADIUS` 380 -> 560, `RING_STEP` 420 -> 600).
+- `tests/Terrain.spec.luau`.
+
+### Changed (dash cooldown)
+- **Dash cooldown is 8s** (was 2s on this branch), and the Dash button now shows only the countdown while recharging (it used to keep the word "Dash" underneath).
+
 ### Changed (floating-island hub, duels below, 8 maps, new dash)
 - **The hub is a round floating island** (`Maps/InkwellPlaza`, `Config.HUB`): a grass disc with a sand beach, a dark rock cone with stalactites and crystals underneath, open ocean far below, and a wooden rail around the rim. It follows the look of the reference video: stepped white-marble amphitheatre arcs, leaning marble pillars, a ruined arch, bare dark trees, crates. Everything sits in rings around the inkwell: plaza (shrines, kiosks, gift box, spawn), amphitheatre and Battleground portal to the south, the team boxes in an arc to the north with the Arena Gate behind them, the Training Grove to the west, the Crate Shop to the east, podium and Most Wins board facing the centre. All tags and names the services use are unchanged.
 - **Duels are summoned below the island.** Arenas are no longer at `y = 400`: `ArenaService.slotOrigin` places them in rings 300 studs under the hub (`Config.ARENA`), outside its footprint, so players on the rim (four 👁 SPECTATE overlooks) can look down and watch fights live. Arena models stream in persistently, carry a floating "⚔ mode · map" sign, effects draw out to 900 studs, and the hub's haze is thinner so the arenas are clear.

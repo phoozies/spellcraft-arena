@@ -1,8 +1,8 @@
 --!strict
 -- Sky Bridge — two round platforms joined by a long plank bridge over the
 -- void, a small island in the middle, and no rim walls: knock people off. The
--- bridge planks are breakable, so the middle can be cut away. Teams start on
--- opposite platforms (the Z ends).
+-- bridge planks are breakable, so the middle can be cut away, and so are the
+-- platform floors. Teams start on opposite platforms (the Z ends).
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -17,11 +17,27 @@ local PLANK = Color3.fromRGB(168, 128, 86)
 local ROCK = Color3.fromRGB(120, 112, 108)
 
 -- A round floor at (0, 0, z) with its rock hanging underneath.
-local function floorAt(parent: Instance, z: number, radius: number, depth: number, name: string)
-	local floor =
-		MapKit.disc(parent, Vector3.new(0, 0, z), radius, 6, STONE, Enum.Material.Slate, name)
+local function floorAt(
+	parent: Instance,
+	z: number,
+	radius: number,
+	depth: number,
+	name: string,
+	color: Color3,
+	material: Enum.Material,
+	makeProp: Registrar
+)
+	MapKit.terrainDisc(
+		parent,
+		Vector3.new(0, 0, z),
+		radius,
+		6,
+		color,
+		material,
+		name,
+		MapKit.groundTerrain(makeProp)
+	)
 	MapKit.underside(parent, -5.5, radius, depth, ROCK, Enum.Material.Rock, Vector3.new(0, 0, z))
-	return floor
 end
 
 return function(makeProp: Registrar): Model
@@ -30,8 +46,18 @@ return function(makeProp: Registrar): Model
 
 	for _, sign in { -1, 1 } do
 		local z = sign * PLATFORM_Z
-		floorAt(model, z, PLATFORM_RADIUS, 40, if sign < 0 then "PlatformA" else "PlatformB")
-		MapKit.disc(
+		floorAt(
+			model,
+			z,
+			PLATFORM_RADIUS,
+			40,
+			if sign < 0 then "PlatformA" else "PlatformB",
+			STONE,
+			Enum.Material.Slate,
+			makeProp
+		)
+		-- A painted inlay: not solid, so it never floats over a hole.
+		local inlay = MapKit.disc(
 			model,
 			Vector3.new(0, 0.1, z),
 			PLATFORM_RADIUS - 6,
@@ -40,12 +66,21 @@ return function(makeProp: Registrar): Model
 			Enum.Material.Cobblestone,
 			"Inlay"
 		)
+		inlay.CanCollide = false
+		inlay.CanQuery = false
 	end
 
 	-- A small grassy island in the middle of the bridge.
-	local island = floorAt(model, 0, ISLAND_RADIUS, 28, "MidIsland")
-	island.Color = Color3.fromRGB(120, 176, 104)
-	island.Material = Enum.Material.Grass
+	floorAt(
+		model,
+		0,
+		ISLAND_RADIUS,
+		28,
+		"MidIsland",
+		Color3.fromRGB(120, 176, 104),
+		Enum.Material.Grass,
+		makeProp
+	)
 
 	-- Breakable planks between each platform and the middle island.
 	local length = (PLATFORM_Z - PLATFORM_RADIUS - ISLAND_RADIUS) / PLANKS_PER_SIDE

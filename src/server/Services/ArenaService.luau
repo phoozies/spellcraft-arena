@@ -11,6 +11,11 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local DestructibleService = require(script.Parent.DestructibleService)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
+local MapKit = require(MapsFolder:WaitForChild("MapKit")) :: any
+
+-- Ground speed (studs/s) jump pads aim for once a map is scaled up; faster than
+-- the design-size 45 so the longer hops keep a sensible arc.
+local PAD_SPEED = 70
 
 export type Arena = {
 	id: number,
@@ -131,7 +136,7 @@ function ArenaService.pickMap(mode: string): string
 	local weights: { [string]: number } = {
 		CrayonCanyon = 1,
 		SkyIslands = 1,
-		-- A compact 46-stud floor: favored for small duels, skipped for 4v4.
+		-- The roomy round floor: favored for small duels, skipped for 4v4.
 		SparringArena = if mode == "1v1" or mode == "2v2" then 2 elseif mode == "4v4" then 0 else 1,
 		FrostHollow = 1,
 		EmberForge = 1,
@@ -263,6 +268,7 @@ function ArenaService.init()
 	for _, name in ArenaService.MAP_NAMES do
 		local builder = require(MapsFolder:WaitForChild(name)) :: any
 		local model: Model = builder(makeProp)
+		MapKit.scale(model, Config.ARENA_SCALE, PAD_SPEED)
 		model.Name = name
 		model.WorldPivot = CFrame.new()
 		model.Parent = templates

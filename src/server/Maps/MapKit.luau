@@ -10,6 +10,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 
 local MapKit = {}
@@ -268,6 +269,145 @@ function MapKit.tree(parent: Instance, position: Vector3, scale: number, rng: Ra
 		color = Color3.fromRGB(72, 150, 72),
 		material = Enum.Material.Grass,
 	})
+end
+
+export type TerrainOptions = {
+	cell: number, -- design-size cell width (Config.TERRAIN.CELL)
+	health: number, -- what one cell can take (Config.TERRAIN.HEALTH)
+	makeProp: (Instance, number) -> (),
+	-- Floors and island tops: bolts glide over them, so only a direct strike or
+	-- an area spell breaks them (Projectile skips "GroundTile" in its wide sweep).
+	ground: boolean?,
+	-- Return false to leave a cell out (x, z are the cell's center, relative to
+	-- the block's center); used to cut round islands from a square block.
+	keep: ((x: number, z: number) -> boolean)?,
+}
+
+-- A solid block of terrain built from separately breakable cells (tagged
+-- Destructible with the "Terrain" attribute, so DestructibleService splashes
+-- each hit onto the neighbours). The block is cut up on X, Y and Z so no cell
+-- is wider than `cell`.
+function MapKit.terrain(parent: Instance, props: PartProps, options: TerrainOptions): Folder
+	local folder = MapKit.folder(parent, props.name or "Terrain")
+	local size = props.size
+	local nx = math.max(1, math.ceil(size.X / options.cell - 0.01))
+	local ny = math.max(1, math.ceil(size.Y / options.cell - 0.01))
+	local nz = math.max(1, math.ceil(size.Z / options.cell - 0.01))
+	local cellSize = Vector3.new(size.X / nx, size.Y / ny, size.Z / nz)
+	local base = props.color or Color3.fromRGB(200, 200, 200)
+	for ix = 1, nx do
+		for iy = 1, ny do
+			for iz = 1, nz do
+				local offset = Vector3.new(
+					(ix - (nx + 1) / 2) * cellSize.X,
+					(iy - (ny + 1) / 2) * cellSize.Y,
+					(iz - (nz + 1) / 2) * cellSize.Z
+				)
+				if options.keep == nil or options.keep(offset.X, offset.Z) then
+					local shade = 1 + ((ix * 7 + iy * 3 + iz * 5) % 5 - 2) * 0.025
+					local cell = MapKit.part(folder, {
+						name = "TerrainCell",
+						size = cellSize,
+						cframe = props.cframe * CFrame.new(offset),
+						color = Color3.new(
+							math.clamp(base.R * shade, 0, 1),
+							math.clamp(base.G * shade, 0, 1),
+							math.clamp(base.B * shade, 0, 1)
+						),
+						material = props.material,
+					})
+					cell:SetAttribute("Terrain", true)
+					if options.ground then
+						cell:SetAttribute("GroundTile", true)
+					end
+					options.makeProp(cell, options.health)
+				end
+			end
+		end
+	end
+	return folder
+end
+
+-- Ready-made terrain options from Config.TERRAIN: floors and island tops
+-- (`ground`, health Ground) and rock such as mesas and boulders (health Rock).
+function MapKit.groundTerrain(makeProp: (Instance, number) -> ()): TerrainOptions
+	return {
+		cell = Config.TERRAIN.CELL,
+		health = Config.TERRAIN.HEALTH.Ground,
+		makeProp = makeProp,
+		ground = true,
+	}
+end
+
+function MapKit.rockTerrain(makeProp: (Instance, number) -> ()): TerrainOptions
+	return {
+		cell = Config.TERRAIN.CELL,
+		health = Config.TERRAIN.HEALTH.Rock,
+		makeProp = makeProp,
+	}
+end
+
+-- A round floor of breakable terrain whose TOP face is at `top` (a point on
+-- its axis), like MapKit.disc. Cells whose center is a little past the radius
+-- are kept too, so the rim has no gaps (the overhang is under the barrier).
+function MapKit.terrainDisc(
+	parent: Instance,
+	top: Vector3,
+	radius: number,
+	thickness: number,
+	color: Color3,
+	material: Enum.Material,
+	name: string,
+	options: TerrainOptions
+): Folder
+	local reach = radius + options.cell * 0.4
+	local withShape = table.clone(options)
+	withShape.keep = function(x: number, z: number)
+		return x * x + z * z <= reach * reach
+	end
+	return MapKit.terrain(parent, {
+		name = name,
+		size = Vector3.new(radius * 2, thickness, radius * 2),
+		cframe = CFrame.new(top - Vector3.new(0, thickness / 2, 0)),
+		color = color,
+		material = material,
+	}, withShape)
+end
+
+-- Launch velocity of a ballistic arc from `from` that lands on `to`, covering
+-- the ground at roughly `speed` studs/s (flight time kept between 1 and 2.2 s).
+function MapKit.launchVelocity(from: Vector3, to: Vector3, speed: number): Vector3
+	local g = workspace.Gravity
+	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local t = math.clamp(flat.Magnitude / speed, 1, 2.2)
+	local vy = ((to.Y - from.Y) + 0.5 * g * t * t) / t
+	return flat / t + Vector3.new(0, vy, 0)
+end
+
+-- Scales a finished map about its origin (the floor's center, top at y = 0, so
+-- the ground stays at y = 0). Jump pads that name a "LaunchTo" landing spot are
+-- re-aimed for the new distances.
+function MapKit.scale(model: Instance, factor: number, padSpeed: number)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			local cframe = descendant.CFrame
+			descendant.Size *= factor
+			descendant.CFrame = cframe.Rotation + cframe.Position * factor
+		elseif descendant:IsA("Attachment") then
+			descendant.Position *= factor
+		end
+	end
+	for _, descendant in model:GetDescendants() do
+		local landing = descendant:GetAttribute("LaunchTo")
+		if descendant:IsA("BasePart") and typeof(landing) == "Vector3" then
+			local to = landing * factor
+			descendant:SetAttribute("LaunchTo", to)
+			descendant:SetAttribute(
+				"LaunchVelocity",
+				MapKit.launchVelocity(descendant.Position, to, padSpeed)
+			)
+		end
+	end
 end
 
 -- Scatter helper with a fixed seed so maps are identical everywhere.

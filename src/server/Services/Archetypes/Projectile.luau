@@ -187,6 +187,8 @@ local function step(p: Live, dt: number): boolean
 			else nil
 		if
 			pos
+			-- Floors are only broken by a direct strike, never by a bolt skimming over.
+			and not thing:GetAttribute("GroundTile")
 			and (pos - p.position).Magnitude <= reach
 			and not table.find(p.ignore, thing)
 			and (caster == nil or DestructibleService.canHarm(caster, thing))

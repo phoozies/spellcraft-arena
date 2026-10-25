@@ -1,7 +1,8 @@
 --!strict
 -- Ember Forge — a basalt floor ringed by a moat of glowing lava, with a
 -- stepped anvil in the middle and obsidian pillars and brick walls as cover.
--- A wall at the rim keeps everyone on the floor; the lava is scenery.
+-- A wall at the rim keeps everyone on the floor; the lava is scenery. The
+-- basalt floor is breakable terrain (a hole shows the lava glowing below).
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -28,7 +29,16 @@ return function(makeProp: Registrar): Model
 	light.Shadows = false
 	light.Parent = lava
 
-	MapKit.disc(model, Vector3.zero, RADIUS, 6, BASALT, Enum.Material.Basalt, "Floor")
+	MapKit.terrainDisc(
+		model,
+		Vector3.zero,
+		RADIUS,
+		6,
+		BASALT,
+		Enum.Material.Basalt,
+		"Floor",
+		MapKit.groundTerrain(makeProp)
+	)
 	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(48, 42, 50), Enum.Material.Slate)
 
 	-- A two-step anvil dais in the middle, with a glowing core.

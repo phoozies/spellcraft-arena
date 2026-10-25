@@ -153,7 +153,7 @@ local Config = {
 	-- pops it HOP studs/s upward, so the dash is a low arc with three wind
 	-- streaks (TRAILS) behind it.
 	DASH = {
-		COOLDOWN = 2,
+		COOLDOWN = 8,
 		SPEED = 70,
 		DURATION = 0.4,
 		HOP = 38,
@@ -174,9 +174,28 @@ local Config = {
 	-- the next PER_RING on a second ring RING_STEP further out, and so on.
 	ARENA = {
 		Y = -300,
-		RADIUS = 380,
-		RING_STEP = 420,
+		RADIUS = 560,
+		RING_STEP = 600,
 		PER_RING = 8,
+	},
+
+	-- Every match arena is built at design size, then scaled up by this factor
+	-- (ArenaService.init). Jump pad launches are re-aimed to match.
+	ARENA_SCALE = 2,
+
+	-- Breakable terrain (MapKit.terrain, DestructibleService): ground, mesas and
+	-- outcrops are made of cells that take spell damage like any other prop, so
+	-- the harder a spell hits the faster it carves through. Cells come back with
+	-- the next round's fresh arena.
+	--   CELL     design-size width of one cell, in studs (before ARENA_SCALE)
+	--   HEALTH   what a cell can take: Ground (floors, island tops), Rock
+	--            (mesas, boulders)
+	--   SPLASH   share of a hit's damage that also lands on every cell touching
+	--            the one that was hit, so heavy spells open wider craters
+	TERRAIN = {
+		CELL = 10,
+		HEALTH = { Ground = 60, Rock = 90 },
+		SPLASH = 0.5,
 	},
 
 	AUTOSAVE_INTERVAL = 90,

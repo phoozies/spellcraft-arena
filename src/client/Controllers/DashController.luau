@@ -96,14 +96,19 @@ local function go(direction: Vector3)
 	end)
 end
 
+local LABEL = "💨 Dash"
+
+-- On cooldown the button shows only the countdown (its own word is hidden).
 local function refresh()
 	local left = cooldownLeft()
 	if left > 0 then
 		cooldownText.Text = string.format("%.1f", left)
 		cooldownText.Visible = true
+		button.Text = ""
 		button.BackgroundColor3 = Theme.COLORS.panel
 	else
 		cooldownText.Visible = false
+		button.Text = LABEL
 		button.BackgroundColor3 = Theme.COLORS.accent
 	end
 end
@@ -119,7 +124,7 @@ local function buildButton()
 	scale.Parent = gui
 	Responsive.bind(scale)
 	-- Sits under the Draw button, bottom right.
-	button = Theme.button(gui, "💨 Dash", {
+	button = Theme.button(gui, LABEL, {
 		Name = "Dash",
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -16, 1, -226),

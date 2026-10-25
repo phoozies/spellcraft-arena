@@ -1,7 +1,8 @@
 --!strict
 -- Tidal Temple — a sandy island around a three-step temple, ringed by shallow
 -- sea. Coral pillars and giant clams are breakable cover, and torches light the
--- shore. A wall at the rim keeps everyone on the sand.
+-- shore. A wall at the rim keeps everyone on the sand. The sand is breakable
+-- terrain; the temple steps are solid.
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -17,7 +18,16 @@ return function(makeProp: Registrar): Model
 	model.Name = "TidalTemple"
 	local rng = MapKit.rng(909)
 
-	MapKit.disc(model, Vector3.zero, RADIUS, 6, SAND, Enum.Material.Sand, "Floor")
+	MapKit.terrainDisc(
+		model,
+		Vector3.zero,
+		RADIUS,
+		6,
+		SAND,
+		Enum.Material.Sand,
+		"Floor",
+		MapKit.groundTerrain(makeProp)
+	)
 	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(150, 128, 98), Enum.Material.Sandstone)
 
 	-- The shallow sea around the island (scenery).
