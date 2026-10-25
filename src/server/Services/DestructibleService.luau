@@ -427,12 +427,54 @@ end
 -- Knockback, server-authoritative. Clients own their character's physics,
 -- so the server briefly takes network ownership of the victim's root,
 -- applies the velocity itself, then hands ownership back. A client that
--- ignores remotes can't dodge knockback, pulls, traps, or ring-outs.
+-- ignores remotes can't dodge knockback, pulls, traps, or ring-outs. Battleground
+-- NPCs are pushed too (they are server-owned).
 local pushTokens: { [Model]: number } = setmetatable({}, { __mode = "k" }) :: any
 
+-- How long a shoved Battleground NPC stays limp, so its walking can't undo the push.
+local NPC_STAGGER = 0.7
+
+-- A Battleground NPC is server-owned, so no ownership dance: it goes limp for
+-- a moment and the server sets its velocity.
+local function pushNpc(model: Model, velocity: Vector3)
+	local root = model:FindFirstChild("HumanoidRootPart")
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if
+		not StatusService.targetOf(model)
+		or not humanoid
+		or not root
+		or not root:IsA("BasePart")
+		or root.Anchored
+	then
+		return
+	end
+	if StatusService.has(model, "Giant") then
+		velocity *= 0.5
+	end
+	if velocity.Magnitude > MAX_PUSH then
+		velocity = velocity.Unit * MAX_PUSH
+	end
+	local token = (pushTokens[model] or 0) + 1
+	pushTokens[model] = token
+	humanoid.PlatformStand = true
+	root.AssemblyLinearVelocity = root.AssemblyLinearVelocity * 0.25 + velocity
+	task.delay(NPC_STAGGER, function()
+		if pushTokens[model] == token and humanoid.Parent then
+			humanoid.PlatformStand = false
+		end
+	end)
+end
+
 function DestructibleService.push(target: Instance, velocity: Vector3)
+	if velocity.Magnitude ~= velocity.Magnitude then
+		return
+	end
 	local resolved, owner, isCharacter = DestructibleService.resolve(target)
-	if not (isCharacter and owner and resolved) or velocity.Magnitude ~= velocity.Magnitude then
+	if resolved and not isCharacter and resolved:IsA("Model") then
+		pushNpc(resolved, velocity)
+		return
+	end
+	if not (isCharacter and owner and resolved) then
 		return
 	end
 	local character = resolved :: Model
