@@ -248,6 +248,8 @@ end
 -- casts it at `target` through the normal pipeline, so range, cooldowns,
 -- placement and every archetype rule still apply.
 function CastService.castFor(player: Player, spellId: string, target: Vector3): boolean
+	-- A copy left over from an earlier rejected cast would block the grant.
+	HandService.clearCopies(player)
 	local ok = HandService.grant(player, spellId, true)
 	if not ok then
 		return false

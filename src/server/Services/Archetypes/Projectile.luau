@@ -90,16 +90,15 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 			TrapBubble.show(affected, stats.statusDuration or 1, opts.visual.color, stats.model)
 		end
 	end
-	if isCharacter then
-		local character = target :: Model
-		if stats.knockback and stats.knockback ~= 0 then
-			local flat = Vector3.new(direction.X, 0, direction.Z)
-			local push = if flat.Magnitude > 0 then flat.Unit else Vector3.zero
-			DestructibleService.push(
-				character,
-				push * stats.knockback + Vector3.new(0, math.abs(stats.knockback) * 0.35, 0)
-			)
-		end
+	-- Wind and other knockback shoves players and Battleground NPCs alike.
+	local pushed = if isCharacter then target else affected
+	if pushed and stats.knockback and stats.knockback ~= 0 then
+		local flat = Vector3.new(direction.X, 0, direction.Z)
+		local push = if flat.Magnitude > 0 then flat.Unit else Vector3.zero
+		DestructibleService.push(
+			pushed,
+			push * stats.knockback + Vector3.new(0, math.abs(stats.knockback) * 0.35, 0)
+		)
 	end
 end
 

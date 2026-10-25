@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed (wind moves push NPCs)
+- **Gust, Whirlwind and Tornado now blow Battleground NPCs back.** Knockback only ever reached players (`DestructibleService.push` skipped anything without an owner, and projectiles only pushed player characters). `push` now also shoves server-owned NPCs: they go limp for 0.7s so their walking can't undo it, and get the push velocity. Live test: Whirlwind sent a Sand Raider about 63 studs and Tornado about 68.
+- Training dummies are anchored posts and still do not move. Knockback from Earth Punch and Earth Pillar (zones and lines) still only reaches players.
+- The Studio `cast` debug command now clears your hand first, so a leftover copy can't block it.
+
 ### Added (Black Hole and Turret: effects, sounds, animations, dummy and NPC targeting)
 - **Black Hole now hurts and pulls training dummies and Battleground NPCs**, not just players (`DestructibleService.isTrainingTarget`). NPCs go limp so their walking can't fight the pull, are dragged to the core, rooted there, and stand back up when the hole closes; dummies are posts, so they take the damage but stay put.
 - **Black Hole vortex** (`SpellVfx.blackHole`, Fx `vortex`): a dark core with a glow and two spinning accretion discs hangs over the target, 30 glowing motes with trails spiral in on three arms, rings ripple inward over the ground, and particles stream into the core. When it ends it implodes and blows out in a flash, a shockwave and sparks.
