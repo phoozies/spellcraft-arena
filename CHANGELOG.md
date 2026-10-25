@@ -4,6 +4,10 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (all scenery is breakable)
+- **The items on the maps break, not just the ground.** Crayon Canyon's cliffs and end walls, the Ember Forge dais, the Tidal Temple steps and torches, Frost Hollow's snow bank, and Moss Ruins' dais are now breakable terrain or props. Scenery health comes from named tiers in `Config.PROPS` (Light 50, Medium 90, Heavy 140, then halved by `PROP_HEALTH`): ice cubes, clams, mossy blocks and torches fall to a couple of hits, trees, columns, bridges and arches to three or four, and spires and pillars to five (a Fireball does 15). Torch flames go down with their post. A cliff or end wall that breaks opens onto the void, so it can ring players out.
+- Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue (single meshes) stay solid. `tests/Terrain.spec.luau` now fails if a map gains solid scenery that can't be broken.
+
 ### Changed (git workflow)
 - **Documented project workflow** (`CLAUDE.md`, `docs/CONTRIBUTING.md`, `ship-change` and `new-feature` skills): every change starts on a `feature/<name>` branch; when tests pass or the user says so, commit, push, merge into `main`, delete the branch, and sync to Roblox. Never merge on red tests.
 

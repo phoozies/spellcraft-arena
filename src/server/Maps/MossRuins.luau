@@ -4,6 +4,9 @@
 -- breakable). A wall at the rim keeps everyone on the grass. The grass floor,
 -- the arches and the trees are all breakable.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -29,7 +32,16 @@ return function(makeProp: Registrar): Model
 		MapKit.groundTerrain(makeProp)
 	)
 	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(110, 90, 72), Enum.Material.Rock)
-	MapKit.disc(model, Vector3.new(0, 0.9, 0), 14, 1, MARBLE, Enum.Material.Marble, "Dais")
+	MapKit.terrainDisc(
+		model,
+		Vector3.new(0, 0.9, 0),
+		14,
+		1,
+		MARBLE,
+		Enum.Material.Marble,
+		"Dais",
+		MapKit.rockTerrain(makeProp)
+	)
 	-- Painted flagstones: not solid, so they never float over a hole.
 	local flagstones = MapKit.disc(
 		model,
@@ -57,7 +69,7 @@ return function(makeProp: Registrar): Model
 				color = MARBLE,
 				material = Enum.Material.Marble,
 			})
-			makeProp(post, 180)
+			makeProp(post, Config.PROPS.Heavy)
 		end
 		local lintel = MapKit.part(model, {
 			name = "ArchLintel",
@@ -66,7 +78,7 @@ return function(makeProp: Registrar): Model
 			color = MARBLE,
 			material = Enum.Material.Marble,
 		})
-		makeProp(lintel, 120)
+		makeProp(lintel, Config.PROPS.Medium)
 	end
 
 	-- Toppled columns (breakable cover).
@@ -82,7 +94,7 @@ return function(makeProp: Registrar): Model
 			color = MARBLE,
 			material = Enum.Material.Marble,
 		})
-		makeProp(column, 220 + i)
+		makeProp(column, Config.PROPS.Medium + i)
 	end
 
 	-- Mossy blocks (breakable).
@@ -98,14 +110,14 @@ return function(makeProp: Registrar): Model
 			color = MOSS,
 			material = Enum.Material.Slate,
 		})
-		makeProp(block, 150)
+		makeProp(block, Config.PROPS.Light)
 	end
 
 	-- Trees along the rim.
 	for i = 1, 12 do
 		local a = (i / 12) * math.pi * 2 + rng:NextNumber(-0.1, 0.1)
 		local at = Vector3.new(math.cos(a) * (RADIUS - 5), 0, math.sin(a) * (RADIUS - 5))
-		MapKit.tree(model, at, 1.2, rng, nil, makeProp, 100)
+		MapKit.tree(model, at, 1.2, rng, nil, makeProp, Config.PROPS.Medium)
 	end
 
 	MapKit.barrierRing(model, RADIUS, 50)

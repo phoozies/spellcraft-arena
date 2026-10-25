@@ -29,6 +29,62 @@ return function(t: any)
 			t.expect(Config.TERRAIN.HEALTH.Rock >= Config.TERRAIN.HEALTH.Ground).toBeTruthy()
 		end)
 
+		t.it("scenery health tiers are ordered and a few hits fell even the heaviest", function()
+			local props = Config.PROPS
+			t.expect(props.Light < props.Medium and props.Medium < props.Heavy).toBeTruthy()
+			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
+			local heavy = props.Heavy * Config.TERRAIN.PROP_HEALTH
+			t.expect(math.ceil(heavy / strong) <= 6).toBeTruthy()
+			t.expect(math.ceil(props.Light * Config.TERRAIN.PROP_HEALTH / strong) <= 2)
+				.toBeTruthy()
+		end)
+
+		t.it("no map has solid scenery that spells can't break (except rock undersides)", function()
+			if not maps then
+				return
+			end
+			-- The Sparring Arena's imported colosseum and statue are single meshes.
+			for _, name in {
+				"CrayonCanyon",
+				"FrostHollow",
+				"EmberForge",
+				"MossRuins",
+				"TidalTemple",
+				"SkyBridge",
+			} do
+				local props: { [Instance]: boolean } = {}
+				local model = (require(maps:FindFirstChild(name) :: ModuleScript) :: any)(
+					function(instance: Instance)
+						props[instance] = true
+					end
+				) :: Model
+				for _, part in model:GetDescendants() do
+					if
+						part:IsA("BasePart")
+						and part.CanCollide
+						and part.CanQuery
+						and part.Transparency < 1
+						and part.Name ~= "Underside"
+						and not part:GetAttribute("Terrain")
+					then
+						local covered = false
+						local node: Instance? = part
+						while node and node ~= model do
+							if props[node] then
+								covered = true
+								break
+							end
+							node = node.Parent
+						end
+						if not covered then
+							error(`{name}: {part.Name} is solid but not breakable`)
+						end
+					end
+				end
+				model:Destroy()
+			end
+		end)
+
 		t.it("a strong spell breaks a cell in fewer hits than a weak one", function()
 			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
 			local weak = (SpellDefinitions.get("FireSlash") :: any).stats.damage

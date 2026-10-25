@@ -2,8 +2,12 @@
 -- Ember Forge — a basalt floor ringed by a moat of glowing lava, with a
 -- stepped anvil in the middle and obsidian pillars and brick walls as cover.
 -- A wall at the rim keeps everyone on the floor; the lava is scenery. The
--- basalt floor is breakable terrain (a hole shows the lava glowing below).
+-- basalt floor, the dais and the pillars are breakable (a hole in the floor
+-- shows the lava glowing below).
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -43,23 +47,25 @@ return function(makeProp: Registrar): Model
 
 	-- A two-step anvil dais in the middle, with a glowing core.
 	local slate = Enum.Material.Slate
-	MapKit.disc(
+	MapKit.terrainDisc(
 		model,
 		Vector3.new(0, 1.5, 0),
 		15,
 		1.5,
 		Color3.fromRGB(88, 80, 90),
 		slate,
-		"DaisLow"
+		"DaisLow",
+		MapKit.rockTerrain(makeProp)
 	)
-	MapKit.disc(
+	MapKit.terrainDisc(
 		model,
 		Vector3.new(0, 3, 0),
 		9,
 		1.5,
 		Color3.fromRGB(110, 100, 110),
 		slate,
-		"DaisHigh"
+		"DaisHigh",
+		MapKit.rockTerrain(makeProp)
 	)
 	local core = MapKit.part(model, {
 		name = "ForgeCore",
@@ -83,7 +89,7 @@ return function(makeProp: Registrar): Model
 			OBSIDIAN,
 			Enum.Material.Basalt
 		)
-		makeProp(pillar, 320)
+		makeProp(pillar, Config.PROPS.Heavy)
 	end
 
 	-- Brick walls across each side lane.

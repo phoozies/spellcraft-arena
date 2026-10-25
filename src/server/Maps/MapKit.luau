@@ -281,7 +281,7 @@ function MapKit.tree(
 	end
 	tree.Parent = parent
 	if makeProp then
-		makeProp(tree, health or 100)
+		makeProp(tree, health or Config.PROPS.Medium)
 	end
 end
 
@@ -364,6 +364,8 @@ end
 -- A round floor of breakable terrain whose TOP face is at `top` (a point on
 -- its axis), like MapKit.disc. Cells whose center is a little past the radius
 -- are kept too, so the rim has no gaps (the overhang is under the barrier).
+-- `hole` leaves out cells whose center is closer to the axis than that, to make
+-- a ring.
 function MapKit.terrainDisc(
 	parent: Instance,
 	top: Vector3,
@@ -372,12 +374,15 @@ function MapKit.terrainDisc(
 	color: Color3,
 	material: Enum.Material,
 	name: string,
-	options: TerrainOptions
+	options: TerrainOptions,
+	hole: number?
 ): Folder
 	local reach = radius + options.cell * 0.4
+	local inner = hole or -1
 	local withShape = table.clone(options)
 	withShape.keep = function(x: number, z: number)
-		return x * x + z * z <= reach * reach
+		local d = x * x + z * z
+		return d <= reach * reach and d >= inner * inner
 	end
 	return MapKit.terrain(parent, {
 		name = name,

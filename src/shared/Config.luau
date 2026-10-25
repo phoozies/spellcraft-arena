@@ -202,6 +202,11 @@ local Config = {
 		PROP_HEALTH = 0.5,
 	},
 
+	-- Design health of the scenery on the maps (trees, pillars, spires, ice
+	-- cubes, columns, bridges, torches) before TERRAIN.PROP_HEALTH halves it:
+	-- Light is a couple of hits, Heavy a handful.
+	PROPS = { Light = 50, Medium = 90, Heavy = 140 },
+
 	AUTOSAVE_INTERVAL = 90,
 
 	-- Coins: earned by winning matches (plus daily login and quests), spent
