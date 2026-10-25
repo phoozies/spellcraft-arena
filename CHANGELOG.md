@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (tough baseplate, easy scenery)
+- **The baseplate is way harder to break:** floor and island-top cells now have 240 health (`Config.TERRAIN.HEALTH.Ground`, about 16 Fireball hits each; was 30), so a fight can't dig through the ground quickly.
+- **Scenery stays easy:** rock terrain (cliffs, mesas, steps, outcrops) takes 45, and trees, pillars, spires, cubes, columns, bridges and torches use `Config.PROPS` (Brick 15, Light 25, Medium 45, Heavy 70), the same effective health as before.
+- The global `TERRAIN.PROP_HEALTH` multiplier is gone (it halved the baseplate too); every health value is explicit in `Config`.
+
 ### Changed (all scenery is breakable)
 - **The items on the maps break, not just the ground.** Crayon Canyon's cliffs and end walls, the Ember Forge dais, the Tidal Temple steps and torches, Frost Hollow's snow bank, and Moss Ruins' dais are now breakable terrain or props. Scenery health comes from named tiers in `Config.PROPS` (Light 50, Medium 90, Heavy 140, then halved by `PROP_HEALTH`): ice cubes, clams, mossy blocks and torches fall to a couple of hits, trees, columns, bridges and arches to three or four, and spires and pillars to five (a Fireball does 15). Torch flames go down with their post. A cliff or end wall that breaks opens onto the void, so it can ring players out.
 - Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue (single meshes) stay solid. `tests/Terrain.spec.luau` now fails if a map gains solid scenery that can't be broken.

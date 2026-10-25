@@ -2,7 +2,8 @@
 -- Breakable terrain and bigger arenas: MapKit.terrain cuts blocks into cells,
 -- MapKit.scale enlarges a finished map, and every cell's health is small
 -- enough that real spells can carve it (the harder the hit, the sooner it goes).
--- Map props are weakened by Config.TERRAIN.PROP_HEALTH, so they break easily.
+-- The baseplate is much tougher than the scenery: floors take dozens of hits,
+-- trees, rocks and pillars only a few.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -20,23 +21,28 @@ return function(t: any)
 
 		local function noop(_: Instance, _: number) end
 
-		t.it("has sane config: arenas are doubled and props are weakened", function()
+		t.it("has sane config: arenas are doubled", function()
 			t.expect(Config.ARENA_SCALE).toBe(2)
-			t.expect(Config.TERRAIN.PROP_HEALTH > 0 and Config.TERRAIN.PROP_HEALTH <= 0.5)
-				.toBeTruthy()
 			t.expect(Config.TERRAIN.CELL > 0).toBeTruthy()
 			t.expect(Config.TERRAIN.SPLASH > 0 and Config.TERRAIN.SPLASH < 1).toBeTruthy()
-			t.expect(Config.TERRAIN.HEALTH.Rock >= Config.TERRAIN.HEALTH.Ground).toBeTruthy()
+		end)
+
+		t.it("the baseplate is way tougher than the scenery", function()
+			local ground = Config.TERRAIN.HEALTH.Ground
+			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
+			-- Many hits to break one floor cell, and far more than the heaviest prop.
+			t.expect(math.ceil(ground / strong) >= 10).toBeTruthy()
+			t.expect(ground >= Config.PROPS.Heavy * 3).toBeTruthy()
+			t.expect(ground >= Config.TERRAIN.HEALTH.Rock * 4).toBeTruthy()
 		end)
 
 		t.it("scenery health tiers are ordered and a few hits fell even the heaviest", function()
 			local props = Config.PROPS
 			t.expect(props.Light < props.Medium and props.Medium < props.Heavy).toBeTruthy()
 			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
-			local heavy = props.Heavy * Config.TERRAIN.PROP_HEALTH
-			t.expect(math.ceil(heavy / strong) <= 6).toBeTruthy()
-			t.expect(math.ceil(props.Light * Config.TERRAIN.PROP_HEALTH / strong) <= 2)
-				.toBeTruthy()
+			t.expect(math.ceil(props.Heavy / strong) <= 6).toBeTruthy()
+			t.expect(math.ceil(props.Light / strong) <= 2).toBeTruthy()
+			t.expect(math.ceil(Config.TERRAIN.HEALTH.Rock / strong) <= 4).toBeTruthy()
 		end)
 
 		t.it("no map has solid scenery that spells can't break (except rock undersides)", function()
@@ -89,12 +95,9 @@ return function(t: any)
 			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
 			local weak = (SpellDefinitions.get("FireSlash") :: any).stats.damage
 			t.expect(strong > weak).toBeTruthy()
-			local health = Config.TERRAIN.HEALTH.Ground * Config.TERRAIN.PROP_HEALTH
+			local health = Config.TERRAIN.HEALTH.Ground
 			t.expect(math.ceil(health / strong) <= math.ceil(health / weak)).toBeTruthy()
-			-- A strong hit still can't clear a floor cell in one go, or the ground
-			-- would vanish at once; a few hits do it.
 			t.expect(math.ceil(health / strong) >= 2).toBeTruthy()
-			t.expect(math.ceil(health / weak) <= 5).toBeTruthy()
 		end)
 
 		t.it("cuts a block into cells no wider than the cell size", function()

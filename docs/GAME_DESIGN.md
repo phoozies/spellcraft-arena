@@ -97,7 +97,7 @@ A blue **Battleground portal** in the concourse teleports you to a big open worl
 
 ## Maps (7 duel maps plus the hub; the compact ones suit smaller matches)
 
-Every map is built at design size and scaled 2x, and almost everything on them breaks: floors, cliffs, mesas, ramps, rocks, ice spires and cubes, trees, pillars, temple steps, arches, torches and cover are weakened by `Config.TERRAIN.PROP_HEALTH`, so a few spell hits carve through (heavier spells carve more). Each round starts on a fresh arena. Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue stay solid.
+Every map is built at design size and scaled 2x, and almost everything on them breaks: floors, cliffs, mesas, ramps, rocks, ice spires and cubes, trees, pillars, temple steps, arches, torches and cover break in a few spell hits (`Config.PROPS`, rock 45), while the **baseplate is far tougher** (240 per cell, about 16 Fireballs) so a fight can't dig through the ground quickly; heavier spells carve more. Each round starts on a fresh arena. Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue stay solid.
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
