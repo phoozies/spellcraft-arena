@@ -51,6 +51,18 @@ The client records your stroke and sends it (`DrawSpell`); the server runs `Glyp
 
 `tests/Glyphs.spec.luau` draws every shape with wobble, rotation, reversal, and random start points, and checks that an element never repeats a shape and that each spell uses its role's shape. Admin commands still take spell names through `WordMatcher` (`;give fireball`).
 
+## Drawing quality
+
+How well a stroke follows its shape sets a **quality** from 0 to 1 (`Spells/Quality`, tunables in `Config.QUALITY`): the recognizer's score maps from 0.85 (quality 0) to 0.975 (quality 1). The copy remembers it, and when it is cast the spell's stats scale between these multipliers:
+
+| What | Stats | Worst to best |
+|---|---|---|
+| Power | `damage`, `heal`, `shield`, `health`, `hazardDps`, and the bonus part of `damageMult` | x0.85 to x1.2 |
+| Size | `radius` (the hit area) | x0.9 to x1.25 |
+| Time | `duration`, `statusDuration`, `lifetime` | x0.85 to x1.3 |
+
+Cooldowns, range, and speed never change, and an average drawing (quality 0.5) is close to the numbers in the spell tables below. `tests/Quality.spec.luau` checks that even a perfect drawing stays inside the balance budgets times its bonus, so a new spell must leave that headroom.
+
 ## Hitboxes
 
 Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS` (2), so a spell reaches that much farther than its radius. Hitboxes are generous on purpose: **medium** 4.5-5, **large** 6-7, **wide** 8.5-11, **huge** 12+ (area attacks and ultimates, up to 25 for Earthquake). The visuals are sized to match.

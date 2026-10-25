@@ -21,6 +21,7 @@ export type ProfileSummary = {
 
 local ClientState = {
 	hand = {} :: { string }, -- spell copies held (hotbar slots, duplicates allowed)
+	qualities = {} :: { number }, -- how well each copy was drawn (0..1), parallel to hand
 	readiedSlot = nil :: number?,
 	readied = nil :: string?, -- spell id in the readied slot
 	-- Match only: the spells this player may draw this match (nil in the hub).
@@ -33,6 +34,9 @@ local ClientState = {
 	queueCounts = {} :: { [string]: number },
 
 	HandChanged = Signal.new(),
+	-- Fired with a spell id when the player taps that spell's card: DrawController
+	-- opens the canvas with a preview of its shape.
+	DrawRequested = Signal.new(),
 	ProfileChanged = Signal.new(),
 	MatchChanged = Signal.new(),
 	QueueChanged = Signal.new(),
@@ -67,8 +71,9 @@ function ClientState.cooldownLeft(spellId: string): number
 end
 
 function ClientState.start()
-	Remotes.get("HandUpdated").OnClientEvent:Connect(function(hand, readiedSlot, spellbook)
+	Remotes.get("HandUpdated").OnClientEvent:Connect(function(hand, readiedSlot, spellbook, qualities)
 		ClientState.hand = hand
+		ClientState.qualities = qualities or {}
 		ClientState.readiedSlot = readiedSlot
 		ClientState.readied = if readiedSlot then hand[readiedSlot] else nil
 		ClientState.spellbook = spellbook

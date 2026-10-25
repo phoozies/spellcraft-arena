@@ -16,6 +16,21 @@ local Config = {
 	DRAW_MAX_COORD = 6,
 	-- Longest a single stroke may take on the client before it auto-submits.
 	DRAW_MAX_SECONDS = 6,
+	-- Drawing quality: how closely a stroke follows its shape. The recognizer's
+	-- score (0..1; 0.8 is the least that counts as the shape at all) maps from
+	-- SCORE_FLOOR (quality 0, a sloppy stroke) to SCORE_PERFECT (quality 1),
+	-- and quality scales a cast between these
+	-- {worst, best} multipliers: POWER (damage, healing, shields, health,
+	-- boosts), SIZE (hit radius), TIME (durations and lifetimes). DEFAULT is the
+	-- quality of a copy that wasn't drawn (admin gives).
+	QUALITY = {
+		SCORE_FLOOR = 0.85,
+		SCORE_PERFECT = 0.975,
+		DEFAULT = 0.5,
+		POWER = { 0.85, 1.2 },
+		SIZE = { 0.9, 1.25 },
+		TIME = { 0.85, 1.3 },
+	},
 
 	-- Movement & aiming. Players move faster than Roblox's default (16) to
 	-- keep fights lively; projectiles are sped up by the same ratio and get

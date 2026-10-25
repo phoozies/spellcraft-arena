@@ -9,14 +9,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
+local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 
@@ -32,6 +33,7 @@ local slots: {
 		cooldownText: TextLabel,
 		icon: TextLabel,
 		name: TextLabel,
+		stars: TextLabel,
 		stroke: UIStroke,
 	}
 } =
@@ -116,7 +118,9 @@ end
 
 -- Glyph cards above the hotbar: what to draw for each spell you can ready.
 -- In a match that is your match spellbook; in the hub, every spell you own.
--- A card shows the spell's cooldown while it recharges.
+-- A card shows the spell's cooldown while it recharges. Tapping a card opens
+-- the drawing canvas with a preview of its shape to trace (the better you
+-- follow it, the stronger the spell: Spells/Quality).
 local glyphRow: Frame
 local glyphCards: { [string]: { card: Frame, name: TextLabel, cover: TextLabel } } = {}
 
@@ -162,6 +166,16 @@ local function refreshWords()
 				ZIndex = 4,
 			})
 			Theme.corner(cover, 10)
+			local hit = Instance.new("TextButton")
+			hit.Name = "Draw"
+			hit.Text = ""
+			hit.BackgroundTransparency = 1
+			hit.Size = UDim2.fromScale(1, 1)
+			hit.ZIndex = 6
+			hit.Parent = card
+			hit.Activated:Connect(function()
+				ClientState.DrawRequested:Fire(id)
+			end)
 			glyphCards[id] = { card = card, name = name, cover = cover }
 		end
 	end
@@ -218,6 +232,14 @@ local function buildHotbar(root: Frame)
 			Position = UDim2.fromOffset(4, 2),
 			TextColor3 = Theme.COLORS.subtext,
 		})
+		local stars = Theme.label(button, "", {
+			Name = "Quality",
+			AnchorPoint = Vector2.new(1, 0),
+			Size = UDim2.fromOffset(40, 14),
+			Position = UDim2.new(1, -3, 0, 3),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = 2,
+		})
 		local cooldown = Theme.frame(button, {
 			Name = "Cooldown",
 			AnchorPoint = Vector2.new(0, 1),
@@ -238,6 +260,7 @@ local function buildHotbar(root: Frame)
 			cooldownText = cooldownText,
 			icon = icon,
 			name = name,
+			stars = stars,
 			stroke = stroke,
 		}
 	end
@@ -255,6 +278,15 @@ local function refreshHotbar()
 			slot.icon.TextColor3 = color
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
+			-- How well this copy was drawn: 1 to 4 stars.
+			local quality = ClientState.qualities[i]
+			if quality then
+				local tier = Quality.tier(quality)
+				slot.stars.Text = string.rep("★", tier.stars)
+				slot.stars.TextColor3 = tier.color
+			else
+				slot.stars.Text = ""
+			end
 			local isReadied = i == ClientState.readiedSlot
 			slot.stroke.Color = if isReadied then Theme.COLORS.accent else color
 			slot.stroke.Thickness = if isReadied then 5 else 3
@@ -266,6 +298,7 @@ local function refreshHotbar()
 			-- show, since you can stockpile up to 5 copies.
 			slot.button.Visible = true
 			slot.icon.Text = ""
+			slot.stars.Text = ""
 			slot.name.Text = if i == #ClientState.hand + 1 then "draw!" else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
@@ -497,20 +530,6 @@ local function addFeed(killer: string?, victim: string, spell: string?)
 	end)
 end
 
-local function updateScale(scale: UIScale)
-	local camera = workspace.CurrentCamera
-	if not camera then
-		return
-	end
-	local size = camera.ViewportSize
-	local s = math.min(size.X / 1280, size.Y / 720)
-	-- Touch screens get slightly larger UI for finger-sized targets.
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		s *= 1.15
-	end
-	scale.Scale = math.clamp(s, 0.6, 1.4)
-end
-
 function HudController.init()
 	gui = Instance.new("ScreenGui")
 	gui.Name = "WordcraftHud"
@@ -545,13 +564,7 @@ function HudController.init()
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = toastHolder
 
-	updateScale(scale)
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			updateScale(scale)
-		end)
-	end
+	Responsive.bind(scale)
 	gui.Parent = player:WaitForChild("PlayerGui")
 	GuiService.AutoSelectGuiEnabled = true
 end

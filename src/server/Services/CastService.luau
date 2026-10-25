@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Types = require(ReplicatedStorage.Shared.Types)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
@@ -27,7 +28,9 @@ export type CastContext = {
 	player: Player,
 	character: Model,
 	root: BasePart,
+	-- The spell, already scaled by the drawing's quality (Spells/Quality).
 	def: Types.SpellDef,
+	quality: number,
 	target: Vector3,
 	rotationY: number,
 	team: string?,
@@ -188,12 +191,15 @@ local function onCast(player: Player, target: any, rotationY: any)
 		return
 	end
 
+	-- A well-drawn copy hits harder, wider, and lasts longer.
+	local quality = HandService.getReadiedQuality(player)
 	local activeHooks = hooks :: WorldHooks
 	local ctx: CastContext = {
 		player = player,
 		character = character,
 		root = root,
-		def = def,
+		def = Quality.apply(def, quality),
+		quality = quality,
 		target = target,
 		rotationY = rotation,
 		team = activeHooks.teamOf(player),

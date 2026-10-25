@@ -10,6 +10,8 @@
 -- * All copies of the same spell share one cast cooldown (its `cooldown`):
 --   after casting a Fireball, your other Fireballs wait for it.
 -- * SpellInputService adds a 1s cooldown between drawings.
+-- * Every copy remembers how well it was drawn (quality 0..1, see
+--   Spells/Quality); CastService scales the spell by it when the copy is cast.
 --
 -- Which spells work:
 -- * Hub: the five spells of the player's equipped element.
@@ -22,12 +24,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local ElementService = require(script.Parent.ElementService)
-local ElementService = require(script.Parent.ElementService)
-local ElementService = require(script.Parent.ElementService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 type State = {
 	copies: { string }, -- hotbar slots, duplicates allowed
+	qualities: { number }, -- drawing quality of each copy (parallel to copies)
 	spellbook: { string }?,
 	readiedSlot: number?,
 	cooldowns: { [string]: number }, -- spellId -> os.clock() when it can be cast again
@@ -46,6 +47,7 @@ local function stateOf(player: Player): State
 	if not state then
 		state = {
 			copies = {},
+			qualities = {},
 			spellbook = nil,
 			readiedSlot = nil,
 			cooldowns = {},
@@ -59,11 +61,9 @@ end
 
 local function push(player: Player)
 	local state = stateOf(player)
-	handRemote:FireClient(player, state.copies, state.readiedSlot, state.spellbook)
+	handRemote:FireClient(player, state.copies, state.readiedSlot, state.spellbook, state.qualities)
 end
 
--- A spell is drawable in the hub when it belongs to the equipped element.
--- A spell is drawable in the hub when it belongs to the equipped element.
 -- A spell is drawable in the hub when it belongs to the equipped element.
 local function owns(player: Player, spellId: string): boolean
 	local def = SpellDefinitions.get(spellId)
@@ -88,6 +88,7 @@ function HandService.setSpellbook(player: Player, spellbook: { string })
 	local state = stateOf(player)
 	state.spellbook = table.clone(spellbook)
 	state.copies = {}
+	state.qualities = {}
 	state.readiedSlot = nil
 	state.cooldowns = {}
 	push(player)
@@ -97,6 +98,7 @@ function HandService.clearMatch(player: Player)
 	local state = stateOf(player)
 	state.spellbook = nil
 	state.copies = {}
+	state.qualities = {}
 	state.readiedSlot = nil
 	state.cooldowns = {}
 	push(player)
@@ -107,9 +109,15 @@ function HandService.cooldownLeft(player: Player, spellId: string): number
 	return math.max(0, (state.cooldowns[spellId] or 0) - os.clock())
 end
 
--- Adds one copy of a spell (from a drawing) and readies it.
+-- Adds one copy of a spell (from a drawing) and readies it. `quality` (0..1,
+-- default Config.QUALITY.DEFAULT) is how well it was drawn.
 -- Returns (ok, reason). `bypass` (admin give) skips spellbook/ownership.
-function HandService.grant(player: Player, spellId: string, bypass: boolean?): (boolean, string?)
+function HandService.grant(
+	player: Player,
+	spellId: string,
+	bypass: boolean?,
+	quality: number?
+): (boolean, string?)
 	local def = SpellDefinitions.get(spellId)
 	if not def then
 		return false, "Unknown spell."
@@ -134,6 +142,7 @@ function HandService.grant(player: Player, spellId: string, bypass: boolean?): (
 		return false, `Your hands are full ({Config.MAX_HAND} spells). Cast one first!`
 	end
 	table.insert(state.copies, spellId)
+	table.insert(state.qualities, math.clamp(quality or Config.QUALITY.DEFAULT, 0, 1))
 	state.readiedSlot = #state.copies
 	push(player)
 	return true, nil
@@ -149,6 +158,7 @@ function HandService.consume(player: Player)
 		return
 	end
 	local spellId = table.remove(state.copies, slot)
+	table.remove(state.qualities, slot)
 	local nextSame = table.find(state.copies, spellId)
 	if nextSame then
 		state.readiedSlot = nextSame
@@ -163,6 +173,7 @@ end
 function HandService.clearCopies(player: Player)
 	local state = stateOf(player)
 	state.copies = {}
+	state.qualities = {}
 	state.readiedSlot = nil
 	push(player)
 end
@@ -180,6 +191,13 @@ function HandService.getReadied(player: Player): string?
 	local state = stateOf(player)
 	local slot = state.readiedSlot
 	return if slot then state.copies[slot] else nil
+end
+
+-- How well the readied copy was drawn (0..1).
+function HandService.getReadiedQuality(player: Player): number
+	local state = stateOf(player)
+	local slot = state.readiedSlot
+	return (if slot then state.qualities[slot] else nil) or Config.QUALITY.DEFAULT
 end
 
 -- Global cast lockout (anti-macro) + the spell's shared cast cooldown.

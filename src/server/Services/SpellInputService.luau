@@ -2,11 +2,18 @@
 -- Drawing a spell: the client sends the stroke it drew (DrawSpell remote),
 -- the server decides what it is.
 --
---   DrawSpell(points) ──► validate (table of Vector2, count, range, 1s cooldown)
+--   DrawSpell(points, spellId?) ──► validate (table of Vector2, count, range, 1s cooldown)
 --   ──► GlyphRecognizer (only the equipped element's five shapes) ──► the
 --   spell drawn with that shape ──► HandService.grant (hotbar copy; only the equipped
 --   element's spells work, in the hub and in matches)
---   ──► GlyphResult(spellId?, glyphId?) back to the drawer for feedback
+--   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback
+--
+-- Quality: the recognizer's score for the stroke becomes a 0..1 quality
+-- (Spells/Quality) stored on the copy; the better the stroke follows the
+-- shape, the stronger the cast (CastService). A client that tapped a spell's
+-- card sends that `spellId` as the shape it is tracing: the stroke must be
+-- THAT spell's shape (any other shape fizzles); without it, any of the
+-- equipped element's shapes is accepted.
 --
 -- A drawing adds ONE copy of the spell to the hotbar (up to 5, duplicates
 -- allowed). Drawings are limited to one per Config.DRAW_COOLDOWN seconds.
@@ -22,6 +29,7 @@ local TextChatService = game:GetService("TextChatService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local ElementService = require(script.Parent.ElementService)
@@ -101,7 +109,7 @@ local function sanitize(raw: any): { Vector2 }?
 end
 
 -- Recognizes a stroke and readies the spell. Returns the granted spell id.
-function SpellInputService.submitStroke(player: Player, points: { Vector2 }): string?
+function SpellInputService.submitStroke(player: Player, points: { Vector2 }, targetId: string?): string?
 	local left = SpellInputService.drawCooldownLeft(player)
 	if left > 0 then
 		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "cooldown")
@@ -116,15 +124,26 @@ function SpellInputService.submitStroke(player: Player, points: { Vector2 }): st
 		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
-	local glyphId = GlyphRecognizer.recognize(points, ALLOWED[element.id])
+	local target = if targetId then SpellDefinitions.get(targetId) else nil
+	if target and target.element ~= element.id then
+		target = nil -- not one of your spells: treated as a free drawing
+	end
+	local glyphId, score = GlyphRecognizer.recognize(points, ALLOWED[element.id])
 	local spellId = if glyphId then SPELL_BY_GLYPH[element.id][glyphId] else nil
+	if spellId and target and spellId ~= target.id then
+		-- Drew a different shape than the one on the card.
+		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "fizzle")
+		resultRemote:FireClient(player, nil, glyphId)
+		return nil
+	end
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
 		toastRemote:FireClient(player, hints[math.random(1, #hints)], "fizzle")
 		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
-	local ok, message = HandService.grant(player, spellId)
+	local quality = Quality.fromScore(score)
+	local ok, message = HandService.grant(player, spellId, nil, quality)
 	if not ok then
 		toastRemote:FireClient(player, message or "Fizzle!", "fizzle")
 		resultRemote:FireClient(player, nil, glyphId)
@@ -140,11 +159,11 @@ function SpellInputService.submitStroke(player: Player, points: { Vector2 }): st
 		end
 		toastRemote:FireClient(
 			player,
-			`+1 {def.name}!` .. (if held > 1 then ` (x{held})` else ""),
+			`+1 {def.name}! {Quality.tier(quality).name}` .. (if held > 1 then ` (x{held})` else ""),
 			"ready"
 		)
 	end
-	resultRemote:FireClient(player, spellId, glyphId)
+	resultRemote:FireClient(player, spellId, glyphId, quality)
 	-- Everyone nearby sees the glyph pop up over the caster's head.
 	local character = player.Character
 	if def and character then
@@ -198,10 +217,10 @@ function SpellInputService.init()
 end
 
 function SpellInputService.start()
-	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw)
+	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw, targetId)
 		local points = sanitize(raw)
 		if points then
-			SpellInputService.submitStroke(player, points)
+			SpellInputService.submitStroke(player, points, if typeof(targetId) == "string" then targetId else nil)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

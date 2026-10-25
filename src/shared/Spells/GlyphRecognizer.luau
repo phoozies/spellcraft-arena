@@ -163,19 +163,20 @@ end
 local STRAIGHT_DEVIATION = 0.22
 local STRAIGHT_MIN_CHORD = 0.7 -- chord / path length
 
-local function isStraight(points: { Vector2 }): boolean
+-- Returns (straight, deviation): the worst stray as a fraction of the chord.
+local function isStraight(points: { Vector2 }): (boolean, number)
 	local first, last = points[1], points[#points]
 	local chord = last - first
 	local chordLength = chord.Magnitude
 	if chordLength < 1e-6 or chordLength < pathLength(points) * STRAIGHT_MIN_CHORD then
-		return false
+		return false, 1
 	end
 	local normal = Vector2.new(-chord.Y, chord.X) / chordLength
 	local worst = 0
 	for _, p in points do
 		worst = math.max(worst, math.abs((p - first):Dot(normal)))
 	end
-	return worst / chordLength <= STRAIGHT_DEVIATION
+	return worst / chordLength <= STRAIGHT_DEVIATION, worst / chordLength
 end
 
 -- A circle and a square look alike to template matching (squash a square and
@@ -245,7 +246,9 @@ for _, glyph in Glyphs.LIST do
 	end
 end
 
--- Returns (glyphId, score, runnerUpScore). `glyphId` is nil when nothing is
+-- Returns (glyphId, score, runnerUpScore). `score` (0..1) is how closely the
+-- stroke follows the shape; Spells/Quality turns it into a cast bonus.
+-- (Reminder of the rest:) `glyphId` is nil when nothing is
 -- close enough or two glyphs are too hard to tell apart; `score` is the best
 -- one found either way (for tuning and feedback). Points are in any consistent
 -- 2D unit (pixels, screen fractions). `allowed` limits the choice to those
@@ -267,9 +270,11 @@ function GlyphRecognizer.recognize(
 		return nil, 0, 0
 	end
 	-- A straight stroke is a slash (or nothing, where slashes aren't allowed).
-	if isStraight(points) then
+	local straight, deviation = isStraight(points)
+	if straight then
 		if allowed == nil or allowed.slash then
-			return "slash", 1, 0
+			-- Straighter is better: 1 for a ruler line, 0.8 at the limit.
+			return "slash", 1 - 0.2 * deviation / STRAIGHT_DEVIATION, 0
 		end
 		return nil, 0, 0
 	end
