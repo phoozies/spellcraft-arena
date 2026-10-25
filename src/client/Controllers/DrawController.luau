@@ -24,7 +24,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
@@ -33,6 +32,7 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 local Types = require(ReplicatedStorage.Shared.Types)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
@@ -46,7 +46,7 @@ type InputKind = "mouse" | "touch" | "pad"
 -- Pixels between recorded points.
 local SAMPLE_SPACING = 4
 local STICK_RADIUS = 0.3 -- of the screen height
-local LINE_THICKNESS = 8
+local LINE_THICKNESS = 10
 -- How long a sent line waits for the server's verdict before fading anyway.
 local VERDICT_TIMEOUT = 1.5
 
@@ -120,11 +120,11 @@ local function showPreview(def: Types.SpellDef?)
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	-- The shape fills the middle 72% of its frame: size the frame to the screen.
 	local size = math.floor(math.min(viewport.X * 0.82, viewport.Y * 0.8))
-	local color = Elements.color(def.element)
+	local color = SpellCard.colorOf(def.id)
 	local holder = GlyphView.create(previewHolder, def.glyph, size, color, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.56),
-	}, math.max(6, size * 0.035))
+	}, math.max(8, size * 0.05))
 	if not holder then
 		return
 	end

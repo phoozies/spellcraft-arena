@@ -11,6 +11,7 @@ local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local GlyphView = {}
 
 local MAX_SEGMENTS = 40
+local OUTLINE = Color3.fromRGB(20, 20, 28)
 
 -- One straight piece of line between two pixel points.
 function GlyphView.segment(
@@ -39,7 +40,8 @@ function GlyphView.segment(
 end
 
 -- A square frame of `size` pixels showing the glyph (line `thickness` pixels,
--- default 7% of the size). Returns the frame, or nil for an unknown glyph id.
+-- default 12% of the size: a fat, bubbly line, drawn over a dark outline so
+-- any colour, even pale ones, stays readable). Returns the frame, or nil for an unknown glyph id.
 -- The shape fills the middle 72% of the frame; GlyphView.pointAt maps a glyph
 -- point into the frame.
 function GlyphView.create(
@@ -64,21 +66,29 @@ function GlyphView.create(
 	local step = math.max(1, math.ceil(#glyph.points / MAX_SEGMENTS))
 	local inset = size * 0.14
 	local span = size - inset * 2
-	local line = thickness or math.max(2, size * 0.07)
-	local previous: Vector2? = nil
+	local line = thickness or math.max(3, size * 0.12)
+	local border = math.max(1.5, line * 0.28)
+	local points: { Vector2 } = {}
 	for i = 1, #glyph.points, step do
 		local p = glyph.points[i]
-		local point = Vector2.new(inset + p.X * span, inset + p.Y * span)
-		if previous then
-			GlyphView.segment(holder, previous, point, line, color)
-		end
-		previous = point
+		table.insert(points, Vector2.new(inset + p.X * span, inset + p.Y * span))
 	end
 	-- Always finish on the glyph's last point.
 	local last = glyph.points[#glyph.points]
 	local lastPoint = Vector2.new(inset + last.X * span, inset + last.Y * span)
-	if previous and (previous - lastPoint).Magnitude > 0.5 then
-		GlyphView.segment(holder, previous, lastPoint, line, color)
+	if (points[#points] - lastPoint).Magnitude > 0.5 then
+		table.insert(points, lastPoint)
+	end
+	-- Outline pass first, then the colour on top.
+	for pass = 1, 2 do
+		for i = 2, #points do
+			if pass == 1 then
+				GlyphView.segment(holder, points[i - 1], points[i], line + border * 2, OUTLINE).Name =
+					"Outline"
+			else
+				GlyphView.segment(holder, points[i - 1], points[i], line, color)
+			end
+		end
 	end
 	holder.Parent = parent
 	return holder

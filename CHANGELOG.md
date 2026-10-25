@@ -4,6 +4,13 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (bubbly spell glyphs, rarity borders, UI contrast)
+- **Spell shapes are fatter and outlined.** `GlyphView.create` draws a line 12% of the icon size (was 7%) over a near-black outline, so a pale colour (Common grey, Legendary gold) reads on any card. The drawing guide is thicker too, and the player's pen line is a little thicker.
+- **Crate spells are drawn and ringed in their rarity colour everywhere**: spell cards, the HUD glyph cards, the hotbar and the drawing guide (the HUD and guide used the element colour before). New `Theme.rim` adds a dark outer edge around the ring so it has high contrast on any background.
+- **Borders are no longer cut off.** The Loadout collection scroll area has padding for the rings (cards are 84 px wide so six still fit), and the HUD glyph row has more spacing.
+- **Contrast fixes:** SLOT / SAME SHAPE tags sit on dark chips, the crate odds are dark text with a rarity-coloured dot, a selected card turns sunny yellow instead of losing its rarity ring, and the hotbar element icon has a dark text outline.
+- **Crate panel layout:** the "Spells you have" line no longer overlaps the Spin button.
+
 ### Changed (sound effects switch, no hub crowd)
 - **The hub's cheering crowd ambience is gone** (`hubCrowd` cue and its loop in `AudioController`).
 - **New Sound effects switch in Settings** next to Background music. It saves to the profile as `settings.sfx` (default on; old profiles pick it up through the settings defaults, no schema bump) and mutes the whole sound-effects group.

@@ -56,7 +56,9 @@ local function oddsText(): string
 		local color = Rarity.color(row.rarity)
 		table.insert(
 			parts,
-			`<font color="#{color:Lerp(Color3.new(0, 0, 0), 0.45):ToHex()}"><b>{row.rarity}</b> {math.floor(row.percent + 0.5)}%</font>`
+			`<font color="#{color:ToHex()}">●</font> <b>{row.rarity} {math.floor(
+				row.percent + 0.5
+			)}%</b>`
 		)
 	end
 	return table.concat(parts, "   ")
@@ -195,7 +197,7 @@ end
 
 local function build()
 	panel = MenuController.createPanel("Crates", "Spell Crate")
-	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 470)
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 500)
 	panelStroke = panel:FindFirstChildOfClass("UIStroke")
 	local crate = Crates.LIST[1]
 
@@ -210,7 +212,7 @@ local function build()
 	local card = Theme.frame(panel, {
 		Name = crate.id,
 		Position = UDim2.fromOffset(16, 60),
-		Size = UDim2.new(1, -32, 0, 214),
+		Size = UDim2.new(1, -32, 0, 240),
 		BackgroundColor3 = Theme.COLORS.panelLight,
 	})
 	Theme.corner(card, 12)
@@ -241,13 +243,13 @@ local function build()
 		Position = UDim2.fromOffset(8, 108),
 		Font = Theme.BODY_FONT,
 		TextScaled = false,
-		TextSize = 14,
+		TextSize = 15,
 		RichText = true,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	infoLabel = Theme.label(card, "", {
 		Size = UDim2.new(1, -16, 0, 24),
-		Position = UDim2.fromOffset(8, 134),
+		Position = UDim2.fromOffset(8, 138),
 		Font = Theme.BODY_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.subtext,
@@ -268,7 +270,7 @@ local function build()
 	-- The reel: a clipped window with a strip of cards and a center marker.
 	reelWindow = Theme.frame(panel, {
 		Name = "Reel",
-		Position = UDim2.fromOffset(16, 286),
+		Position = UDim2.fromOffset(16, 312),
 		Size = UDim2.fromOffset(REEL_WIDTH, 116),
 		BackgroundColor3 = Color3.fromRGB(20, 20, 40),
 		ClipsDescendants = true,

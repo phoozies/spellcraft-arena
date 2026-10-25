@@ -49,8 +49,9 @@ function SpellCard.create(parent: Instance, spellId: string, options: Options?):
 	local stroke = card:FindFirstChildOfClass("UIStroke")
 	if stroke then
 		stroke.Color = color
-		stroke.Thickness = if def and def.rarity and Rarity.rank(def.rarity) >= 4 then 4 else 3
+		stroke.Thickness = 4
 	end
+	Theme.rim(card, 4)
 	if not def then
 		return card
 	end
