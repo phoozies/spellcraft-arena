@@ -4,7 +4,8 @@
 -- KeyframeSequenceProvider (so it needs no uploaded Animation asset), and
 -- played through the character's Animator at Action priority: it overrides the
 -- idle/walk arms while it plays and blends back out. Works on R15 (arms,
--- elbows, waist lean) and R6 (arm swing only). Purely cosmetic and local:
+-- elbows, waist lean and twist, legs) and R6 (arm and leg swing only). A pose
+-- that never names a leg leaves the walk cycle alone. Purely cosmetic and local:
 -- every client plays it for every caster.
 
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
@@ -52,8 +53,25 @@ local function elbowOffset(arm: CastPoses.Arm?): CFrame
 	return CFrame.Angles(math.rad(if arm then arm.elbow or 0 else 0), 0, 0)
 end
 
+-- A leg's offset. Hips swing like shoulders (forward about X on R15, about Z on
+-- R6), `side` opens the leg outward, and the knee bends the shin backward.
+local function legOffset(leg: CastPoses.Leg?, r15: boolean, mirror: number): CFrame
+	if not leg then
+		return CFrame.identity
+	end
+	local forward = math.rad(leg.fwd or 0)
+	if not r15 then
+		return CFrame.Angles(0, 0, forward)
+	end
+	return CFrame.Angles(forward, 0, math.rad(leg.side or 0) * mirror)
+end
+
+local function kneeOffset(leg: CastPoses.Leg?): CFrame
+	return CFrame.Angles(-math.rad(if leg then leg.knee or 0 else 0), 0, 0)
+end
+
 -- One keyframe: the whole joint tree with this key's angles (nil = at rest).
-local function keyframe(time: number, key: CastPoses.Key?, r15: boolean): Keyframe
+local function keyframe(time: number, key: CastPoses.Key?, r15: boolean, legs: boolean): Keyframe
 	local frame = Instance.new("Keyframe")
 	frame.Time = time
 	local root = pose("HumanoidRootPart", CFrame.identity, 0)
@@ -88,23 +106,27 @@ local function animationFor(poseName: string, r15: boolean, extraHold: number): 
 	if known then
 		return known.id, known.length
 	end
+	local legs = false
+	for _, key in keys do
+		legs = legs or key.rightLeg ~= nil or key.leftLeg ~= nil
+	end
 	local sequence = Instance.new("KeyframeSequence")
 	sequence.Name = "Cast_" .. poseName
 	sequence.Loop = false
 	sequence.Priority = Enum.AnimationPriority.Action3
 	local time = 0
-	sequence:AddKeyframe(keyframe(0, nil, r15))
+	sequence:AddKeyframe(keyframe(0, nil, r15, legs))
 	for index, key in keys do
 		time += key.d
-		sequence:AddKeyframe(keyframe(time, key, r15))
+		sequence:AddKeyframe(keyframe(time, key, r15, legs))
 		local hold = (key.hold or 0) + (if index == #keys then extraHold else 0)
 		if hold > 0 then
 			time += hold
-			sequence:AddKeyframe(keyframe(time, key, r15))
+			sequence:AddKeyframe(keyframe(time, key, r15, legs))
 		end
 	end
 	time += RETURN_TIME
-	sequence:AddKeyframe(keyframe(time, nil, r15))
+	sequence:AddKeyframe(keyframe(time, nil, r15, legs))
 
 	local ok, result = pcall(function()
 		return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)

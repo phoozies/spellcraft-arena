@@ -20,6 +20,19 @@ VfxStyles.TEX = {
 }
 local TEX = VfxStyles.TEX
 
+-- The kinds of impact SpellVfx.impact can draw:
+--   explosion  fireball flash, flames, smoke, embers
+--   slashCut   a crossed pair of cut marks and sparks
+--   splash     flying droplets, mist, and a ripple
+--   bubble     a bubble that swells and pops, shedding small bubbles
+--   rubble     rock chunks, dust, and a ground ring
+--   wind       an expanding ring of air and puffs
+--   storm      wind rings with debris flung out
+--   bolt       a white flash with jagged lightning forks
+--   spark      a few quick sparks (small bullets)
+VfxStyles.HITS =
+	{ "explosion", "slashCut", "splash", "bubble", "rubble", "wind", "storm", "bolt", "spark" }
+
 export type Style = {
 	texture: string,
 	rate: number,
@@ -31,6 +44,8 @@ export type Style = {
 	burst: number,
 	tint: Color3?,
 	secondary: string?, -- extra emitter texture (e.g. smoke behind fire)
+	hit: string?, -- how it looks on impact, one of VfxStyles.HITS (nil = plain burst)
+	hitScale: number?, -- how big that impact is (default 1)
 }
 
 -- Buff aura on the caster for the buff's duration.
@@ -70,6 +85,7 @@ VfxStyles.STYLES = {
 		lightRange = 12,
 		burst = 30,
 		tint = Color3.fromRGB(255, 140, 50),
+		hit = "explosion",
 		secondary = TEX.smoke,
 	},
 	WaterLock = {
@@ -82,6 +98,7 @@ VfxStyles.STYLES = {
 		lightRange = 8,
 		burst = 24,
 		tint = Color3.fromRGB(90, 180, 255),
+		hit = "bubble",
 	},
 	Gust = {
 		texture = TEX.smoke,
@@ -93,6 +110,7 @@ VfxStyles.STYLES = {
 		lightRange = 0,
 		burst = 22,
 		tint = Color3.fromRGB(235, 245, 255),
+		hit = "wind",
 	},
 	FireSlash = {
 		texture = TEX.fire,
@@ -104,6 +122,7 @@ VfxStyles.STYLES = {
 		lightRange = 10,
 		burst = 22,
 		tint = Color3.fromRGB(255, 150, 50),
+		hit = "slashCut",
 	},
 	FireBomb = {
 		texture = TEX.fire,
@@ -115,6 +134,8 @@ VfxStyles.STYLES = {
 		lightRange = 22,
 		burst = 60,
 		tint = Color3.fromRGB(255, 90, 30),
+		hit = "explosion",
+		hitScale = 2.3,
 		secondary = TEX.smoke,
 	},
 	WaterSlice = {
@@ -127,6 +148,7 @@ VfxStyles.STYLES = {
 		lightRange = 8,
 		burst = 20,
 		tint = Color3.fromRGB(80, 180, 255),
+		hit = "splash",
 	},
 	WaterWave = {
 		texture = TEX.sparkle,
@@ -138,6 +160,8 @@ VfxStyles.STYLES = {
 		lightRange = 8,
 		burst = 50,
 		tint = Color3.fromRGB(80, 170, 255),
+		hit = "splash",
+		hitScale = 2.2,
 	},
 	RockThrow = {
 		texture = TEX.smoke,
@@ -149,6 +173,7 @@ VfxStyles.STYLES = {
 		lightRange = 0,
 		burst = 28,
 		tint = Color3.fromRGB(140, 110, 80),
+		hit = "rubble",
 	},
 	Whirlwind = {
 		texture = TEX.smoke,
@@ -160,6 +185,8 @@ VfxStyles.STYLES = {
 		lightRange = 0,
 		burst = 36,
 		tint = Color3.fromRGB(235, 245, 255),
+		hit = "wind",
+		hitScale = 1.8,
 	},
 	Tornado = {
 		texture = TEX.smoke,
@@ -171,6 +198,8 @@ VfxStyles.STYLES = {
 		lightRange = 0,
 		burst = 50,
 		tint = Color3.fromRGB(205, 235, 230),
+		hit = "storm",
+		hitScale = 2.2,
 	},
 	Bullet = {
 		texture = TEX.sparkle,
@@ -182,6 +211,7 @@ VfxStyles.STYLES = {
 		lightRange = 5,
 		burst = 10,
 		tint = Color3.fromRGB(255, 213, 79),
+		hit = "spark",
 	},
 
 	-- Zones, lines, walls, and buffs: these have no bolt, so the style colors
@@ -307,6 +337,8 @@ VfxStyles.STYLES = {
 		lightRange = 26,
 		burst = 60,
 		tint = Color3.fromRGB(255, 240, 110),
+		hit = "bolt",
+		hitScale = 1.5,
 	},
 	Heal = {
 		texture = TEX.sparkle,

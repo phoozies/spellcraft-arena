@@ -196,7 +196,8 @@ function Zone.cast(ctx: any): boolean?
 				radius,
 				stats.delay,
 				visual.model,
-				visual.color
+				visual.color,
+				ctx.def.id
 			)
 		end
 		task.delay(stats.delay, burst, ctx, center)

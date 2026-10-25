@@ -4,6 +4,14 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (a cast pose and a hit effect for every spell)
+- **Each spell has its own cast animation** (20 new or reworked poses in `CastPoses`): Fireball held overhead then thrown with a lunge, a diagonal Fire Slash chop, a flat Water Slice sweep, Water Body's rippling arms, the Water Wave heave, Rock Throw's scoop-and-heave, stomps for Earth Wall, Earth Pillar and Earthquake, an Earth Punch lunge, a Gust fan, Whirlwind and Tornado body twists, Air Boost's lean, and more. The animator gained **leg poses** (hips, knees) and **waist twist**; a pose with no legs still leaves the walk cycle alone.
+- **Cast beats** (`CastPoses.BEATS`, `SpellVfx.castBeat`): a glowing fireball or boulder grows in the raised hand and is released into the throw, slashes leave a hand trail, stomps kick up dust and a ring (with a thud), big spells and Lightning draw sparks into the hand and flash, spins whirl rings of wind, water moves spray droplets, Gust shoves a ring of air.
+- **A distinct hit effect per spell** (`VfxStyles` `hit` kinds): explosion (Fireball, bigger for Fire Bomb), crossed cut marks (Fire Slash), splash (Water Slice, bigger Water Wave), popping bubble (Water Lock), rubble (Rock Throw), wind rings (Gust, bigger Whirlwind), storm with debris (Tornado), white flash and lightning forks (Lightning), sparks (Turret bullets).
+- **New sounds:** per-spell impact cues (`slashHit`, `sliceHit`, `lockPop`, `waveCrash`, `rockSmash`), stomp / charge / push / spin cues for the poses, and layered cues (`with`) such as a splash plus a thump. They reuse the existing recordings at different pitch and length, so swap ids in `Audio/Cues` if you find better ones.
+- **Fixed:** Lightning's strike never played its impact sound and used the plain burst; it now uses its bolt effect and `zapStrike`.
+- Tests: no two spells of an element share a pose, beats land inside their pose, every impact kind and layered cue exists, every projectile spell has its own impact sound.
+
 ### Changed (tough baseplate, easy scenery)
 - **The baseplate is way harder to break:** floor and island-top cells now have 240 health (`Config.TERRAIN.HEALTH.Ground`, about 16 Fireball hits each; was 30), so a fight can't dig through the ground quickly.
 - **Scenery stays easy:** rock terrain (cliffs, mesas, steps, outcrops) takes 45, and trees, pillars, spires, cubes, columns, bridges and torches use `Config.PROPS` (Brick 15, Light 25, Medium 45, Heavy 70), the same effective health as before.

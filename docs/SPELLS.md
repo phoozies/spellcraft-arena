@@ -185,32 +185,33 @@ Every spell has a **model**, a **particle style**, a **cast animation**, and **s
 
 - **Model** (`visual.model` / `stats.model`): 14 spells use block models made in Blender (`tools/blender/block_models.py`); Fireball, Fire Bomb, Water Lock, Earth Wall, Gust, and Whirlwind use imported meshes.
 - **Particles** (`Spells/VfxStyles`): a bolt trail and impact burst per spell; buffs also get an **aura** on the caster (rising embers, a water shimmer, wind streaks, or orbiting blades) for as long as they last (`SpellVfx.buffAura`). Zones draw their element's column (`SpellVfx.pillar`), Earth Punch and Earth Pillar rise as boulders and spikes (`SpellVfx.rise`), and Earthquake spreads ground cracks and pulsing rings while it winds up (`SpellVfx.quake`).
-- **Cast animation** (`Spells/CastPoses`): nine arm and body poses (Throw, Slash, Flex, Guard, Point, Smash, Sweep, Ascend, Stomp) played on the caster by `Fx/CastAnimations`, for every player to see. They are built as KeyframeSequences at runtime, so no animation uploads are needed. Earthquake holds its Stomp for the whole channel.
+- **Cast animation** (`Spells/CastPoses`): nearly every spell has its own pose, played on the caster by `Fx/CastAnimations` for every player to see: Fireball raises the flame overhead before the throw, slashes cut across with a glowing hand trail, Rock Throw scoops and heaves a boulder, Earth Wall / Pillar / Quake stomp (dust and a thud when the foot lands), Earth Punch lunges a fist into the ground, Gust fans a ring of wind, Whirlwind and Tornado twist the body, Lightning and the big spells gather sparks into the raised hand. Poses use arms, legs, knees, lean, and waist twist, and are built as KeyframeSequences at runtime (no uploads). A pose's *beat* (`CastPoses.BEATS`) is the body effect and sound that lands with it. Earthquake holds its Stomp for the whole channel. No two spells of one element share a pose (`tests/Registry.spec`).
+- **Hit effects** (`Spells/VfxStyles` `hit` kind, drawn by `SpellVfx.impact`): Fireball and Fire Bomb explode (flash, flames, smoke, embers), Fire Slash leaves crossed cut marks, Water Slice and Water Wave splash droplets, Water Lock's bubble swells and pops, Rock Throw cracks into rubble, Gust and Whirlwind push out rings of air, Tornado adds flung debris, and Lightning flashes white with jagged forks. Each projectile spell has its own impact sound (some layered, via a cue's `with`).
 - **Sound** (`sfx = { cast, impact }` naming cues in `Audio/Cues`): every spell has a cast sound; every attack has an impact sound. Buffs and Earth Wall have no impact by design (`noImpact` in the registry).
 
 <!-- REGISTRY:start -->
 | Spell | School | Rarity | Model | Particles (`VfxStyles`) | Cast pose (`CastPoses`) | Cast sound | Impact sound |
 |---|---|---|---|---|---|---|---|
-| **Fireball** | Fire | base | `Fireball` | `Fireball` | Throw | `fireballCast` | `fireballHit` |
-| **Fire Slash** | Fire | base | `FireSlash` | `FireSlash` | Slash | `slashCast` | `fireballHit` |
+| **Fireball** | Fire | base | `Fireball` | `Fireball` | Fireball | `fireballCast` | `fireballHit` |
+| **Fire Slash** | Fire | base | `FireSlash` | `FireSlash` | Slash | `slashCast` | `slashHit` |
 | **Fire Boost** | Fire | base | `FireBoost` | `FireBoost` | Flex | `boostCast` | n/a |
-| **Fire Pillar** | Fire | Uncommon | `FirePillar` | `FirePillar` | Sweep | `pillarCast` | `pillarBoom` |
+| **Fire Pillar** | Fire | Uncommon | `FirePillar` | `FirePillar` | Erupt | `pillarCast` | `pillarBoom` |
 | **Fire Bomb** | Fire | Epic | `Fireball` | `FireBomb` | Ascend | `bombCast` | `bombBoom` |
-| **Water Slice** | Water | base | `WaterSlice` | `WaterSlice` | Slash | `sliceCast` | `waterTrap` |
-| **Water Body** | Water | base | `WaterBody` | `WaterBody` | Flex | `bodyCast` | n/a |
-| **Water Lock** | Water | base | `WaterBubble` | `WaterLock` | Point | `waterCast` | `waterTrap` |
-| **Water Wave** | Water | Rare | `WaterWave` | `WaterWave` | Smash | `waveCast` | `waterTrap` |
-| **Water Nebula** | Water | Legendary | `WaterNebula` | `WaterNebula` | Ascend | `nebulaCast` | `nebulaBoom` |
-| **Rock Throw** | Earth | base | `RockThrow` | `RockThrow` | Throw | `throwCast` | `rockBreak` |
-| **Earth Wall** | Earth | base | `RockWall` | `EarthWall` | Guard | `rockRaise` | `wallHit` |
-| **Earth Punch** | Earth | base | `EarthPunch` | `EarthPunch` | Smash | `punchCast` | `rockBreak` |
-| **Earth Pillar** | Earth | Uncommon | `EarthPillar` | `EarthPillar` | Sweep | `rockRaise` | `rockBreak` |
+| **Water Slice** | Water | base | `WaterSlice` | `WaterSlice` | Slice | `sliceCast` | `sliceHit` |
+| **Water Body** | Water | base | `WaterBody` | `WaterBody` | Flow | `bodyCast` | n/a |
+| **Water Lock** | Water | base | `WaterBubble` | `WaterLock` | Point | `waterCast` | `lockPop` |
+| **Water Wave** | Water | Rare | `WaterWave` | `WaterWave` | Wave | `waveCast` | `waveCrash` |
+| **Water Nebula** | Water | Legendary | `WaterNebula` | `WaterNebula` | Downpour | `nebulaCast` | `nebulaBoom` |
+| **Rock Throw** | Earth | base | `RockThrow` | `RockThrow` | Heave | `throwCast` | `rockSmash` |
+| **Earth Wall** | Earth | base | `RockWall` | `EarthWall` | Bulwark | `rockRaise` | `wallHit` |
+| **Earth Punch** | Earth | base | `EarthPunch` | `EarthPunch` | GroundPunch | `punchCast` | `rockBreak` |
+| **Earth Pillar** | Earth | Uncommon | `EarthPillar` | `EarthPillar` | StompRise | `rockRaise` | `rockBreak` |
 | **Earthquake** | Earth | Legendary | `Earthquake` | `Earthquake` | Stomp | `quakeRumble` | `quakeBoom` |
-| **Gust** | Air | base | `Gust` | `Gust` | Throw | `gustCast` | `gustHit` |
-| **Whirlwind** | Air | base | `Gust` | `Whirlwind` | Smash | `whirlCast` | `whirlHit` |
-| **Air Boost** | Air | base | `AirBoost` | `AirBoost` | Flex | `airBoostCast` | n/a |
+| **Gust** | Air | base | `Gust` | `Gust` | Fan | `gustCast` | `gustHit` |
+| **Whirlwind** | Air | base | `Gust` | `Whirlwind` | Spin | `whirlCast` | `whirlHit` |
+| **Air Boost** | Air | base | `AirBoost` | `AirBoost` | Surge | `airBoostCast` | n/a |
 | **Air Shield** | Air | Common | `AirShield` | `AirShield` | Guard | `shieldCast` | n/a |
-| **Tornado** | Air | Epic | `Tornado` | `Tornado` | Ascend | `tornadoCast` | `tornadoHit` |
+| **Tornado** | Air | Epic | `Tornado` | `Tornado` | Cyclone | `tornadoCast` | `tornadoHit` |
 | **Lightning** | Arcane | Rare | `Zap` | `Zap` | Call | `zapCharge` | `zapStrike` |
 | **Heal** | Arcane | Common | `Heal` | `Heal` | Offer | `healChime` | n/a |
 | **Black Hole** | Arcane | Legendary | `BlackHole` | `BlackHole` | Conjure | `blackHoleOpen` | `blackHoleCollapse` |

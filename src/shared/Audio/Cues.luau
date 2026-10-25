@@ -9,6 +9,8 @@
 --   length   play only the first N seconds (long recordings, short moments)
 --   world    true = heard from a place in the world, false = plays in your ears
 --   loop     true = ambience that AudioController starts/stops itself
+--   with     other cues played together with this one (a splash plus a thud);
+--            those cues may not layer further
 --
 -- Most ids are from Roblox's free Pro Sound Effects library and the Creator
 -- Store; tests/Audio.spec checks every cue's shape (not that it sounds good,
@@ -21,6 +23,7 @@ export type Cue = {
 	length: number?,
 	world: boolean,
 	loop: boolean?,
+	with: { string }?,
 }
 
 local function sound(
@@ -37,6 +40,13 @@ local function sound(
 		pitch = pitch,
 		length = length,
 	}
+end
+
+-- The same cue with other cues layered under it.
+local function layered(cue: Cue, ...: string): Cue
+	local copy = table.clone(cue)
+	copy.with = { ... }
+	return copy
 end
 
 -- Ids reused across spells with different pitch/length so a handful of
@@ -57,19 +67,27 @@ local HIT = 9113513576
 local Cues: { [string]: Cue } = {
 	-- Fire (heard in the world)
 	fireballCast = sound(WHOOSH_FIRE, 0.6, true),
-	fireballHit = sound(EXPLOSION, 0.7, true, 1, 1.6),
+	fireballHit = layered(sound(EXPLOSION, 0.7, true, 1, 1.6), "emberCrackle"),
+	emberCrackle = sound(WHOOSH_FIRE, 0.35, true, 2, 0.6),
+	slashHit = layered(sound(HIT, 0.6, true, 1.8, 0.3), "emberCrackle"),
+	orbCharge = sound(WHOOSH_FIRE, 0.3, true, 0.7, 0.5),
 	slashCast = sound(WHOOSH_FIRE, 0.5, true, 1.5, 0.7),
 	boostCast = sound(CHIME, 0.6, true, 0.7, 1.8),
 	pillarCast = sound(RUMBLE, 0.6, true, 1.1, 1),
 	pillarBoom = sound(EXPLOSION, 0.9, true, 0.8, 2.2),
 	bombCast = sound(WHOOSH_FIRE, 0.8, true, 0.6, 1.4),
-	bombBoom = sound(EXPLOSION, 1, true, 0.6, 2.8),
+	bombBoom = layered(sound(EXPLOSION, 1, true, 0.6, 2.8), "emberCrackle", "thump"),
 
 	-- Water
 	sliceCast = sound(SPLASH, 0.45, true, 1.6, 0.6),
 	bodyCast = sound(BUBBLE, 0.6, true, 0.8, 1.8),
 	waterCast = sound(SPLASH, 0.5, true, 1.15, 1),
 	waterTrap = sound(BUBBLE, 0.6, true, 1, 1.5),
+	sliceHit = layered(sound(SPLASH, 0.55, true, 1.7, 0.5), "dripSplash"),
+	dripSplash = sound(SPLASH, 0.3, true, 2, 0.3),
+	lockPop = layered(sound(BUBBLE, 0.6, true, 1.6, 0.6), "dripSplash"),
+	waveCrash = layered(sound(SPLASH, 0.9, true, 0.75, 1.6), "waveRumble"),
+	waveRumble = sound(RUMBLE, 0.4, true, 1.4, 0.8),
 	waveCast = sound(BUBBLE, 0.8, true, 0.7, 2),
 	nebulaCast = sound(RUMBLE, 0.6, true, 1.2, 1.2),
 	nebulaBoom = sound(BUBBLE, 1, true, 0.6, 2.6),
@@ -79,11 +97,16 @@ local Cues: { [string]: Cue } = {
 	rockRaise = sound(GRIND, 0.7, true, 1, 2),
 	wallHit = sound(RUBBLE, 0.5, true, 1.4, 0.6),
 	rockBreak = sound(RUBBLE, 0.6, true, 1.1, 1.6),
+	rockSmash = layered(sound(RUBBLE, 0.7, true, 1.25, 0.9), "thump"),
+	thump = sound(HIT, 0.5, true, 0.7, 0.35),
+	stompThud = layered(sound(RUBBLE, 0.6, true, 0.6, 0.5), "thump"),
 	punchCast = sound(GRIND, 0.75, true, 0.8, 1.4),
 	quakeRumble = sound(GRIND, 0.9, true, 0.55, 3.2),
 	quakeBoom = sound(RUBBLE, 1, true, 0.55, 3),
 
 	-- Air
+	pushWhoosh = sound(WIND, 0.5, true, 1.7, 0.4),
+	spinWhoosh = sound(WIND, 0.55, true, 1.2, 0.7),
 	gustCast = sound(WIND, 0.7, true),
 	gustHit = sound(WIND, 0.6, true, 1.6, 0.5),
 	whirlCast = sound(WIND, 0.8, true, 0.8, 1.8),
@@ -95,7 +118,8 @@ local Cues: { [string]: Cue } = {
 
 	-- Arcane (crate spells that belong to no element)
 	zapCharge = sound(TWINKLE, 0.7, true, 2, 0.6),
-	zapStrike = sound(EXPLOSION, 0.8, true, 1.9, 0.9),
+	zapStrike = layered(sound(EXPLOSION, 0.8, true, 1.9, 0.9), "zapCrackle"),
+	zapCrackle = sound(TWINKLE, 0.5, true, 2, 0.5),
 	healChime = sound(CHIME, 0.7, true, 1.6, 1.6),
 	blackHoleOpen = sound(RUMBLE, 0.8, true, 0.5, 2.5),
 	blackHoleCollapse = sound(EXPLOSION, 0.9, true, 0.45, 2.2),

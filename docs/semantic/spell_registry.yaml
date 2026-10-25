@@ -24,7 +24,7 @@ spells:
     model: Fireball
     vfx: Fireball
     fx: [projectile, projectileEnd, cast]
-    animation: Throw
+    animation: Fireball
     sfx:
       cast: fireballCast
       impact: fireballHit
@@ -43,7 +43,7 @@ spells:
     animation: Slash
     sfx:
       cast: slashCast
-      impact: fireballHit
+      impact: slashHit
     note: "Block crescent blade with a fiery trail"
   - id: FireBoost
     name: Fire Boost
@@ -72,7 +72,7 @@ spells:
     model: FirePillar
     vfx: FirePillar
     fx: [pillar, shockwave, cast]
-    animation: Sweep
+    animation: Erupt
     sfx:
       cast: pillarCast
       impact: pillarBoom
@@ -104,10 +104,10 @@ spells:
     model: WaterSlice
     vfx: WaterSlice
     fx: [projectile, projectileEnd, cast]
-    animation: Slash
+    animation: Slice
     sfx:
       cast: sliceCast
-      impact: waterTrap
+      impact: sliceHit
     note: "Block crescent of water with a sparkling trail"
   - id: WaterBody
     name: Water Body
@@ -120,7 +120,7 @@ spells:
     model: WaterBody
     vfx: WaterBody
     fx: [modelPop, cast, aura]
-    animation: Flex
+    animation: Flow
     sfx:
       cast: bodyCast
       impact: null
@@ -139,7 +139,7 @@ spells:
     animation: Point
     sfx:
       cast: waterCast
-      impact: waterTrap
+      impact: lockPop
     note: "Bubble bolt; a bubble traps the victim (TrapBubble)"
   - id: WaterWave
     name: Water Wave
@@ -152,10 +152,10 @@ spells:
     model: WaterWave
     vfx: WaterWave
     fx: [projectile, projectileEnd, cast]
-    animation: Smash
+    animation: Wave
     sfx:
       cast: waveCast
-      impact: waterTrap
+      impact: waveCrash
     note: "Blocky breaking wave with foam, rolling through everything"
   - id: WaterNebula
     name: Water Nebula
@@ -168,7 +168,7 @@ spells:
     model: WaterNebula
     vfx: WaterNebula
     fx: [pillar, shockwave, cast]
-    animation: Ascend
+    animation: Downpour
     sfx:
       cast: nebulaCast
       impact: nebulaBoom
@@ -184,10 +184,10 @@ spells:
     model: RockThrow
     vfx: RockThrow
     fx: [projectile, projectileEnd, cast]
-    animation: Throw
+    animation: Heave
     sfx:
       cast: throwCast
-      impact: rockBreak
+      impact: rockSmash
     note: "Chunky boulder with a dust trail"
   - id: EarthWall
     name: Earth Wall
@@ -200,7 +200,7 @@ spells:
     model: RockWall
     vfx: EarthWall
     fx: [dust, chip, shatter, cast]
-    animation: Guard
+    animation: Bulwark
     sfx:
       cast: rockRaise
       impact: wallHit
@@ -216,7 +216,7 @@ spells:
     model: EarthPunch
     vfx: EarthPunch
     fx: [rise, dust, shockwave, cast]
-    animation: Smash
+    animation: GroundPunch
     sfx:
       cast: punchCast
       impact: rockBreak
@@ -232,7 +232,7 @@ spells:
     model: EarthPillar
     vfx: EarthPillar
     fx: [rise, dust, shockwave, cast]
-    animation: Sweep
+    animation: StompRise
     sfx:
       cast: rockRaise
       impact: rockBreak
@@ -264,7 +264,7 @@ spells:
     model: Gust
     vfx: Gust
     fx: [projectile, projectileEnd, cast]
-    animation: Throw
+    animation: Fan
     sfx:
       cast: gustCast
       impact: gustHit
@@ -280,7 +280,7 @@ spells:
     model: Gust
     vfx: Whirlwind
     fx: [projectile, projectileEnd, cast]
-    animation: Smash
+    animation: Spin
     sfx:
       cast: whirlCast
       impact: whirlHit
@@ -296,7 +296,7 @@ spells:
     model: AirBoost
     vfx: AirBoost
     fx: [modelPop, cast, aura]
-    animation: Flex
+    animation: Surge
     sfx:
       cast: airBoostCast
       impact: null
@@ -328,7 +328,7 @@ spells:
     model: Tornado
     vfx: Tornado
     fx: [projectile, projectileEnd, cast]
-    animation: Ascend
+    animation: Cyclone
     sfx:
       cast: tornadoCast
       impact: tornadoHit
@@ -356,7 +356,7 @@ spells:
     rarity: Common
     role: support
     archetype: Buff
-    cooldown: 10
+    cooldown: 30
     model: Heal
     vfx: Heal
     fx: [modelPop, cast, aura]
