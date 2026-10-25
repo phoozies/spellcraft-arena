@@ -5,7 +5,7 @@
 --   poof           (position, color)                               debris burst
 --   beam           (from, to, color)                               chain flash
 --   number         (position, amount, kind)                        floating damage/heal/shield number
---   cast           (character, spellId, target)                    arm raise + magic circle
+--   cast           (character, spellId, target)                    cast pose + magic circle (+ buff aura)
 --   shatter        (cframe, size, color, material)                 block breaks into chunks
 --   chip           (position, color)                               chips off a damaged block
 --   dust           (position, width, color)                        dust ring under a placed object
@@ -13,9 +13,10 @@
 --   strike         (center, radius, delay, modelName, color)       a bolt model slams down after `delay`
 --   modelPop       (character, modelName, color)                   a model pops up over a head and fades
 --   glyph          (character, glyphId, color)                     the drawn glyph pops over a head
+--   dash           (character, direction)                          dash pose, dust puff, and whoosh
 --   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)
---   rise           (center, radius, delay, color, kind, height)    boulder/pillar rises from the ground
---   quake          (center, radius, duration, color)               Earthquake wind-up rumble
+--   rise           (center, radius, delay, color, kind, height, model?)  boulder/pillar rises from the ground
+--   quake          (center, radius, duration, color, model?)       Earthquake wind-up rumble and cracks
 -- and spins parts/models tagged "SpinFx" locally.
 -- The looks live in Fx/SpellVfx.
 --
@@ -32,7 +33,9 @@ local TweenService = game:GetService("TweenService")
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local SpellRegistry = require(ReplicatedStorage.Shared.Spells.SpellRegistry)
 local Types = require(ReplicatedStorage.Shared.Types)
+local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
 local AudioController = require(script.Parent.AudioController)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -184,38 +187,89 @@ local function onCast(character: Model, spellId: string, target: Vector3)
 	local def = SpellDefinitions.get(spellId)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if def and root and root:IsA("BasePart") and near(root.Position) then
-		SpellVfx.castAnimation(folder, character, def.visual.color, def.glyph)
+		-- A channelled spell (Earthquake) holds its pose for the whole channel.
+		local channel = if def.stats.channel then def.stats.delay else nil
+		SpellVfx.castAnimation(
+			folder,
+			character,
+			def.visual.color,
+			def.glyph,
+			SpellRegistry.animationFor(spellId),
+			channel
+		)
 		AudioController.playSpell(spellId, "cast", root.Position)
+		-- Buffs (Fire Boost, Water Body, Air Boost, Air Shield) glow on the caster.
+		local styleKey = SpellRegistry.vfxFor(spellId)
+		if def.archetype == "Buff" and styleKey and def.stats.duration then
+			SpellVfx.buffAura(character, styleKey, def.stats.duration)
+		end
 	end
 end
 
 -- Elemental column (Fire Pillar, Water Nebula, Earthquake).
-local function onPillar(center: Vector3, radius: number, color: Color3, elementId: string, spellId: string?)
+local function onPillar(
+	center: Vector3,
+	radius: number,
+	color: Color3,
+	elementId: string,
+	spellId: string?
+)
 	if not near(center) then
 		return
 	end
-	SpellVfx.pillar(folder, center, radius, color, elementId)
+	-- A channelled column (Earthquake) has no column model: its model is the
+	-- cracks drawn during the wind-up.
+	local def = if spellId then SpellDefinitions.get(spellId) else nil
+	local modelName = if def and not def.stats.channel then def.visual.model else nil
+	SpellVfx.pillar(folder, center, radius, color, elementId, modelName)
 	if spellId then
 		AudioController.playSpell(spellId, "impact", center)
 	end
 end
 
 -- A boulder / stone pillar rises out of the ground (Earth Punch, Earth Pillar).
-local function onRise(center: Vector3, radius: number, delay: number, color: Color3, kind: string, height: number)
+local function onRise(
+	center: Vector3,
+	radius: number,
+	delay: number,
+	color: Color3,
+	kind: string,
+	height: number,
+	modelName: string?
+)
 	if not near(center) then
 		return
 	end
-	SpellVfx.rise(folder, center, radius, delay, color, kind, height)
+	SpellVfx.rise(folder, center, radius, delay, color, kind, height, modelName)
 	task.delay(delay, function()
 		AudioController.play("rockBreak", center)
 	end)
 end
 
 -- Earthquake wind-up.
-local function onQuake(center: Vector3, radius: number, duration: number, color: Color3)
+local function onQuake(
+	center: Vector3,
+	radius: number,
+	duration: number,
+	color: Color3,
+	modelName: string?
+)
 	if near(center) then
-		SpellVfx.quake(folder, center, radius, duration, color)
+		SpellVfx.quake(folder, center, radius, duration, color, modelName)
 	end
+end
+
+-- A player dashed: the dash pose, a puff at their feet, and a whoosh.
+local function onDash(character: Model, direction: Vector3)
+	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") or not near(root.Position) then
+		return
+	end
+	CastAnimations.play(character, "Dash")
+	local feet = root.Position - Vector3.new(0, 2.8, 0)
+	SpellVfx.dust(folder, feet, 5, Color3.fromRGB(220, 220, 230))
+	SpellVfx.dust(folder, feet - direction * 3, 4, Color3.fromRGB(220, 220, 230))
+	AudioController.play("dash", root.Position)
 end
 
 -- A player just drew a glyph: show it over their head.
@@ -317,7 +371,13 @@ end
 
 -- Strike: after the server's telegraph delay, the bolt model drops from the
 -- sky onto the circle, flashes, and fades.
-local function onStrike(center: Vector3, radius: number, delay: number, modelName: string, color: Color3)
+local function onStrike(
+	center: Vector3,
+	radius: number,
+	delay: number,
+	modelName: string,
+	color: Color3
+)
 	if not near(center) then
 		return
 	end
@@ -458,6 +518,16 @@ function FxController.start()
 			onStrike(...)
 		elseif kind == "modelPop" then
 			onModelPop(...)
+		elseif kind == "pillar" then
+			onPillar(...)
+		elseif kind == "rise" then
+			onRise(...)
+		elseif kind == "quake" then
+			onQuake(...)
+		elseif kind == "glyph" then
+			onGlyph(...)
+		elseif kind == "dash" then
+			onDash(...)
 		elseif kind == "shatter" then
 			local cframe: CFrame = (...)
 			if near(cframe.Position) then

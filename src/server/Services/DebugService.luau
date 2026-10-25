@@ -3,6 +3,8 @@
 -- Every command is rejected outside Studio, so this is safe to ship.
 --
 --   coins <n>      grant coins
+--   takecoins <n>  remove coins (spends them)
+--   likefav <bool> mark the Like & Favourite gift claimed (true) or claimable again (false)
 --   wins <n>       add n match wins (leaderboard + podium)
 --   crate <id>     open a crate (charges coins), returns the result
 --   state          returns {coins, wins, elements, element} per player
@@ -37,6 +39,10 @@ function DebugService.run(player: Player, command: string, arg: any): any
 	end
 	if command == "coins" and typeof(arg) == "number" then
 		EconomyService.addCoins(player, arg, "debug")
+	elseif command == "takecoins" and typeof(arg) == "number" then
+		return EconomyService.spend(player, math.max(0, math.floor(arg)))
+	elseif command == "likefav" and typeof(arg) == "boolean" then
+		EconomyService.setLikeRewardClaimed(player, arg)
 	elseif command == "wins" and typeof(arg) == "number" then
 		for _ = 1, math.clamp(math.floor(arg), 0, 1000) do
 			EconomyService.recordWin(player)

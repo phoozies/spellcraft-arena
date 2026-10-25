@@ -45,7 +45,8 @@ return function(t: any)
 				lowest = math.min(lowest, npc.reward)
 			end
 			t.expect(cap.COIN_CAP >= lowest * 10).toBeTruthy()
-			local raider, brute, warlord = Npcs.get("Raider"), Npcs.get("Brute"), Npcs.get("Warlord")
+			local raider, brute, warlord =
+				Npcs.get("Raider"), Npcs.get("Brute"), Npcs.get("Warlord")
 			t.expect((raider :: any).reward < (brute :: any).reward).toBeTruthy()
 			t.expect((brute :: any).reward < (warlord :: any).reward).toBeTruthy()
 			t.expect((raider :: any).health < (brute :: any).health).toBeTruthy()

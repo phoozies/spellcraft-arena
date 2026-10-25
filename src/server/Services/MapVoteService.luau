@@ -135,7 +135,11 @@ end
 function MapVoteService.start()
 	Remotes.get("MapVote").OnServerEvent:Connect(function(player, mapName: unknown)
 		local vote = active[player]
-		if not vote or typeof(mapName) ~= "string" or not table.find(ArenaService.MAP_NAMES, mapName) then
+		if
+			not vote
+			or typeof(mapName) ~= "string"
+			or not table.find(ArenaService.MAP_NAMES, mapName)
+		then
 			return
 		end
 		local now = os.clock()

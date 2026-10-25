@@ -4,6 +4,39 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (training-ground hub)
+- **The Training Grove lets you draw and cast again.** It is now a big 100 x 110 stud yard (was 64 x 76) with a fence, corner torches, 11 dummies in two rows, archery targets, and hay bales. Standing inside it (tag `PracticeZone`, `shared/Util/PracticeZone`) is the one place in the hub where drawing works; the server (`MatchService.canDraw`) and client (`ClientState.canDraw`) both check it.
+- **No stone walls in the hub.** The concourse walls, arched bays, windows, banners, buttresses, overhead ribs, entrance pylons, end wall, and the stone ring around the hub are gone, as are the glass walls around the duel pads. The 1v1/2v2/3v3/4v4 pads are now open training mats with hay bales; wooden fences, archery targets, hay bales, and torches line the carpet; invisible barriers still keep players on the grass. The hub reads as a training-ground map ("Spellcraft Arena, Training Grounds").
+
+### Changed (pacing, one copy per spell, fights only)
+- **Cooldowns:** basic spells (Fireball, Rock Throw, Gust) now wait **3 seconds** between casts; slash moves (Fire Slash, Water Slice) wait **2 seconds** (they were 0.9-1.1s and 0.55s). `tests/Balance.spec.luau` keeps it that way.
+- **Earthquake's wind-up is shorter and harder to punish:** 1.2 seconds (was 2s), still rooted while it charges.
+- **One copy of each spell.** Drawing a spell you already hold is refused ("You already hold Fireball. Cast it first!"); the hotbar holds at most one of each of your element's five spells.
+- **Drawing only works in fights:** the rounds of a match (every duel and team map, including the Sparring Arena) and the Battleground. Not in the hub, and not during a match's intro, countdown, draft, or results. The server enforces it (`MatchService.canDraw`, installed into `SpellInputService`); the Draw button and spell cards hide where drawing isn't allowed. The hub's Spell Practice sign became "Training Grove".
+- **Phones and tablets get a clean screen in fights:** the menu buttons, wallet, party button and panel, kill feed, and boost icons are hidden in matches and the Battleground (the hotbar, spell cards, Draw and Dash buttons, health, the match bar, and Return to Hub stay).
+- **The ice map is gone:** Frostbite Fortress was removed from the map list, the map vote, and the docs.
+- **More team boxes:** the hub now has **two 1v1 boxes and two 2v2 boxes** (plus one 3v3 and one 4v4). Boxes now have ids (`Box` attribute), so a mode can have several, each with its own countdown.
+- **The hub's centerpiece is the wizard statue**, standing on the inkwell where the golden quill was (the quill returns only if the model is missing).
+
+### Added (dash, spectate)
+- **Dash:** press **Q** (gamepad **B**) or the new **Dash** button to burst about 24 studs the way you're moving, with a dash pose, a dust puff, and a whoosh for everyone; 4 second cooldown shown on the button (`Config.DASH`, `DashService`, `DashController`, remotes `Dash` / `DashStarted`, Fx `dash`). Q can no longer be the draw key.
+- **Spectate:** a **Watch** side button lists the other players and where they are; pick one to follow them with the camera, with Previous / Next / Stop controls at the top (`SpectateController`). It ends when the target leaves or you join a fight.
+### Added (studded GUI, music, like gift, block models, spell registry)
+- **Studded Roblox GUI.** `UI/Theme` now draws every panel and button in the classic studded style: bright blue with a stud grid (`assets/ui/studs.png`, made by `tools/make-stud-texture.py`), a bevel, small corners, navy outlines, and outlined white text, with orange for primary, green for go, and red for close. Studs hide on small, see-through, or dark frames (health bars, overlays). The loading screen matches. `Theme.button` shows its text in a child label above the studs, so existing code is unchanged.
+- **Block models** (`tools/blender/block_models.py`, one spec): 24 chunky classic-Roblox models, exported as FBX (`assets/models/blocks`) and a Blender scene, and generated as plain data (`src/shared/Models/BlockModels.luau`) that `ModelKit` builds into Parts, so they work in every place with no import. New spell models for Fire Slash, Fire Boost, Fire Pillar, Water Slice, Water Body, Water Wave, Water Nebula, Rock Throw, Earth Punch, Earth Pillar, Earthquake, Air Boost, Air Shield, and Tornado (every spell now has a model), plus **trees** (oak, pine, birch, cactus; used in the Battleground and the hub), the **training dummy**, the **Element Crate** (closed and open), the **Daily Quests chest** (closed and open), and the **wizard statue** at the center of the Sparring Arena.
+- **Spell registry.** `Spells/SpellRegistry` lists, for every spell, its model, particle style, cast pose, Fx events, and sounds; `docs/semantic/spell_registry.yaml` and a table in `docs/SPELLS.md` mirror it (`python tools/gen-spell-registry.py`), and `tests/Registry.spec.luau` fails if a spell is missing or names something that doesn't exist.
+- **Cast animations.** Each kind of move has its own arm and body pose (Throw, Slash, Flex, Guard, Point, Smash, Sweep, Ascend, Stomp) in `Spells/CastPoses`, played on the caster for everyone by `Fx/CastAnimations` as runtime KeyframeSequences (Motor6D `C0` is read-only at runtime, so the old arm-raise never moved). Earthquake holds its pose for the whole channel.
+- **Spell VFX and SFX gaps filled.** Buffs (Fire Boost, Water Body, Air Boost, Air Shield) now have an aura on the caster (embers, shimmer, wind streaks, orbiting blades, an outline); every spell has a particle style (`Spells/VfxStyles`); Gust, Whirlwind, Tornado, and Earth Wall got impact sounds (Tornado no longer uses the water sound).
+- **Background music** with a mute: a hub playlist and a fight playlist (`Audio/Music`) loop and fade between each other; the new **Background music** switch in Settings saves to the profile (`settings.music`, schema 4). Volume and fades are in `Config.MUSIC`.
+- **Like & Favourite gift.** A "👍 Like!" menu button opens a panel with the steps and a Claim button for a one-time **250 coins** (`Config.SUPPORT`). Roblox can't verify likes or favourites, so it is honor-based: the server opens it after 90 seconds in the server and pays once per account (`EconomyService.claimLikeReward`, remote `ClaimLikeReward`, `profile.rewards.likeFav`). Check Roblox's policy on rewarding likes before launch.
+- The hub crate throws its lid open (and the chest opens on a quest claim) while the reward plays (`Fx/PropSwap`).
+- Debug commands `likefav <bool>` and `takecoins <n>` for QA.
+
+### Fixed (effects that never showed)
+- **Fire Pillar, Water Nebula, Earth Punch, Earth Pillar, Earthquake, and the drawn-glyph pop-up had no visuals:** `FxController` received their `pillar`, `rise`, `quake`, and `glyph` events but never handled them. They are wired up, and now draw their block models.
+- `tests/Quality.spec.luau` allowed 10% power at average quality; an average drawing is now about +17% (perfect is +50%), so it allows 20%.
+- Zone spells with a `visual.model` and a column, boulder, or channel no longer also drop that model from the sky as a strike.
+
 ### Changed (arena size, open Battleground)
 - **The Return to Hub button now shows** whenever you are in the Battleground (it was built but never made visible). The green gates still work too.
 - **Bigger Sparring Arena** (the 1v1/2v2 map): the floor is 4x larger than the original model (about 184 studs), with spawns and the invisible wall ring scaled to match.

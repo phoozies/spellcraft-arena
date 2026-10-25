@@ -109,7 +109,8 @@ export type Totals = {
 }
 
 function Boosts.totals(owned: { [string]: number }): Totals
-	local totals: Totals = { damage = 1, maxHealth = 0, speed = 0, cooldownFactor = 1, potions = {} }
+	local totals: Totals =
+		{ damage = 1, maxHealth = 0, speed = 0, cooldownFactor = 1, potions = {} }
 	local cut = 0
 	for id, stacks in owned do
 		local boost = byId[id]

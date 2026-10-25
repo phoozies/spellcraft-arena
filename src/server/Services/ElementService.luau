@@ -104,7 +104,11 @@ function ElementService.start()
 		end
 		if #profile.elements == 0 then
 			ElementService.grant(player, elementId)
-			toastRemote:FireClient(player, `You chose {elementId}! Draw its shapes to cast.`, "reward")
+			toastRemote:FireClient(
+				player,
+				`You chose {elementId}! Draw its shapes to cast.`,
+				"reward"
+			)
 		else
 			local ok, reason = ElementService.equip(player, elementId)
 			if not ok and reason then

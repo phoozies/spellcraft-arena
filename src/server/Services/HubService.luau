@@ -13,6 +13,7 @@ local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
@@ -43,7 +44,10 @@ local function regenTick(dt: number)
 			end
 			if humanoid.Health < humanoid.MaxHealth then
 				local perSecond = 0
-				if not MatchService.isInMatch(player) and not player:GetAttribute("InBattleground") then
+				if
+					not MatchService.isInMatch(player)
+					and not player:GetAttribute("InBattleground")
+				then
 					perSecond = Config.HUB_REGEN_PER_SECOND
 				elseif now - (lastDamaged[player] or 0) >= Config.PASSIVE_REGEN_DELAY then
 					perSecond = Config.PASSIVE_REGEN_PER_SECOND
@@ -76,9 +80,9 @@ local function setupLighting()
 	end
 end
 
-local function spawnDummy(spot: BasePart)
+-- A plain straw-coloured dummy for when the TrainingDummy block model is missing.
+local function buildFallbackDummy(spot: BasePart): (Model, BasePart)
 	local model = Instance.new("Model")
-	model.Name = "TrainingDummy"
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Size = Vector3.new(3, 5, 2)
@@ -86,7 +90,7 @@ local function spawnDummy(spot: BasePart)
 	body.Material = Enum.Material.Fabric
 	body.Anchored = true
 	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0))
-		* CFrame.Angles(0, math.pi / 2, 0)
+		* CFrame.Angles(0, -math.pi / 2, 0)
 	body.Parent = model
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -101,6 +105,22 @@ local function spawnDummy(spot: BasePart)
 	face.Texture = "rbxasset://textures/face.png"
 	face.Face = Enum.NormalId.Front
 	face.Parent = head
+	return model, body
+end
+
+local function spawnDummy(spot: BasePart)
+	-- The block-model dummy (a straw man on a post), facing east into the grove.
+	local model = ModelKit.clone("TrainingDummy", "solid")
+	local body: BasePart
+	if model then
+		model:PivotTo(
+			CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, -math.pi / 2, 0)
+		)
+		body = model:FindFirstChild("Body") :: BasePart
+	else
+		model, body = buildFallbackDummy(spot)
+	end
+	model.Name = "TrainingDummy"
 	model.PrimaryPart = body
 
 	local bar = Instance.new("BillboardGui")
@@ -180,10 +200,13 @@ local function collectBoxes()
 			and typeof(team) == "string"
 			and typeof(slots) == "number"
 		then
-			local box = boxes[mode]
+			-- A mode can have several boxes; each pad names its box.
+			local boxAttribute = instance:GetAttribute("Box")
+			local boxId = if typeof(boxAttribute) == "string" then boxAttribute else mode
+			local box = boxes[boxId]
 			if not box then
 				box = { mode = mode, pads = {}, header = nil, signature = "", startsAt = nil }
-				boxes[mode] = box
+				boxes[boxId] = box
 			end
 			table.insert(box.pads, {
 				part = instance,
@@ -195,8 +218,10 @@ local function collectBoxes()
 		end
 	end
 	for _, header in CollectionService:GetTagged("TeamBoxHeader") do
+		local boxAttribute = header:GetAttribute("Box")
 		local mode = header:GetAttribute("Mode")
-		local box = if typeof(mode) == "string" then boxes[mode] else nil
+		local key = if typeof(boxAttribute) == "string" then boxAttribute else mode
+		local box = if typeof(key) == "string" then boxes[key] else nil
 		if box then
 			box.header = labelOf(header)
 		end

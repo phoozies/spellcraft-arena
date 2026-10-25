@@ -68,7 +68,9 @@ local function show(state: State?)
 		local mine = state.myPick == choice.id
 		card.stroke.Color = if mine then Theme.COLORS.accent else Color3.fromRGB(20, 20, 40)
 		card.stroke.Thickness = if mine then 5 else 2
-		card.button.BackgroundColor3 = if mine then Color3.fromRGB(84, 80, 140) else Theme.COLORS.panelLight
+		card.button.BackgroundColor3 = if mine
+			then Color3.fromRGB(84, 80, 140)
+			else Theme.COLORS.panelLight
 	end
 end
 

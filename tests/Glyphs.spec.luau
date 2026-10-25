@@ -127,34 +127,40 @@ return function(t)
 				local line = {}
 				for i = 0, 30 do
 					local d = i * 0.02
-					table.insert(line, Vector2.new(0.5 + math.cos(angle) * d, 0.5 + math.sin(angle) * d))
+					table.insert(
+						line,
+						Vector2.new(0.5 + math.cos(angle) * d, 0.5 + math.sin(angle) * d)
+					)
 				end
 				t.expect(GlyphRecognizer.recognize(line)).toBe("slash")
 			end
 		end)
 
-		t.it("ignores a straight line when slashes aren't allowed, and rejects a dot and scribbles", function()
-			local line = {}
-			for i = 0, 30 do
-				table.insert(line, Vector2.new(0.2 + i * 0.02, 0.5))
-			end
-			t.expect(GlyphRecognizer.recognize(line, { circle = true, star = true })).toBeNil()
-
-			local dot = {}
-			for _ = 1, 30 do
-				table.insert(dot, Vector2.new(0.5, 0.5))
-			end
-			t.expect(GlyphRecognizer.recognize(dot)).toBeNil()
-
-			local rng = Random.new(5)
-			for _ = 1, 20 do
-				local scribble = {}
-				for _ = 1, 40 do
-					table.insert(scribble, Vector2.new(rng:NextNumber(), rng:NextNumber()))
+		t.it(
+			"ignores a straight line when slashes aren't allowed, and rejects a dot and scribbles",
+			function()
+				local line = {}
+				for i = 0, 30 do
+					table.insert(line, Vector2.new(0.2 + i * 0.02, 0.5))
 				end
-				t.expect(GlyphRecognizer.recognize(scribble)).toBeNil()
+				t.expect(GlyphRecognizer.recognize(line, { circle = true, star = true })).toBeNil()
+
+				local dot = {}
+				for _ = 1, 30 do
+					table.insert(dot, Vector2.new(0.5, 0.5))
+				end
+				t.expect(GlyphRecognizer.recognize(dot)).toBeNil()
+
+				local rng = Random.new(5)
+				for _ = 1, 20 do
+					local scribble = {}
+					for _ = 1, 40 do
+						table.insert(scribble, Vector2.new(rng:NextNumber(), rng:NextNumber()))
+					end
+					t.expect(GlyphRecognizer.recognize(scribble)).toBeNil()
+				end
 			end
-		end)
+		)
 
 		t.it("rejects tiny or too-short strokes", function()
 			local tiny = {}
@@ -168,55 +174,66 @@ return function(t)
 	end)
 
 	t.describe("Spell glyphs", function()
-		t.it("every spell's shape is the one for its role, and an element never repeats one", function()
-			for _, element in Elements.LIST do
-				local owner: { [string]: string } = {}
-				for _, id in element.spells do
-					local def = SpellDefinitions.get(id) :: any
-					t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
-					t.expect(Glyphs.ROLE[def.role] ~= nil).toBeTruthy()
-					t.expect(def.glyph).toBe(Glyphs.ROLE[def.role])
-					t.expect(owner[def.glyph]).toBeNil()
-					owner[def.glyph] = def.id
+		t.it(
+			"every spell's shape is the one for its role, and an element never repeats one",
+			function()
+				for _, element in Elements.LIST do
+					local owner: { [string]: string } = {}
+					for _, id in element.spells do
+						local def = SpellDefinitions.get(id) :: any
+						t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
+						t.expect(Glyphs.ROLE[def.role] ~= nil).toBeTruthy()
+						t.expect(def.glyph).toBe(Glyphs.ROLE[def.role])
+						t.expect(owner[def.glyph]).toBeNil()
+						owner[def.glyph] = def.id
+					end
 				end
 			end
-		end)
+		)
 
-		t.it("basic attacks are circles, fast attacks slashes, boosts squares, defenses and stuns triangles", function()
-			t.expect(Glyphs.ROLE.basic).toBe("circle")
-			t.expect(Glyphs.ROLE.fast).toBe("slash")
-			t.expect(Glyphs.ROLE.boost).toBe("square")
-			t.expect(Glyphs.ROLE.defense).toBe("triangle")
-			t.expect(Glyphs.ROLE.stun).toBe("triangle")
-			for _, def in SpellDefinitions.list do
-				if def.stats.status == "Stun" then
-					t.expect(def.role).toBe("stun")
-				end
-				if def.role == "ultimate" then
-					t.expect(def.ultimate).toBe(true)
+		t.it(
+			"basic attacks are circles, fast attacks slashes, boosts squares, defenses and stuns triangles",
+			function()
+				t.expect(Glyphs.ROLE.basic).toBe("circle")
+				t.expect(Glyphs.ROLE.fast).toBe("slash")
+				t.expect(Glyphs.ROLE.boost).toBe("square")
+				t.expect(Glyphs.ROLE.defense).toBe("triangle")
+				t.expect(Glyphs.ROLE.stun).toBe("triangle")
+				for _, def in SpellDefinitions.list do
+					if def.stats.status == "Stun" then
+						t.expect(def.role).toBe("stun")
+					end
+					if def.role == "ultimate" then
+						t.expect(def.ultimate).toBe(true)
+					end
 				end
 			end
-		end)
+		)
 
 		t.it("no spell is drawn with a swirl or a squiggle", function()
 			for _, def in SpellDefinitions.list do
-				t.expect(def.glyph ~= "spiral" and def.glyph ~= "wave" and def.glyph ~= "infinity").toBeTruthy()
+				t.expect(def.glyph ~= "spiral" and def.glyph ~= "wave" and def.glyph ~= "infinity")
+					.toBeTruthy()
 			end
 			t.expect(Glyphs.get("spiral")).toBeNil()
 			t.expect(Glyphs.get("wave")).toBeNil()
 		end)
 
-		t.it("Earth Wall and Air Shield are triangles; Fire Boost, Water Body and Air Boost are squares", function()
-			for _, id in { "EarthWall", "AirShield" } do
-				t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("triangle")
+		t.it(
+			"Earth Wall and Air Shield are triangles; Fire Boost, Water Body and Air Boost are squares",
+			function()
+				for _, id in { "EarthWall", "AirShield" } do
+					t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("triangle")
+				end
+				for _, id in { "FireBoost", "WaterBody", "AirBoost" } do
+					t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("square")
+				end
 			end
-			for _, id in { "FireBoost", "WaterBody", "AirBoost" } do
-				t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("square")
-			end
-		end)
+		)
 
 		t.it("a square is never read as a circle (or the reverse), even when sloppy", function()
-			local allowed = { circle = true, square = true, slash = true, chevron = true, star = true }
+			local allowed =
+				{ circle = true, square = true, slash = true, chevron = true, star = true }
 			local rng = Random.new(33)
 			local wrong = 0
 			for _, id in { "circle", "square" } do
@@ -231,25 +248,31 @@ return function(t)
 			t.expect(wrong <= 4).toBeTruthy() -- at most 2.5% misses, and never swapped silently
 		end)
 
-		t.it("each element's own five shapes are recognized from sloppy strokes (5% wobble) 95% of the time", function()
-			local rng = Random.new(21)
-			local total, hits = 0, 0
-			for _, element in Elements.LIST do
-				local allowed: { [string]: boolean } = {}
-				for _, id in element.spells do
-					allowed[(SpellDefinitions.get(id) :: any).glyph] = true
-				end
-				for glyphId in allowed do
-					local glyph = Glyphs.get(glyphId) :: Glyphs.Glyph
-					for _ = 1, 40 do
-						total += 1
-						if GlyphRecognizer.recognize(attempt(glyph, rng, 0.05), allowed) == glyphId then
-							hits += 1
+		t.it(
+			"each element's own five shapes are recognized from sloppy strokes (5% wobble) 95% of the time",
+			function()
+				local rng = Random.new(21)
+				local total, hits = 0, 0
+				for _, element in Elements.LIST do
+					local allowed: { [string]: boolean } = {}
+					for _, id in element.spells do
+						allowed[(SpellDefinitions.get(id) :: any).glyph] = true
+					end
+					for glyphId in allowed do
+						local glyph = Glyphs.get(glyphId) :: Glyphs.Glyph
+						for _ = 1, 40 do
+							total += 1
+							if
+								GlyphRecognizer.recognize(attempt(glyph, rng, 0.05), allowed)
+								== glyphId
+							then
+								hits += 1
+							end
 						end
 					end
 				end
+				t.expect(hits / total >= 0.95).toBeTruthy()
 			end
-			t.expect(hits / total >= 0.95).toBeTruthy()
-		end)
+		)
 	end)
 end

@@ -170,7 +170,13 @@ function StatusService.targetOf(instance: Instance): Model?
 		return nil
 	end
 	local humanoid = instance:FindFirstChildOfClass("Humanoid")
-	if humanoid and (game:GetService("Players"):GetPlayerFromCharacter(instance) or instance:GetAttribute("Hostile") == true) then
+	if
+		humanoid
+		and (
+			game:GetService("Players"):GetPlayerFromCharacter(instance)
+			or instance:GetAttribute("Hostile") == true
+		)
+	then
 		return instance
 	end
 	return nil

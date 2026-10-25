@@ -36,9 +36,10 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 
 ### Casting: draw it, stockpile it, spend it
 
-- **Draw** a spell's glyph (hold **F** or tap ✏ Draw, then trace it) to add **one copy** of that spell to your hotbar. You can hold **up to 5 copies in any mix**, including 5 of the same spell. The new copy is readied automatically.
-- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** If you hold more copies of that spell, the next one is readied for you.
-- **Shared cooldown:** all copies of the same spell share one cast cooldown (0.55-9s for the first four slots, 16-22s for ultimates; see SPELLS.md). The hotbar shows the cooldown sweep on every slot holding that spell.
+- **Draw** a spell's glyph (hold **F** or tap ✏ Draw, then trace it) to add **one copy** of that spell to your hotbar. You hold **at most one copy of each spell**. The new copy is readied automatically. **You can only draw in the hub's Training Grove, the rounds of a match, and the Battleground.**
+- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.**
+- **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, the rest up to 9s, ultimates 16-22s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
+- **Dash:** press **Q** (or the Dash button) to burst forward; 4 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground where you aim, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
@@ -77,11 +78,11 @@ The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones,
 | 1v1 | 2 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
 | 2v2 | 4 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
 | 3v3 | 6 | Blue / Red | Full map |
-| 4v4 | 8 | Blue / Red | Full map; Frostbite Fortress is weighted ×2; never the Sparring Arena (too small) |
+| 4v4 | 8 | Blue / Red | Full map; never the Sparring Arena (too small) |
 
 ### Picking your team: the team boxes
 
-The hub has a **box for each team mode** (1v1, 2v2, 3v3, 4v4). Every box has a **Blue side and a Red side**, with one spot per teammate. **Stand on a side to pick your team**, so friends can line up together before the match, and the sides show how many spots are filled (for example `BLUE 1/2`). When **both sides are full**, a 5-second countdown starts. It restarts if anyone steps off or swaps sides, and then the match starts with exactly those teams. A full side turns newcomers away with a hint to try the other side.
+The hub has **boxes for every team mode** (two each for 1v1 and 2v2, one each for 3v3 and 4v4). Every box has a **Blue side and a Red side**, with one spot per teammate. **Stand on a side to pick your team**, so friends can line up together before the match, and the sides show how many spots are filled (for example `BLUE 1/2`). When **both sides are full**, a 5-second countdown starts. It restarts if anyone steps off or swaps sides, and then the match starts with exactly those teams. A full side turns newcomers away with a hint to try the other side.
 
 The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically.
 
@@ -98,9 +99,8 @@ A blue **Battleground portal** in the concourse teleports you to a big open worl
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell with a three-tier grandstand behind it, opening into the Champions' Concourse (arched bays with sky-glass windows and glyph banners, a red carpet to the Arena Gate) | Four element shrines around the fountain, team boxes (1v1–4v4) and the Battleground portal in the concourse, Spell Practice pavilion (build anything, smash dummies), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
+| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell topped by a stone wizard statue, with a three-tier grandstand behind it, opening into the Training Concourse (a red carpet to the Arena Gate between wooden fences, hay bales, and archery targets). The hub has no stone walls: it is a training-ground map | Four element shrines around the fountain, team boxes (1v1–4v4) and the Battleground portal in the concourse, the Training Grove (build anything, smash dummies, and the one hub place to draw and cast), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
-| **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
 | **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
 

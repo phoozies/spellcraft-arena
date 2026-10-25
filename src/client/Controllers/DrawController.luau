@@ -172,6 +172,15 @@ end
 
 local function setActive(on: boolean, spellId: string?)
 	local def = if on and spellId then SpellDefinitions.get(spellId) else nil
+	if on and not ClientState.canDraw() then
+		HudController.toast(
+			if ClientState.fighting()
+				then "Hold on, you can draw when the round starts!"
+				else "You can only draw in the Training Grove, duels, and the Battleground.",
+			"fizzle"
+		)
+		return
+	end
 	if active == on and (not on or target == def) then
 		return
 	end
@@ -460,6 +469,17 @@ function DrawController.start()
 	ClientState.ProfileChanged:Connect(function()
 		keyCap.Text = ClientState.drawKeyName()
 	end)
+	-- The Draw button only exists where drawing does; close the canvas when
+	-- drawing stops being allowed (the round ends).
+	local function refreshPresence()
+		local allowed = ClientState.canDraw()
+		drawButton.Visible = allowed
+		if not allowed then
+			setActive(false)
+		end
+	end
+	ClientState.PresenceChanged:Connect(refreshPresence)
+	refreshPresence()
 
 	Remotes.get("GlyphResult").OnClientEvent:Connect(onVerdict)
 	ClientState.DrawRequested:Connect(DrawController.begin)

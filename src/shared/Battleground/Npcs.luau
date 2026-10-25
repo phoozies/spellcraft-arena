@@ -19,8 +19,20 @@
 
 local Npcs = {}
 
-export type Melee = { damage: number, range: number, interval: number, windup: number, knockback: number? }
-export type Ranged = { damage: number, range: number, interval: number, speed: number, windup: number }
+export type Melee = {
+	damage: number,
+	range: number,
+	interval: number,
+	windup: number,
+	knockback: number?,
+}
+export type Ranged = {
+	damage: number,
+	range: number,
+	interval: number,
+	speed: number,
+	windup: number,
+}
 
 export type NpcType = {
 	id: string,

@@ -3,12 +3,10 @@
 -- per-spell cast cooldowns.
 --
 -- Copy model:
--- * Drawing a spell's glyph adds ONE copy of that spell to the
---   hotbar. A player can hold up to MAX_HAND (5) copies in any mix —
---   including five of the same spell.
--- * Casting uses a copy up; draw it again to get more.
--- * All copies of the same spell share one cast cooldown (its `cooldown`):
---   after casting a Fireball, your other Fireballs wait for it.
+-- * Drawing a spell's glyph adds ONE copy of that spell to the hotbar. A
+--   player holds at most ONE copy of each spell (so at most one of each of
+--   their element's five spells, never more than MAX_HAND).
+-- * Casting uses the copy up; draw it again to get another.
 -- * SpellInputService adds a 1s cooldown between drawings.
 -- * Every copy remembers how well it was drawn (quality 0..1, see
 --   Spells/Quality); CastService scales the spell by it when the copy is cast.
@@ -27,7 +25,7 @@ local ElementService = require(script.Parent.ElementService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 type State = {
-	copies: { string }, -- hotbar slots, duplicates allowed
+	copies: { string }, -- hotbar slots, one per spell
 	qualities: { number }, -- drawing quality of each copy (parallel to copies)
 	spellbook: { string }?,
 	readiedSlot: number?,
@@ -133,10 +131,15 @@ function HandService.grant(
 				return false, "Pick your first element in the Spellbook!"
 			end
 			if ElementService.owns(player, def.element) then
-				return false, `{def.name} is a {def.element} spell. Equip {def.element} in the Spellbook!`
+				return false,
+					`{def.name} is a {def.element} spell. Equip {def.element} in the Spellbook!`
 			end
-			return false, `You haven't unlocked {def.element} yet. Open an Element Crate in the hub!`
+			return false,
+				`You haven't unlocked {def.element} yet. Open an Element Crate in the hub!`
 		end
+	end
+	if table.find(state.copies, spellId) then
+		return false, `You already hold {def.name}. Cast it first!`
 	end
 	if #state.copies >= Config.MAX_HAND then
 		return false, `Your hands are full ({Config.MAX_HAND} spells). Cast one first!`

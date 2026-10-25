@@ -2,7 +2,7 @@
 -- Side menu + panels: Play (queues), Spellbook (the four elements: pick your
 -- first one free, equip any you own, see each one's five spells and the shape
 -- to draw for them), Crates (built by CrateController through createPanel),
--- and Daily Quests. Hub kiosks open the matching
+-- Daily Quests, and the Like & Favourite gift (SupportController). Hub kiosks open the matching
 -- panel through ProximityPrompts ("Spellbook", "Crates", "Quests").
 
 local GuiService = game:GetService("GuiService")
@@ -18,6 +18,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
+local PropSwap = require(script.Parent.Parent.Fx.PropSwap)
 
 local MenuController = {}
 
@@ -245,7 +246,12 @@ local function showSpell(def: Types.SpellDef)
 	local element = Elements.get(def.element)
 	local shape = Glyphs.get(def.glyph)
 	detailGlyph:ClearAllChildren()
-	GlyphView.create(detailGlyph, def.glyph, 96, if element then element.color else def.visual.color)
+	GlyphView.create(
+		detailGlyph,
+		def.glyph,
+		96,
+		if element then element.color else def.visual.color
+	)
 	local tag = if def.ultimate then "  <b>ULTIMATE</b>" else ""
 	detailLabel.Text = `<b>{def.name}</b>{tag}\n{def.description}\n\n`
 		.. `<b>Draw:</b> {if shape then shape.name else def.glyph}\n<b>Cooldown:</b> {def.cooldown}s`
@@ -263,14 +269,19 @@ function MenuController.refreshSpellbook()
 	for id, button in elementButtons do
 		local element = Elements.get(id)
 		local owned = table.find(ownedList, id) ~= nil
-		local mark = if id == equipped then "✓ Equipped" elseif owned or firstPick then "" else "🔒"
+		local mark = if id == equipped
+			then "✓ Equipped"
+			elseif owned or firstPick then ""
+			else "🔒"
 		button.Text = `{if element then element.icon else ""} {id}\n{mark}`
 		button.BackgroundColor3 = if id == selectedElement
 			then Color3.fromRGB(84, 80, 140)
 			else Theme.COLORS.panelLight
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke and element then
-			stroke.Color = if id == selectedElement then element.color else Color3.fromRGB(20, 20, 40)
+			stroke.Color = if id == selectedElement
+				then element.color
+				else Color3.fromRGB(20, 20, 40)
 			stroke.Thickness = if id == selectedElement then 4 else 2
 		end
 	end
@@ -282,11 +293,13 @@ function MenuController.refreshSpellbook()
 	local owned = table.find(ownedList, selectedElement) ~= nil
 	local color = `#{element.color:ToHex()}`
 	headerLabel.Text = `<b><font color="{color}">{element.icon} {element.name}</font></b>  {element.tagline}\n`
-		.. (if firstPick
-			then "Choose your FIRST element for free! More are unlocked from Element Crates."
-			elseif selectedElement == equipped then "This is your equipped element."
-			elseif owned then "You own this element."
-			else "Locked. Open an Element Crate to unlock a new element.")
+		.. (
+			if firstPick
+				then "Choose your FIRST element for free! More are unlocked from Element Crates."
+				elseif selectedElement == equipped then "This is your equipped element."
+				elseif owned then "You own this element."
+				else "Locked. Open an Element Crate to unlock a new element."
+		)
 	if firstPick then
 		equipButton.Text = `Choose {element.name}!`
 		equipButton.BackgroundColor3 = Theme.COLORS.good
@@ -317,7 +330,13 @@ function MenuController.refreshSpellbook()
 			stroke.Color = element.color
 			stroke.Thickness = if def.ultimate then 4 else 2
 		end
-		GlyphView.create(card, def.glyph, 54, element.color, { Position = UDim2.new(0.5, -27, 0, 6) })
+		GlyphView.create(
+			card,
+			def.glyph,
+			54,
+			element.color,
+			{ Position = UDim2.new(0.5, -27, 0, 6) }
+		)
 		Theme.label(card, def.name, {
 			Size = UDim2.new(1, -6, 0, 30),
 			Position = UDim2.new(0, 3, 1, -36),
@@ -365,11 +384,15 @@ local function refreshQuests()
 			BackgroundColor3 = Theme.COLORS.panelLight,
 		})
 		Theme.corner(row)
-		Theme.label(row, `{quest.text}  ({quest.progress}/{quest.goal})  +{quest.rewardCoins} coins`, {
-			Size = UDim2.new(1, -150, 1, -16),
-			Position = UDim2.fromOffset(10, 8),
-			TextXAlignment = Enum.TextXAlignment.Left,
-		})
+		Theme.label(
+			row,
+			`{quest.text}  ({quest.progress}/{quest.goal})  +{quest.rewardCoins} coins`,
+			{
+				Size = UDim2.new(1, -150, 1, -16),
+				Position = UDim2.fromOffset(10, 8),
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}
+		)
 		local done = quest.progress >= quest.goal
 		local claim = Theme.button(
 			row,
@@ -387,6 +410,8 @@ local function refreshQuests()
 		claim.Activated:Connect(function()
 			if done and not quest.claimed then
 				Remotes.get("ClaimQuest"):FireServer(quest.id)
+				-- The plaza chest opens to hand over the reward.
+				PropSwap.show("QuestChestModel", "QuestChestOpen", 2.5)
 			end
 		end)
 	end
@@ -397,7 +422,7 @@ local function buildSideButtons(root: Instance)
 		Name = "SideMenu",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(120, 5 * 62),
+		Size = UDim2.fromOffset(120, 7 * 62),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
@@ -410,6 +435,8 @@ local function buildSideButtons(root: Instance)
 			{ "Spellbook", "📖 Spells" },
 			{ "Crates", "🎁 Crates" },
 			{ "Quests", "⭐ Quests" },
+			{ "Support", "👍 Like!" },
+			{ "Spectate", "👁 Watch" },
 			{ "Settings", "⚙ Settings" },
 		}
 	do

@@ -55,7 +55,7 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.basic,
 		sfx = { cast = "fireballCast", impact = "fireballHit" },
 		archetype = "Projectile",
-		cooldown = 0.9,
+		cooldown = 3,
 		description = "Hurl a ball of fire with a medium hitbox. 15 damage.",
 		stats = { damage = 15, speed = 95, range = 160, radius = 5, knockback = 18 },
 		visual = {
@@ -76,14 +76,15 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.fast,
 		sfx = { cast = "slashCast", impact = "fireballHit" },
 		archetype = "Projectile",
-		cooldown = 0.55,
-		description = "A fast crescent of fire with a medium hitbox. 10 damage, recharges quickly.",
+		cooldown = 2,
+		description = "A fast crescent of fire with a medium hitbox. 10 damage, 2 second cooldown.",
 		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
 		visual = {
 			shape = "Block",
 			size = Vector3.new(7, 1, 1.6),
 			color = rgb(255, 150, 50),
 			material = M.Neon,
+			model = "FireSlash",
 		},
 	},
 	{
@@ -105,6 +106,7 @@ local DEFINITIONS: { SpellDef } = {
 			color = rgb(255, 120, 40),
 			material = M.ForceField,
 			transparency = 0.5,
+			model = "FireBoost",
 		},
 	},
 	{
@@ -133,6 +135,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(2, 2, 2),
 			color = rgb(255, 120, 40),
 			material = M.Neon,
+			model = "FirePillar",
 		},
 	},
 	{
@@ -171,7 +174,7 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.fast,
 		sfx = { cast = "sliceCast", impact = "waterTrap" },
 		archetype = "Projectile",
-		cooldown = 0.55,
+		cooldown = 2,
 		description = "A fast slice of water with a medium hitbox. 10 damage.",
 		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
 		visual = {
@@ -179,6 +182,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(7, 1, 1.6),
 			color = rgb(80, 180, 255),
 			material = M.Neon,
+			model = "WaterSlice",
 		},
 	},
 	{
@@ -200,6 +204,7 @@ local DEFINITIONS: { SpellDef } = {
 			color = rgb(64, 164, 255),
 			material = M.ForceField,
 			transparency = 0.4,
+			model = "WaterBody",
 		},
 	},
 	{
@@ -251,6 +256,7 @@ local DEFINITIONS: { SpellDef } = {
 			color = rgb(60, 150, 255),
 			material = M.Glass,
 			transparency = 0.25,
+			model = "WaterWave",
 		},
 	},
 	{
@@ -280,6 +286,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(2, 2, 2),
 			color = rgb(70, 160, 255),
 			material = M.Neon,
+			model = "WaterNebula",
 		},
 	},
 
@@ -296,7 +303,7 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.basic,
 		sfx = { cast = "throwCast", impact = "rockBreak" },
 		archetype = "Projectile",
-		cooldown = 1.1,
+		cooldown = 3,
 		description = "Hurl a large boulder. 15 damage and a solid shove.",
 		stats = { damage = 15, speed = 80, range = 130, radius = 6, knockback = 22 },
 		visual = {
@@ -304,6 +311,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(6.3, 6.3, 6.3),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
+			model = "RockThrow",
 		},
 	},
 	{
@@ -314,7 +322,7 @@ local DEFINITIONS: { SpellDef } = {
 		slot = 2,
 		role = "defense",
 		glyph = ROLE.defense,
-		sfx = { cast = "rockRaise" },
+		sfx = { cast = "rockRaise", impact = "wallHit" },
 		archetype = "Placeable",
 		cooldown = 4,
 		description = "Raise a rocky wall with 35 health that blocks spells. It breaks apart piece by piece.",
@@ -360,6 +368,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(8, 8, 8),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
+			model = "EarthPunch",
 		},
 	},
 	{
@@ -388,6 +397,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(5.5, 14, 5.5),
 			color = rgb(150, 118, 86),
 			material = M.Slate,
+			model = "EarthPillar",
 		},
 	},
 	{
@@ -402,9 +412,9 @@ local DEFINITIONS: { SpellDef } = {
 		sfx = { cast = "quakeRumble", impact = "quakeBoom" },
 		archetype = "Zone",
 		cooldown = 22,
-		description = "ULTIMATE: the ground shakes around you, then bursts. A long 2 second cast leaves you rooted, but it deals 40 damage in a huge area.",
+		description = "ULTIMATE: the ground shakes around you, then bursts. A quick 1.2 second cast leaves you rooted, but it deals 40 damage in a huge area.",
 		stats = {
-			delay = 2,
+			delay = 1.2,
 			damage = 40,
 			radius = 25,
 			range = 0, -- centered on the caster
@@ -417,6 +427,7 @@ local DEFINITIONS: { SpellDef } = {
 			size = Vector3.new(2, 2, 2),
 			color = rgb(176, 128, 80),
 			material = M.Slate,
+			model = "Earthquake",
 		},
 	},
 
@@ -431,9 +442,9 @@ local DEFINITIONS: { SpellDef } = {
 		slot = 1,
 		role = "basic",
 		glyph = ROLE.basic,
-		sfx = { cast = "gustCast" },
+		sfx = { cast = "gustCast", impact = "gustHit" },
 		archetype = "Projectile",
-		cooldown = 0.9,
+		cooldown = 3,
 		description = "A fast gust of air. 15 damage.",
 		stats = { damage = 15, speed = 140, range = 140, radius = 4.6, knockback = 12 },
 		visual = {
@@ -453,7 +464,7 @@ local DEFINITIONS: { SpellDef } = {
 		slot = 2,
 		role = "heavy",
 		glyph = ROLE.heavy,
-		sfx = { cast = "whirlCast" },
+		sfx = { cast = "whirlCast", impact = "whirlHit" },
 		archetype = "Projectile",
 		cooldown = 5,
 		description = "A wide gust that blows everyone it hits far away. 15 damage.",
@@ -486,6 +497,7 @@ local DEFINITIONS: { SpellDef } = {
 			color = rgb(190, 240, 225),
 			material = M.ForceField,
 			transparency = 0.5,
+			model = "AirBoost",
 		},
 	},
 	{
@@ -507,6 +519,7 @@ local DEFINITIONS: { SpellDef } = {
 			color = rgb(190, 240, 235),
 			material = M.ForceField,
 			transparency = 0.45,
+			model = "AirShield",
 		},
 	},
 	{
@@ -518,17 +531,25 @@ local DEFINITIONS: { SpellDef } = {
 		role = "ultimate",
 		ultimate = true,
 		glyph = ROLE.ultimate,
-		sfx = { cast = "tornadoCast", impact = "waterTrap" },
+		sfx = { cast = "tornadoCast", impact = "tornadoHit" },
 		archetype = "Projectile",
 		cooldown = 18,
 		description = "ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage.",
-		stats = { damage = 30, speed = 55, range = 120, radius = 8.5, knockback = 105, pierce = true },
+		stats = {
+			damage = 30,
+			speed = 55,
+			range = 120,
+			radius = 8.5,
+			knockback = 105,
+			pierce = true,
+		},
 		visual = {
 			shape = "Block",
 			size = Vector3.new(9.5, 17, 9.5),
 			color = rgb(205, 235, 230),
 			material = M.ForceField,
 			transparency = 0.35,
+			model = "Tornado",
 		},
 	},
 }
@@ -551,7 +572,10 @@ for _, element in Elements.LIST do
 	for slot, id in element.spells do
 		local def = byId[id]
 		assert(def, `{element.id} lists unknown spell {id}`)
-		assert(def.element == element.id and def.slot == slot, `{id} is in the wrong element or slot`)
+		assert(
+			def.element == element.id and def.slot == slot,
+			`{id} is in the wrong element or slot`
+		)
 	end
 end
 

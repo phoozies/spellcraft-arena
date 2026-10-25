@@ -103,7 +103,8 @@ function Buff.cast(ctx: any): boolean?
 	end
 	aura(ctx, duration)
 	if ctx.def.visual.model then
-		Remotes.get("Fx"):FireAllClients("modelPop", ctx.character, ctx.def.visual.model, ctx.def.visual.color)
+		Remotes.get("Fx")
+			:FireAllClients("modelPop", ctx.character, ctx.def.visual.model, ctx.def.visual.color)
 	end
 	return true
 end

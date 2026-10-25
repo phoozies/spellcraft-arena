@@ -42,7 +42,16 @@ function Line.cast(ctx: any): boolean?
 	for i = 1, count do
 		local center = groundAt(start + direction * spacing * (i - 1), { ctx.character })
 		local wait = delay + (i - 1) * step
-		fxRemote:FireAllClients("rise", center, radius, wait, visual.color, "pillar", visual.size.Y)
+		fxRemote:FireAllClients(
+			"rise",
+			center,
+			radius,
+			wait,
+			visual.color,
+			"pillar",
+			visual.size.Y,
+			visual.model
+		)
 		task.delay(wait, function()
 			DestructibleService.shockwave(center, radius, visual.color)
 			for _, hit in ctx.enemiesNear(center, radius) do
@@ -66,7 +75,12 @@ function Line.cast(ctx: any): boolean?
 						end
 					end
 				else
-					DestructibleService.damage(hit.instance, stats.damage or 0, ctx.player, ctx.def.name)
+					DestructibleService.damage(
+						hit.instance,
+						stats.damage or 0,
+						ctx.player,
+						ctx.def.name
+					)
 				end
 			end
 		end)

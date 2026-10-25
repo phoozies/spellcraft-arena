@@ -20,6 +20,10 @@ local ORDER = {
 	"FxController",
 	"HealthController",
 	"SettingsController",
+	"SupportController",
+	"SpectateController",
+	"DashController",
+	"MobileController",
 	"PresentationController",
 }
 

@@ -23,8 +23,20 @@ export type Cue = {
 	loop: boolean?,
 }
 
-local function sound(id: number, volume: number, world: boolean, pitch: number?, length: number?): Cue
-	return { id = `rbxassetid://{id}`, volume = volume, world = world, pitch = pitch, length = length }
+local function sound(
+	id: number,
+	volume: number,
+	world: boolean,
+	pitch: number?,
+	length: number?
+): Cue
+	return {
+		id = `rbxassetid://{id}`,
+		volume = volume,
+		world = world,
+		pitch = pitch,
+		length = length,
+	}
 end
 
 -- Ids reused across spells with different pitch/length so a handful of
@@ -65,6 +77,7 @@ local Cues: { [string]: Cue } = {
 	-- Earth
 	throwCast = sound(GRIND, 0.55, true, 1.6, 0.9),
 	rockRaise = sound(GRIND, 0.7, true, 1, 2),
+	wallHit = sound(RUBBLE, 0.5, true, 1.4, 0.6),
 	rockBreak = sound(RUBBLE, 0.6, true, 1.1, 1.6),
 	punchCast = sound(GRIND, 0.75, true, 0.8, 1.4),
 	quakeRumble = sound(GRIND, 0.9, true, 0.55, 3.2),
@@ -72,10 +85,16 @@ local Cues: { [string]: Cue } = {
 
 	-- Air
 	gustCast = sound(WIND, 0.7, true),
+	gustHit = sound(WIND, 0.6, true, 1.6, 0.5),
 	whirlCast = sound(WIND, 0.8, true, 0.8, 1.8),
+	whirlHit = sound(WIND, 0.8, true, 0.6, 1.2),
 	airBoostCast = sound(WIND, 0.6, true, 1.4, 0.9),
 	shieldCast = sound(CHIME, 0.55, true, 0.9, 1.4),
 	tornadoCast = sound(RUMBLE, 0.9, true, 1, 2.6),
+	tornadoHit = sound(RUMBLE, 0.8, true, 1.3, 1.2),
+
+	-- Movement
+	dash = sound(WIND, 0.6, true, 1.9, 0.5),
 
 	-- Fights
 	hit = sound(HIT, 0.45, true, 1.3, 0.4),
@@ -84,6 +103,7 @@ local Cues: { [string]: Cue } = {
 	glyphGood = sound(TWINKLE, 0.6, false, 1, 1),
 	glyphBad = sound(TWINKLE, 0.5, false, 0.55, 0.9),
 	crateReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
+	claimReward = sound(CHIME, 0.8, false, 1.5, 2),
 
 	-- Hub ambience (a distant arena crowd, kept quiet)
 	hubCrowd = { id = "rbxassetid://9119562311", volume = 0.22, world = false, loop = true },

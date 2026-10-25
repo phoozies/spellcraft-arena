@@ -10,7 +10,8 @@ local Npcs = require(ReplicatedStorage.Shared.Battleground.Npcs)
 
 return function(t: any)
 	t.describe("Battleground", function()
-		local maps = ServerScriptService:FindFirstChild("Server") and ServerScriptService.Server:FindFirstChild("Maps")
+		local maps = ServerScriptService:FindFirstChild("Server")
+			and ServerScriptService.Server:FindFirstChild("Maps")
 		local builder = if maps and maps:FindFirstChild("Battleground")
 			then require(maps.Battleground :: ModuleScript) :: any
 			else nil

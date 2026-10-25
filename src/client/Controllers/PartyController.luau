@@ -61,7 +61,13 @@ local function nameLabel(parent: Frame, text: string, width: number)
 	})
 end
 
-local function smallButton(parent: Frame, text: string, offset: number, color: Color3, onClick: () -> ()): TextButton
+local function smallButton(
+	parent: Frame,
+	text: string,
+	offset: number,
+	color: Color3,
+	onClick: () -> ()
+): TextButton
 	local button = Theme.button(parent, text, {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -offset, 0.5, 0),
@@ -157,8 +163,12 @@ local function rebuild()
 		})
 	end
 
-	toggle.Text = if inParty then `👥 Party {#state.members}/{Config.PARTY.MAX_SIZE}` else "👥 Party"
-	toggle.BackgroundColor3 = if #state.invites > 0 then Theme.COLORS.accent else Theme.COLORS.panelLight
+	toggle.Text = if inParty
+		then `👥 Party {#state.members}/{Config.PARTY.MAX_SIZE}`
+		else "👥 Party"
+	toggle.BackgroundColor3 = if #state.invites > 0
+		then Theme.COLORS.accent
+		else Theme.COLORS.panelLight
 	toggle.TextColor3 = if #state.invites > 0 then Theme.COLORS.panel else Theme.COLORS.text
 end
 

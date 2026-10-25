@@ -17,13 +17,7 @@ export type Archetype =
 
 -- Status effects the server can apply to a character. Stun is Water Lock's:
 -- no moving and no casting. Haste, Invincible, and Channel are buffs.
-export type StatusKind =
-	"Root"
-	| "Slow"
-	| "Shrink"
-	| "TimeStop"
-	| "Slippery"
-	| "Stun"
+export type StatusKind = "Root" | "Slow" | "Shrink" | "TimeStop" | "Slippery" | "Stun"
 
 -- Procedural look of a spell's projectile / placed object / summon body.
 -- Everything is built from primitives so the game needs no uploaded assets.
@@ -177,6 +171,10 @@ export type Profile = {
 	},
 	settings: {
 		drawKey: string, -- Enum.KeyCode name that starts drawing a spell
+		music: boolean, -- background music on or off
+	},
+	rewards: {
+		likeFav: boolean, -- the one-time Like & Favourite coin gift was claimed
 	},
 }
 
@@ -206,7 +204,6 @@ export type MatchState = {
 	won: boolean?, -- set in Results for this player
 	coinsGained: number?, -- set in Results for this player
 }
-
 
 -- The crate shop's crate (shared/Economy/Crates): it unlocks a random
 -- element you don't own yet.

@@ -83,6 +83,7 @@ local Config = {
 		"Down",
 		"Left",
 		"Right",
+		"Q",
 	} :: { string },
 	-- After a hard crowd-control effect (Root, TimeStop, Shrink) ends, the
 	-- target can't be hit by that kind again for this long. Stops CC chains
@@ -145,6 +146,16 @@ local Config = {
 		INVITE_SECONDS = 30,
 	},
 
+	-- Dash (DashService, client DashController): a quick burst forward on a
+	-- key (Q) or the Dash button. The server checks the cooldown and the
+	-- player's state and tells the client which way to go; the client moves its
+	-- own character at SPEED studs/s for DURATION seconds (about 24 studs).
+	DASH = {
+		COOLDOWN = 4,
+		SPEED = 96,
+		DURATION = 0.25,
+	},
+
 	-- Distance between instanced arenas so concurrent matches never overlap.
 	ARENA_SPACING = 2000,
 
@@ -157,6 +168,23 @@ local Config = {
 		MATCH_WIN = 100,
 		FIRST_WIN_OF_DAY = 50,
 		DAILY_LOGIN = 25, -- x streak day, capped at 7
+	},
+
+	-- Support reward (EconomyService.claimLikeReward): a one-time coin gift for
+	-- players who Like and Favourite the game. Roblox has no way to check either,
+	-- so it is a thank-you on the honor system: the claim opens after MIN_SECONDS
+	-- in the server (time to actually play, like, and favourite) and works once
+	-- per account.
+	SUPPORT = {
+		LIKE_FAVORITE_COINS = 250,
+		MIN_SECONDS = 90,
+	},
+
+	-- Background music (client AudioController, tracks in shared/Audio/Music):
+	-- the music group's volume (0..1) and the seconds a track fades in/out.
+	MUSIC = {
+		VOLUME = 0.3,
+		FADE_SECONDS = 2,
 	},
 
 	-- Hub wins podium + board (LeaderboardService): seconds between refreshes

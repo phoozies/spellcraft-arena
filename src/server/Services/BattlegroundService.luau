@@ -26,7 +26,8 @@ local MatchService = require(script.Parent.MatchService)
 local PartyService = require(script.Parent.PartyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
-local buildBattleground = require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("Battleground")) :: any
+local buildBattleground =
+	require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("Battleground")) :: any
 
 local BattlegroundService = {}
 
@@ -51,7 +52,8 @@ local function spawnCFrame(player: Player): CFrame
 	local others: { Vector3 } = {}
 	local friends: { Vector3 } = {}
 	for _, other in Players:GetPlayers() do
-		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local root = other.Character
+			and other.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if root and other ~= player and BattlegroundService.isIn(other) then
 			if PartyService.sameParty(player, other) then
 				table.insert(friends, root.Position)
@@ -69,7 +71,13 @@ local function spawnCFrame(player: Player): CFrame
 		for _ = 1, 12 do
 			local angle = math.random() * math.pi * 2
 			local position = anchor + Vector3.new(math.cos(angle) * 10, 2, math.sin(angle) * 10)
-			if #workspace:GetPartBoundsInBox(CFrame.new(position + Vector3.new(0, 3, 0)), Vector3.new(6, 8, 6), overlap) == 0 then
+			if
+				#workspace:GetPartBoundsInBox(
+					CFrame.new(position + Vector3.new(0, 3, 0)),
+					Vector3.new(6, 8, 6),
+					overlap
+				) == 0
+			then
 				return CFrame.lookAt(position, Vector3.new(anchor.X, position.Y, anchor.Z))
 			end
 		end
@@ -77,7 +85,8 @@ local function spawnCFrame(player: Player): CFrame
 	local best = center + Vector3.new(0, 4, 0)
 	local bestScore = -math.huge
 	for _ = 1, 25 do
-		local position = center + Vector3.new(math.random(-reach, reach), 4, math.random(-reach, reach))
+		local position = center
+			+ Vector3.new(math.random(-reach, reach), 4, math.random(-reach, reach))
 		local nearestNpc = math.huge
 		for _, spot in CollectionService:GetTagged("NpcSpot") do
 			nearestNpc = math.min(nearestNpc, (spot.Position - position).Magnitude)
@@ -86,7 +95,11 @@ local function spawnCFrame(player: Player): CFrame
 		for _, point in others do
 			nearestFighter = math.min(nearestFighter, (point - position).Magnitude)
 		end
-		local clear = #workspace:GetPartBoundsInBox(CFrame.new(position + Vector3.new(0, 3, 0)), Vector3.new(6, 8, 6), overlap) == 0
+		local clear = #workspace:GetPartBoundsInBox(
+			CFrame.new(position + Vector3.new(0, 3, 0)),
+			Vector3.new(6, 8, 6),
+			overlap
+		) == 0
 		local score = math.min(nearestNpc, 120) + math.min(nearestFighter, 120)
 		if clear and score > bestScore then
 			best, bestScore = position, score
@@ -208,10 +221,15 @@ function BattlegroundService.start()
 		while true do
 			task.wait(1)
 			for _, player in Players:GetPlayers() do
-				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local root = player.Character
+					and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 				if root and BattlegroundService.isIn(player) then
 					local offset = root.Position - center
-					if offset.Y < -40 or math.abs(offset.X) > limit or math.abs(offset.Z) > limit then
+					if
+						offset.Y < -40
+						or math.abs(offset.X) > limit
+						or math.abs(offset.Z) > limit
+					then
 						root.AssemblyLinearVelocity = Vector3.zero
 						root.CFrame = spawnCFrame(player)
 					end
@@ -226,7 +244,11 @@ function BattlegroundService.start()
 			return
 		end
 		task.delay(Config.BATTLEGROUND.RESPAWN_DELAY, function()
-			if victim.Parent and BattlegroundService.isIn(victim) and not MatchService.isInMatch(victim) then
+			if
+				victim.Parent
+				and BattlegroundService.isIn(victim)
+				and not MatchService.isInMatch(victim)
+			then
 				MatchService.respawnAt(victim, spawnCFrame(victim))
 				markCharacter(victim)
 			end

@@ -148,7 +148,9 @@ local function updatePodium(rows: { Types.LeaderRow })
 		end
 		local label = spotLabel(spot)
 		if label then
-			label.Text = if row then `#{rank} {row.name}\n{row.wins} wins` else `#{rank}\nWin a match to stand here!`
+			label.Text = if row
+				then `#{rank} {row.name}\n{row.wins} wins`
+				else `#{rank}\nWin a match to stand here!`
 		end
 		local userId = if row then row.userId else 0
 		if shown[rank] == userId then

@@ -582,6 +582,14 @@ function HudController.start()
 	end
 	player:GetAttributeChangedSignal("InBattleground"):Connect(refreshBattle)
 	refreshBattle()
+	-- The spell cards (tap to trace) only show where drawing is allowed.
+	local function refreshDrawable()
+		local allowed = ClientState.canDraw()
+		glyphRow.Visible = allowed
+		drawBar.Visible = allowed
+	end
+	ClientState.PresenceChanged:Connect(refreshDrawable)
+	refreshDrawable()
 	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)

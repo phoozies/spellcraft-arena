@@ -221,7 +221,13 @@ local function kick(leader: Player, targetId: any)
 	end
 	local party = parties[leader]
 	local target = Players:GetPlayerByUserId(targetId)
-	if not party or party.leader ~= leader or not target or target == leader or parties[target] ~= party then
+	if
+		not party
+		or party.leader ~= leader
+		or not target
+		or target == leader
+		or parties[target] ~= party
+	then
 		return
 	end
 	toast(target, "You were removed from the party.", "fizzle")

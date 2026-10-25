@@ -1,36 +1,61 @@
 --!strict
--- Shared UI look and small builders. Bright, rounded, high-contrast text
--- that reads well for all ages and on small phone screens.
+-- Shared UI look and small builders: the classic studded-Roblox style. Bright
+-- blue panels and buttons with a grid of studs, a lighter top edge and darker
+-- bottom edge (a bevel), small square-ish corners, bold white text with a navy
+-- outline, and orange / green / red for primary / go / stop. High contrast so
+-- it reads well for all ages and on small phone screens.
+--
+-- Studs are one tiled image (assets/ui/studs.png, made by
+-- tools/make-stud-texture.py) laid over any opaque panel or button; they hide
+-- themselves on small, see-through, or dark frames (health bars, overlays).
+-- If the image can't load the UI is simply flat blue.
 
 local Theme = {}
 
 Theme.FONT = Enum.Font.FredokaOne
 Theme.BODY_FONT = Enum.Font.GothamMedium
 
+-- Uploaded stud tile (a single white/black-shaded stud on transparent).
+Theme.STUD_IMAGE = "rbxassetid://111722228846947"
+-- Size of one stud on screen, in pixels (before UIScale).
+Theme.STUD_SIZE = 22
+
 Theme.COLORS = {
-	panel = Color3.fromRGB(33, 33, 58),
-	panelLight = Color3.fromRGB(57, 55, 98),
-	accent = Color3.fromRGB(255, 202, 40),
+	panel = Color3.fromRGB(24, 118, 205), -- deep studded blue: panels, disabled buttons
+	panelLight = Color3.fromRGB(46, 150, 240), -- bright studded blue: buttons, rows, cards
+	accent = Color3.fromRGB(255, 170, 0), -- orange: titles, primary buttons, highlights
 	text = Color3.fromRGB(255, 255, 255),
-	subtext = Color3.fromRGB(197, 202, 233),
-	good = Color3.fromRGB(102, 187, 106),
-	bad = Color3.fromRGB(239, 83, 80),
-	blue = Color3.fromRGB(66, 165, 245),
-	red = Color3.fromRGB(239, 83, 80),
+	subtext = Color3.fromRGB(200, 232, 255),
+	good = Color3.fromRGB(60, 185, 70),
+	bad = Color3.fromRGB(235, 64, 52),
+	blue = Color3.fromRGB(30, 160, 255),
+	red = Color3.fromRGB(235, 64, 52),
+	outline = Color3.fromRGB(10, 48, 110), -- navy outlines and text strokes
 }
 
 -- Minimum touch target in pixels (before UIScale).
 Theme.TOUCH = 52
 
+local function luminance(color: Color3): number
+	return 0.3 * color.R + 0.59 * color.G + 0.11 * color.B
+end
+
+-- Rounded corners, kept small so panels stay blocky.
 function Theme.corner(parent: Instance, radius: number?)
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius or 12)
+	c.CornerRadius = UDim.new(0, math.clamp(math.floor((radius or 12) * 0.5), 4, 10))
 	c.Parent = parent
+	-- Studs follow the panel's shape.
+	local studs = parent:FindFirstChild("Studs")
+	if studs then
+		local clone = c:Clone()
+		clone.Parent = studs
+	end
 end
 
 function Theme.stroke(parent: Instance, color: Color3?, thickness: number?)
 	local s = Instance.new("UIStroke")
-	s.Color = color or Color3.new(0, 0, 0)
+	s.Color = color or Theme.COLORS.outline
 	s.Thickness = thickness or 2
 	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	s.Parent = parent
@@ -46,6 +71,53 @@ function Theme.padding(parent: Instance, px: number)
 	p.Parent = parent
 end
 
+-- A lighter top and darker bottom edge on a panel or button.
+function Theme.bevel(target: GuiObject)
+	local gradient = Instance.new("UIGradient")
+	gradient.Name = "Bevel"
+	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(235, 240, 248)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(176, 190, 214)),
+	})
+	gradient.Parent = target
+end
+
+-- Lays the stud pattern over a panel or button. It shows only while the object
+-- is opaque enough, big enough, and bright enough for studs to look right.
+function Theme.studs(target: GuiObject, tile: number?): ImageLabel?
+	if Theme.STUD_IMAGE == "" then
+		return nil
+	end
+	local studs = Instance.new("ImageLabel")
+	studs.Name = "Studs"
+	studs.BackgroundTransparency = 1
+	studs.BorderSizePixel = 0
+	studs.Size = UDim2.fromScale(1, 1)
+	studs.Image = Theme.STUD_IMAGE
+	studs.ScaleType = Enum.ScaleType.Tile
+	studs.TileSize = UDim2.fromOffset(tile or Theme.STUD_SIZE, tile or Theme.STUD_SIZE)
+	studs.ImageTransparency = 0.12
+	studs.Active = false
+	studs.Selectable = false
+	studs.Visible = false
+	studs.Parent = target
+
+	local function refresh()
+		local size = target.AbsoluteSize
+		studs.Visible = target.BackgroundTransparency <= 0.6
+			and size.X >= 56
+			and size.Y >= 28
+			and luminance(target.BackgroundColor3) > 0.18
+	end
+	target:GetPropertyChangedSignal("AbsoluteSize"):Connect(refresh)
+	target:GetPropertyChangedSignal("BackgroundTransparency"):Connect(refresh)
+	target:GetPropertyChangedSignal("BackgroundColor3"):Connect(refresh)
+	refresh()
+	return studs
+end
+
 function Theme.frame(parent: Instance, props: { [string]: any }): Frame
 	local f = Instance.new("Frame")
 	f.BackgroundColor3 = Theme.COLORS.panel
@@ -53,6 +125,8 @@ function Theme.frame(parent: Instance, props: { [string]: any }): Frame
 	for key, value in props do
 		(f :: any)[key] = value
 	end
+	Theme.bevel(f)
+	Theme.studs(f)
 	f.Parent = parent
 	return f
 end
@@ -62,6 +136,8 @@ function Theme.label(parent: Instance, text: string, props: { [string]: any }?):
 	l.BackgroundTransparency = 1
 	l.Font = Theme.FONT
 	l.TextColor3 = Theme.COLORS.text
+	l.TextStrokeColor3 = Theme.COLORS.outline
+	l.TextStrokeTransparency = 0.55
 	l.TextScaled = true
 	l.Text = text
 	l.Size = UDim2.fromScale(1, 1)
@@ -74,6 +150,47 @@ function Theme.label(parent: Instance, text: string, props: { [string]: any }?):
 	limit.Parent = l
 	l.Parent = parent
 	return l
+end
+
+-- The button's own text would draw under its studs, so the visible text lives
+-- in a child label above them. The button's text properties are mirrored into
+-- it, so callers keep using `button.Text` and friends as usual.
+local MIRRORED = {
+	"Text",
+	"TextColor3",
+	"TextSize",
+	"TextScaled",
+	"TextWrapped",
+	"Font",
+	"RichText",
+	"TextXAlignment",
+	"TextYAlignment",
+	"LineHeight",
+}
+
+local function addFace(button: TextButton)
+	local face = Instance.new("TextLabel")
+	face.Name = "Face"
+	face.BackgroundTransparency = 1
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Size = UDim2.new(1, -10, 1, -6)
+	face.Active = false
+	face.TextStrokeColor3 = Theme.COLORS.outline
+	face.TextStrokeTransparency = 0.45
+	for _, prop in MIRRORED do
+		(face :: any)[prop] = (button :: any)[prop]
+		button:GetPropertyChangedSignal(prop):Connect(function()
+			(face :: any)[prop] = (button :: any)[prop]
+		end)
+	end
+	local limit = Instance.new("UITextSizeConstraint")
+	limit.MaxTextSize = 28
+	limit.MinTextSize = 8
+	limit.Parent = face
+	button.TextTransparency = 1
+	button.TextStrokeTransparency = 1
+	face.Parent = button
 end
 
 function Theme.button(parent: Instance, text: string, props: { [string]: any }?): TextButton
@@ -89,11 +206,11 @@ function Theme.button(parent: Instance, text: string, props: { [string]: any }?)
 	for key, value in props or {} do
 		(b :: any)[key] = value
 	end
+	Theme.bevel(b)
+	Theme.studs(b, 18)
 	Theme.corner(b)
-	Theme.stroke(b, Color3.fromRGB(20, 20, 40), 2)
-	local limit = Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize = 28
-	limit.Parent = b
+	Theme.stroke(b, Theme.COLORS.outline, 2)
+	addFace(b)
 	b.Parent = parent
 	return b
 end

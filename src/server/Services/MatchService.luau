@@ -30,6 +30,8 @@ local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local MapVoteService = require(script.Parent.MapVoteService)
 local PartyService = require(script.Parent.PartyService)
+local SpellInputService = require(script.Parent.SpellInputService)
+local PracticeZone = require(ReplicatedStorage.Shared.Util.PracticeZone)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
@@ -61,8 +63,7 @@ local MatchService = {}
 -- Fired with (player, mode) when someone joins/leaves a queue, for UI.
 MatchService.QueueChanged = Signal.new()
 
-local queues: { [string]: { Player } } =
-	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
+local queues: { [string]: { Player } } = { ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
 -- Players waiting on a map vote before their match is created.
@@ -564,19 +565,28 @@ function MatchService.startMatch(
 			local here = true
 			for _, player in players do
 				votingPlayers[player] = nil
-				if player.Parent == nil or playerMatch[player] or player:GetAttribute("InBattleground") then
+				if
+					player.Parent == nil
+					or playerMatch[player]
+					or player:GetAttribute("InBattleground")
+				then
 					here = false
 				end
 			end
 			if not here then
 				for _, player in players do
 					if player.Parent then
-						toastRemote:FireClient(player, "Your opponent left, so the match was cancelled.", "fizzle")
+						toastRemote:FireClient(
+							player,
+							"Your opponent left, so the match was cancelled.",
+							"fizzle"
+						)
 					end
 				end
 				return
 			end
-			local forced: { teams: { [Player]: string }?, map: string? } = { teams = options and options.teams, map = map }
+			local forced: { teams: { [Player]: string }?, map: string? } =
+				{ teams = options and options.teams, map = map }
 			MatchService.startMatch(mode, players, forced)
 		end)
 		return
@@ -697,7 +707,11 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 		return false
 	end
 	if player:GetAttribute("InBattleground") then
-		toastRemote:FireClient(player, "Leave the Battleground first (use a green gate or Return to Hub).", "fizzle")
+		toastRemote:FireClient(
+			player,
+			"Leave the Battleground first (use a green gate or Return to Hub).",
+			"fizzle"
+		)
 		return false
 	end
 	if MatchService.queuedMode(player) == mode then
@@ -708,6 +722,29 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 	toastRemote:FireClient(player, `Joined the {mode} queue`, "info")
 	broadcastCounts()
 	return true
+end
+
+-- Where drawing is allowed: in the Battleground, in the hub's Training Grove, and
+-- in a match once the round is on (not elsewhere in the hub, nor in the intro,
+-- the countdown, the draft, or the results).
+-- Installed into SpellInputService as its draw gate.
+function MatchService.canDraw(player: Player): (boolean, string?)
+	if player:GetAttribute("InBattleground") then
+		return true, nil
+	end
+	local match = playerMatch[player]
+	if match and match.phase == "Round" then
+		return true, nil
+	end
+	if match then
+		return false, "Hold on, you can draw when the round starts!"
+	end
+	-- The hub's Training Grove.
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root and not votingPlayers[player] and PracticeZone.contains(root.Position) then
+		return true, nil
+	end
+	return false, "You can only draw in the Training Grove, duels, and the Battleground."
 end
 
 -- True from the map vote until the match ends, so nothing else (a queue, a
@@ -794,6 +831,7 @@ function MatchService.init()
 	hubStructures.Parent = workspace
 
 	DestructibleService.setRelationResolver(relation)
+	SpellInputService.setDrawGate(MatchService.canDraw)
 	CastService.setWorldHooks({
 		teamOf = function(player)
 			local match = playerMatch[player]
@@ -843,7 +881,9 @@ function MatchService.start()
 			local boost = Boosts.get(card.boostId)
 			toastRemote:FireClient(
 				player,
-				`{if boost then boost.name else card.boostId} boost! {if boost then boost.description else ""}`,
+				`{if boost then boost.name else card.boostId} boost! {if boost
+					then boost.description
+					else ""}`,
 				"reward"
 			)
 			EconomyService.track(player, "boost")

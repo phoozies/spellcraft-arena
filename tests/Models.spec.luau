@@ -58,6 +58,63 @@ return function(t: any)
 			end)
 		end
 
+		t.it("every block model builds into well-formed, game-sized parts", function()
+			local names = ModelKit.blockNames()
+			t.expect(#names >= 24).toBeTruthy()
+			for _, name in names do
+				local model = ModelKit.get(name)
+				t.expect(model ~= nil).toBeTruthy()
+				if model then
+					local parts = 0
+					for _, part in model:GetDescendants() do
+						if part:IsA("BasePart") then
+							parts += 1
+							t.expect(part.Size.X > 0 and part.Size.Y > 0 and part.Size.Z > 0)
+								.toBeTruthy()
+						end
+					end
+					t.expect(parts >= 2).toBeTruthy()
+					local _, size = model:GetBoundingBox()
+					t.expect(math.max(size.X, size.Y, size.Z) <= 30).toBeTruthy()
+					-- Effect models carry a Root for particles and trails.
+					if model:FindFirstChild("Root") then
+						t.expect(model.PrimaryPart ~= nil).toBeTruthy()
+					end
+				end
+			end
+		end)
+
+		t.it("the props the maps rely on exist as block models", function()
+			for _, name in
+				{
+					"TreeOak",
+					"TreePine",
+					"TreeBirch",
+					"Cactus",
+					"TrainingDummy",
+					"ElementCrate",
+					"ElementCrateOpen",
+					"QuestChest",
+					"QuestChestOpen",
+					"WizardStatue",
+				}
+			do
+				t.expect(ModelKit.isBlock(name)).toBeTruthy()
+			end
+			-- The dummy's hit parts, the crate's tinted parts, and the chest lock.
+			local dummy = ModelKit.get("TrainingDummy") :: Model
+			t.expect(dummy:FindFirstChild("Body") ~= nil and dummy:FindFirstChild("Head") ~= nil)
+				.toBeTruthy()
+			local crate = ModelKit.get("ElementCrate") :: Model
+			t.expect(
+				crate:FindFirstChild("Crate_Trim") ~= nil
+					and crate:FindFirstChild("Crate_Gem") ~= nil
+			)
+				.toBeTruthy()
+			t.expect((ModelKit.get("QuestChest") :: Model):FindFirstChild("Chest_Lock") ~= nil)
+				.toBeTruthy()
+		end)
+
 		t.it("Rock Wall's visual size matches its model (placement rules fit it)", function()
 			local model = ModelKit.get("RockWall")
 			local def = SpellDefinitions.get("RockWall")
@@ -75,7 +132,9 @@ return function(t: any)
 				-- Only check spells whose models were imported into this place.
 				local name = def.visual.model or def.stats.model
 				if name and ModelKit.get("RockWall") ~= nil and ModelKit.get(name) == nil then
-					warn(`[Models] {def.name} uses model "{name}", not in ReplicatedStorage.Models (using the fallback shape)`)
+					warn(
+						`[Models] {def.name} uses model "{name}", not in ReplicatedStorage.Models (using the fallback shape)`
+					)
 				end
 				if def.stats.model and ModelKit.get("RockWall") ~= nil then
 					t.expect(ModelKit.get(def.stats.model) ~= nil).toBeTruthy()

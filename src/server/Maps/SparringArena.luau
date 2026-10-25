@@ -11,6 +11,9 @@
 -- everyone on the floor (the pillars stand inside it, as cover). The walls
 -- ignore spells (CanQuery off), so bolts still fly over the seating.
 --
+-- A stone wizard statue (the WizardStatue block model) stands on the rune ring
+-- at the center: solid cover for everyone, with its staff orb glowing.
+--
 -- Follows the arena contract documented in MapKit (Bounds, Spawns,
 -- SmallModeWalls); the floor top is at y = 0.
 
@@ -25,6 +28,8 @@ local FLOOR_DIAMETER = 46 * SCALE
 local WALL_RADIUS = 24.2 * SCALE -- inner face just past the floor's edge (radius 23 * SCALE)
 local WALL_SEGMENTS = 24
 local WALL_HEIGHT = 40
+-- The wizard statue at the center (the model is about 21 studs tall at scale 1).
+local STATUE_SCALE = 2
 
 -- Scales everything in `model` about the arena's origin (the floor's center,
 -- top at y = 0), so the floor top stays at y = 0.
@@ -61,6 +66,30 @@ local function buildFallbackArt(model: Model)
 	end
 end
 
+local function buildStatue(model: Model)
+	local statue = ModelKit.clone("WizardStatue", "solid", STATUE_SCALE)
+	if statue then
+		statue:PivotTo(CFrame.new(0, 0, 0))
+		statue.Parent = model
+		return
+	end
+	-- Fallback: a plain stone plinth with a pillar on it.
+	MapKit.part(model, {
+		name = "StatuePlinth",
+		size = Vector3.new(15, 2, 15),
+		cframe = CFrame.new(0, 1, 0),
+		color = Color3.fromRGB(112, 112, 124),
+		material = Enum.Material.Slate,
+	})
+	MapKit.part(model, {
+		name = "StatuePillar",
+		size = Vector3.new(6, 24, 6),
+		cframe = CFrame.new(0, 14, 0),
+		color = Color3.fromRGB(158, 158, 170),
+		material = Enum.Material.Slate,
+	})
+end
+
 return function(_makeProp: (Instance, number) -> ()): Model
 	local model = Instance.new("Model")
 	model.Name = "SparringArena"
@@ -75,6 +104,8 @@ return function(_makeProp: (Instance, number) -> ()): Model
 	else
 		buildFallbackArt(model)
 	end
+
+	buildStatue(model)
 
 	-- Invisible wall ring.
 	local barriers = MapKit.folder(model, "Barriers")

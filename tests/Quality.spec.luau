@@ -49,9 +49,10 @@ return function(t: any)
 			t.expect(best.power).toBeNear(q.POWER[2], 1e-6)
 			t.expect(best.size).toBeNear(q.SIZE[2], 1e-6)
 			t.expect(worst.time).toBeNear(q.TIME[1], 1e-6)
-			-- An average drawing is close to the spell as written.
+			-- An average drawing is close to the spell as written (a perfect one
+			-- gives the full +50% power, so the middle is a bit above 1).
 			local middle = Quality.multipliers(q.DEFAULT)
-			t.expect(math.abs(middle.power - 1) < 0.1).toBeTruthy()
+			t.expect(math.abs(middle.power - 1) < 0.2).toBeTruthy()
 			t.expect(math.abs(middle.size - 1) < 0.12).toBeTruthy()
 			t.expect(math.abs(middle.time - 1) < 0.12).toBeTruthy()
 		end)
@@ -97,7 +98,10 @@ return function(t: any)
 					for k = 0, 9 do
 						local f = k / 10
 						local p = all[i]:Lerp(all[i + 1], f)
-						table.insert(points, p + Vector2.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * wobble)
+						table.insert(
+							points,
+							p + Vector2.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * wobble
+						)
 					end
 				end
 				local _, score = GlyphRecognizer.recognize(points)
@@ -117,7 +121,12 @@ return function(t: any)
 					local share = (if def.ultimate then 0.4 else 0.34) * POWER
 					-- No one-shots, even with a perfect drawing.
 					t.expect(hit <= Config.PLAYER_MAX_HEALTH * share + 1e-6).toBeTruthy()
-					if not def.stats.duration and not def.stats.hazardDps and not def.stats.turret and not def.stats.lifetime then
+					if
+						not def.stats.duration
+						and not def.stats.hazardDps
+						and not def.stats.turret
+						and not def.stats.lifetime
+					then
 						t.expect(hit / window <= MAX_BURST_DPS * POWER + 1e-6).toBeTruthy()
 					end
 				end
@@ -129,7 +138,8 @@ return function(t: any)
 					t.expect(s.shield / window <= MAX_HEAL_PER_SEC * POWER + 1e-6).toBeTruthy()
 				end
 				if s.status and HARD_CC[s.status] then
-					t.expect((s.statusDuration or 0) / window <= MAX_HARD_CC_UPTIME * TIME + 1e-6).toBeTruthy()
+					t.expect((s.statusDuration or 0) / window <= MAX_HARD_CC_UPTIME * TIME + 1e-6)
+						.toBeTruthy()
 				end
 				if def.archetype == "Buff" and s.duration then
 					t.expect(s.duration / def.cooldown <= 0.6 * TIME + 1e-6).toBeTruthy()

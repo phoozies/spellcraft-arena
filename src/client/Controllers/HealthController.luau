@@ -72,13 +72,17 @@ local function buildHud()
 		TextStrokeTransparency = 0.4,
 		ZIndex = 5,
 	})
-	regenNote = Theme.label(holder, "Health regenerates slowly after 5s without damage. Health Potion boosts heal more!", {
-		Position = UDim2.new(0, 0, 1, 2),
-		Size = UDim2.new(1, 0, 0, 16),
-		TextColor3 = Theme.COLORS.text,
-		TextStrokeTransparency = 0.2,
-		Visible = false,
-	})
+	regenNote = Theme.label(
+		holder,
+		"Health regenerates slowly after 5s without damage. Health Potion boosts heal more!",
+		{
+			Position = UDim2.new(0, 0, 1, 2),
+			Size = UDim2.new(1, 0, 0, 16),
+			TextColor3 = Theme.COLORS.text,
+			TextStrokeTransparency = 0.2,
+			Visible = false,
+		}
+	)
 end
 
 local function colorFor(ratio: number): Color3
@@ -185,11 +189,13 @@ local function updateOverheads()
 				-- In the Battleground every other fighter is an enemy.
 				local fighter = inBattle and other:GetAttribute("InBattleground") == true
 				local partyId = other:GetAttribute("PartyId")
-				local partyMate = fighter and partyId ~= nil and partyId == player:GetAttribute("PartyId")
-				entry.fill.BackgroundColor3 = if partyMate then Theme.COLORS.blue
+				local partyMate = fighter
+					and partyId ~= nil
+					and partyId == player:GetAttribute("PartyId")
+				entry.fill.BackgroundColor3 = if partyMate
+					then Theme.COLORS.blue
 					elseif fighter then Theme.COLORS.red
-					elseif not inMatch
-					then Color3.fromRGB(176, 190, 197)
+					elseif not inMatch then Color3.fromRGB(176, 190, 197)
 					elseif team == state.myTeamId then Theme.COLORS.blue
 					else Theme.COLORS.red
 				-- In the hub only show bars on hurt players to keep it calm.

@@ -19,7 +19,8 @@ return function(t: any)
 				t.expect(#element.spells).toBe(5)
 				for slot, id in element.spells do
 					local def = SpellDefinitions.get(id)
-					t.expect(def ~= nil and def.element == element.id and def.slot == slot).toBeTruthy()
+					t.expect(def ~= nil and def.element == element.id and def.slot == slot)
+						.toBeTruthy()
 				end
 			end
 		end)
@@ -55,7 +56,8 @@ return function(t: any)
 			for _ = 1, 200 do
 				local owned = { "Fire" }
 				local rolled = Crates.roll(owned, rng)
-				t.expect(rolled ~= nil and rolled ~= "Fire" and Elements.get(rolled) ~= nil).toBeTruthy()
+				t.expect(rolled ~= nil and rolled ~= "Fire" and Elements.get(rolled) ~= nil)
+					.toBeTruthy()
 			end
 		end)
 		t.it("can land on every element you're missing", function()
@@ -110,7 +112,13 @@ return function(t: any)
 			local none = Boosts.totals({})
 			t.expect(none.damage).toBe(1)
 			t.expect(none.cooldownFactor).toBe(1)
-			local lots = Boosts.totals({ Power = 2, Vitality = 3, Swiftness = 1, Focus = 3, HealthPotion = 2 })
+			local lots = Boosts.totals({
+				Power = 2,
+				Vitality = 3,
+				Swiftness = 1,
+				Focus = 3,
+				HealthPotion = 2,
+			})
 			t.expect(lots.damage).toBeNear(1.3, 0.001)
 			t.expect(lots.maxHealth).toBe(60)
 			t.expect(lots.speed).toBe(3)
@@ -118,6 +126,16 @@ return function(t: any)
 			t.expect(#lots.potions).toBe(2)
 			local capped = Boosts.totals({ Focus = 99 })
 			t.expect(capped.cooldownFactor >= Boosts.MIN_COOLDOWN_FACTOR).toBeTruthy()
+		end)
+	end)
+
+	t.describe("Like & Favourite gift", function()
+		t.it("is a one-time thank-you worth at most one crate, behind a short wait", function()
+			local crate = Crates.get("Element") :: any
+			t.expect(Config.SUPPORT.LIKE_FAVORITE_COINS > 0).toBeTruthy()
+			t.expect(Config.SUPPORT.LIKE_FAVORITE_COINS <= crate.price).toBeTruthy()
+			t.expect(Config.SUPPORT.MIN_SECONDS >= 30 and Config.SUPPORT.MIN_SECONDS <= 300)
+				.toBeTruthy()
 		end)
 	end)
 end

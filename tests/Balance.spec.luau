@@ -38,13 +38,16 @@ return function(t: any)
 				end
 			end)
 
-			t.it(`{def.name}: no one-shots (ultimates may take up to 40% of a player's HP)`, function()
-				if s.damage then
-					local hit = s.damage * (s.comboMultiplier or 1)
-					local share = if def.ultimate then 0.4 else 0.34
-					t.expect(hit <= Config.PLAYER_MAX_HEALTH * share).toBeTruthy()
+			t.it(
+				`{def.name}: no one-shots (ultimates may take up to 40% of a player's HP)`,
+				function()
+					if s.damage then
+						local hit = s.damage * (s.comboMultiplier or 1)
+						local share = if def.ultimate then 0.4 else 0.34
+						t.expect(hit <= Config.PLAYER_MAX_HEALTH * share).toBeTruthy()
+					end
 				end
-			end)
+			)
 
 			t.it(`{def.name}: lingering damage within budget`, function()
 				if s.damage and s.duration then
@@ -96,5 +99,30 @@ return function(t: any)
 				end
 			end)
 		end
+	end)
+
+	t.describe("Pacing rules", function()
+		t.it("basic attacks wait 3s and fast slashes 2s between casts", function()
+			for _, def in SpellDefinitions.list do
+				if def.role == "basic" then
+					t.expect(def.cooldown >= 3).toBeTruthy()
+				elseif def.role == "fast" then
+					t.expect(def.cooldown >= 2).toBeTruthy()
+				end
+			end
+		end)
+
+		t.it("Earthquake's wind-up is quick but still a telegraph", function()
+			local quake = SpellDefinitions.get("Earthquake") :: any
+			t.expect(quake.stats.delay >= 1 and quake.stats.delay <= 1.5).toBeTruthy()
+		end)
+
+		t.it("the dash covers a short hop and recharges slower than it lasts", function()
+			local dash = Config.DASH
+			local distance = dash.SPEED * dash.DURATION
+			t.expect(distance >= 15 and distance <= 35).toBeTruthy()
+			t.expect(dash.COOLDOWN >= 2 and dash.COOLDOWN > dash.DURATION * 4).toBeTruthy()
+			t.expect(table.find(Config.RESERVED_KEYS, "Q")).toBeTruthy()
+		end)
 	end)
 end

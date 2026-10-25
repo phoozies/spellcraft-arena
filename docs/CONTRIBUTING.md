@@ -8,7 +8,7 @@
 
 ## 3D models
 
-The imported models live in the place file, not the project. To add or change one, follow `assets/models/README.md` (import the FBX, run `tools/prepare-models.luau`, save the place). Always keep a plain-shape fallback in code, because a place built by CI won't have the models.
+Most models are **block models**: edit the spec in `tools/blender/block_models.py`, regenerate `src/shared/Models/BlockModels.luau` (`python tools/blender/block_models.py --luau .`) and the FBX/blend with Blender, and they work in every place with no import. Meshes imported by hand live in the place file, not the project: follow `assets/models/README.md` (import the FBX, run `tools/prepare-models.luau`, save the place). Always keep a plain-shape fallback in code.
 
 ## Workflow
 
@@ -28,6 +28,8 @@ The imported models live in the place file, not the project. To add or change on
   debug:Invoke("wins", 3)
   debug:Invoke("state")             -- {coins, wins, elements, element} per player
   debug:Invoke("unlockall")
+  debug:Invoke("likefav", false)   -- make the Like & Favourite gift claimable again
+  debug:Invoke("takecoins", 250)   -- remove coins
   ```
   Studio playtests with API access save to the real DataStore, so these change your saved profile.
   Use **Test → Clients and Servers** (2–8 players) to check PvP, teams, and drafts.
@@ -39,11 +41,12 @@ The imported models live in the place file, not the project. To add or change on
 - **Server-authoritative:** remote handlers validate type, range, ownership, and rate. Never trust a client number.
 - **Tunables** go in `Config.luau`. Spell numbers go in `SpellDefinitions.luau`. Nothing is hard-coded inside systems.
 - New remotes go in `Net/Remotes.luau` with a one-line payload description.
-- UI uses `UI/Theme` builders, scale-friendly layouts, and touch targets of at least 52 px. Make every button `Selectable` for gamepad.
+- UI uses `UI/Theme` builders (the studded-Roblox look: blue studded panels and buttons, orange/green/red accents), scale-friendly layouts, and touch targets of at least 52 px. Make every button `Selectable` for gamepad. `Theme.button` shows its text in a child label above the studs, so keep setting `button.Text`, `TextColor3`, and the like as usual.
 
 ## Checklist for a new spell / map / system
 
 - [ ] Data row or builder added (see SPELLS.md or MapKit's arena contract)
+- [ ] New spell: model (block model), particle style, cast pose, and a `SpellRegistry` entry, then `python tools/gen-spell-registry.py`
 - [ ] Tests pass and docs are updated (SPELLS.md table regenerated, `docs/semantic/features.yaml` updated)
 - [ ] Tried on PC, plus the device emulator for phone and console
 - [ ] `roblox-dev:roblox-reviewer` audit for remote, DataStore, or performance changes

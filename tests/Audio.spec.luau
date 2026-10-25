@@ -4,7 +4,9 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Cues = require(ReplicatedStorage.Shared.Audio.Cues)
+local Music = require(ReplicatedStorage.Shared.Audio.Music)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 
 return function(t: any)
@@ -24,6 +26,10 @@ return function(t: any)
 			end
 		end)
 
+		t.it("the like-and-favourite chime exists", function()
+			t.expect(Cues.claimReward ~= nil).toBeTruthy()
+		end)
+
 		t.it("every spell's cast and impact cues exist", function()
 			for _, def in SpellDefinitions.list do
 				local sfx = def.sfx
@@ -34,6 +40,26 @@ return function(t: any)
 					end
 				end
 			end
+		end)
+	end)
+
+	t.describe("Background music", function()
+		t.it("has hub and fight playlists of real tracks with sane volumes", function()
+			t.expect(#Music.playlist("hub") >= 2).toBeTruthy()
+			t.expect(#Music.playlist("fight") >= 2).toBeTruthy()
+			local seen: { [string]: boolean } = {}
+			for _, track in Music.TRACKS do
+				t.expect(string.match(track.id, "^rbxassetid://%d+$") ~= nil).toBeTruthy()
+				t.expect(track.volume > 0 and track.volume <= 1).toBeTruthy()
+				t.expect(track.title ~= "").toBeTruthy()
+				t.expect(seen[track.id]).toBeNil()
+				seen[track.id] = true
+			end
+		end)
+
+		t.it("the music is quiet enough to leave room for spell sounds", function()
+			t.expect(Config.MUSIC.VOLUME > 0 and Config.MUSIC.VOLUME <= 0.5).toBeTruthy()
+			t.expect(Config.MUSIC.FADE_SECONDS > 0).toBeTruthy()
 		end)
 	end)
 end

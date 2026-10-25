@@ -67,7 +67,10 @@ Elements.LIST = {
 local byId: { [string]: Element } = {}
 for _, element in Elements.LIST do
 	assert(byId[element.id] == nil, `duplicate element {element.id}`)
-	assert(#element.spells == Elements.SLOT_COUNT, `{element.id} needs {Elements.SLOT_COUNT} spells`)
+	assert(
+		#element.spells == Elements.SLOT_COUNT,
+		`{element.id} needs {Elements.SLOT_COUNT} spells`
+	)
 	byId[element.id] = element
 	table.freeze(element.spells)
 	table.freeze(element)

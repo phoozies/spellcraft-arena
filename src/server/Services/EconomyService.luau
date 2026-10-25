@@ -47,6 +47,10 @@ end
 local toastRemote: RemoteEvent
 local profileRemote: RemoteEvent
 
+-- Server time each player's profile loaded (the Like & Favourite gift unlocks
+-- Config.SUPPORT.MIN_SECONDS later).
+local joinedAt: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 local function today(): number
 	return math.floor(os.time() / 86400)
 end
@@ -64,6 +68,11 @@ local function sendSummary(player: Player)
 		streak = profile.daily.streak,
 		settings = profile.settings,
 		stats = profile.stats,
+		rewards = {
+			likeFav = profile.rewards.likeFav,
+			likeReadyAt = (joinedAt[player] or workspace:GetServerTimeNow())
+				+ Config.SUPPORT.MIN_SECONDS,
+		},
 	})
 end
 EconomyService.sendSummary = sendSummary
@@ -194,6 +203,38 @@ function EconomyService.consumeFirstWin(player: Player): boolean
 	return true
 end
 
+-- The one-time Like & Favourite gift. Nothing on Roblox can confirm a like or a
+-- favourite, so this trusts the player but only after they've spent
+-- Config.SUPPORT.MIN_SECONDS here, and only once per account.
+function EconomyService.claimLikeReward(player: Player): boolean
+	local profile = PlayerDataService.get(player)
+	if not profile or profile.rewards.likeFav then
+		return false
+	end
+	local ready = (joinedAt[player] or workspace:GetServerTimeNow()) + Config.SUPPORT.MIN_SECONDS
+	if workspace:GetServerTimeNow() < ready then
+		toastRemote:FireClient(player, "Play a little longer, then claim your gift!", "fizzle")
+		return false
+	end
+	profile.rewards.likeFav = true
+	toastRemote:FireClient(
+		player,
+		`Thanks for the support! +{Config.SUPPORT.LIKE_FAVORITE_COINS} coins`,
+		"reward"
+	)
+	EconomyService.addCoins(player, Config.SUPPORT.LIKE_FAVORITE_COINS, "likeFav")
+	return true
+end
+
+-- Studio QA only (DebugService "likefav"): sets whether the gift counts as claimed.
+function EconomyService.setLikeRewardClaimed(player: Player, claimed: boolean)
+	local profile = PlayerDataService.get(player)
+	if profile then
+		profile.rewards.likeFav = claimed
+		sendSummary(player)
+	end
+end
+
 function EconomyService.init()
 	toastRemote = Remotes.get("Toast")
 	profileRemote = Remotes.get("ProfileUpdated")
@@ -201,6 +242,7 @@ end
 
 function EconomyService.start()
 	PlayerDataService.ProfileLoaded:Connect(function(player, profile)
+		joinedAt[player] = workspace:GetServerTimeNow()
 		refreshDaily(player, profile)
 		sendSummary(player)
 		EconomyService.Changed:Fire(player)
@@ -210,7 +252,17 @@ function EconomyService.start()
 	-- values are accepted.
 	Remotes.get("SaveSettings").OnServerEvent:Connect(function(player, key, value)
 		local profile = PlayerDataService.get(player)
-		if not profile or typeof(key) ~= "string" or typeof(value) ~= "string" or #value > 32 then
+		if not profile or typeof(key) ~= "string" then
+			return
+		end
+		if key == "music" then
+			if typeof(value) == "boolean" then
+				profile.settings.music = value
+				sendSummary(player)
+			end
+			return
+		end
+		if typeof(value) ~= "string" or #value > 32 then
 			return
 		end
 		if key == "drawKey" then
@@ -224,6 +276,17 @@ function EconomyService.start()
 			profile.settings.drawKey = value
 			sendSummary(player)
 		end
+	end)
+
+	-- One claim attempt per second is plenty; the check itself is idempotent.
+	local lastClaimTry: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+	Remotes.get("ClaimLikeReward").OnServerEvent:Connect(function(player)
+		local now = os.clock()
+		if now - (lastClaimTry[player] or 0) < 1 then
+			return
+		end
+		lastClaimTry[player] = now
+		EconomyService.claimLikeReward(player)
 	end)
 
 	Remotes.get("ClaimQuest").OnServerEvent:Connect(function(player, questId)

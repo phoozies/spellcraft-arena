@@ -16,6 +16,12 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Spells/GlyphRecognizer      stroke → glyph id ($1 unistroke recognizer)
   Spells/WordMatcher          admin spell names → spell id
   Audio/Cues                  every sound by name (asset ids, volume, pitch)
+  Audio/Music                 the background music tracks (hub and fight playlists)
+  ModelKit                    reads a model by name: the place's imported meshes, else a block model
+  Models/BlockModels          GENERATED: every blocky model as plain data (tools/blender/block_models.py)
+  Spells/SpellRegistry        per spell: model, particle style, cast pose, Fx events, sounds (the presentation registry)
+  Spells/VfxStyles            particle styles per spell + buff auras
+  Spells/CastPoses            the cast animations as data (arm and body poses)
   UI/GlyphView                draws a glyph as a line (HUD, signs, VFX)
   Spells/Elements             the 4 elements and their 5 spells each
   (Spells/Glyphs              the shapes and Glyphs.ROLE, the shape for each kind of move)
@@ -30,10 +36,11 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     EconomyService      coins, wins, daily login/quests, first win, settings (only writer of coins/wins)
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
-    HandService         held spell copies (up to 5, duplicates ok), match spellbook, readied slot, shared cast cooldowns
+    HandService         held spell copies (one per spell, up to 5), match spellbook, readied slot, per-spell cast cooldowns
+    DashService         the dash: validates the cooldown and state, tells the client which way to go, fires the dash Fx
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon
-    SpellInputService   DrawSpell remote → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
+    SpellInputService   DrawSpell remote → draw gate (fights and the Training Grove) → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
     AdminService        ";" admin commands (chat), server-side admin check
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, boost drafts, teams, PvP rules
@@ -62,10 +69,38 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     EffectsController   self boosts, slippery friction, team outlines, camera reset
     FxController        dispatches Fx events (bolts, impacts, cast anim, glyphs, shatter, chips, dust, numbers, element pillars, rising rocks, earthquake)
     HealthController    own HP bar (shield + damage trail), overhead bars, hides Roblox health
-    SettingsController  Settings panel: rebind the draw key (saved to profile)
+    SettingsController  Settings panel: rebind the draw key, switch the background music on or off (saved to profile)
+    DashController      the dash: Q / B / Dash button, cooldown display, moves your own character when the server allows it
+    SpectateController  watch another player: player list panel, a Previous/Next/Stop bar, camera follows the target
+    MobileController    on touch-only devices in a fight, hides the menu, wallet, party, feed, and boost GUIs
+    SupportController   Like & Favourite panel: the one-time thank-you gift (honor system, server-checked)
+    AudioController     sound cues, hub ambience, and the background music playlists (muted by the Music setting)
     PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat (+coins), KO
-  Fx/SpellVfx           particle/trail styles per spell, cast animation (C0 arm raise + magic circle)
-  UI/Theme              shared look and builders
+  Fx/SpellVfx           bolt trails, impact bursts, buff auras, model columns/boulders/cracks, magic circle
+  Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator
+  UI/Theme              the studded-Roblox look: studded blue panels and buttons, bevels, outlined text
+
+## Block models (the classic blocky look)
+
+Everything that isn't an imported mesh is a **block model**: a handful of plain, chunky Parts in the classic Roblox style (spell effects, trees, cactus, training dummy, Element Crate, quest chest, wizard statue). They are authored once, in `tools/blender/block_models.py` (a Python spec of blocks with positions, sizes, colours, and materials), and that spec produces two things:
+
+- `src/shared/Models/BlockModels.luau` (generated, plain data). `ModelKit` builds a model from it the first time it's asked for, so block models exist in **every** place, including one built by CI, with no import step.
+- `assets/models/blocks/<Name>.fbx` and `assets/models/source/BlockModels.blend`, the Blender versions (1 stud = 28 cm, forward = Blender +Y) for artists and for uploading meshes later.
+
+`ModelKit.get(name)` checks the place's `ReplicatedStorage.Models` first (imported meshes), then the block models. Callers still fall back to plain shapes when it returns nil. To change a block model, edit the spec, run `python tools/blender/block_models.py --luau .` (Luau data) and `blender --background --python tools/blender/block_models.py -- .` (FBX + blend), and run the tests (`tests/Models.spec.luau` checks every model builds).
+
+| Model | Where it's used |
+|---|---|
+| `FireSlash`, `WaterSlice`, `RockThrow`, `WaterWave`, `Tornado` | The bolt of that spell (`FxController` `onProjectile`) |
+| `FireBoost`, `WaterBody`, `AirBoost`, `AirShield` | The emblem that pops over the caster's head (`Buff` → Fx `modelPop`) |
+| `FirePillar`, `WaterNebula` | The column that erupts (`SpellVfx.pillar`) |
+| `EarthPunch`, `EarthPillar` | The boulder or spike that rises (`SpellVfx.rise`) |
+| `Earthquake` | Ground cracks spreading during the wind-up (`SpellVfx.quake`) |
+| `TreeOak`, `TreePine`, `TreeBirch`, `Cactus` | Battleground and hub scenery |
+| `TrainingDummy` | The Training Grove dummies (`HubService.spawnDummy`; parts `Body` and `Head` are the hit parts) |
+| `ElementCrate`, `ElementCrateOpen` | The Crate Shop crate (closed); the open one is for reveals |
+| `QuestChest`, `QuestChestOpen` | The Daily Quests chest on the plaza (closed); open for rewards |
+| `WizardStatue` | The center of the Sparring Arena (`Maps/SparringArena.luau`) |
 
 ## Imported 3D models
 
@@ -115,7 +150,7 @@ client: stroke ──DrawSpell──► SpellInputService
                                └ GlyphRecognizer → glyph → spell → HandService.grant
                                     ├ match: in spellbook? hub: owned?
                                     ├ hotbar full (5)? → refuse
-                                    └ add ONE copy (duplicates allowed) and ready it
+                                    └ add ONE copy (refused if you already hold that spell) and ready it
 client: aim  ──CastSpell───► CastService
                                ├ alive? not frozen/time-stopped?
                                ├ readied slot holds a copy; global lockout 0.35s;
@@ -157,12 +192,12 @@ client: aim  ──CastSpell───► CastService
 
 - **One place, instanced arenas.** Templates are built once into `ServerStorage.MapTemplates`. Each match clones one to `x = slot × 2000, y = 400`, so several matches run at once. Each round, `ArenaService.rebuild` swaps in a fresh copy, which restores broken props.
 - **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `SmallModeWalls`). Maps are registered in `ArenaService.MAP_NAMES`, with per-mode weights in `pickMap`.
-- **Team boxes** (`HubService.updateBoxes`, every 0.25s): the hub builder tags each side of a box `TeamPad` (`Mode`, `Team`, `Slots` attributes). The service collects who stands on each pad (sticky arrival order, capped at `Slots`), updates the labels, and, once both sides are full, runs a `Config.TEAM_BOX_COUNTDOWN` that restarts if anyone steps off or swaps. It then calls `MatchService.startMatch(mode, players, { teams = {...} })`, where `teams` maps each player to "Blue" or "Red". `Slots` is re-read every tick, so a pad can be resized live.
+- **Team boxes** (`HubService.updateBoxes`, every 0.25s): the hub builder tags each side of a box `TeamPad` (`Box`, `Mode`, `Team`, `Slots` attributes; `Box` is the box's id, so a mode can have several boxes: there are two for 1v1 and for 2v2). The service collects who stands on each pad (sticky arrival order, capped at `Slots`), updates the labels, and, once both sides are full, runs a `Config.TEAM_BOX_COUNTDOWN` that restarts if anyone steps off or swaps. It then calls `MatchService.startMatch(mode, players, { teams = {...} })`, where `teams` maps each player to "Blue" or "Red". `Slots` is re-read every tick, so a pad can be resized live.
 - **To move matches to reserved servers later:** keep MatchService's state machine and replace `ArenaService.create` / `spawnAt` with `TeleportService:ReserveServer` and a match place that reads its mode from `TeleportData`.
 
 ## Data
 
-The profile (`Types.Profile`, schema 3: `coins`, `elements`, `element`, `stats`, `daily`, `settings`; no XP or level) is stored under `PlayerProfiles_v1/u_<userId>` as `{ data, lockJobId, lockTime }`.
+The profile (`Types.Profile`, schema 4: `coins`, `elements`, `element`, `stats`, `daily`, `settings` (`drawKey`, `music`), `rewards` (`likeFav`); no XP or level) is stored under `PlayerProfiles_v1/u_<userId>` as `{ data, lockJobId, lockTime }`.
 
 - **Load:** `UpdateAsync` takes the lock if it's free, ours, or stale (> 30 min). Otherwise it retries with backoff, and finally kicks the player instead of risking a dupe.
 - **Save:** autosave every 90s, release on leave, and flush in `BindToClose`. A save never overwrites a lock owned by another server.

@@ -116,7 +116,10 @@ local function label(head: BasePart, text: string, color: Color3, height: number
 end
 
 -- A blocky R6-style body so the stock walk/idle animations drive it.
-local function buildBody(def: Npcs.NpcType, position: Vector3): (Model, Humanoid, BasePart, BasePart)
+local function buildBody(
+	def: Npcs.NpcType,
+	position: Vector3
+): (Model, Humanoid, BasePart, BasePart)
 	local model = Instance.new("Model")
 	model.Name = def.name
 
@@ -124,10 +127,13 @@ local function buildBody(def: Npcs.NpcType, position: Vector3): (Model, Humanoid
 	root.Transparency = 1
 	local torso = limb(model, "Torso", Vector3.new(2, 2, 1), def.shirt, Vector3.zero)
 	local head = limb(model, "Head", Vector3.new(2, 1, 1), def.skin, Vector3.new(0, 1.5, 0))
-	local rightArm = limb(model, "Right Arm", Vector3.new(1, 2, 1), def.skin, Vector3.new(1.5, 0, 0))
+	local rightArm =
+		limb(model, "Right Arm", Vector3.new(1, 2, 1), def.skin, Vector3.new(1.5, 0, 0))
 	local leftArm = limb(model, "Left Arm", Vector3.new(1, 2, 1), def.skin, Vector3.new(-1.5, 0, 0))
-	local rightLeg = limb(model, "Right Leg", Vector3.new(1, 2, 1), def.pants, Vector3.new(0.5, -2, 0))
-	local leftLeg = limb(model, "Left Leg", Vector3.new(1, 2, 1), def.pants, Vector3.new(-0.5, -2, 0))
+	local rightLeg =
+		limb(model, "Right Leg", Vector3.new(1, 2, 1), def.pants, Vector3.new(0.5, -2, 0))
+	local leftLeg =
+		limb(model, "Left Leg", Vector3.new(1, 2, 1), def.pants, Vector3.new(-0.5, -2, 0))
 
 	-- Glowing eyes and a belt in the accent color.
 	for _, side in { -0.45, 0.45 } do
@@ -266,7 +272,13 @@ local function targetRoot(player: Player?): (BasePart?, Humanoid?)
 	local character = player and player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if root and humanoid and humanoid.Health > 0 and player and player:GetAttribute("InBattleground") then
+	if
+		root
+		and humanoid
+		and humanoid.Health > 0
+		and player
+		and player:GetAttribute("InBattleground")
+	then
 		return root, humanoid
 	end
 	return nil, nil
@@ -293,7 +305,9 @@ end
 
 local function stunned(npc: Npc): boolean
 	local model = npc.model
-	return StatusService.has(model, "Stun") or StatusService.has(model, "Root") or StatusService.has(model, "TimeStop")
+	return StatusService.has(model, "Stun")
+		or StatusService.has(model, "Root")
+		or StatusService.has(model, "TimeStop")
 end
 
 local function swing(npc: Npc, player: Player)
@@ -314,7 +328,8 @@ local function swing(npc: Npc, player: Player)
 		if (root.Position - npc.root.Position).Magnitude > melee.range * 1.5 + 2 then
 			return -- the player stepped away: a miss
 		end
-		local dealt = DestructibleService.damage(root.Parent :: Instance, melee.damage, nil, npc.def.name)
+		local dealt =
+			DestructibleService.damage(root.Parent :: Instance, melee.damage, nil, npc.def.name)
 		if dealt > 0 and melee.knockback then
 			local away = root.Position - npc.root.Position
 			local flat = Vector3.new(away.X, 0, away.Z)
@@ -363,7 +378,12 @@ local function shoot(npc: Npc, player: Player)
 			caster = nil,
 			origin = origin,
 			direction = aim - origin,
-			stats = { damage = ranged.damage, speed = ranged.speed, range = ranged.range + 25, radius = 2 },
+			stats = {
+				damage = ranged.damage,
+				speed = ranged.speed,
+				range = ranged.range + 25,
+				radius = 2,
+			},
 			visual = {
 				shape = "Ball",
 				size = Vector3.new(3, 3, 3),
@@ -449,7 +469,10 @@ local function think(npc: Npc, now: number)
 	end
 	if not npc.target then
 		local player = nearestFighter(npc, def.aggro)
-		if player and ((targetRoot(player) :: BasePart).Position - npc.home).Magnitude <= def.leash then
+		if
+			player
+			and ((targetRoot(player) :: BasePart).Position - npc.home).Magnitude <= def.leash
+		then
 			npc.target = player
 		end
 	end
@@ -523,7 +546,9 @@ local function think(npc: Npc, now: number)
 		if math.random() < 0.6 then
 			local angle = math.random() * math.pi * 2
 			local radius = 4 + math.random() * 10
-			npc.humanoid:MoveTo(npc.home + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius))
+			npc.humanoid:MoveTo(
+				npc.home + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+			)
 		else
 			npc.humanoid:Move(Vector3.zero)
 		end
@@ -633,7 +658,11 @@ local function payReward(player: Player, def: Npcs.NpcType)
 	end
 	local amount = math.min(def.reward, cap.COIN_CAP - record.total)
 	if amount <= 0 then
-		toastRemote:FireClient(player, `{def.name} down! (No more NPC coins for a few minutes.)`, "info")
+		toastRemote:FireClient(
+			player,
+			`{def.name} down! (No more NPC coins for a few minutes.)`,
+			"info"
+		)
 	else
 		record.total += amount
 		EconomyService.addCoins(player, amount, "npc", true)

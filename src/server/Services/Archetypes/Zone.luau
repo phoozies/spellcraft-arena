@@ -8,6 +8,8 @@
 --     clients draw the element's column erupting (Fx "pillar": Fire Pillar,
 --     Water Nebula, Earthquake); `rise` pops a boulder up out of the ground
 --     (Earth Punch); `channel` roots the caster for the delay (Earthquake).
+--     Those three draw `visual.model` themselves (SpellVfx); any other burst
+--     with a model has it strike down from the sky.
 --   * hold (Black Hole): enemies pulled into the core (HOLD_RADIUS) are
 --     Rooted there until the zone ends: sucked in, then trapped.
 --   * visual.model: the lingering swirl is that model (spun by clients via
@@ -93,7 +95,14 @@ local function burst(ctx: any, center: Vector3)
 	end
 	if stats.pillar then
 		-- Clients draw the element's column erupting.
-		fxRemote:FireAllClients("pillar", center, radius, ctx.def.visual.color, ctx.def.element, ctx.def.id)
+		fxRemote:FireAllClients(
+			"pillar",
+			center,
+			radius,
+			ctx.def.visual.color,
+			ctx.def.element,
+			ctx.def.id
+		)
 	end
 	local flash = disc(center, radius, ctx.def.visual.color, Enum.Material.Neon, 0.2)
 	TweenService:Create(flash, TweenInfo.new(0.5), { Transparency = 1 }):Play()
@@ -154,16 +163,41 @@ function Zone.cast(ctx: any): boolean?
 		end
 		if stats.rise then
 			-- Earth Punch: a boulder bursts up out of the ground at the burst.
-			fxRemote:FireAllClients("rise", center, radius, stats.delay, visual.color, "boulder", visual.size.Y)
+			fxRemote:FireAllClients(
+				"rise",
+				center,
+				radius,
+				stats.delay,
+				visual.color,
+				"boulder",
+				visual.size.Y,
+				visual.model
+			)
 		end
 		if stats.channel then
 			-- Earthquake: the caster can't move or cast while the ground shakes.
 			StatusService.apply(ctx.character, "Channel", stats.delay)
-			fxRemote:FireAllClients("quake", center, radius, stats.delay, visual.color)
+			fxRemote:FireAllClients(
+				"quake",
+				center,
+				radius,
+				stats.delay,
+				visual.color,
+				visual.model
+			)
 		end
-		if visual.model then
+		-- Pillar, rise, and channel spells use their model in their own effect
+		-- (SpellVfx); any other burst with a model has it strike down from the sky.
+		if visual.model and not (stats.pillar or stats.rise or stats.channel) then
 			-- Clients draw the model striking down at the burst (Zap's bolt).
-			fxRemote:FireAllClients("strike", center, radius, stats.delay, visual.model, visual.color)
+			fxRemote:FireAllClients(
+				"strike",
+				center,
+				radius,
+				stats.delay,
+				visual.model,
+				visual.color
+			)
 		end
 		task.delay(stats.delay, burst, ctx, center)
 		return true

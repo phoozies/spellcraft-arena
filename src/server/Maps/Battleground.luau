@@ -5,8 +5,8 @@
 --
 -- A 600 x 600 stud square of land, one open world with distant mountain
 -- scenery and invisible walls at its edge, split into four
--- biomes (forest, meadow, desert, rocky highlands) dotted with trees, cacti,
--- and rocks. In it:
+-- biomes (forest, meadow, desert, rocky highlands) dotted with block-model
+-- trees (oak, pine, birch), cacti, and rocks. In it:
 --   * six Raider camps (tents, campfire, banner) and two ruined stone circles
 --     guarded by NPCs, and the Warlord's Keep in the middle (the boss)
 --   * "NpcSpot" parts (tag) that name an NPC type in their `NpcType`
@@ -20,6 +20,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local MapKit = require(script.Parent.MapKit)
 
 local GRASS = Color3.fromRGB(98, 168, 74)
@@ -32,7 +33,8 @@ local STONE_LIGHT = Color3.fromRGB(240, 232, 214)
 local GOLD = Color3.fromRGB(255, 202, 40)
 
 -- {x, z} offsets from the center.
-local CAMPS = { { -190, -170 }, { 185, -190 }, { -215, 45 }, { 205, 70 }, { -70, 215 }, { 95, 205 } }
+local CAMPS =
+	{ { -190, -170 }, { 185, -190 }, { -215, 45 }, { 205, 70 }, { -70, 215 }, { 95, 205 } }
 local RUINS = { { -110, -45 }, { 120, -70 } }
 local KEEP_RADIUS = 52
 
@@ -108,17 +110,20 @@ return function(center: Vector3): Model
 		color = GRASS,
 		material = Enum.Material.Grass,
 	})
-	for index, biome in {
-		{ x = -150, z = -150, color = FOREST, material = Enum.Material.Grass },
-		{ x = -150, z = 150, color = MEADOW, material = Enum.Material.Grass },
-		{ x = 150, z = 150, color = DESERT, material = Enum.Material.Sand },
-		{ x = 150, z = -150, color = ROCKY, material = Enum.Material.Slate },
-	} do
+	for index, biome in
+		{
+			{ x = -150, z = -150, color = FOREST, material = Enum.Material.Grass },
+			{ x = -150, z = 150, color = MEADOW, material = Enum.Material.Grass },
+			{ x = 150, z = 150, color = DESERT, material = Enum.Material.Sand },
+			{ x = 150, z = -150, color = ROCKY, material = Enum.Material.Slate },
+		}
+	do
 		MapKit.part(model, {
 			name = "Biome",
 			shape = Enum.PartType.Cylinder,
 			size = Vector3.new(0.2, 300, 300),
-			cframe = CFrame.new(at(biome.x, biome.z, 0.05 + index * 0.02)) * CFrame.Angles(0, 0, math.pi / 2),
+			cframe = CFrame.new(at(biome.x, biome.z, 0.05 + index * 0.02))
+				* CFrame.Angles(0, 0, math.pi / 2),
 			color = biome.color,
 			material = biome.material,
 			canCollide = false,
@@ -130,24 +135,37 @@ return function(center: Vector3): Model
 	-- invisible walls at the edge of the land so nobody can walk off the map.
 	for side = 1, 4 do
 		local along = Vector3.new(if side <= 2 then 0 else 1, 0, if side <= 2 then 1 else 0)
-		local out = Vector3.new(if side == 1 then -1 elseif side == 2 then 1 else 0, 0, if side == 3 then -1 elseif side == 4 then 1 else 0)
+		local out = Vector3.new(
+			if side == 1 then -1 elseif side == 2 then 1 else 0,
+			0,
+			if side == 3 then -1 elseif side == 4 then 1 else 0
+		)
 		for i = 1, 14 do
 			local t = (i - 7.5) / 7 * (half + 20)
 			local height = rng:NextNumber(55, 100)
 			local width = rng:NextNumber(46, 62)
-			local position = center + along * t + out * (half + 75) + Vector3.new(0, height / 2 - 4, 0)
+			local position = center
+				+ along * t
+				+ out * (half + 75)
+				+ Vector3.new(0, height / 2 - 4, 0)
 			MapKit.part(model, {
 				name = "Mountain",
-				size = if side <= 2 then Vector3.new(40, height, width) else Vector3.new(width, height, 40),
+				size = if side <= 2
+					then Vector3.new(40, height, width)
+					else Vector3.new(width, height, 40),
 				cframe = CFrame.new(position),
-				color = if i % 3 == 0 then Color3.fromRGB(122, 116, 108) else Color3.fromRGB(150, 140, 126),
+				color = if i % 3 == 0
+					then Color3.fromRGB(122, 116, 108)
+					else Color3.fromRGB(150, 140, 126),
 				material = Enum.Material.Slate,
 				canCollide = false,
 			})
 		end
 		local wall = MapKit.part(model, {
 			name = "EdgeWall",
-			size = if side <= 2 then Vector3.new(8, 200, half * 2 + 100) else Vector3.new(half * 2 + 100, 200, 8),
+			size = if side <= 2
+				then Vector3.new(8, 200, half * 2 + 100)
+				else Vector3.new(half * 2 + 100, 200, 8),
 			cframe = CFrame.new(center + out * (half + 4) + Vector3.new(0, 100, 0)),
 			transparency = 1,
 		})
@@ -158,7 +176,22 @@ return function(center: Vector3): Model
 	----------------------------------------------------------------------
 	-- Scenery: trees, cacti, rocks
 	----------------------------------------------------------------------
-	local function tree(x: number, z: number, scale: number)
+	local scenicFolder = MapKit.folder(model, "Scenery")
+	-- Block-model scenery (TreeOak, TreePine, TreeBirch, Cactus); the plain
+	-- trunk-and-ball look stays as the fallback when a model is missing.
+	local function scenery(names: { string }, x: number, z: number, scale: number): boolean
+		local art = ModelKit.clone(names[rng:NextInteger(1, #names)], "solid", scale * 1.15)
+		if not art then
+			return false
+		end
+		art:PivotTo(CFrame.new(at(x, z)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+		art.Parent = scenicFolder
+		return true
+	end
+	local function tree(x: number, z: number, scale: number, kinds: { string })
+		if scenery(kinds, x, z, scale) then
+			return
+		end
 		local base = at(x, z)
 		MapKit.part(model, {
 			name = "Trunk",
@@ -178,13 +211,17 @@ return function(center: Vector3): Model
 		})
 	end
 	local function cactus(x: number, z: number)
+		if scenery({ "Cactus" }, x, z, rng:NextNumber(0.8, 1.3)) then
+			return
+		end
 		local base = at(x, z)
 		local height = rng:NextNumber(7, 12)
 		MapKit.part(model, {
 			name = "Cactus",
 			shape = Enum.PartType.Cylinder,
 			size = Vector3.new(height, 2.4, 2.4),
-			cframe = CFrame.new(base + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+			cframe = CFrame.new(base + Vector3.new(0, height / 2, 0))
+				* CFrame.Angles(0, 0, math.pi / 2),
 			color = Color3.fromRGB(80, 150, 80),
 			material = Enum.Material.Grass,
 		})
@@ -202,8 +239,13 @@ return function(center: Vector3): Model
 			name = "Rock",
 			shape = Enum.PartType.Ball,
 			size = Vector3.new(size, size * 0.75, size * rng:NextNumber(0.8, 1.1)),
-			cframe = CFrame.new(at(x, z, size * 0.3)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0),
-			color = Color3.fromRGB(150 + rng:NextInteger(-14, 14), 146 + rng:NextInteger(-14, 14), 138),
+			cframe = CFrame.new(at(x, z, size * 0.3))
+				* CFrame.Angles(0, rng:NextNumber(0, 6.28), 0),
+			color = Color3.fromRGB(
+				150 + rng:NextInteger(-14, 14),
+				146 + rng:NextInteger(-14, 14),
+				138
+			),
 			material = Enum.Material.Slate,
 		})
 	end
@@ -211,13 +253,13 @@ return function(center: Vector3): Model
 	for _ = 1, 70 do -- forest (north-west)
 		local x, z = pick(-m, -20, -m, -20)
 		if x and z then
-			tree(x, z, rng:NextNumber(0.9, 1.4))
+			tree(x, z, rng:NextNumber(0.9, 1.4), { "TreeOak", "TreePine", "TreePine", "TreeBirch" })
 		end
 	end
 	for _ = 1, 24 do -- meadow (south-west): a few trees
 		local x, z = pick(-m, -20, 20, m)
 		if x and z then
-			tree(x, z, rng:NextNumber(0.8, 1.2))
+			tree(x, z, rng:NextNumber(0.8, 1.2), { "TreeOak", "TreeBirch" })
 		end
 	end
 	for _ = 1, 36 do -- desert (south-east)
@@ -256,7 +298,8 @@ return function(center: Vector3): Model
 	end
 
 	-- Raider camps: tents around a campfire, crates, and a banner.
-	local tentColors = { Color3.fromRGB(200, 70, 56), Color3.fromRGB(70, 110, 200), Color3.fromRGB(226, 196, 90) }
+	local tentColors =
+		{ Color3.fromRGB(200, 70, 56), Color3.fromRGB(70, 110, 200), Color3.fromRGB(226, 196, 90) }
 	for index, camp in CAMPS do
 		local cx, cz = camp[1], camp[2]
 		-- Campfire: a ring of stones, two logs, and a flame with a warm light.
@@ -295,7 +338,9 @@ return function(center: Vector3): Model
 				MapKit.part(model, {
 					name = "Tent",
 					size = Vector3.new(0.4, 6.6, 8),
-					cframe = facing * CFrame.new(side * 1.9, 3.1, 0) * CFrame.Angles(0, 0, side * math.rad(-32)),
+					cframe = facing
+						* CFrame.new(side * 1.9, 3.1, 0)
+						* CFrame.Angles(0, 0, side * math.rad(-32)),
 					color = tentColors[tentIndex],
 					material = Enum.Material.Fabric,
 				})
@@ -306,7 +351,8 @@ return function(center: Vector3): Model
 			MapKit.part(model, {
 				name = "Crate",
 				size = Vector3.new(3, 3, 3),
-				cframe = CFrame.new(at(cx - 6 + crate * 2.2, cz + 7, 1.5)) * CFrame.Angles(0, crate, 0),
+				cframe = CFrame.new(at(cx - 6 + crate * 2.2, cz + 7, 1.5))
+					* CFrame.Angles(0, crate, 0),
 				color = Color3.fromRGB(160, 120, 70),
 				material = Enum.Material.WoodPlanks,
 			})
@@ -369,7 +415,10 @@ return function(center: Vector3): Model
 			MapKit.part(model, {
 				name = "KeepWall",
 				size = Vector3.new(16, 13, 3),
-				cframe = CFrame.lookAt(position + Vector3.new(0, 6.5, 0), center + Vector3.new(0, 6.5, 0)),
+				cframe = CFrame.lookAt(
+					position + Vector3.new(0, 6.5, 0),
+					center + Vector3.new(0, 6.5, 0)
+				),
 				color = STONE,
 				material = Enum.Material.Sandstone,
 			})
@@ -380,7 +429,8 @@ return function(center: Vector3): Model
 			name = "KeepTower",
 			shape = Enum.PartType.Cylinder,
 			size = Vector3.new(26, 9, 9),
-			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30, 13)) * CFrame.Angles(0, 0, math.pi / 2),
+			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30, 13))
+				* CFrame.Angles(0, 0, math.pi / 2),
 			color = STONE_LIGHT,
 			material = Enum.Material.Limestone,
 		})
@@ -416,7 +466,8 @@ return function(center: Vector3): Model
 	----------------------------------------------------------------------
 	for _, gate in { { 0, half - 22 }, { 0, -(half - 22) }, { half - 22, 0 }, { -(half - 22), 0 } } do
 		local gx, gz = gate[1], gate[2]
-		local facing = CFrame.new(at(gx, gz)) * CFrame.Angles(0, if gx == 0 then 0 else math.pi / 2, 0)
+		local facing = CFrame.new(at(gx, gz))
+			* CFrame.Angles(0, if gx == 0 then 0 else math.pi / 2, 0)
 		for _, side in { -1, 1 } do
 			MapKit.part(model, {
 				name = "GatePillar",

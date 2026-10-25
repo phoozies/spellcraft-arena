@@ -15,8 +15,10 @@
 -- THAT spell's shape (any other shape fizzles); without it, any of the
 -- equipped element's shapes is accepted.
 --
--- A drawing adds ONE copy of the spell to the hotbar (up to 5, duplicates
--- allowed). Drawings are limited to one per Config.DRAW_COOLDOWN seconds.
+-- A drawing adds ONE copy of the spell to the hotbar (one copy per spell).
+-- Drawings are limited to one per Config.DRAW_COOLDOWN seconds, and only
+-- allowed in fights: during a match's rounds and in the Battleground (MatchService
+-- installs the rule with setDrawGate; not in the hub, and not while a match counts down).
 --
 -- Chat is no longer a way to cast: messages starting with Config.ADMIN_PREFIX
 -- go to the admin command handler (AdminService installs it); everything else
@@ -42,6 +44,13 @@ local resultRemote: RemoteEvent
 local fxRemote: RemoteEvent
 local lastDraw: { [Player]: number } = {}
 local noDrawCooldown: { [Player]: boolean } = {}
+
+-- (player) -> (allowed, reason). Installed by MatchService.
+local drawGate: ((Player) -> (boolean, string?))? = nil
+
+function SpellInputService.setDrawGate(gate: (Player) -> (boolean, string?))
+	drawGate = gate
+end
 
 -- Per element: shape -> the spell drawn with it. Only an element's own five
 -- shapes are ever recognized, so look-alike shapes can't be confused with them.
@@ -89,7 +98,11 @@ end
 
 -- Returns a clean list of Vector2 from untrusted remote data, or nil.
 local function sanitize(raw: any): { Vector2 }?
-	if typeof(raw) ~= "table" or #raw > Config.DRAW_MAX_POINTS or #raw < GlyphRecognizer.MIN_POINTS then
+	if
+		typeof(raw) ~= "table"
+		or #raw > Config.DRAW_MAX_POINTS
+		or #raw < GlyphRecognizer.MIN_POINTS
+	then
 		return nil
 	end
 	local limit = Config.DRAW_MAX_COORD
@@ -109,7 +122,19 @@ local function sanitize(raw: any): { Vector2 }?
 end
 
 -- Recognizes a stroke and readies the spell. Returns the granted spell id.
-function SpellInputService.submitStroke(player: Player, points: { Vector2 }, targetId: string?): string?
+function SpellInputService.submitStroke(
+	player: Player,
+	points: { Vector2 },
+	targetId: string?
+): string?
+	if drawGate then
+		local allowed, reason = drawGate(player)
+		if not allowed then
+			toastRemote:FireClient(player, reason or "You can't draw right now.", "fizzle")
+			resultRemote:FireClient(player, nil, nil)
+			return nil
+		end
+	end
 	local left = SpellInputService.drawCooldownLeft(player)
 	if left > 0 then
 		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "cooldown")
@@ -220,7 +245,11 @@ function SpellInputService.start()
 	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw, targetId)
 		local points = sanitize(raw)
 		if points then
-			SpellInputService.submitStroke(player, points, if typeof(targetId) == "string" then targetId else nil)
+			SpellInputService.submitStroke(
+				player,
+				points,
+				if typeof(targetId) == "string" then targetId else nil
+			)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

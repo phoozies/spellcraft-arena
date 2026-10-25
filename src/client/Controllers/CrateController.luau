@@ -17,6 +17,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local AudioController = require(script.Parent.AudioController)
 local ClientState = require(script.Parent.ClientState)
+local PropSwap = require(script.Parent.Parent.Fx.PropSwap)
 local MenuController = require(script.Parent.MenuController)
 
 local CrateController = {}
@@ -133,13 +134,15 @@ local function spin(result: Types.CrateResult)
 	task.delay(Crates.SPIN_TIME - 0.3, function()
 		local element = Elements.get(result.element)
 		resultLabel.TextColor3 = if element then element.color else Theme.COLORS.accent
-		resultLabel.Text = `{if element then element.icon else ""} NEW ELEMENT: {result.element}! Equip it in the Spellbook.`
+		resultLabel.Text =
+			`{if element then element.icon else ""} NEW ELEMENT: {result.element}! Equip it in the Spellbook.`
 		AudioController.play("crateReveal")
 		local winner = reelStrip:FindFirstChild(`Card{WIN_INDEX}`)
 		if winner and winner:IsA("Frame") then
 			local pop = Instance.new("UIScale")
 			pop.Parent = winner
-			TweenService:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1.12 }):Play()
+			TweenService:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1.12 })
+				:Play()
 		end
 		task.wait(0.3)
 		spinning = false
@@ -175,17 +178,21 @@ local function build()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.accent,
 	})
-	Theme.label(card, "Unlocks a brand new element and its five spells. You always win one you don't own yet.", {
-		Size = UDim2.new(1, -16, 0, 44),
-		Position = UDim2.fromOffset(8, 46),
-		Font = Theme.BODY_FONT,
-		TextWrapped = true,
-		TextScaled = false,
-		TextSize = 17,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top,
-		TextColor3 = Theme.COLORS.text,
-	})
+	Theme.label(
+		card,
+		"Unlocks a brand new element and its five spells. You always win one you don't own yet.",
+		{
+			Size = UDim2.new(1, -16, 0, 44),
+			Position = UDim2.fromOffset(8, 46),
+			Font = Theme.BODY_FONT,
+			TextWrapped = true,
+			TextScaled = false,
+			TextSize = 17,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextColor3 = Theme.COLORS.text,
+		}
+	)
 	ownedLabel = Theme.label(card, "", {
 		Size = UDim2.new(1, -16, 0, 30),
 		Position = UDim2.fromOffset(8, 96),
@@ -244,7 +251,11 @@ end
 function CrateController.start()
 	ClientState.ProfileChanged:Connect(refresh)
 	refresh()
-	Remotes.get("CrateOpened").OnClientEvent:Connect(spin)
+	Remotes.get("CrateOpened").OnClientEvent:Connect(function(result)
+		-- The shop crate in the hub throws its lid open while the reel spins.
+		PropSwap.show("CrateModel_Element", "ElementCrateOpen", Crates.SPIN_TIME + 2)
+		spin(result)
+	end)
 end
 
 return CrateController

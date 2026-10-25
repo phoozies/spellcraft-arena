@@ -44,6 +44,14 @@ You start with one element (a free first pick in the Spellbook) and there are fo
 
 **Adding an element:** add it to `Elements.LIST` with its five spells; the crate, reel, Spellbook, and hub shrines pick it up. **Retuning the crate:** edit `Crates.LIST` (`tests/Economy.spec.luau` covers the rolls).
 
+## Like & Favourite gift
+
+A one-time thank-you of **250 coins** (`Config.SUPPORT.LIKE_FAVORITE_COINS`, never more than one crate) for players who Like and Favourite the game. Players open it from the **👍 Like!** button, follow the steps, and press Claim.
+
+- **Roblox gives no way to check a like or a favourite**, so the claim is on the honor system. The server only opens it after the player has spent `Config.SUPPORT.MIN_SECONDS` (90) in the server, accepts one claim per account (`profile.rewards.likeFav`), and rate-limits the remote. `EconomyService.claimLikeReward` pays it through `addCoins`.
+- Before launching, check Roblox's current rules on rewarding likes or favourites, and switch the feature off (remove `SupportController` and the `ClaimLikeReward` handler) if they don't allow it.
+- Studio QA: `SpellcraftDebug:Invoke("likefav", false)` makes it claimable again, `("takecoins", 250)` removes the coins.
+
 ## Wins leaderboard and podium (`LeaderboardService`)
 
 - **leaderstats:** every player gets `leaderstats.Wins` and `leaderstats.Coins`, so the Roblox player list shows wins. Synced on profile load and on every `EconomyService.Changed`.

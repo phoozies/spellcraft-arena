@@ -25,7 +25,9 @@ local STORE_NAME = "PlayerProfiles_v1"
 -- 2: levels/XP removed; coins added (crates unlock spells).
 -- 3: spells come from elements: ownedSpells is gone, profile.elements and
 --    profile.element replace it (players pick their first element again).
-local SCHEMA = 3
+-- 4: settings.music (background music on/off) and rewards.likeFav (the
+--    one-time Like & Favourite gift); both just get their defaults.
+local SCHEMA = 4
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -48,7 +50,8 @@ local function defaultProfile(): Profile
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
-		settings = { drawKey = Config.DEFAULT_DRAW_KEY },
+		settings = { drawKey = Config.DEFAULT_DRAW_KEY, music = true },
+		rewards = { likeFav = false },
 	}
 end
 
@@ -87,6 +90,14 @@ local function reconcile(data: any): Profile
 	for key, value in base.settings :: any do
 		if data.settings[key] == nil then
 			data.settings[key] = value
+		end
+	end
+	if typeof(data.rewards) ~= "table" then
+		data.rewards = table.clone(base.rewards)
+	end
+	for key, value in base.rewards :: any do
+		if data.rewards[key] == nil then
+			data.rewards[key] = value
 		end
 	end
 	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
