@@ -67,7 +67,7 @@ The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones,
 ### PvP encouragement
 
 - Coins and a win only for winning the match, plus a "SPELL STREAK!" callout at 3 KOs.
-- Combos (Water Lock stuns an enemy for a Fire Pillar or Earth Punch), knockback ring-outs on Sky Islands (Whirlwind, Tornado), and destructible cover.
+- Combos (Water Lock stuns an enemy for a Fire Pillar or Earth Punch), knockback ring-outs on the rim-less maps (Whirlwind, Tornado), and destructible cover.
 - A wins leaderboard (player list), a Most Wins board, and a podium where the top 3 players in the server stand as their avatars. There's no PvP in the hub; it all happens in matches.
 - Spawn protection lasts 3 seconds and friendly fire is off.
 
@@ -75,8 +75,8 @@ The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones,
 
 | Mode | Players | Teams | Notes |
 |---|---|---|---|
-| 1v1 | 2 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
-| 2v2 | 4 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
+| 1v1 | 2 | Blue / Red | The Sparring Arena is weighted ×2 |
+| 2v2 | 4 | Blue / Red | The Sparring Arena is weighted ×2 |
 | 3v3 | 6 | Blue / Red | Full map |
 | 4v4 | 8 | Blue / Red | Full map; never the Sparring Arena (too small) |
 
@@ -95,17 +95,18 @@ A blue **Battleground portal** in the concourse teleports you to a big open worl
 - **Knocking out an NPC pays coins** (3 / 5 / 12 / 40), up to 120 coins per 5 minutes so camps can't be farmed endlessly.
 - You fight with your equipped element's spells and can raise Earth Walls anywhere. There are no wins or boosts; health regenerates slowly after 5 seconds without damage. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
 
-## Maps (8 duel maps plus the hub; the compact ones suit smaller matches)
+## Maps (7 duel maps plus the hub; the compact ones suit smaller matches)
+
+Every map is built at design size and scaled 2x, and almost everything on them breaks: floors, cliffs, mesas, ramps, rocks, ice spires and cubes, trees, pillars, temple steps, arches, torches and cover are weakened by `Config.TERRAIN.PROP_HEALTH`, so a few spell hits carve through (heavier spells carve more). Each round starts on a fresh arena. Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue stay solid.
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
 | **Inkwell Plaza** (hub) | A round **floating island** over the ocean: a grass top with a sand beach, a dark rock cone underneath, a wooden rail, and a stepped white-marble amphitheatre, leaning pillars, a ruined arch and bare trees. A sand plaza with a giant inkwell and a stone wizard statue is at the centre | Four element shrines, Spellbook kiosk, Daily Quest chest and gift box on the plaza; the team boxes (1v1–4v4) in an arc to the north with the Arena Gate behind them; the Battleground portal to the south; the Training Grove (west: build, smash dummies, the one hub place to draw and cast); the Crate Shop (east); the wins podium + Most Wins board; four rim overlooks to **spectate the duels fought on arenas below the island** |
-| **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
-| **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
+| **Crayon Canyon** | Paper canyon, 3 lanes split by mesas (open in every mode, no dividing gates) | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
 | **Frost Hollow** | A round sheet of ice with frozen spires | No rim wall: ring-outs; breakable ice cubes and spires |
 | **Ember Forge** | A basalt floor in a lava moat, around a stepped anvil | Obsidian pillars and brick walls as cover; rim wall |
-| **Moss Ruins** | An overgrown courtyard with broken marble arches | Lots of cover: toppled columns, mossy blocks, trees; rim wall |
+| **Moss Ruins** | An overgrown courtyard with broken marble arches | Lots of cover: toppled columns, mossy blocks, arches, trees (all breakable); rim wall |
 | **Tidal Temple** | A sandy island around a three-step temple in shallow sea | Coral pillars and giant clams as cover; torches; rim wall |
 | **Sky Bridge** | Two round platforms joined by a plank bridge, with a small island midway | No rim walls: ring-outs; breakable bridge planks |
 

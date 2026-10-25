@@ -2,8 +2,11 @@
 -- Tidal Temple — a sandy island around a three-step temple, ringed by shallow
 -- sea. Coral pillars and giant clams are breakable cover, and torches light the
 -- shore. A wall at the rim keeps everyone on the sand. The sand is breakable
--- terrain; the temple steps are solid.
+-- terrain, and so are the temple steps, pillars, clams and torches.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -45,16 +48,18 @@ return function(makeProp: Registrar): Model
 
 	-- Three temple steps with a glowing pearl on top.
 	local limestone = Enum.Material.Limestone
-	MapKit.disc(model, Vector3.new(0, 1.5, 0), 20, 1.5, STONE, limestone, "StepLow")
-	MapKit.disc(model, Vector3.new(0, 3, 0), 14, 1.5, STONE, limestone, "StepMid")
-	MapKit.disc(
+	local steps = MapKit.rockTerrain(makeProp)
+	MapKit.terrainDisc(model, Vector3.new(0, 1.5, 0), 20, 1.5, STONE, limestone, "StepLow", steps)
+	MapKit.terrainDisc(model, Vector3.new(0, 3, 0), 14, 1.5, STONE, limestone, "StepMid", steps)
+	MapKit.terrainDisc(
 		model,
 		Vector3.new(0, 4.5, 0),
 		8,
 		1.5,
 		Color3.fromRGB(232, 226, 210),
 		Enum.Material.Marble,
-		"StepHigh"
+		"StepHigh",
+		steps
 	)
 	local pearl = MapKit.part(model, {
 		name = "Pearl",
@@ -71,7 +76,7 @@ return function(makeProp: Registrar): Model
 	for i = 1, 4 do
 		local a = (i / 4) * math.pi * 2 + math.pi / 4
 		local base = Vector3.new(math.cos(a) * 38, 0, math.sin(a) * 38)
-		makeProp(MapKit.pillar(model, base, 12, 4, CORAL, Enum.Material.Marble), 250)
+		makeProp(MapKit.pillar(model, base, 12, 4, CORAL, Enum.Material.Marble), Config.PROPS.Heavy)
 	end
 
 	-- Giant clams (breakable).
@@ -86,21 +91,26 @@ return function(makeProp: Registrar): Model
 			color = Color3.fromRGB(250, 230, 236),
 			material = Enum.Material.SmoothPlastic,
 		})
-		makeProp(clam, 140)
+		makeProp(clam, Config.PROPS.Light)
 	end
 
 	-- Shore torches.
 	for i = 1, 6 do
 		local a = (i / 6) * math.pi * 2
 		local base = Vector3.new(math.cos(a) * (RADIUS - 3), 0, math.sin(a) * (RADIUS - 3))
-		MapKit.part(model, {
+		-- Post and flame are one breakable prop, so the flame goes with the post.
+		local torch = Instance.new("Model")
+		torch.Name = "Torch"
+		torch.Parent = model
+		makeProp(torch, Config.PROPS.Light)
+		MapKit.part(torch, {
 			name = "TorchPost",
 			size = Vector3.new(0.8, 6, 0.8),
 			cframe = CFrame.new(base + Vector3.new(0, 3, 0)),
 			color = Color3.fromRGB(110, 78, 50),
 			material = Enum.Material.Wood,
 		})
-		local flame = MapKit.part(model, {
+		local flame = MapKit.part(torch, {
 			name = "Flame",
 			shape = Enum.PartType.Ball,
 			size = Vector3.new(1.8, 2.4, 1.8),

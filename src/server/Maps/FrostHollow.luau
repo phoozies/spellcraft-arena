@@ -2,8 +2,11 @@
 -- Frost Hollow — a round sheet of ice with frozen spires and breakable ice
 -- cubes for cover. There is no wall at the rim, so knockback ring-outs decide
 -- close fights. Compact: good for duels, fine for 4v4. The ice sheet is
--- breakable terrain; cracks drop you onto the rock below.
+-- breakable terrain, and so are the snow bank, the spires and the ice cubes.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -40,7 +43,18 @@ return function(makeProp: Registrar): Model
 	)
 	pond.CanCollide = false
 	pond.CanQuery = false
-	MapKit.disc(model, Vector3.new(0, -0.5, 0), RADIUS + 5, 5, SNOW, Enum.Material.Snow, "SnowRim")
+	-- The snow bank around the ice is breakable too (a ring: the floor fills the middle).
+	MapKit.terrainDisc(
+		model,
+		Vector3.new(0, -0.5, 0),
+		RADIUS + 5,
+		5,
+		SNOW,
+		Enum.Material.Snow,
+		"SnowRim",
+		MapKit.groundTerrain(makeProp),
+		RADIUS - 6
+	)
 	MapKit.underside(
 		model,
 		-5.5,
@@ -61,7 +75,7 @@ return function(makeProp: Registrar): Model
 			material = Enum.Material.Ice,
 			transparency = 0.15,
 		})
-		makeProp(spire, 260)
+		makeProp(spire, Config.PROPS.Heavy)
 	end
 
 	-- Scattered ice cubes (breakable cover), kept off the spawn lines.
@@ -79,7 +93,7 @@ return function(makeProp: Registrar): Model
 				material = Enum.Material.Ice,
 				transparency = 0.1,
 			})
-			makeProp(cube, 140)
+			makeProp(cube, Config.PROPS.Light)
 		end
 	end
 

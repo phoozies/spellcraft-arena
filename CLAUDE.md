@@ -26,7 +26,7 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 - **No levels or XP.** Winning a match pays **coins** (`Config.COINS`) and +1 **win**. Coins buy base elements and **Spell Crate** spins; a server-decided spin wins one crate spell by rarity (duplicates pay coins back).
 - **Leaderboard:** `leaderstats.Wins`/`Coins`, a Most Wins board, and a top-3 podium with avatars in the hub (`LeaderboardService`).
 - **Battleground:** a hub portal drops you at a random spot in a big open world (`BattlegroundService`, `Maps/Battleground`); players are enemies (respawn after 3s), and hostile NPCs (`NpcService`, `shared/Battleground/Npcs`) fight back and pay coins (capped). Green gates or the HUD button return you to the hub.
-- **The hub is a round floating island** (`Maps/InkwellPlaza`); duels are fought on one of **8 maps** (`ArenaService.MAP_NAMES`) summoned in rings *below* the island (`Config.ARENA`), so hub players can look over the rim and watch.
+- **The hub is a round floating island** (`Maps/InkwellPlaza`); duels are fought on one of **7 maps** (`ArenaService.MAP_NAMES`) summoned in rings *below* the island (`Config.ARENA`), so hub players can look over the rim and watch.
 - **Matches:** hub team boxes or queues → best of 3 rounds → your loadout; between rounds you pick 1 of 3 **boosts** (Power, Vitality, Swiftness, Focus, Health Potion) instead of earning spells.
 - **Look and feel:** everything is blocky, classic Roblox: block-model spells and scenery (Blender spec in `tools/blender/block_models.py`), a studded pastel GUI with dark ink text, cast animations per move, background music (hub and fight playlists) with an on/off setting, a one-time Like & Favourite coin gift (honor system) claimed at a gift box in the hub, a mouse cursor that turns into a crosshair while a spell is readied, and a first-join tutorial with guiding arrows.
 - **Casting:** tap a spell card to see its shape and trace it (the closer you follow it, the higher the drawing **quality**: more power, size, and duration, see `Spells/Quality`), or press **F** (or tap ✏ Draw) for a blank canvas. The shape is the KIND of move, the same in every element: circle = a basic attack, a diagonal slash = a fast attack, a square = a boost, a triangle = a defense or a stun, a lightning bolt = a heavy attack, a V = an area attack, a star = your ultimate; crate spells use a heart (heal), zigzag (lightning), hook (turret), X (ward), or spiral (black hole). The server recognizes the stroke and readies the spell; there is no typing or voice input.
@@ -53,7 +53,21 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 
 The Blender scene for game models is set up for Roblox: **metric, unit scale 0.01, length in centimeters** (1 Blender unit = 1 cm), so FBX exports import into Studio at a sane size. Part names in the FBX are the contract with `tools/prepare-models.luau` and `tests/Models.spec.luau`. Details in `assets/models/README.md`.
 
+## Git workflow (every new feature or change)
+
+The user has authorised this for the whole project, so follow it without asking each time:
+
+1. **Start on a branch.** Before editing, create a branch from an up-to-date `main` (`feature/<short-name>`; `fix/<short-name>` for fixes). Never work directly on `main`. If the working tree already holds unrelated changes, say so instead of mixing them in.
+2. **Build and sync as you go.** Sync to Roblox Studio after code changes (see the `test-in-studio` skill) so the user can try it in their open place.
+3. **Finish when tests pass or the user says so.** Once the suite is green in Studio (or the user says to ship it), do all of these in order:
+   1. update docs and `CHANGELOG.md` (`ship-change` skill), then commit with a clear message;
+   2. push the branch and merge it into `main` (a PR merged on GitHub, or `gh pr merge`; never force-push `main`);
+   3. delete the branch locally and on the remote;
+   4. switch to `main`, pull, and **sync to Roblox** so the place matches `main`.
+4. **Never merge on red.** If tests fail, or something could not be run, stop and report it plainly instead of merging. If the user asks only for a PR, open it and leave the merge to them.
+
 ## Before you finish a change
 
+- Follow the git workflow above (branch, test, commit, push, merge to `main`, delete the branch, sync to Roblox).
 - Run the tests in Studio; update `docs/semantic/features.yaml` and the human doc for the feature you touched; add a `CHANGELOG.md` entry.
 - CI runs `stylua --check`, `selene`, and `rojo build` (see `.github/workflows/ci.yml`).

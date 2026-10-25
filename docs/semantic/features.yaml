@@ -44,7 +44,7 @@ glossary:
   hub: Inkwell Plaza, a round floating island (sand plaza, marble amphitheatre, rim overlooks) over open ocean, where players spawn, pick elements, open crates, and pick teams (no PvP)
   glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), support heart, storm zigzag M, summon hook J, ward X, vortex spiral, ultimate star"
   arena: an instanced match map summoned below the hub island (ArenaService.slotOrigin: Config.ARENA ring of slots at y = -300, radius 560), built at design size then scaled by Config.ARENA_SCALE (2), so hub players can spectate it
-  terrain: "breakable map cells (MapKit.terrain; Destructible + Terrain attribute): the floors and island tops of every map, Crayon Canyon mesas and ramps, and the Sparring Arena outcrops. Spell damage chips a cell (Config.TERRAIN.HEALTH), touching cells take SPLASH of it, so heavier spells carve faster and wider. Cliffs and end walls are solid. A fresh arena each round restores everything; breaking terrain earns no quest credit; floor cells (GroundTile) are skipped by a skimming bolt's wide sweep"
+  terrain: "breakable map cells (MapKit.terrain; Destructible + Terrain attribute): the floors of every map, Crayon Canyon cliffs, end walls, mesas and ramps, the dais and temple steps, the snow bank, and the Sparring Arena outcrops; scenery props (trees, pillars, spires, cubes, columns, torches, bridges) use Config.PROPS tiers Light 50 / Medium 90 / Heavy 140. Spell damage chips a cell (Config.TERRAIN.HEALTH x Config.TERRAIN.PROP_HEALTH, which also weakens every other map prop and the breakable trees), touching cells take SPLASH of it, so heavier spells carve faster and wider. Only the hub, rock undersides and the Sparring Arena colosseum/statue stay solid. A fresh arena each round restores everything; breaking terrain earns no quest credit; floor cells (GroundTile) are skipped by a skimming bolt's wide sweep"
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
@@ -465,11 +465,11 @@ features:
     animation: CastPoses.Dash (arms wide) through Fx/CastAnimations; SpellVfx.windStreaks (Config.DASH.TRAILS Trails), puff and whoosh from FxController onDash
 
   - id: duel_maps
-    summary: Eight duel maps, each summoned as an instanced arena below the floating hub so hub players can watch the fight.
+    summary: Seven duel maps, each summoned as an instanced arena below the floating hub so hub players can watch the fight.
     server: src/server/Services/ArenaService.luau (MAP_NAMES, DISPLAY_NAMES, pickMap weights, slotOrigin(slot), create/destroy/rebuild, the SpectatorSign billboard); MapVoteService lists every map
-    maps: src/server/Maps/{CrayonCanyon,SkyIslands,SparringArena,FrostHollow,EmberForge,MossRuins,TidalTemple,SkyBridge}.luau; shared builders in Maps/MapKit.luau (disc, pillar, barrierRing, underside, tree, blockWall)
+    maps: src/server/Maps/{CrayonCanyon,SparringArena,FrostHollow,EmberForge,MossRuins,TidalTemple,SkyBridge}.luau; shared builders in Maps/MapKit.luau (disc, pillar, barrierRing, underside, tree, blockWall)
     config: Config.ARENA { Y -300, RADIUS 560, RING_STEP 600, PER_RING 8 }; Config.HUB { RADIUS 180, OCEAN_Y -450 }
-    client: MapVoteController (4 x 2 card grid); FxController.DRAW_DISTANCE 900 so the hub's far rim still sees the fights; LightingController thins the hub haze
+    client: MapVoteController (4-wide card grid); FxController.DRAW_DISTANCE 900 so the hub's far rim still sees the fights; LightingController thins the hub haze
     invariants: [every map has Bounds, Spawns/Team1_1-4 and Team2_1-4, SmallModeWalls, floor top at y = 0, every model has a fallback, the ocean stays above FallenPartsDestroyHeight, arenas stay outside the island's footprint and 400+ studs apart (maps are scaled by Config.ARENA_SCALE)]
     tests: tests/Maps.spec.luau
 

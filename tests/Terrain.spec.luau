@@ -2,6 +2,7 @@
 -- Breakable terrain and bigger arenas: MapKit.terrain cuts blocks into cells,
 -- MapKit.scale enlarges a finished map, and every cell's health is small
 -- enough that real spells can carve it (the harder the hit, the sooner it goes).
+-- Map props are weakened by Config.TERRAIN.PROP_HEALTH, so they break easily.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -19,21 +20,81 @@ return function(t: any)
 
 		local function noop(_: Instance, _: number) end
 
-		t.it("has sane config: arenas are doubled and a cell outlasts one weak hit", function()
+		t.it("has sane config: arenas are doubled and props are weakened", function()
 			t.expect(Config.ARENA_SCALE).toBe(2)
+			t.expect(Config.TERRAIN.PROP_HEALTH > 0 and Config.TERRAIN.PROP_HEALTH <= 0.5)
+				.toBeTruthy()
 			t.expect(Config.TERRAIN.CELL > 0).toBeTruthy()
 			t.expect(Config.TERRAIN.SPLASH > 0 and Config.TERRAIN.SPLASH < 1).toBeTruthy()
 			t.expect(Config.TERRAIN.HEALTH.Rock >= Config.TERRAIN.HEALTH.Ground).toBeTruthy()
+		end)
+
+		t.it("scenery health tiers are ordered and a few hits fell even the heaviest", function()
+			local props = Config.PROPS
+			t.expect(props.Light < props.Medium and props.Medium < props.Heavy).toBeTruthy()
+			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
+			local heavy = props.Heavy * Config.TERRAIN.PROP_HEALTH
+			t.expect(math.ceil(heavy / strong) <= 6).toBeTruthy()
+			t.expect(math.ceil(props.Light * Config.TERRAIN.PROP_HEALTH / strong) <= 2)
+				.toBeTruthy()
+		end)
+
+		t.it("no map has solid scenery that spells can't break (except rock undersides)", function()
+			if not maps then
+				return
+			end
+			-- The Sparring Arena's imported colosseum and statue are single meshes.
+			for _, name in {
+				"CrayonCanyon",
+				"FrostHollow",
+				"EmberForge",
+				"MossRuins",
+				"TidalTemple",
+				"SkyBridge",
+			} do
+				local props: { [Instance]: boolean } = {}
+				local model = (require(maps:FindFirstChild(name) :: ModuleScript) :: any)(
+					function(instance: Instance)
+						props[instance] = true
+					end
+				) :: Model
+				for _, part in model:GetDescendants() do
+					if
+						part:IsA("BasePart")
+						and part.CanCollide
+						and part.CanQuery
+						and part.Transparency < 1
+						and part.Name ~= "Underside"
+						and not part:GetAttribute("Terrain")
+					then
+						local covered = false
+						local node: Instance? = part
+						while node and node ~= model do
+							if props[node] then
+								covered = true
+								break
+							end
+							node = node.Parent
+						end
+						if not covered then
+							error(`{name}: {part.Name} is solid but not breakable`)
+						end
+					end
+				end
+				model:Destroy()
+			end
 		end)
 
 		t.it("a strong spell breaks a cell in fewer hits than a weak one", function()
 			local strong = (SpellDefinitions.get("Fireball") :: any).stats.damage
 			local weak = (SpellDefinitions.get("FireSlash") :: any).stats.damage
 			t.expect(strong > weak).toBeTruthy()
-			local health = Config.TERRAIN.HEALTH.Ground
+			local health = Config.TERRAIN.HEALTH.Ground * Config.TERRAIN.PROP_HEALTH
 			t.expect(math.ceil(health / strong) <= math.ceil(health / weak)).toBeTruthy()
-			-- No cell falls to one ordinary hit, or the ground would vanish at once.
+			-- A strong hit still can't clear a floor cell in one go, or the ground
+			-- would vanish at once; a few hits do it.
 			t.expect(math.ceil(health / strong) >= 2).toBeTruthy()
+			t.expect(math.ceil(health / weak) <= 5).toBeTruthy()
 		end)
 
 		t.it("cuts a block into cells no wider than the cell size", function()
@@ -90,7 +151,7 @@ return function(t: any)
 			folder:Destroy()
 		end)
 
-		t.it("scale grows a map about its origin and re-aims jump pads", function()
+		t.it("scale grows a map about its origin", function()
 			if not mapKit then
 				return
 			end
@@ -99,20 +160,12 @@ return function(t: any)
 			floor.Size = Vector3.new(10, 2, 20)
 			floor.CFrame = CFrame.new(5, -1, 0)
 			floor.Parent = model
-			local pad = Instance.new("Part")
-			pad.Position = Vector3.new(10, 1, 0)
-			pad:SetAttribute("LaunchTo", Vector3.new(40, 0, 0))
-			pad:SetAttribute("LaunchVelocity", Vector3.zero)
-			pad.Parent = model
-			mapKit.scale(model, 2, 70)
+			mapKit.scale(model, 2)
 			t.expect(floor.Size.X).toBe(20)
 			t.expect(floor.Size.Z).toBe(40)
 			t.expect(floor.Position.X).toBe(10)
 			-- The floor's top stays at y = 0.
 			t.expect(floor.Position.Y + floor.Size.Y / 2).toBeNear(0, 0.001)
-			t.expect(pad:GetAttribute("LaunchTo")).toBe(Vector3.new(80, 0, 0))
-			local velocity = pad:GetAttribute("LaunchVelocity") :: Vector3
-			t.expect(velocity.X > 0 and velocity.Y > 0).toBeTruthy()
 			model:Destroy()
 		end)
 
@@ -122,7 +175,6 @@ return function(t: any)
 			end
 			for _, name in {
 				"CrayonCanyon",
-				"SkyIslands",
 				"SparringArena",
 				"FrostHollow",
 				"EmberForge",

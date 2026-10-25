@@ -1,9 +1,12 @@
 --!strict
 -- Moss Ruins — an overgrown courtyard: broken marble arches, toppled columns,
 -- mossy blocks and trees ringing a stone dais. Lots of cover (some of it
--- breakable). A wall at the rim keeps everyone on the grass. The grass floor
--- is breakable terrain.
+-- breakable). A wall at the rim keeps everyone on the grass. The grass floor,
+-- the arches and the trees are all breakable.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -29,7 +32,16 @@ return function(makeProp: Registrar): Model
 		MapKit.groundTerrain(makeProp)
 	)
 	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(110, 90, 72), Enum.Material.Rock)
-	MapKit.disc(model, Vector3.new(0, 0.9, 0), 14, 1, MARBLE, Enum.Material.Marble, "Dais")
+	MapKit.terrainDisc(
+		model,
+		Vector3.new(0, 0.9, 0),
+		14,
+		1,
+		MARBLE,
+		Enum.Material.Marble,
+		"Dais",
+		MapKit.rockTerrain(makeProp)
+	)
 	-- Painted flagstones: not solid, so they never float over a hole.
 	local flagstones = MapKit.disc(
 		model,
@@ -50,21 +62,23 @@ return function(makeProp: Registrar): Model
 			* CFrame.Angles(0, -a + math.pi / 2, 0)
 		for _, side in { -1, 1 } do
 			local height = if side < 0 then 16 else 10
-			MapKit.part(model, {
+			local post = MapKit.part(model, {
 				name = "ArchPost",
 				size = Vector3.new(3.5, height, 3.5),
 				cframe = frame * CFrame.new(side * 7, height / 2, 0),
 				color = MARBLE,
 				material = Enum.Material.Marble,
 			})
+			makeProp(post, Config.PROPS.Heavy)
 		end
-		MapKit.part(model, {
+		local lintel = MapKit.part(model, {
 			name = "ArchLintel",
 			size = Vector3.new(10, 3, 3.5),
 			cframe = frame * CFrame.new(-3, 17.5, 0),
 			color = MARBLE,
 			material = Enum.Material.Marble,
 		})
+		makeProp(lintel, Config.PROPS.Medium)
 	end
 
 	-- Toppled columns (breakable cover).
@@ -80,7 +94,7 @@ return function(makeProp: Registrar): Model
 			color = MARBLE,
 			material = Enum.Material.Marble,
 		})
-		makeProp(column, 220 + i)
+		makeProp(column, Config.PROPS.Medium + i)
 	end
 
 	-- Mossy blocks (breakable).
@@ -96,14 +110,14 @@ return function(makeProp: Registrar): Model
 			color = MOSS,
 			material = Enum.Material.Slate,
 		})
-		makeProp(block, 150)
+		makeProp(block, Config.PROPS.Light)
 	end
 
 	-- Trees along the rim.
 	for i = 1, 12 do
 		local a = (i / 12) * math.pi * 2 + rng:NextNumber(-0.1, 0.1)
 		local at = Vector3.new(math.cos(a) * (RADIUS - 5), 0, math.sin(a) * (RADIUS - 5))
-		MapKit.tree(model, at, 1.2, rng)
+		MapKit.tree(model, at, 1.2, rng, nil, makeProp, Config.PROPS.Medium)
 	end
 
 	MapKit.barrierRing(model, RADIUS, 50)

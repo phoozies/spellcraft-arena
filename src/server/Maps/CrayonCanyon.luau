@@ -1,7 +1,7 @@
 --!strict
 -- Crayon Canyon — a 3-lane canyon with two raised mesas and destructible
 -- rope bridges. Rewards walls and high ground. Tuned for 8 players. The floor,
--- mesas and ramps are breakable terrain; the cliffs and end walls are not.
+-- mesas and ramps, the cliffs and the end walls are all breakable terrain.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -40,27 +40,28 @@ return function(makeProp: Registrar): Model
 		ground = true,
 	})
 
-	-- Tall striped cliffs on both sides.
+	-- Tall striped cliffs on both sides: breakable rock (knock a hole through
+	-- and there is only the void beyond).
 	for _, side in { -1, 1 } do
 		for i = 0, 8 do
-			MapKit.part(model, {
+			MapKit.terrain(model, {
 				name = "Cliff",
 				size = Vector3.new(10, 40 + rng:NextInteger(-4, 6), 20),
 				cframe = CFrame.new(side * 58, 18, -80 + i * 20),
 				color = COLORS[(i % #COLORS) + 1],
 				material = Enum.Material.Sandstone,
-			})
+			}, MapKit.rockTerrain(makeProp))
 		end
 	end
 	-- End caps.
 	for _, z in { -94, 94 } do
-		MapKit.part(model, {
+		MapKit.terrain(model, {
 			name = "EndWall",
 			size = Vector3.new(126, 40, 8),
 			cframe = CFrame.new(0, 18, z),
 			color = Color3.fromRGB(141, 110, 99),
 			material = Enum.Material.Sandstone,
-		})
+		}, MapKit.rockTerrain(makeProp))
 	end
 
 	-- Two mesas splitting the canyon into 3 lanes, with ramps at each end.
@@ -100,7 +101,7 @@ return function(makeProp: Registrar): Model
 			color = Color3.fromRGB(161, 136, 127),
 			material = Enum.Material.WoodPlanks,
 		})
-		makeProp(bridge, 250)
+		makeProp(bridge, Config.PROPS.Medium)
 	end
 
 	-- Giant crayons as cover (breakable).
@@ -116,7 +117,7 @@ return function(makeProp: Registrar): Model
 				color = COLORS[(i % #COLORS) + 1],
 				material = Enum.Material.SmoothPlastic,
 			})
-			makeProp(crayon, 180)
+			makeProp(crayon, Config.PROPS.Medium)
 		end
 	end
 
@@ -138,17 +139,8 @@ return function(makeProp: Registrar): Model
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 78)
 
-	local small = MapKit.folder(model, "SmallModeWalls")
-	for _, z in { -55, 55 } do
-		MapKit.part(small, {
-			name = "LaneGate",
-			size = Vector3.new(106, 16, 2),
-			cframe = CFrame.new(0, 8, z),
-			color = Color3.fromRGB(129, 212, 250),
-			material = Enum.Material.Glass,
-			transparency = 0.6,
-		})
-	end
+	-- No dividing gates: the whole canyon is open in every mode.
+	MapKit.folder(model, "SmallModeWalls")
 
 	MapKit.bounds(model, Vector3.new(106, 80, 180), Vector3.new(0, 30, 0))
 	return model

@@ -180,7 +180,7 @@ local Config = {
 	},
 
 	-- Every match arena is built at design size, then scaled up by this factor
-	-- (ArenaService.init). Jump pad launches are re-aimed to match.
+	-- (ArenaService.init).
 	ARENA_SCALE = 2,
 
 	-- Breakable terrain (MapKit.terrain, DestructibleService): ground, mesas and
@@ -192,11 +192,20 @@ local Config = {
 	--            (mesas, boulders)
 	--   SPLASH   share of a hit's damage that also lands on every cell touching
 	--            the one that was hit, so heavy spells open wider craters
+	--   PROP_HEALTH  multiplier on the health of EVERY map prop (terrain cells,
+	--            trees, pillars, cover) when an arena is built: lower = easier
+	--            to destroy
 	TERRAIN = {
 		CELL = 10,
 		HEALTH = { Ground = 60, Rock = 90 },
-		SPLASH = 0.5,
+		SPLASH = 0.75,
+		PROP_HEALTH = 0.5,
 	},
+
+	-- Design health of the scenery on the maps (trees, pillars, spires, ice
+	-- cubes, columns, bridges, torches) before TERRAIN.PROP_HEALTH halves it:
+	-- Light is a couple of hits, Heavy a handful.
+	PROPS = { Light = 50, Medium = 90, Heavy = 140 },
 
 	AUTOSAVE_INTERVAL = 90,
 

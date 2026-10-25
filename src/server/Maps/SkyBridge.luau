@@ -4,6 +4,9 @@
 -- bridge planks are breakable, so the middle can be cut away, and so are the
 -- platform floors. Teams start on opposite platforms (the Z ends).
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -93,7 +96,7 @@ return function(makeProp: Registrar): Model
 				color = PLANK,
 				material = Enum.Material.WoodPlanks,
 			})
-			makeProp(plank, 300)
+			makeProp(plank, Config.PROPS.Medium)
 		end
 	end
 
