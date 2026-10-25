@@ -60,13 +60,15 @@ function Control.cast(ctx: any): boolean?
 	Debris:AddItem(ring, 0.6)
 
 	for _, hit in ctx.enemiesNear(center, radius) do
-		if hit.character then
+		-- Players, and hostile Battleground NPCs (other structures are left alone).
+		local victim: Model? = hit.character or StatusService.targetOf(hit.instance)
+		if victim then
 			if stats.damage then
-				DestructibleService.damage(hit.character, stats.damage, ctx.player, ctx.def.name)
+				DestructibleService.damage(victim, stats.damage, ctx.player, ctx.def.name)
 			end
 			if stats.status then
-				if StatusService.apply(hit.character, stats.status, stats.statusDuration or 1) then
-					bubble(hit.character, ctx.def.visual.color, stats.statusDuration or 1)
+				if StatusService.apply(victim, stats.status, stats.statusDuration or 1) then
+					bubble(victim, ctx.def.visual.color, stats.statusDuration or 1)
 				end
 			end
 		end

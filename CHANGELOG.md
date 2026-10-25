@@ -9,6 +9,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 - **Bigger Sparring Arena** (the 1v1/2v2 map): the floor is 4x larger than the original model (about 184 studs), with spawns and the invisible wall ring scaled to match.
 - **One open Battleground.** The mountain ring is now distant scenery you can't collide with; thicker invisible walls at the edge keep everyone on the map, and a once-a-second safety net puts anyone who still ends up below the world or outside the walls back at a random spot.
 
+### Fixed (crowd control on NPCs)
+- **Water Lock (and every status spell) now works on Battleground NPCs.** The stun was only applied to player characters, so NPCs took the damage and kept fighting. Single-target shots and area control spells (Vine Snare, Time Stop, ...) now apply their status to hostile NPCs too, with the bubble. A stunned, rooted, or time-stopped NPC stops moving, swinging and shooting, and a wind-up already in progress is cancelled. NPCs keep their own speed and size after the effect ends (`BaseWalkSpeed` / `BaseScale` attributes read by `StatusService`). Players were already stunned correctly.
+
 ### Added (duel map vote, name change)
 - **Vote for the map in duels.** After a 1v1 is found, both players see a vote screen with every map and a countdown (`Config.MAP_VOTE`); the most votes wins, ties and no votes are random. New `MapVoteService`, `MapVoteController`, and remotes `MapVote` / `MapVoteState`.
 - **Renamed to Spellcraft Arena** everywhere (docs, project name, debug bindable `ServerStorage.SpellcraftDebug`, GUI names).

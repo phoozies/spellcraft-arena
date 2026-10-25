@@ -9,7 +9,7 @@
 --   * An NPC is a Destructible model, so every spell hurts it through
 --     DestructibleService like a dummy; MatchService.relation lets players
 --     inside the Battleground hurt anything with the `Hostile` attribute.
---     (NPCs aren't knocked back or stunned by spells: they have no player
+--     (NPCs aren't knocked back by spells: they have no player
 --     physics owner.)
 --   * NPCs only target players inside the Battleground, and only think while
 --     one is nearby, so an empty world costs nothing.
@@ -29,6 +29,7 @@ local Npcs = require(ReplicatedStorage.Shared.Battleground.Npcs)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Projectile = require(script.Parent.Archetypes.Projectile)
 local DestructibleService = require(script.Parent.DestructibleService)
+local StatusService = require(script.Parent.StatusService)
 local EconomyService = require(script.Parent.EconomyService)
 
 local NpcService = {}
@@ -199,6 +200,9 @@ local function buildBody(def: Npcs.NpcType, position: Vector3): (Model, Humanoid
 	local humanoid = Instance.new("Humanoid")
 	humanoid.RigType = Enum.HumanoidRigType.R6
 	humanoid.WalkSpeed = def.speed
+	-- StatusService puts speed and size back to these after a stun/slow ends.
+	model:SetAttribute("BaseWalkSpeed", def.speed)
+	model:SetAttribute("BaseScale", def.scale)
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.BreakJointsOnDeath = false
@@ -287,6 +291,11 @@ local function alive(npc: Npc): boolean
 	return npc.model.Parent ~= nil and npcs[npc.model] == npc
 end
 
+local function stunned(npc: Npc): boolean
+	local model = npc.model
+	return StatusService.has(model, "Stun") or StatusService.has(model, "Root") or StatusService.has(model, "TimeStop")
+end
+
 local function swing(npc: Npc, player: Player)
 	local melee = npc.def.melee :: Npcs.Melee
 	local now = os.clock()
@@ -295,7 +304,7 @@ local function swing(npc: Npc, player: Player)
 	face(npc, (targetRoot(player) :: BasePart).Position)
 	telegraph(npc, melee.windup)
 	task.delay(melee.windup, function()
-		if not alive(npc) then
+		if not alive(npc) or stunned(npc) then
 			return
 		end
 		local root = targetRoot(player)
@@ -337,7 +346,7 @@ local function shoot(npc: Npc, player: Player)
 	face(npc, (targetRoot(player) :: BasePart).Position)
 	telegraph(npc, ranged.windup)
 	task.delay(ranged.windup, function()
-		if not alive(npc) then
+		if not alive(npc) or stunned(npc) then
 			return
 		end
 		local root = targetRoot(player)
@@ -452,6 +461,14 @@ local function think(npc: Npc, now: number)
 	elseif now - npc.stuckSince > 1.2 and npc.humanoid.MoveDirection.Magnitude > 0 then
 		npc.humanoid.Jump = true
 		npc.stuckSince = now
+	end
+
+	-- Stunned, rooted, or time-stopped (Water Lock, Vine Snare, Time Stop): no
+	-- moving, swinging, or shooting.
+	if stunned(npc) then
+		npc.humanoid:Move(Vector3.zero)
+		setWalking(npc, false)
+		return
 	end
 
 	if now < npc.busyUntil then

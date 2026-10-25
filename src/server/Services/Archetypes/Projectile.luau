@@ -81,20 +81,17 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 	if dealt <= 0 and damage > 0 then
 		return -- not allowed to hit (ally/self)
 	end
+	-- Status effects (Water Lock's stun, ...) work on players and on hostile NPCs.
+	local affected = StatusService.targetOf(target)
+	if affected and stats.status then
+		local applied = StatusService.apply(affected, stats.status, stats.statusDuration or 1)
+		-- Water Lock wraps its victim in the imported bubble model.
+		if applied and stats.model then
+			TrapBubble.show(affected, stats.statusDuration or 1, opts.visual.color, stats.model)
+		end
+	end
 	if isCharacter then
 		local character = target :: Model
-		if stats.status then
-			local applied = StatusService.apply(character, stats.status, stats.statusDuration or 1)
-			-- Water Lock wraps its victim in the imported bubble model.
-			if applied and stats.model then
-				TrapBubble.show(
-					character,
-					stats.statusDuration or 1,
-					opts.visual.color,
-					stats.model
-				)
-			end
-		end
 		if stats.knockback and stats.knockback ~= 0 then
 			local flat = Vector3.new(direction.X, 0, direction.Z)
 			local push = if flat.Magnitude > 0 then flat.Unit else Vector3.zero

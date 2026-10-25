@@ -225,6 +225,7 @@ features:
       - they only target players with InBattleground, only think while one is within 260 studs, give up past their leash, then walk home and heal
       - a player who hits one (DestructibleService.Damaged) provokes it: it chases that player at any distance, ignoring leash and aggro range, until they fall or leave the Battleground (no sniping from range); merely being noticed is escapable
       - a red "!" billboard (Alert, on the head) shows while an NPC has a target
+      - status spells (Water Lock stun, Root, Time Stop, Slow, ...) work on NPCs via StatusService.targetOf; a stunned/rooted/time-stopped NPC does nothing and its wind-ups are cancelled; hard-CC immunity applies to NPCs too; NPC speed/size live in BaseWalkSpeed/BaseScale attributes
       - melee swings and ranged bolts have a windup (telegraphed with a red highlight); ranged bolts are Projectile.launch with no caster
       - the player who knocks one out gets its reward through EconomyService, capped at COIN_CAP coins per COIN_WINDOW seconds per player
     tests: tests/Npcs.spec.luau

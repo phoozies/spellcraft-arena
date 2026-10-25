@@ -41,7 +41,9 @@ local function recompute(character: Model)
 		return
 	end
 	-- Swiftness boost (BoostService) adds to the base speed.
-	local speed = BASE_WALKSPEED + ((character:GetAttribute("BoostSpeed") :: number?) or 0)
+	-- (Battleground NPCs have their own walk speed and size, set on the model.)
+	local baseSpeed = (character:GetAttribute("BaseWalkSpeed") :: number?) or BASE_WALKSPEED
+	local speed = baseSpeed + ((character:GetAttribute("BoostSpeed") :: number?) or 0)
 	local jump = BASE_JUMP
 	if active(character, "Slow") then
 		speed *= 0.5
@@ -70,11 +72,12 @@ local function recompute(character: Model)
 	end
 
 	-- Size changes: Shrink wins over Giant.
-	local targetScale = 1
+	local baseScale = (character:GetAttribute("BaseScale") :: number?) or 1
+	local targetScale = baseScale
 	if active(character, "Shrink") then
-		targetScale = 0.5
+		targetScale = baseScale * 0.5
 	elseif active(character, "Giant") then
-		targetScale = 1.6
+		targetScale = baseScale * 1.6
 	end
 	if math.abs(character:GetScale() - targetScale) > 0.01 then
 		pcall(function()
@@ -158,6 +161,19 @@ end
 -- they depend on, like BoostSpeed, changes).
 function StatusService.refresh(character: Model)
 	recompute(character)
+end
+
+-- The model a status can be put on, or nil: a player's character, or a
+-- hostile Battleground NPC (an unowned Destructible model with a Humanoid).
+function StatusService.targetOf(instance: Instance): Model?
+	if not instance:IsA("Model") then
+		return nil
+	end
+	local humanoid = instance:FindFirstChildOfClass("Humanoid")
+	if humanoid and (game:GetService("Players"):GetPlayerFromCharacter(instance) or instance:GetAttribute("Hostile") == true) then
+		return instance
+	end
+	return nil
 end
 
 function StatusService.has(character: Model, kind: string): boolean
