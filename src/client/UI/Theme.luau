@@ -72,6 +72,26 @@ function Theme.stroke(parent: Instance, color: Color3?, thickness: number?)
 	return s
 end
 
+-- A dark outer edge around a card whose own stroke is a bright colour (a
+-- rarity ring): the ring then reads on any background. `gap` is the ring's
+-- thickness in pixels; callers keep the card's UIStroke at that thickness or
+-- a little more. Make sure the parent has `gap + 2` pixels of room around the
+-- card, or the edge is clipped.
+function Theme.rim(target: GuiObject, gap: number, radius: number?): Frame
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.BackgroundTransparency = 1
+	rim.BorderSizePixel = 0
+	rim.Active = false
+	rim.Position = UDim2.fromOffset(-gap, -gap)
+	rim.Size = UDim2.new(1, gap * 2, 1, gap * 2)
+	rim.ZIndex = target.ZIndex
+	Theme.corner(rim, (radius or 12) + gap * 2)
+	Theme.stroke(rim, Theme.COLORS.outline, 2)
+	rim.Parent = target
+	return rim
+end
+
 function Theme.padding(parent: Instance, px: number)
 	local p = Instance.new("UIPadding")
 	p.PaddingTop = UDim.new(0, px)

@@ -339,8 +339,10 @@ local function buildSpellbook(root: Instance)
 	collection.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	collection.ScrollBarThickness = 6
 	collection.Parent = loadoutPage
+	-- Room for the cards' thick rarity rings, so they are not clipped.
+	Theme.padding(collection, 8)
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(96, 104)
+	grid.CellSize = UDim2.fromOffset(84, 104)
 	grid.CellPadding = UDim2.fromOffset(8, 8)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = collection
@@ -544,9 +546,11 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 		end
 		card.LayoutOrder = Elements.BASE_COUNT + slot
 		local stroke = card:FindFirstChildOfClass("UIStroke")
-		if selectedSlot == slot and stroke then
-			stroke.Color = Theme.COLORS.accent
-			stroke.Thickness = 5
+		if selectedSlot == slot then
+			card.BackgroundColor3 = Theme.COLORS.accent
+			if stroke then
+				stroke.Thickness = 5
+			end
 		end
 		card.Activated:Connect(function()
 			selectedSlot = slot
@@ -587,24 +591,29 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 			card.BackgroundTransparency = 0.6
 			Theme.label(card, "SAME SHAPE", {
 				Name = "Clash",
-				Size = UDim2.fromOffset(80, 14),
+				Size = UDim2.fromOffset(70, 15),
 				Position = UDim2.fromOffset(4, 3),
 				TextColor3 = Theme.COLORS.bad,
+				BackgroundTransparency = 0,
+				BackgroundColor3 = Theme.COLORS.outline,
 			})
 		end
 		if equippedSlot then
 			Theme.label(card, `SLOT {equippedSlot}`, {
 				Name = "Equipped",
-				Size = UDim2.fromOffset(48, 14),
+				Size = UDim2.fromOffset(48, 15),
 				Position = UDim2.new(1, -52, 0, 3),
 				TextColor3 = Theme.COLORS.good,
+				BackgroundTransparency = 0,
+				BackgroundColor3 = Theme.COLORS.outline,
 			})
 		end
 		if selectedSpell == def.id then
 			local stroke = card:FindFirstChildOfClass("UIStroke")
+			-- Selected: a sunny card, keeping the rarity ring.
+			card.BackgroundColor3 = Theme.COLORS.accent
 			if stroke then
 				stroke.Thickness = 5
-				stroke.Color = Theme.COLORS.text
 			end
 		end
 		card.Activated:Connect(function()

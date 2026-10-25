@@ -19,6 +19,7 @@ local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 
@@ -135,7 +136,7 @@ local function refreshWords()
 	for order, id in ids do
 		local def = SpellDefinitions.get(id)
 		if def then
-			local color = Elements.color(def.element)
+			local color = SpellCard.colorOf(def.id)
 			local card = Theme.frame(glyphRow, {
 				Name = def.id,
 				Size = UDim2.fromOffset(62, 74),
@@ -143,13 +144,9 @@ local function refreshWords()
 				BackgroundTransparency = 0.2,
 			})
 			Theme.corner(card, 10)
-			-- Crate spells are outlined in their rarity colour.
-			local stroke = Theme.stroke(
-				card,
-				if def.rarity then Rarity.color(def.rarity) else color,
-				if def.ultimate then 4 else 2
-			)
-			stroke.Transparency = 0.2
+			-- Crate spells are outlined (and drawn) in their rarity colour.
+			Theme.stroke(card, color, 4)
+			Theme.rim(card, 4, 10)
 			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
@@ -212,7 +209,7 @@ local function buildHotbar(root: Frame)
 			LayoutOrder = i,
 		})
 		local stroke = button:FindFirstChildOfClass("UIStroke") :: UIStroke
-		stroke.Thickness = 3
+		stroke.Thickness = 4
 		local icon = Theme.label(button, "", {
 			Name = "Glyph",
 			Size = UDim2.new(1, 0, 0.45, 0),
@@ -278,6 +275,7 @@ local function refreshHotbar()
 			slot.button.Visible = true
 			slot.icon.Text = if element then element.icon else ""
 			slot.icon.TextColor3 = color
+			slot.icon.TextStrokeTransparency = 0
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
 			-- How well this copy was drawn: 1 to 4 stars.
@@ -290,8 +288,9 @@ local function refreshHotbar()
 				slot.stars.Text = ""
 			end
 			local isReadied = i == ClientState.readiedSlot
-			slot.stroke.Color = if isReadied then Theme.COLORS.accent else color
-			slot.stroke.Thickness = if isReadied then 5 else 3
+			local rarityColor = if def.rarity then Rarity.color(def.rarity) else color
+			slot.stroke.Color = if isReadied then Theme.COLORS.accent else rarityColor
+			slot.stroke.Thickness = if isReadied then 6 else 4
 			slot.button.BackgroundColor3 = if isReadied
 				then Theme.COLORS.purple
 				else Theme.COLORS.panelLight
@@ -304,7 +303,7 @@ local function refreshHotbar()
 			slot.name.Text = if i == #ClientState.hand + 1 then "draw!" else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
-			slot.stroke.Thickness = 3
+			slot.stroke.Thickness = 4
 			slot.button.BackgroundColor3 = Theme.COLORS.panel
 		end
 	end
@@ -356,7 +355,7 @@ local function buildGlyphRow(root: Frame)
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 6)
+	layout.Padding = UDim.new(0, 12)
 	layout.Parent = glyphRow
 	-- Thin bar under the cards that drains during the drawing cooldown.
 	drawBar = Theme.frame(root, {
