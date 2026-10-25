@@ -1,7 +1,11 @@
 --!strict
 -- Sky Islands — floating islands over the void with jump pads between
--- them. Knockback spells shine here (ring-outs). Great for 4v4.
+-- them. Knockback spells shine here (ring-outs). Great for 4v4. The grassy
+-- island tops are breakable terrain: blast holes to drop players into the void.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -9,14 +13,28 @@ type Registrar = (instance: Instance, health: number) -> ()
 local GRASS = Color3.fromRGB(129, 199, 132)
 local DIRT = Color3.fromRGB(161, 136, 127)
 
-local function island(parent: Instance, center: Vector3, radius: number, name: string)
-	MapKit.part(parent, {
+local function island(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	name: string,
+	makeProp: Registrar
+)
+	-- The grassy top is breakable: round cut from a grid of cells.
+	MapKit.terrain(parent, {
 		name = name,
-		shape = Enum.PartType.Cylinder,
-		size = Vector3.new(4, radius * 2, radius * 2),
-		cframe = CFrame.new(center - Vector3.new(0, 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		size = Vector3.new(radius * 2, 4, radius * 2),
+		cframe = CFrame.new(center - Vector3.new(0, 2, 0)),
 		color = GRASS,
 		material = Enum.Material.Grass,
+	}, {
+		cell = Config.TERRAIN.CELL,
+		health = Config.TERRAIN.HEALTH.Ground,
+		makeProp = makeProp,
+		ground = true,
+		keep = function(x: number, z: number)
+			return x * x + z * z <= radius * radius
+		end,
 	})
 	-- Rocky underside.
 	MapKit.part(parent, {
@@ -38,12 +56,10 @@ local function jumpPad(parent: Instance, from: Vector3, to: Vector3)
 		color = Color3.fromRGB(255, 64, 129),
 		material = Enum.Material.Neon,
 	})
-	-- Ballistic launch that lands near `to` (g = workspace gravity).
-	local g = workspace.Gravity
-	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
-	local t = math.clamp(flat.Magnitude / 45, 1, 2.2)
-	local vy = ((to.Y - from.Y) + 0.5 * g * t * t) / t
-	pad:SetAttribute("LaunchVelocity", flat / t + Vector3.new(0, vy, 0))
+	-- Ballistic launch that lands near `to`. MapKit.scale re-aims it from
+	-- "LaunchTo" when the whole map is enlarged.
+	pad:SetAttribute("LaunchTo", to)
+	pad:SetAttribute("LaunchVelocity", MapKit.launchVelocity(from, to, 45))
 	pad:AddTag("JumpPad")
 end
 
@@ -51,13 +67,13 @@ return function(makeProp: Registrar): Model
 	local model = Instance.new("Model")
 	model.Name = "SkyIslands"
 
-	island(model, Vector3.zero, 26, "MainIsland")
+	island(model, Vector3.zero, 26, "MainIsland", makeProp)
 	local satellites = {}
 	for i = 1, 4 do
 		local a = (i / 4) * math.pi * 2 + math.pi / 4
 		local center = Vector3.new(math.cos(a) * 62, if i % 2 == 0 then 6 else -2, math.sin(a) * 62)
 		table.insert(satellites, center)
-		island(model, center, 15, `Island{i}`)
+		island(model, center, 15, `Island{i}`, makeProp)
 		-- Pads both ways between each satellite and the main island.
 		local inward = (Vector3.zero - center) * Vector3.new(1, 0, 1)
 		jumpPad(model, center + inward.Unit * 9, Vector3.new(0, 0, 0) - inward.Unit * 10)

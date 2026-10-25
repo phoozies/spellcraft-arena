@@ -146,18 +146,57 @@ local Config = {
 		INVITE_SECONDS = 30,
 	},
 
-	-- Dash (DashService, client DashController): a quick burst forward on a
+	-- Dash (DashService, client DashController): a quick leap forward on a
 	-- key (Q) or the Dash button. The server checks the cooldown and the
 	-- player's state and tells the client which way to go; the client moves its
-	-- own character at SPEED studs/s for DURATION seconds (about 24 studs).
+	-- own character at SPEED studs/s for DURATION seconds (about 28 studs) and
+	-- pops it HOP studs/s upward, so the dash is a low arc with three wind
+	-- streaks (TRAILS) behind it.
 	DASH = {
-		COOLDOWN = 4,
-		SPEED = 96,
-		DURATION = 0.25,
+		COOLDOWN = 8,
+		SPEED = 70,
+		DURATION = 0.4,
+		HOP = 38,
+		TRAILS = 3,
 	},
 
-	-- Distance between instanced arenas so concurrent matches never overlap.
-	ARENA_SPACING = 2000,
+	-- The hub is a floating island (Maps/InkwellPlaza) centered on the origin
+	-- with its top at y = 0. RADIUS is the grass disc; the ocean far below it is
+	-- OCEAN_Y. Match arenas are summoned BELOW it (ArenaService) so hub players
+	-- can look over the rim and watch duels.
+	HUB = {
+		RADIUS = 180,
+		OCEAN_Y = -450,
+	},
+
+	-- Where match arenas appear: in rings around the hub's axis, ARENA.Y studs
+	-- below it. Slot 1..PER_RING sit on the first ring (RADIUS from the axis),
+	-- the next PER_RING on a second ring RING_STEP further out, and so on.
+	ARENA = {
+		Y = -300,
+		RADIUS = 560,
+		RING_STEP = 600,
+		PER_RING = 8,
+	},
+
+	-- Every match arena is built at design size, then scaled up by this factor
+	-- (ArenaService.init). Jump pad launches are re-aimed to match.
+	ARENA_SCALE = 2,
+
+	-- Breakable terrain (MapKit.terrain, DestructibleService): ground, mesas and
+	-- outcrops are made of cells that take spell damage like any other prop, so
+	-- the harder a spell hits the faster it carves through. Cells come back with
+	-- the next round's fresh arena.
+	--   CELL     design-size width of one cell, in studs (before ARENA_SCALE)
+	--   HEALTH   what a cell can take: Ground (floors, island tops), Rock
+	--            (mesas, boulders)
+	--   SPLASH   share of a hit's damage that also lands on every cell touching
+	--            the one that was hit, so heavy spells open wider craters
+	TERRAIN = {
+		CELL = 10,
+		HEALTH = { Ground = 60, Rock = 90 },
+		SPLASH = 0.5,
+	},
 
 	AUTOSAVE_INTERVAL = 90,
 

@@ -10,6 +10,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -175,8 +176,59 @@ local function breakStructure(target: Instance, destroyer: Player?)
 	end
 	target:SetAttribute("Broken", true)
 	DestructibleService.shatter(target)
-	DestructibleService.Destroyed:Fire(target, destroyer)
+	-- Terrain is scenery: carving it earns nothing (no quest progress).
+	local credit = if target:GetAttribute("Terrain") then nil else destroyer
+	DestructibleService.Destroyed:Fire(target, credit)
 	target:Destroy()
+end
+
+-- Terrain (map cells from MapKit.terrain): the hit cell takes the full damage
+-- and every cell touching it takes SPLASH of it, so a heavy spell breaks
+-- through faster and opens a wider hole than a light one. The splash does not
+-- spread further, so one hit can never unravel a whole map.
+local function damageTerrain(
+	cell: Instance,
+	amount: number,
+	attacker: Player?,
+	owner: Player?
+): number
+	local function hurt(piece: Instance, dealt: number)
+		if piece:GetAttribute("Broken") then
+			return
+		end
+		local health = ((piece:GetAttribute("Health") :: number?) or 0) - dealt
+		piece:SetAttribute("Health", health)
+		updateBar(piece)
+		if health <= 0 then
+			breakStructure(piece, attacker)
+		end
+	end
+
+	local splash = amount * Config.TERRAIN.SPLASH
+	if splash >= 1 and cell:IsA("BasePart") then
+		local size = cell.Size
+		local reach = math.max(size.X, size.Y, size.Z) * 1.2
+		for _, other in CollectionService:GetTagged(TAG) do
+			if
+				other ~= cell
+				and other:IsA("BasePart")
+				and other:GetAttribute("Terrain")
+				and (other.Position - cell.Position).Magnitude <= reach
+			then
+				hurt(other, splash)
+			end
+		end
+	end
+
+	local position = if cell:IsA("BasePart") then cell.Position else nil
+	if position then
+		showNumber(position, amount, "damage", attacker, owner)
+		if amount >= 3 and ((cell:GetAttribute("Health") :: number?) or 0) - amount > 0 then
+			fxRemote:FireAllClients("chip", position, (cell :: BasePart).Color)
+		end
+	end
+	hurt(cell, amount)
+	return amount
 end
 
 -- Damage to a wall built from chunks (Rock Wall). Any chunk that is hit takes
@@ -319,8 +371,12 @@ function DestructibleService.damage(
 		return damageWall(wall :: Model, resolved, amount, attacker, owner)
 	end
 
+	if resolved:GetAttribute("Terrain") then
+		return damageTerrain(resolved, amount, attacker, owner)
+	end
+
 	-- Structures / summons / props
-	local health = (resolved:GetAttribute("Health") :: number?) or 0
+	local health =(resolved:GetAttribute("Health") :: number?) or 0
 	health -= amount
 	resolved:SetAttribute("Health", health)
 	updateBar(resolved)

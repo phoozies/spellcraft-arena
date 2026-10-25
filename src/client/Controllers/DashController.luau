@@ -4,8 +4,9 @@
 -- it allows the dash (DashService: alive, free to move, off cooldown) it
 -- answers DashStarted with the direction and when the dash is ready again, and
 -- this controller then drives the player's own character at Config.DASH.SPEED
--- for Config.DASH.DURATION seconds. The button shows the cooldown. The dash
--- animation and puff are played for everyone by FxController ("dash").
+-- for Config.DASH.DURATION seconds, popping it up Config.DASH.HOP so the dash
+-- is a low leap. The button shows the cooldown. The dash animation, wind
+-- streaks and puff are played for everyone by FxController ("dash").
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -84,8 +85,10 @@ local function go(direction: Vector3)
 	velocity.SecondaryTangentAxis = Vector3.zAxis
 	velocity.PlaneVelocity = Vector2.new(direction.X, direction.Z) * Config.DASH.SPEED
 	velocity.Parent = root
-	-- Face the way you dash.
+	-- Face the way you dash, and leave the ground in a low arc.
 	root.CFrame = CFrame.lookAt(root.Position, root.Position + direction)
+	local launched = root.AssemblyLinearVelocity
+	root.AssemblyLinearVelocity = Vector3.new(launched.X, Config.DASH.HOP, launched.Z)
 	task.delay(Config.DASH.DURATION, function()
 		velocity:Destroy()
 		attachment:Destroy()
@@ -93,14 +96,19 @@ local function go(direction: Vector3)
 	end)
 end
 
+local LABEL = "💨 Dash"
+
+-- On cooldown the button shows only the countdown (its own word is hidden).
 local function refresh()
 	local left = cooldownLeft()
 	if left > 0 then
 		cooldownText.Text = string.format("%.1f", left)
 		cooldownText.Visible = true
+		button.Text = ""
 		button.BackgroundColor3 = Theme.COLORS.panel
 	else
 		cooldownText.Visible = false
+		button.Text = LABEL
 		button.BackgroundColor3 = Theme.COLORS.accent
 	end
 end
@@ -116,7 +124,7 @@ local function buildButton()
 	scale.Parent = gui
 	Responsive.bind(scale)
 	-- Sits under the Draw button, bottom right.
-	button = Theme.button(gui, "💨 Dash", {
+	button = Theme.button(gui, LABEL, {
 		Name = "Dash",
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -16, 1, -226),

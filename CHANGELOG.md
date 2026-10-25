@@ -4,6 +4,22 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (breakable terrain, bigger arenas)
+- **Terrain breaks.** The floors of Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple and Sky Bridge (platforms, middle island), Crayon Canyon's floor, mesas and ramps, Sky Islands' island tops, and six new rock outcrops in the Sparring Arena are made of cells (`MapKit.terrain`) that take spell damage like any prop. The hit cell takes the full damage and the cells touching it take half (`Config.TERRAIN.SPLASH`), so a heavy spell breaks through faster and opens a wider hole; blast the floor out and players fall (ring-outs). Cliffs, end walls, and the Sparring Arena's imported floor mesh stay solid. Every round starts on a fresh arena, so the terrain respawns. Terrain gives no quest credit, and a bolt skimming over the floor does not break it (`GroundTile`).
+- **Arenas are twice as big** (`Config.ARENA_SCALE`, applied by `MapKit.scale` in `ArenaService.init`, all 8 maps); Sky Islands jump pads are re-aimed for the longer hops. The summon ring below the hub is wider to fit them (`Config.ARENA.RADIUS` 380 -> 560, `RING_STEP` 420 -> 600).
+- `tests/Terrain.spec.luau`.
+
+### Changed (dash cooldown)
+- **Dash cooldown is 8s** (was 2s on this branch), and the Dash button now shows only the countdown while recharging (it used to keep the word "Dash" underneath).
+
+### Changed (floating-island hub, duels below, 8 maps, new dash)
+- **The hub is a round floating island** (`Maps/InkwellPlaza`, `Config.HUB`): a grass disc with a sand beach, a dark rock cone with stalactites and crystals underneath, open ocean far below, and a wooden rail around the rim. It follows the look of the reference video: stepped white-marble amphitheatre arcs, leaning marble pillars, a ruined arch, bare dark trees, crates. Everything sits in rings around the inkwell: plaza (shrines, kiosks, gift box, spawn), amphitheatre and Battleground portal to the south, the team boxes in an arc to the north with the Arena Gate behind them, the Training Grove to the west, the Crate Shop to the east, podium and Most Wins board facing the centre. All tags and names the services use are unchanged.
+- **Duels are summoned below the island.** Arenas are no longer at `y = 400`: `ArenaService.slotOrigin` places them in rings 300 studs under the hub (`Config.ARENA`), outside its footprint, so players on the rim (four 👁 SPECTATE overlooks) can look down and watch fights live. Arena models stream in persistently, carry a floating "⚔ mode · map" sign, effects draw out to 900 studs, and the hub's haze is thinner so the arenas are clear.
+- **Eight duel maps** (was three): the new **Frost Hollow** (ice sheet, ring-outs), **Ember Forge** (basalt over a lava moat), **Moss Ruins** (overgrown arches and cover), **Tidal Temple** (sand island, stepped temple), and **Sky Bridge** (two platforms and a breakable plank bridge, ring-outs). The map vote shows all eight in a 4 x 2 grid. New `MapKit` helpers: `disc`, `pillar`, `barrierRing`, `underside`, `tree`.
+- **The dash is now a leap, as in the reference video:** the character hops in a low arc (`Config.DASH.HOP`) with arms flung wide and three thin pale wind streaks trailing behind (`SpellVfx.windStreaks`). The cooldown is 2s (was 4s), 70 studs/s for 0.4s (about 28 studs).
+- Project skills for agents in `.claude/skills/` (new feature, add a map, add a spell, testing, Studio sync, docs and changelog).
+- Tests: `tests/Maps.spec.luau` (map contract, arena placement, hub tags, dash).
+
 ### Changed (store art)
 - **New icons and thumbnails in the classic blocky Roblox style** (`assets/marketing/`: two 512px icons, three 1920x1080 thumbnails: key art, action, spell crates). They are drawn by `tools/make-marketing-art.py` (needs Pillow), so edit a scene there and re-run. They replace the old "Wordcraft Arena" art.
 

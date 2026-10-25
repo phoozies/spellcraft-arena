@@ -60,21 +60,22 @@ A one-time thank-you of **250 coins** (`Config.SUPPORT.LIKE_FAVORITE_COINS`, les
 
 - **leaderstats:** every player gets `leaderstats.Wins` and `leaderstats.Coins`, so the Roblox player list shows wins. Synced on profile load and on every `EconomyService.Changed`.
 - **Most Wins board** (hub part tagged `WinsBoard`): the top `Config.LEADERBOARD_ROWS` (10) players **in this server** by wins.
-- **Podium** (hub parts tagged `PodiumSpot`, attribute `Rank` 1–3): the top 3 players in the server with at least one win stand on the gold (1), silver (2) and bronze (3) pedestals as their real avatars (`Players:CreateHumanoidModelFromUserId`, anchored, cached per user, facing the plaza). Each pedestal's front shows `#rank name / N wins` (its SurfaceGui label named `Text`). Empty pedestals read "Win a match to stand here!".
+- **Podium** (hub parts tagged `PodiumSpot`, attribute `Rank` 1–3): the top 3 players in the server with at least one win stand on the gold (1), silver (2) and bronze (3) pedestals as their real avatars (`Players:CreateHumanoidModelFromUserId`, anchored, cached per user, facing the island's centre). Each pedestal's front shows `#rank name / N wins` (its SurfaceGui label named `Text`). Empty pedestals read "Win a match to stand here!".
 - Refreshes at most every `Config.LEADERBOARD_REFRESH` (10s), only when something changed.
 
 The ranking is per server (players currently here), built from their saved `stats.wins`, so a player's wins follow them between servers. A global all-time board would need an `OrderedDataStore`; see "Ideas" below.
 
 ## Hub layout
 
-| Thing | Where (studs) | Built by |
+| Thing | Where (studs; bearing 0 = north = -Z, 90 = east) | Built by |
 |---|---|---|
-| Spellbook kiosk (imported **Grimoire** model on a lectern, prompt "Spellbook") | (-22, 0, 70) | `Maps/InkwellPlaza.luau` |
-| Element shrines (4, list each element's 3 base spells, shapes, and price; prompt "Spellbook") | around the fountain | same |
-| Daily Quests chest | (22, 0, 70) | same |
-| Crate Shop stage (the Spell Crate, prompt "Crates", with five rarity orbs) | (76, 0, 36) | same; the crate uses the imported **Crate** model tinted gold, else a colored block |
-| Podium (3 pedestals) | (-23, 0, -20), the hall entrance | same |
-| Most Wins board | right side of the hall entrance, angled to the plaza | same |
+| Spellbook kiosk (imported **Grimoire** model on a lectern, prompt "Spellbook") | plaza, bearing 150, radius 36 | `Maps/InkwellPlaza.luau` |
+| Element shrines (4, list each element's 3 base spells, shapes, and price; prompt "Spellbook") | plaza, radius 30, bearings 35 / 105 / 255 / 325 | same |
+| Daily Quests chest | plaza, bearing 210, radius 36 | same |
+| Like & Favourite gift box | plaza, bearing 180, radius 40 | same |
+| Crate Shop stage (the Spell Crate, prompt "Crates", with five rarity orbs) | (100, 0, 45), east | same; the crate uses the imported **Crate** model tinted gold, else a colored block |
+| Podium (3 pedestals) | bearing 335, radius 64, facing the centre | same |
+| Most Wins board | bearing 25, radius 64, facing the centre | same |
 
 ## Admin and debug
 

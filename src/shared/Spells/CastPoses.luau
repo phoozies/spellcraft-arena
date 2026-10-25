@@ -135,14 +135,15 @@ CastPoses.POSES = {
 		{ d = 0.1, right = { fwd = 178 }, left = { fwd = 10 }, lean = -10 },
 		{ d = 0.06, hold = 0.2, right = { fwd = 85 }, left = { fwd = 10 }, lean = 16 },
 	},
-	-- The dash (not a spell): arms thrown back, body tipped far forward.
+	-- The dash (not a spell): a leap with the arms flung wide and swept back,
+	-- body tipped forward, held for the whole dash.
 	Dash = {
 		{
 			d = 0.07,
-			hold = 0.14,
-			right = { fwd = -70, elbow = 20 },
-			left = { fwd = -70, elbow = 20 },
-			lean = 30,
+			hold = 0.34,
+			right = { fwd = -30, side = 70, elbow = 10 },
+			left = { fwd = -30, side = 70, elbow = 10 },
+			lean = 32,
 		},
 	},
 	-- Arms low and wide, torso bent, planted: shaking the ground. The held

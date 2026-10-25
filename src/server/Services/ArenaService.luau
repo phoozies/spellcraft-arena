@@ -11,6 +11,11 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local DestructibleService = require(script.Parent.DestructibleService)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
+local MapKit = require(MapsFolder:WaitForChild("MapKit")) :: any
+
+-- Ground speed (studs/s) jump pads aim for once a map is scaled up; faster than
+-- the design-size 45 so the longer hops keep a sensible arc.
+local PAD_SPEED = 70
 
 export type Arena = {
 	id: number,
@@ -25,11 +30,25 @@ export type Arena = {
 
 local ArenaService = {}
 
-ArenaService.MAP_NAMES = { "CrayonCanyon", "SkyIslands", "SparringArena" }
+ArenaService.MAP_NAMES = {
+	"CrayonCanyon",
+	"SkyIslands",
+	"SparringArena",
+	"FrostHollow",
+	"EmberForge",
+	"MossRuins",
+	"TidalTemple",
+	"SkyBridge",
+}
 ArenaService.DISPLAY_NAMES = {
 	CrayonCanyon = "Crayon Canyon",
 	SkyIslands = "Sky Islands",
 	SparringArena = "Sparring Arena",
+	FrostHollow = "Frost Hollow",
+	EmberForge = "Ember Forge",
+	MossRuins = "Moss Ruins",
+	TidalTemple = "Tidal Temple",
+	SkyBridge = "Sky Bridge",
 }
 
 local templates: Folder
@@ -67,13 +86,64 @@ local function wireJumpPad(pad: Instance)
 	end)
 end
 
+-- Where arena `slot` (1, 2, ...) is summoned: below the hub island, in rings
+-- around its axis (Config.ARENA), so hub players can look over the rim and
+-- watch the fights. The first ring is full before the next one outward is used.
+function ArenaService.slotOrigin(slot: number): CFrame
+	local ring = (slot - 1) // Config.ARENA.PER_RING
+	local index = (slot - 1) % Config.ARENA.PER_RING
+	local radius = Config.ARENA.RADIUS + ring * Config.ARENA.RING_STEP
+	-- Stagger each ring by half a step so arenas don't stack behind each other.
+	local angle = (index + (ring % 2) * 0.5) / Config.ARENA.PER_RING * math.pi * 2
+	return CFrame.new(math.sin(angle) * radius, Config.ARENA.Y, -math.cos(angle) * radius)
+end
+
+-- A floating sign over an arena so hub spectators can tell the fights apart.
+local function addSpectatorSign(model: Model, mapName: string, mode: string)
+	local bounds = model:FindFirstChild("Bounds")
+	local height = 60
+	if bounds and bounds:IsA("BasePart") then
+		height = bounds.Position.Y - model:GetPivot().Position.Y + bounds.Size.Y / 2 + 12
+	end
+	local anchor = Instance.new("Part")
+	anchor.Name = "SpectatorSign"
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one
+	anchor.CFrame = model:GetPivot() + Vector3.new(0, height, 0)
+	anchor.Parent = model
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(240, 60)
+	gui.MaxDistance = 1500
+	gui.AlwaysOnTop = true
+	gui.Parent = anchor
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.TextColor3 = Color3.new(1, 1, 1)
+	text.TextStrokeTransparency = 0.3
+	text.Text = `⚔ {mode} · {ArenaService.DISPLAY_NAMES[mapName] or mapName}`
+	text.Parent = gui
+end
+
 -- Picks a map suited to the mode.
 function ArenaService.pickMap(mode: string): string
 	local weights: { [string]: number } = {
 		CrayonCanyon = 1,
 		SkyIslands = 1,
-		-- A compact 46-stud floor: favored for small duels, skipped for 4v4.
+		-- The roomy round floor: favored for small duels, skipped for 4v4.
 		SparringArena = if mode == "1v1" or mode == "2v2" then 2 elseif mode == "4v4" then 0 else 1,
+		FrostHollow = 1,
+		EmberForge = 1,
+		MossRuins = 1,
+		TidalTemple = 1,
+		-- Two 30-stud platforms: great for duels, tight for 4v4.
+		SkyBridge = if mode == "4v4" then 0.5 else 1,
 	}
 	local total = 0
 	for _, w in weights do
@@ -81,7 +151,7 @@ function ArenaService.pickMap(mode: string): string
 	end
 	local roll = math.random() * total
 	for _, name in ArenaService.MAP_NAMES do
-		roll -= weights[name]
+		roll -= weights[name] or 1
 		if roll <= 0 then
 			return name
 		end
@@ -99,9 +169,11 @@ function ArenaService.create(mapName: string, mode: string): Arena
 	slots[slot] = true
 	nextId += 1
 
-	local origin = CFrame.new(slot * Config.ARENA_SPACING, 400, 0)
+	local origin = ArenaService.slotOrigin(slot)
 	local model = template:Clone()
 	model:PivotTo(origin)
+	-- Hub players watch from far away, so the arena must always be streamed in.
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	for _, descendant in model:GetDescendants() do
 		local health = descendant:GetAttribute("PropHealth")
@@ -137,6 +209,7 @@ function ArenaService.create(mapName: string, mode: string): Arena
 	end
 
 	model.Name = `Arena{nextId}_{mapName}`
+	addSpectatorSign(model, mapName, mode)
 	model.Parent = workspace
 	for _, pad in model:GetDescendants() do
 		if CollectionService:HasTag(pad, "JumpPad") then
@@ -195,6 +268,7 @@ function ArenaService.init()
 	for _, name in ArenaService.MAP_NAMES do
 		local builder = require(MapsFolder:WaitForChild(name)) :: any
 		local model: Model = builder(makeProp)
+		MapKit.scale(model, Config.ARENA_SCALE, PAD_SPEED)
 		model.Name = name
 		model.WorldPivot = CFrame.new()
 		model.Parent = templates

@@ -1,7 +1,11 @@
 --!strict
 -- Crayon Canyon — a 3-lane canyon with two raised mesas and destructible
--- rope bridges. Rewards walls and high ground. Tuned for 8 players.
+-- rope bridges. Rewards walls and high ground. Tuned for 8 players. The floor,
+-- mesas and ramps are breakable terrain; the cliffs and end walls are not.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
@@ -20,13 +24,20 @@ return function(makeProp: Registrar): Model
 	model.Name = "CrayonCanyon"
 	local rng = MapKit.rng(1337)
 
-	-- Floor: a paper-colored canyon bed.
-	MapKit.part(model, {
+	-- Floor: a paper-colored canyon bed, breakable cell by cell (blast a hole
+	-- and anyone standing there falls). The cliffs and end walls below stay
+	-- solid: they are the arena's edge.
+	MapKit.terrain(model, {
 		name = "Floor",
 		size = Vector3.new(110, 4, 180),
 		cframe = CFrame.new(0, -2, 0),
 		color = Color3.fromRGB(255, 243, 224),
 		material = Enum.Material.Sand,
+	}, {
+		cell = Config.TERRAIN.CELL,
+		health = Config.TERRAIN.HEALTH.Ground,
+		makeProp = makeProp,
+		ground = true,
 	})
 
 	-- Tall striped cliffs on both sides.
@@ -54,12 +65,16 @@ return function(makeProp: Registrar): Model
 
 	-- Two mesas splitting the canyon into 3 lanes, with ramps at each end.
 	for _, x in { -22, 22 } do
-		MapKit.part(model, {
+		MapKit.terrain(model, {
 			name = "Mesa",
 			size = Vector3.new(16, 14, 90),
 			cframe = CFrame.new(x, 7, 0),
 			color = Color3.fromRGB(255, 204, 128),
 			material = Enum.Material.Sandstone,
+		}, {
+			cell = Config.TERRAIN.CELL,
+			health = Config.TERRAIN.HEALTH.Rock,
+			makeProp = makeProp,
 		})
 		for _, z in { -1, 1 } do
 			local ramp = Instance.new("WedgePart")
@@ -71,6 +86,8 @@ return function(makeProp: Registrar): Model
 			ramp.Color = Color3.fromRGB(255, 183, 77)
 			ramp.Material = Enum.Material.Sandstone
 			ramp.Parent = model
+			ramp:SetAttribute("Terrain", true)
+			makeProp(ramp, Config.TERRAIN.HEALTH.Rock)
 		end
 	end
 

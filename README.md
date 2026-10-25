@@ -8,7 +8,7 @@ A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, out
 - 1v1, 2v2, 3v3, and 4v4, best of 3. In the hub, stand on the Blue or Red side of a team box to pick your team before the match. Your loadout (your element's three spells plus two crate spells) is your spellbook, and between rounds you pick a boost. For a drop-in fight with no queue, step into the **Battleground** portal: a big open world where players and raiders are enemies. Knock out NPCs for coins.
 - 24 spells: 4 elements (Fire, Water, Earth, Air) with three base spells each, plus 12 crate spells in five rarities. Pick one element free, then win matches to earn coins to buy the others and to spin the Spell Crate. Between rounds you pick a boost (more damage, health, speed, or faster spells) instead of earning spells.
 - Wins show on the player list, a Most Wins board, and a podium in the hub where the server's top 3 stand as their avatars.
-- A central hub plus 4 arenas: Crayon Canyon, Frostbite Fortress, Sky Islands, and the Sparring Arena (a colosseum).
+- A round floating-island hub, and 8 duel arenas summoned below it so hub players can watch the fights: Crayon Canyon, Sky Islands, Sparring Arena (a colosseum), Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple, and Sky Bridge.
 
 ## Quick start
 

@@ -19,6 +19,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local MapKit = require(script.Parent.MapKit)
 
@@ -30,6 +31,8 @@ local WALL_SEGMENTS = 24
 local WALL_HEIGHT = 40
 -- The wizard statue at the center (the model is about 21 studs tall at scale 1).
 local STATUE_SCALE = 2
+-- Distance of the breakable rock outcrops from the center (clear of the spawn lines).
+local OUTCROP_RADIUS = 50
 
 -- Scales everything in `model` about the arena's origin (the floor's center,
 -- top at y = 0), so the floor top stays at y = 0.
@@ -90,7 +93,28 @@ local function buildStatue(model: Model)
 	})
 end
 
-return function(_makeProp: (Instance, number) -> ()): Model
+-- Six rock outcrops around the center: breakable terrain cover. (The imported
+-- floor is one mesh and can't be cut into cells, so the floor itself is solid.)
+local function buildOutcrops(model: Model, makeProp: (Instance, number) -> ())
+	local folder = MapKit.folder(model, "Outcrops")
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2
+		MapKit.terrain(folder, {
+			name = "Outcrop",
+			size = Vector3.new(20, 14, 20),
+			cframe = CFrame.new(math.cos(a) * OUTCROP_RADIUS, 7, math.sin(a) * OUTCROP_RADIUS)
+				* CFrame.Angles(0, -a, 0),
+			color = Color3.fromRGB(150, 146, 158),
+			material = Enum.Material.Slate,
+		}, {
+			cell = Config.TERRAIN.CELL,
+			health = Config.TERRAIN.HEALTH.Rock,
+			makeProp = makeProp,
+		})
+	end
+end
+
+return function(makeProp: (Instance, number) -> ()): Model
 	local model = Instance.new("Model")
 	model.Name = "SparringArena"
 
@@ -106,6 +130,7 @@ return function(_makeProp: (Instance, number) -> ()): Model
 	end
 
 	buildStatue(model)
+	buildOutcrops(model, makeProp)
 
 	-- Invisible wall ring.
 	local barriers = MapKit.folder(model, "Barriers")
