@@ -1,5 +1,6 @@
 --!strict
 -- Replaces Roblox's default "Health" character script, which regenerates
--- 1% HP per second everywhere. Spellcraft Arena only regenerates in the hub
--- (HubService); inside arenas the only healing comes from spells.
+-- 1% HP per second everywhere. Spellcraft Arena does its own regeneration
+-- (HubService.regenTick): fast in the hub, slow and out-of-combat-only in
+-- matches and the Battleground.
 -- This script intentionally does nothing.

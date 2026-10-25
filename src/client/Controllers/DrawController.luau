@@ -267,7 +267,7 @@ local function finishStroke()
 	end)
 end
 
--- A short "Perfect! +20% power" note over the canvas.
+-- A short "Perfect! +50% power" note over the canvas.
 local function showQuality(quality: number)
 	local tier = Quality.tier(quality)
 	local text = `{string.rep("★", tier.stars)} {tier.name}! {Quality.describe(quality)}`

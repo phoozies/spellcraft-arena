@@ -210,7 +210,7 @@ features:
       - MatchService.relation lets any two players who are both InBattleground harm each other, and any Battleground player harm NPCs (Hostile attribute); nobody else can
       - drop-in point is random: 25 samples scored by distance from NPC spots and other fighters, clear of scenery (GetPartBoundsInBox)
       - knocked-out fighters respawn at a new random spot after RESPAWN_DELAY, with spawn protection (MatchService.respawnAt)
-      - HubService neither regenerates health nor respawns them; MatchService.joinQueue refuses while inside, and starting a match pulls you out
+      - HubService respawns neither them nor gives hub-speed regen (they get the slow passive regen); MatchService.joinQueue refuses while inside, and starting a match pulls you out
       - no wins or boosts; coins come only from NPC knockouts; you must have an element equipped to enter
     client: "HudController banner and Return to Hub button (LeaveBattleground remote), HealthController (every other fighter's bar is red)"
     tests: tests/Battleground.spec.luau
@@ -324,7 +324,7 @@ features:
     config: [DRAW_COOLDOWN, DRAW_MAX_POINTS, DRAW_MAX_COORD, DRAW_MAX_SECONDS, DEFAULT_DRAW_KEY, QUALITY]
     client_ui: HudController glyph cards (equipped element; tapping one opens the canvas with a guide), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
     preview: "tapping a glyph card (ClientState.DrawRequested) opens the canvas for that spell: its shape is drawn faint in the middle (GlyphView.create) with a dot tracing it; DrawSpell then carries the spell id and the server only accepts THAT shape"
-    quality: "the recognizer score becomes a 0..1 quality (Spells/Quality.fromScore, Config.QUALITY); each hand copy stores it (HandService.qualities); CastService applies Quality.apply to the spell def at cast time: power (damage, heal, shield, health, hazardDps, damageMult bonus) x0.85..1.2, size (radius) x0.9..1.25, time (duration, statusDuration, lifetime) x0.85..1.3; cooldown, range, and speed never change. Tiers Rough/Good/Great/Perfect show as 1-4 stars on the hotbar slot"
+    quality: "the recognizer score becomes a 0..1 quality (Spells/Quality.fromScore, Config.QUALITY); each hand copy stores it (HandService.qualities); CastService applies Quality.apply to the spell def at cast time: power (damage, heal, shield, health, hazardDps, damageMult bonus) x0.85..1.5, size (radius) x0.9..1.25, time (duration, statusDuration, lifetime) x0.85..1.3; cooldown, range, and speed never change. Tiers Rough/Good/Great/Perfect show as 1-4 stars on the hotbar slot"
     responsive: "UI/Responsive.bind keeps every UIScale matched to the screen (1280x720 design, 960x540 for phones, capped so a 700x470 panel always fits); used by the HUD and the draw button"
 
     invariants:

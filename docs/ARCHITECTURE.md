@@ -37,7 +37,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     AdminService        ";" admin commands (chat), server-side admin check
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, boost drafts, teams, PvP rules
-    HubService          builds the hub, spawning, team boxes, dummies, hub regen
+    HubService          builds the hub, spawning, team boxes, dummies, hub regen and passive regen
     BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
     MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
@@ -84,7 +84,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
 
 src/character → StarterPlayer.StarterCharacterScripts
-  Health.server.luau    empty: replaces Roblox's default regen (arenas have no regen)
+  Health.server.luau    empty: replaces Roblox's default regen (HubService does the regen)
 
 src/loading   → ReplicatedFirst.LoadingScreen
   LoadingScreen.client  custom join screen (title, tips, progress) until the HUD exists

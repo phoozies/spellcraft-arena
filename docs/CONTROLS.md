@@ -15,7 +15,7 @@ You get a spell by **drawing its shape**, which adds **one copy** to your hotbar
 
 ## Drawing tips
 
-- **Tap a spell card** (the row above the hotbar) and that spell's shape appears on screen with a dot showing how to draw it. **Trace it as closely as you can: the better your line follows the shape, the stronger the spell.** The result shows as 1 to 4 stars (Rough, Good, Great, Perfect) on the hotbar copy. A Perfect drawing hits up to 20% harder, up to 25% wider, and lasts up to 30% longer; a Rough one is a bit weaker.
+- **Tap a spell card** (the row above the hotbar) and that spell's shape appears on screen with a dot showing how to draw it. **Trace it as closely as you can: the better your line follows the shape, the stronger the spell.** The result shows as 1 to 4 stars (Rough, Good, Great, Perfect) on the hotbar copy. A Perfect drawing hits up to 50% harder, up to 25% wider, and lasts up to 30% longer; a Rough one is a bit weaker.
 - Start anywhere and go either way; size, position, and angle don't matter for recognition, only the shape does. With a card selected, drawing a different shape fizzles.
 
 - Draw **big and smooth**. Size and angle don't matter, and you can start anywhere on a closed shape and go either way. A **slash** is just a straight line, in any direction.

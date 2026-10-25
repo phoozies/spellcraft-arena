@@ -27,7 +27,7 @@ local Config = {
 		SCORE_FLOOR = 0.85,
 		SCORE_PERFECT = 0.975,
 		DEFAULT = 0.5,
-		POWER = { 0.85, 1.2 },
+		POWER = { 0.85, 1.5 },
 		SIZE = { 0.9, 1.25 },
 		TIME = { 0.85, 1.3 },
 	},
@@ -42,8 +42,12 @@ local Config = {
 	-- area-of-effect checks against players.
 	HITBOX_BONUS = 2,
 
-	-- Health regenerates only in the hub. In arenas the only healing is spells.
+	-- The hub heals fast. Everywhere else (matches, the Battleground) health
+	-- slowly regenerates, but only after PASSIVE_REGEN_DELAY seconds without
+	-- taking damage, so it never helps in the middle of a fight.
 	HUB_REGEN_PER_SECOND = 5,
+	PASSIVE_REGEN_PER_SECOND = 1,
+	PASSIVE_REGEN_DELAY = 5,
 
 	-- Seconds the hub's team boxes wait once both sides are full, so someone
 	-- can still step off before the match starts.

@@ -11,7 +11,7 @@
 --   * When you're knocked out you respawn at a random spot after a few
 --     seconds, with the usual spawn protection.
 --   * No coins, wins, or boosts: it's for practice and fun. You use your
---     equipped element's spells, with no health regen (like a match).
+--     equipped element's spells, with slow out-of-combat regen (like a match).
 --   * Leaving the hub's queue/match flow: you can't join a queue from here.
 
 local CollectionService = game:GetService("CollectionService")

@@ -3,7 +3,7 @@
 A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 
 - Draw a shape to add a copy of a spell to your hotbar: press **F** or tap ✏ Draw, then trace it. The shape is the kind of move: circle = a basic attack, a diagonal slash = a fast attack, a square = a boost, a triangle = a defense or a stun, a lightning bolt = a heavy attack, a V = an area attack, a star = your ultimate. You can hold up to 5 copies, duplicates included, and copies of the same spell share a cooldown. You can draw one spell per second.
-- Everyone has 100 HP with no regeneration in the arena. Walls break apart block by block, and every spell has its own effects and a cast animation.
+- Everyone has 100 HP, regenerating slowly (1 HP/s) after 5 seconds without damage. Walls break apart block by block, and every spell has its own effects and a cast animation.
 - Placeables show a ghost preview before you put them down, and everything you build can be destroyed.
 - 1v1, 2v2, 3v3, and 4v4, best of 3. In the hub, stand on the Blue or Red side of a team box to pick your team before the match. Your equipped element's five spells are your spellbook, and between rounds you pick a boost. For a drop-in fight with no queue, step into the **Battleground** portal: a big open world where players and raiders are enemies. Knock out NPCs for coins.
 - 20 spells in 4 elements (Fire, Water, Earth, Air), five each. Pick one element free, then win matches to earn coins and open Element Crates to unlock the others. Between rounds you pick a boost (more damage, health, speed, or faster spells) instead of earning spells.

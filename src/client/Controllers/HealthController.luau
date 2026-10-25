@@ -72,7 +72,7 @@ local function buildHud()
 		TextStrokeTransparency = 0.4,
 		ZIndex = 5,
 	})
-	regenNote = Theme.label(holder, "No health regen in the arena. Pick a Health Potion boost!", {
+	regenNote = Theme.label(holder, "Health regenerates slowly after 5s without damage. Health Potion boosts heal more!", {
 		Position = UDim2.new(0, 0, 1, 2),
 		Size = UDim2.new(1, 0, 0, 16),
 		TextColor3 = Theme.COLORS.text,
