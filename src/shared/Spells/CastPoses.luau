@@ -99,6 +99,42 @@ CastPoses.POSES = {
 		},
 		{ d = 0.08, hold = 0.25, right = { fwd = 80 }, left = { fwd = 80 }, lean = 16 },
 	},
+	-- Both palms lifted and opened toward the sky (Heal).
+	Offer = {
+		{
+			d = 0.15,
+			hold = 0.4,
+			right = { fwd = 110, side = 35, elbow = 40 },
+			left = { fwd = 110, side = 35, elbow = 40 },
+			lean = -6,
+		},
+	},
+	-- Arms flung wide, then dragged together as if pulling the air in (Black Hole).
+	Conjure = {
+		{ d = 0.12, right = { fwd = 80, side = 90 }, left = { fwd = 80, side = 90 }, lean = -6 },
+		{
+			d = 0.12,
+			hold = 0.3,
+			right = { fwd = 100, side = 5, elbow = 20 },
+			left = { fwd = 100, side = 5, elbow = 20 },
+			lean = 8,
+		},
+	},
+	-- Both hands pushed down and out, setting something on the ground (Turret).
+	Deploy = {
+		{
+			d = 0.12,
+			hold = 0.35,
+			right = { fwd = 55, side = 15, elbow = 25 },
+			left = { fwd = 55, side = 15, elbow = 25 },
+			lean = 20,
+		},
+	},
+	-- One arm shot to the sky, then thrown down at the target (Lightning).
+	Call = {
+		{ d = 0.1, right = { fwd = 178 }, left = { fwd = 10 }, lean = -10 },
+		{ d = 0.06, hold = 0.2, right = { fwd = 85 }, left = { fwd = 10 }, lean = 16 },
+	},
 	-- The dash (not a spell): arms thrown back, body tipped far forward.
 	Dash = {
 		{

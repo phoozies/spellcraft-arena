@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Placement = require(ReplicatedStorage.Shared.Spells.Placement)
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
 local Projectile = require(script.Parent.Projectile)
@@ -143,6 +144,7 @@ local function addBehaviors(ctx: any, model: Model, body: BasePart)
 					body.CFrame = if ctx.def.visual.shape == "Cylinder"
 						then facing * CFrame.Angles(0, math.pi / 2, 0)
 						else facing
+					Remotes.get("Fx"):FireAllClients("sfx", "turretShot", origin)
 					Projectile.launch({
 						caster = ctx.player,
 						origin = origin + direction * 3,

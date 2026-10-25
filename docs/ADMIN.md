@@ -32,7 +32,7 @@ Leaving the target out means `me` where that makes sense.
 | `;unlock <player> <Fire\|Water\|Earth\|Air\|all>` | Permanently unlocks an element (saved) |
 | `;coins <player> <amount>` | Grants coins (spent on crates) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
-| `;crate <player>` | Opens an Element Crate for the player, charging their coins like the shop |
+| `;crate <player>` | Spins a Spell Crate for the player, charging their coins like the shop |
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |

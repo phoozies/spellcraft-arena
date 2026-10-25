@@ -3,9 +3,9 @@
 -- the server decides what it is.
 --
 --   DrawSpell(points, spellId?) ──► validate (table of Vector2, count, range, 1s cooldown)
---   ──► GlyphRecognizer (only the equipped element's five shapes) ──► the
---   spell drawn with that shape ──► HandService.grant (hotbar copy; only the equipped
---   element's spells work, in the hub and in matches)
+--   ──► GlyphRecognizer (only the shapes of the player's loadout) ──► the
+--   spell drawn with that shape ──► HandService.grant (hotbar copy; only
+--   loadout spells work, in the hub and in matches)
 --   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback
 --
 -- Quality: the recognizer's score for the stroke becomes a 0..1 quality
@@ -13,7 +13,7 @@
 -- shape, the stronger the cast (CastService). A client that tapped a spell's
 -- card sends that `spellId` as the shape it is tracing: the stroke must be
 -- THAT spell's shape (any other shape fizzles); without it, any of the
--- equipped element's shapes is accepted.
+-- loadout's shapes is accepted.
 --
 -- A drawing adds ONE copy of the spell to the hotbar (one copy per spell).
 -- Drawings are limited to one per Config.DRAW_COOLDOWN seconds, and only
@@ -29,7 +29,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
@@ -50,24 +49,6 @@ local drawGate: ((Player) -> (boolean, string?))? = nil
 
 function SpellInputService.setDrawGate(gate: (Player) -> (boolean, string?))
 	drawGate = gate
-end
-
--- Per element: shape -> the spell drawn with it. Only an element's own five
--- shapes are ever recognized, so look-alike shapes can't be confused with them.
-local SPELL_BY_GLYPH: { [string]: { [string]: string } } = {}
-local ALLOWED: { [string]: { [string]: boolean } } = {}
-for _, element in Elements.LIST do
-	local byGlyph: { [string]: string } = {}
-	local allowed: { [string]: boolean } = {}
-	for _, id in element.spells do
-		local def = SpellDefinitions.get(id)
-		if def then
-			byGlyph[def.glyph] = def.id
-			allowed[def.glyph] = true
-		end
-	end
-	SPELL_BY_GLYPH[element.id] = byGlyph
-	ALLOWED[element.id] = allowed
 end
 
 -- (player, text) -> handled. Installed by AdminService; returns true when
@@ -142,19 +123,29 @@ function SpellInputService.submitStroke(
 	end
 	lastDraw[player] = os.clock()
 
-	local elementId = ElementService.equipped(player)
-	local element = if elementId then Elements.get(elementId) else nil
-	if not element then
+	-- Only the shapes of the player's loadout are ever recognized (a loadout
+	-- never repeats a shape), so look-alike shapes can't be confused with them.
+	local loadout = ElementService.loadout(player)
+	if #loadout == 0 then
 		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "fizzle")
 		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
+	local spellByGlyph: { [string]: string } = {}
+	local allowed: { [string]: boolean } = {}
+	for _, id in loadout do
+		local candidate = SpellDefinitions.get(id)
+		if candidate then
+			spellByGlyph[candidate.glyph] = candidate.id
+			allowed[candidate.glyph] = true
+		end
+	end
 	local target = if targetId then SpellDefinitions.get(targetId) else nil
-	if target and target.element ~= element.id then
+	if target and not table.find(loadout, target.id) then
 		target = nil -- not one of your spells: treated as a free drawing
 	end
-	local glyphId, score = GlyphRecognizer.recognize(points, ALLOWED[element.id])
-	local spellId = if glyphId then SPELL_BY_GLYPH[element.id][glyphId] else nil
+	local glyphId, score = GlyphRecognizer.recognize(points, allowed)
+	local spellId = if glyphId then spellByGlyph[glyphId] else nil
 	if spellId and target and spellId ~= target.id then
 		-- Drew a different shape than the one on the card.
 		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "fizzle")

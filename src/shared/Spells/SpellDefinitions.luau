@@ -3,17 +3,20 @@
 -- comes from its `archetype` (see src/server/Services/Archetypes). To add a
 -- spell, add a row — no new code needed. Keep docs/SPELLS.md in sync.
 --
--- Elements: every spell belongs to one of four elements (shared/Spells/
--- Elements) and fills one of its five slots (slot 5 is the ultimate). Its
--- `role` (basic, fast, boost, defense, stun, heavy, area, ultimate) decides
--- the shape the player draws (Glyphs.ROLE), the same in every element, and an
--- element never repeats a shape.
+-- Schools: every spell belongs to one of four elements (shared/Spells/
+-- Elements) or to Arcane. Its `role` (basic, fast, boost, defense, stun,
+-- heavy, area, support, ultimate) decides the shape the player draws
+-- (Glyphs.ROLE), the same everywhere, and a loadout never repeats a shape.
 --
 -- Aliases are admin names (`;give fireball`), matched after normalization
 -- (lowercase, no punctuation), so list plain words only.
 --
--- Getting spells: a player equips one element and can draw its five spells.
--- The first element is a free pick; the others are unlocked from crates.
+-- Getting spells: an element's three BASE spells (slots 1-3, no `rarity`)
+-- come with the element: the first is a free pick, the others are bought with
+-- coins. Every other spell is a CRATE spell (it has a `rarity`) won from the
+-- Spell Crate and equipped in the loadout's two extra slots (shared/Spells/
+-- Loadout). Slot 4 is a crate spell, slot 5 an ultimate. Neutral crate spells
+-- belong to the "Arcane" school instead of an element.
 --
 -- Copy model: drawing a glyph adds one copy of the spell to the hotbar
 -- (up to 5 held, duplicates allowed); casting uses a copy up. `cooldown` is
@@ -115,6 +118,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire pillar", "firepillar" },
 		element = "Fire",
 		slot = 4,
+		rarity = "Uncommon",
 		role = "area",
 		glyph = ROLE.area,
 		sfx = { cast = "pillarCast", impact = "pillarBoom" },
@@ -144,6 +148,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "fire bomb", "firebomb", "bomb" },
 		element = "Fire",
 		slot = 5,
+		rarity = "Epic",
 		role = "ultimate",
 		ultimate = true,
 		glyph = ROLE.ultimate,
@@ -243,6 +248,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water wave", "waterwave", "wave" },
 		element = "Water",
 		slot = 4,
+		rarity = "Rare",
 		role = "heavy",
 		glyph = ROLE.heavy,
 		sfx = { cast = "waveCast", impact = "waterTrap" },
@@ -265,6 +271,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "water nebula", "waternebula", "nebula" },
 		element = "Water",
 		slot = 5,
+		rarity = "Legendary",
 		role = "ultimate",
 		ultimate = true,
 		glyph = ROLE.ultimate,
@@ -330,7 +337,6 @@ local DEFINITIONS: { SpellDef } = {
 			health = 35, -- total damage the whole wall takes before it's gone
 			lifetime = 20,
 			maxActive = 3,
-			hitByAll = true, -- every spell hits it, your own included
 			model = "RockWall",
 			segments = { x = 3, y = 2 }, -- fallback when the model isn't in the place
 		},
@@ -377,6 +383,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earth pillar", "earthpillar" },
 		element = "Earth",
 		slot = 4,
+		rarity = "Uncommon",
 		role = "area",
 		glyph = ROLE.area,
 		sfx = { cast = "rockRaise", impact = "rockBreak" },
@@ -406,6 +413,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earthquake", "quake" },
 		element = "Earth",
 		slot = 5,
+		rarity = "Legendary",
 		role = "ultimate",
 		ultimate = true,
 		glyph = ROLE.ultimate,
@@ -506,6 +514,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "air shield", "airshield", "shield" },
 		element = "Air",
 		slot = 4,
+		rarity = "Common",
 		role = "defense",
 		glyph = ROLE.defense,
 		sfx = { cast = "shieldCast" },
@@ -528,6 +537,7 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "tornado", "twister" },
 		element = "Air",
 		slot = 5,
+		rarity = "Epic",
 		role = "ultimate",
 		ultimate = true,
 		glyph = ROLE.ultimate,
@@ -552,6 +562,125 @@ local DEFINITIONS: { SpellDef } = {
 			model = "Tornado",
 		},
 	},
+
+	----------------------------------------------------------------------
+	-- Arcane (crate spells that belong to no element)
+	----------------------------------------------------------------------
+	{
+		id = "Zap",
+		name = "Lightning",
+		aliases = { "lightning", "zap", "thunder", "strike", "bolt" },
+		element = "Arcane",
+		slot = 4,
+		rarity = "Rare",
+		role = "fast",
+		glyph = ROLE.fast,
+		sfx = { cast = "zapCharge", impact = "zapStrike" },
+		archetype = "Zone",
+		cooldown = 2.5,
+		description = "Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60.",
+		stats = {
+			delay = 0.45,
+			damage = 18,
+			radius = 5,
+			range = 60,
+			knockback = 20,
+			reticle = true,
+		},
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(2, 2, 2),
+			color = rgb(255, 238, 88),
+			material = M.Neon,
+			model = "Zap",
+		},
+	},
+	{
+		id = "Heal",
+		name = "Heal",
+		aliases = { "heal", "medic", "health", "cure" },
+		element = "Arcane",
+		slot = 4,
+		rarity = "Common",
+		role = "support",
+		glyph = ROLE.support,
+		sfx = { cast = "healChime" },
+		archetype = "Buff",
+		cooldown = 10,
+		description = "A warm light mends you: restore 25 health.",
+		stats = { heal = 25, duration = 1.5 }, -- `duration` is just how long the green glow lasts
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(1.5, 1.5, 1.5),
+			color = rgb(102, 187, 106),
+			material = M.Neon,
+			model = "Heal",
+		},
+	},
+	{
+		id = "BlackHole",
+		name = "Black Hole",
+		aliases = { "black hole", "blackhole", "vortex", "void" },
+		element = "Arcane",
+		slot = 4,
+		rarity = "Epic",
+		role = "heavy",
+		glyph = ROLE.heavy,
+		sfx = { cast = "blackHoleOpen", impact = "blackHoleCollapse" },
+		archetype = "Zone",
+		cooldown = 10,
+		description = "Point and click: a black hole sucks enemies in, traps them for 3 seconds, and deals 10 damage over time. Range 70.",
+		-- `hold`: enemies pulled into the core are Rooted (trapped) at the
+		-- center until the hole closes. 10 damage over its 3 seconds.
+		stats = {
+			radius = 16,
+			duration = 3,
+			pull = 60,
+			damage = 10 / 3,
+			range = 70,
+			maxActive = 1,
+			hold = true,
+			reticle = true,
+		},
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(6, 6, 6),
+			color = rgb(40, 0, 70),
+			material = M.Neon,
+			model = "BlackHole",
+		},
+	},
+	{
+		id = "Turret",
+		name = "Turret",
+		aliases = { "turret", "sentry", "gun" },
+		element = "Arcane",
+		slot = 4,
+		rarity = "Rare",
+		role = "defense",
+		glyph = ROLE.defense,
+		sfx = { cast = "turretDeploy", impact = "turretShot" },
+		archetype = "Placeable",
+		cooldown = 12,
+		description = "Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds.",
+		stats = {
+			health = 30,
+			lifetime = 20,
+			maxActive = 1,
+			turret = true,
+			damage = 6,
+			range = 80,
+			fireInterval = 1,
+		},
+		visual = {
+			shape = "Block",
+			-- Matches the Turret model's size so placement rules fit it.
+			size = Vector3.new(4, 5, 4),
+			color = rgb(84, 110, 122),
+			material = M.Metal,
+			model = "Turret",
+		},
+	},
 }
 
 local SpellDefinitions = {}
@@ -567,29 +696,50 @@ for _, def in DEFINITIONS do
 end
 SpellDefinitions.byId = byId
 
--- Every element's spell list in Elements must match the rows above.
+-- Every element's base spells in Elements must match the rows above, and a
+-- spell has a rarity exactly when it is not a base spell.
+local isBase: { [string]: boolean } = {}
 for _, element in Elements.LIST do
-	for slot, id in element.spells do
+	for slot, id in element.base do
 		local def = byId[id]
 		assert(def, `{element.id} lists unknown spell {id}`)
 		assert(
-			def.element == element.id and def.slot == slot,
-			`{id} is in the wrong element or slot`
+			def.element == element.id and def.slot == slot and def.rarity == nil,
+			`{id} is not base slot {slot} of {element.id}`
 		)
+		isBase[id] = true
 	end
+end
+for _, def in DEFINITIONS do
+	assert(isBase[def.id] ~= nil or def.rarity ~= nil, `{def.id} needs a rarity (a crate spell)`)
+	assert(
+		def.element == "Arcane" or Elements.get(def.element) ~= nil,
+		`{def.id} is in an unknown school`
+	)
 end
 
 function SpellDefinitions.get(id: string): SpellDef?
 	return byId[id]
 end
 
--- The five spells of an element, by slot.
+-- The three base spells of an element, by slot.
 function SpellDefinitions.ofElement(elementId: string): { SpellDef }
 	local list: { SpellDef } = {}
 	local element = Elements.get(elementId)
 	if element then
-		for _, id in element.spells do
+		for _, id in element.base do
 			table.insert(list, byId[id])
+		end
+	end
+	return list
+end
+
+-- Every crate spell: the Spell Crate's prize pool.
+function SpellDefinitions.crateSpells(): { SpellDef }
+	local list: { SpellDef } = {}
+	for _, def in DEFINITIONS do
+		if def.rarity then
+			table.insert(list, def)
 		end
 	end
 	return list

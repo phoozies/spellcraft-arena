@@ -1,14 +1,14 @@
 --!strict
--- The four elements. Every spell belongs to one (SpellDefinitions `element`)
--- and every element has five spells, slot 5 being its ultimate. A spell's
--- shape comes from its role (a circle for a basic attack, a diagonal slash
--- for a fast attack, a squiggle for movement, a triangle for a stun, ...; see
--- Glyphs.ROLE), so it is the same in every element, and an element never
--- repeats a shape.
+-- The four elements. Each has three BASE spells that come with it (the
+-- "base element"): a player picks their first element free and buys the
+-- others with coins (`price`). Every other spell is a crate spell, won from the
+-- Spell Crate (shared/Economy/Crates) and equipped in the loadout's two extra
+-- slots (shared/Spells/Loadout).
 --
--- A player equips one element at a time (profile.element); its five spells
--- are what they can draw, in the hub and in every match. The first element is
--- a free pick; the other three are unlocked from crates (shared/Economy/Crates).
+-- A spell's shape comes from its role (a circle for a basic attack, a
+-- diagonal slash for a fast attack, a square for a boost, ...; see
+-- Glyphs.ROLE), so it is the same in every element, and a loadout never
+-- repeats a shape.
 --
 -- Pure data: the server (ElementService), the client UI, and the hub build
 -- from this one table.
@@ -21,13 +21,31 @@ export type Element = {
 	color: Color3,
 	icon: string,
 	tagline: string,
-	-- Spell ids by slot (1..5; slot 5 is the ultimate).
-	spells: { string },
+	-- Coins to buy it (the first element a player picks is free).
+	price: number,
+	-- The three base spell ids, in slot order.
+	base: { string },
+}
+
+-- The neutral school of spells that belong to no element (Lightning, Heal,
+-- Black Hole, Turret). They only come from crates.
+export type School = {
+	id: string,
+	name: string,
+	color: Color3,
+	icon: string,
 }
 
 local Elements = {}
 
-Elements.SLOT_COUNT = 5
+Elements.BASE_COUNT = 3
+
+Elements.ARCANE = table.freeze({
+	id = "Arcane",
+	name = "Arcane",
+	color = Color3.fromRGB(190, 130, 255),
+	icon = "✨",
+}) :: School
 
 Elements.LIST = {
 	{
@@ -36,7 +54,8 @@ Elements.LIST = {
 		color = Color3.fromRGB(255, 112, 40),
 		icon = "🔥",
 		tagline = "Hit hard and burn bright.",
-		spells = { "Fireball", "FireSlash", "FireBoost", "FirePillar", "FireBomb" },
+		price = 400,
+		base = { "Fireball", "FireSlash", "FireBoost" },
 	},
 	{
 		id = "Water",
@@ -44,7 +63,8 @@ Elements.LIST = {
 		color = Color3.fromRGB(64, 164, 255),
 		icon = "💧",
 		tagline = "Flow around attacks and trap your foes.",
-		spells = { "WaterSlice", "WaterBody", "WaterLock", "WaterWave", "WaterNebula" },
+		price = 400,
+		base = { "WaterSlice", "WaterBody", "WaterLock" },
 	},
 	{
 		id = "Earth",
@@ -52,7 +72,8 @@ Elements.LIST = {
 		color = Color3.fromRGB(176, 128, 80),
 		icon = "⛰",
 		tagline = "Walls, boulders, and ground-shaking power.",
-		spells = { "RockThrow", "EarthWall", "EarthPunch", "EarthPillar", "Earthquake" },
+		price = 400,
+		base = { "RockThrow", "EarthWall", "EarthPunch" },
 	},
 	{
 		id = "Air",
@@ -60,19 +81,17 @@ Elements.LIST = {
 		color = Color3.fromRGB(176, 232, 220),
 		icon = "🌪",
 		tagline = "Fast, slippery, and full of wind.",
-		spells = { "Gust", "Whirlwind", "AirBoost", "AirShield", "Tornado" },
+		price = 400,
+		base = { "Gust", "Whirlwind", "AirBoost" },
 	},
 } :: { Element }
 
 local byId: { [string]: Element } = {}
 for _, element in Elements.LIST do
 	assert(byId[element.id] == nil, `duplicate element {element.id}`)
-	assert(
-		#element.spells == Elements.SLOT_COUNT,
-		`{element.id} needs {Elements.SLOT_COUNT} spells`
-	)
+	assert(#element.base == Elements.BASE_COUNT, `{element.id} needs {Elements.BASE_COUNT} spells`)
 	byId[element.id] = element
-	table.freeze(element.spells)
+	table.freeze(element.base)
 	table.freeze(element)
 end
 Elements.byId = byId
@@ -81,9 +100,18 @@ function Elements.get(id: string): Element?
 	return byId[id]
 end
 
+-- The element or the Arcane school, for anything that shows a spell's colour
+-- and icon; nil for an unknown id.
+function Elements.school(id: string): School?
+	if id == Elements.ARCANE.id then
+		return Elements.ARCANE
+	end
+	return byId[id]
+end
+
 function Elements.color(id: string): Color3
-	local element = byId[id]
-	return if element then element.color else Color3.fromRGB(176, 190, 197)
+	local school = Elements.school(id)
+	return if school then school.color else Color3.fromRGB(176, 190, 197)
 end
 
 -- Ids of every element, in display order.

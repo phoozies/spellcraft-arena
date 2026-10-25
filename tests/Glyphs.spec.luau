@@ -175,15 +175,17 @@ return function(t)
 
 	t.describe("Spell glyphs", function()
 		t.it(
-			"every spell's shape is the one for its role, and an element never repeats one",
+			"every spell's shape is the one for its role, and an element's base spells never repeat one",
 			function()
+				for _, def in SpellDefinitions.list do
+					t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
+					t.expect(Glyphs.ROLE[def.role] ~= nil).toBeTruthy()
+					t.expect(def.glyph).toBe(Glyphs.ROLE[def.role])
+				end
 				for _, element in Elements.LIST do
 					local owner: { [string]: string } = {}
-					for _, id in element.spells do
+					for _, id in element.base do
 						local def = SpellDefinitions.get(id) :: any
-						t.expect(Glyphs.get(def.glyph) ~= nil).toBeTruthy()
-						t.expect(Glyphs.ROLE[def.role] ~= nil).toBeTruthy()
-						t.expect(def.glyph).toBe(Glyphs.ROLE[def.role])
 						t.expect(owner[def.glyph]).toBeNil()
 						owner[def.glyph] = def.id
 					end
@@ -249,13 +251,13 @@ return function(t)
 		end)
 
 		t.it(
-			"each element's own five shapes are recognized from sloppy strokes (5% wobble) 95% of the time",
+			"a full loadout's five shapes (base trio + a support spell + an ultimate) are recognized from sloppy strokes (5% wobble) 95% of the time",
 			function()
 				local rng = Random.new(21)
 				local total, hits = 0, 0
 				for _, element in Elements.LIST do
-					local allowed: { [string]: boolean } = {}
-					for _, id in element.spells do
+					local allowed: { [string]: boolean } = { chevron = true, star = true }
+					for _, id in element.base do
 						allowed[(SpellDefinitions.get(id) :: any).glyph] = true
 					end
 					for glyphId in allowed do

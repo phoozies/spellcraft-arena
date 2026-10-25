@@ -5,6 +5,12 @@
 -- The four elements. Every spell belongs to one; a player equips one at a time.
 export type ElementId = "Fire" | "Water" | "Earth" | "Air"
 
+-- A spell's school: one of the four elements, or "Arcane" for the neutral
+-- spells that only come from crates (Lightning, Heal, Black Hole, Turret).
+export type SchoolId = ElementId | "Arcane"
+
+export type RarityId = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary"
+
 export type Archetype =
 	"Projectile"
 	| "Control"
@@ -126,8 +132,11 @@ export type SpellDef = {
 	glyph: string, -- id in Spells/Glyphs: the shape drawn to ready this spell
 	-- Names in Audio/Cues: `cast` plays when it's cast, `impact` where it lands.
 	sfx: { cast: string?, impact: string? }?,
-	element: ElementId,
-	slot: number, -- 1..5 within its element (display order; slot 5 is the ultimate)
+	element: SchoolId,
+	slot: number, -- display order in its school: 1-3 are an element's base spells, 4 a crate spell, 5 an ultimate
+	-- Set on crate spells only (everything that is not one of an element's
+	-- three base spells): how rare it is in the Spell Crate.
+	rarity: RarityId?,
 	role: string, -- the kind of move (Glyphs.ROLE): decides its glyph
 	ultimate: boolean?, -- slot 5: the element's big, slow spell
 	archetype: Archetype,
@@ -153,8 +162,11 @@ export type DraftCard = {
 export type Profile = {
 	schema: number,
 	coins: number, -- spent on crates (CrateService); earned by winning matches
-	elements: { string }, -- elements unlocked (the first is picked free, the rest come from crates)
+	elements: { string }, -- elements owned (the first is picked free, the rest are bought with coins)
 	element: string, -- the equipped element ("" until the first pick)
+	spells: { string }, -- crate spells owned (ids of spells with a rarity)
+	loadout: { string }, -- up to Loadout.MAX_EXTRA owned crate spells equipped beside the element's base spells
+	tutorial: { done: boolean }, -- the first-join walkthrough was finished or skipped
 	cosmetics: { string },
 	stats: {
 		matches: number,
@@ -205,8 +217,8 @@ export type MatchState = {
 	coinsGained: number?, -- set in Results for this player
 }
 
--- The crate shop's crate (shared/Economy/Crates): it unlocks a random
--- element you don't own yet.
+-- The crate shop's crate (shared/Economy/Crates): a gacha spin that wins one
+-- crate spell, picked by rarity.
 export type CrateDef = {
 	id: string,
 	name: string,
@@ -216,8 +228,12 @@ export type CrateDef = {
 -- What the server tells the opener after a crate spin (CrateOpened remote).
 export type CrateResult = {
 	crate: string,
-	element: ElementId,
-	coins: number, -- balance after the spin
+	spell: string, -- the spell id the spin landed on
+	rarity: RarityId,
+	duplicate: boolean, -- already owned: paid back as `refund` coins instead
+	refund: number,
+	equipped: boolean, -- the spell went straight into an empty loadout slot
+	coins: number, -- balance after the spin (the refund is added when the reel stops)
 }
 
 -- One row of the server's wins leaderboard (LeaderboardService).

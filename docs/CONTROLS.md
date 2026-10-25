@@ -35,3 +35,5 @@ You get a spell by **drawing its shape**, which adds **one copy** to your hotbar
 - UI scales with the screen. Touch layouts are 15% larger, and buttons are at least 52 px.
 - Elements use an icon plus a color (🔥 💧 ⛰ 🌪), and spells use a shape, so nothing depends on color alone.
 - No camera shake, which matters for VR comfort.
+
+**Spell cursor:** with a mouse, a readied spell turns the pointer into a pulsing crosshair in the spell's colour (name and "Click to cast" under it; red while it recharges).

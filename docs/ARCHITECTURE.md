@@ -23,11 +23,13 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Spells/VfxStyles            particle styles per spell + buff auras
   Spells/CastPoses            the cast animations as data (arm and body poses)
   UI/GlyphView                draws a glyph as a line (HUD, signs, VFX)
-  Spells/Elements             the 4 elements and their 5 spells each
+  Spells/Elements             the 4 elements: 3 base spells and a price each
+  Spells/Rarity               Common..Legendary: crate odds and duplicate refunds
+  Spells/Loadout              base spells + 2 crate spells; one shape per spell
   (Spells/Glyphs              the shapes and Glyphs.ROLE, the shape for each kind of move)
   Spells/Placement            placement rules shared by ghost preview + server
   Match/Boosts                the match boosts + roll/totals (injectable RNG)
-  Economy/Crates              the Element Crate: price, roll() of an unowned element (injectable RNG)
+  Economy/Crates              the Spell Crate gacha: price, roll() of a rarity then a spell (injectable RNG)
   Util/Signal                 tiny module-to-module event
 
 src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
@@ -49,7 +51,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
     MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
     PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
-    ElementService      owns profile.elements/element: first free pick, equip, grant (from crates)
+    ElementService      owns profile.elements/element/spells/loadout: free first pick, buy, equip, crate spells, loadout
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
     CrateService        OpenCrate: validate, spend coins, roll an unowned element, grant it
     LeaderboardService  leaderstats (Wins, Coins), Most Wins board, top-3 podium avatars

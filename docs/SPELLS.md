@@ -1,23 +1,24 @@
 # Spells
 
-Spellcraft Arena has **20 spells in 4 elements**: Fire, Water, Earth, and Air, five each. You equip **one element at a time** and can draw its five spells. Your first element is a free pick; the other three are unlocked from **Element Crates** (see [ECONOMY.md](ECONOMY.md)). In a match your equipped element is locked in and its five spells are your spellbook.
+Spellcraft Arena has **24 spells**. Four **base elements** (Fire, Water, Earth, Air) come with **three base spells** each; the other **12 are crate spells** with a rarity (Common to Legendary), won from the Spell Crate. You equip one element and build a **loadout**: its three base spells plus up to **two crate spells** you own. Your first element is a free pick; the others are bought with coins (see [ECONOMY.md](ECONOMY.md)). In a match your loadout is locked in and is your spellbook.
 
 > **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau) and [`Elements.luau`](../src/shared/Spells/Elements.luau).
 > The tables below are generated from them (see "Regenerating"). Don't hand-edit numbers here.
 
 ## The shapes: one per kind of move
 
-Every spell has a **role**, and the role decides the shape you draw. A shape means the same thing in every element, and an element never repeats a shape, so each spell has its own:
+Every spell has a **role**, and the role decides the shape you draw. A shape means the same thing everywhere, and **a loadout never holds two spells with the same shape** (the game tells spells apart by the shape you draw), so each loadout spell has its own:
 
 | Role | Shape | Spells |
 |---|---|---|
 | Basic attack | Circle | Fireball, Rock Throw, Gust |
-| Fast attack | Diagonal slash (a straight line) | Fire Slash, Water Slice |
+| Fast attack | Diagonal slash (a straight line) | Fire Slash, Water Slice, Lightning |
 | Boost | Square | Fire Boost, Water Body, Air Boost |
-| Defense | Triangle | Earth Wall, Air Shield |
+| Defense | Triangle | Earth Wall, Air Shield, Turret |
 | Stun | Triangle | Water Lock |
-| Heavy attack | Lightning bolt | Water Wave, Earth Punch, Whirlwind |
+| Heavy attack | Lightning bolt | Water Wave, Earth Punch, Whirlwind, Black Hole |
 | Area attack | V (chevron) | Fire Pillar, Earth Pillar |
+| Support | V (chevron) | Heal |
 | Ultimate | Star | Fire Bomb, Water Nebula, Earthquake, Tornado |
 
 No spell uses a swirl or a squiggle.
@@ -26,12 +27,13 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 ## Getting spells: the copy model
 
-- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You hold **at most one copy of each spell**, so at most one of each of your element's five. Drawing a spell you already hold is refused ("You already hold Fireball"); cast it first.
+- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You hold **at most one copy of each spell**. Drawing a spell you already hold is refused ("You already hold Fireball"); cast it first.
 - **Casting uses up the copy.** Draw the shape again to get another.
 - **Each spell has its own cast cooldown** (the **Cooldown** column below). Basic attacks wait **3 seconds**, fast slashes **2 seconds**.
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
 - **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's **Training Grove** (a 100 x 110 stud yard in the west with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
-- **Which shapes work:** only the five spells of your equipped element (the others are never even considered). A shape from a spell you don't have fizzles (in the hub the toast tells you which element it belongs to).
+- **Which shapes work:** only the spells of your loadout (the others are never even considered). A shape from a spell you don't have equipped fizzles.
+- **Your ready spell shows on your cursor:** while a spell is readied, the mouse becomes a pulsing crosshair in the spell's colour with its name and "Click to cast" (red with the seconds left while it recharges).
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 
@@ -68,7 +70,9 @@ Cooldowns, range, and speed never change, and an average drawing (quality 0.5) i
 
 Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS` (2), so a spell reaches that much farther than its radius. Hitboxes are generous on purpose: **medium** 4.5-5, **large** 6-7, **wide** 8.5-11, **huge** 12+ (area attacks and ultimates, up to 25 for Earthquake). The visuals are sized to match.
 
-## The 20 spells
+## The 24 spells
+
+Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all Arcane spells) are **crate spells**: their rarity is in the table under "Crate spells".
 
 ### 🔥 Fire
 
@@ -110,10 +114,33 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 | 4 | **Air Shield** | triangle | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
 | 5 | **Tornado** ★ | star | Projectile | 18s | ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage. |
 
+### Crate spells
+
+Won from the Spell Crate (100 coins a spin). A spin rolls a rarity by weight, then a spell of that rarity; a spell you already own pays its rarity's refund in coins. Odds and refunds live in `Spells/Rarity.luau`.
+
+| Rarity | Chance | Refund | Spells |
+|---|---|---|---|
+| Common | 55% | 20 | Heal, Air Shield |
+| Uncommon | 25% | 35 | Fire Pillar, Earth Pillar |
+| Rare | 12% | 55 | Lightning, Water Wave, Turret |
+| Epic | 6% | 75 | Black Hole, Fire Bomb, Tornado |
+| Legendary | 2% | 90 | Water Nebula, Earthquake |
+
+### ✨ Arcane
+
+Neutral crate spells that belong to no element.
+
+| Rarity | Spell | Draw | Archetype | Cooldown | What it does |
+|---|---|---|---|---|---|
+| Rare | **Lightning** | slash | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
+| Common | **Heal** | V | Buff | 10s | A warm light mends you: restore 25 health. |
+| Epic | **Black Hole** | lightning bolt | Zone | 10s | Point and click: a black hole sucks enemies in, traps them for 3 seconds, and deals 10 damage over time. Range 70. |
+| Rare | **Turret** | triangle | Placeable | 12s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
+
 ### Notes on the spells
 
-- **Earth Wall:** the imported earth-wall model, and **every spell hits it, your own included**. The whole wall has a shared **35-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones). Without the model it falls back to a 3×2 grid of blocks.
-- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground while readied, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
+- **Earth Wall:** the imported earth-wall model. **Your own spells (and your allies') fly straight through it, while enemy spells hit it**. The whole wall has a shared **35-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones). Without the model it falls back to a 3×2 grid of blocks.
+- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground while readied, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
 - **Water Body** makes you immune to damage *and* effects (stun, knockback) for its duration. **Air Shield** blocks one hit of any kind, including a spell's effect, then pops.
 - **Fire Boost** multiplies all your damage by 1.25 for 8s (it stacks multiplicatively with the Power match boost).
 - **Piercing spells** (Water Wave, Tornado) keep flying after they hit a player and hit each player only once. They still stop on walls.
@@ -123,7 +150,7 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 
 ## Match boosts (instead of earning spells)
 
-In a duel the spellbook is always your element's five spells. After each round you pick **one of three boosts** that last for the rest of the match and stack up to 3 times (`shared/Match/Boosts.luau`, applied by `BoostService`):
+In a duel the spellbook is always your loadout. After each round you pick **one of three boosts** that last for the rest of the match and stack up to 3 times (`shared/Match/Boosts.luau`, applied by `BoostService`):
 
 | Boost | Effect |
 |---|---|
@@ -146,7 +173,7 @@ In a duel the spellbook is always your element's five spells. After each round y
 | Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
 | Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
 
-**`visual.model`:** every spell names a 3D model that replaces its primitive look: the bolt for projectiles, the column or boulder for zones and lines, the head emblem for buffs, the body for placeables (the primitive stays as the invisible hitbox). A model is either a **block model** (the classic blocky Parts in `Models/BlockModels`, built by `ModelKit` in any place) or an imported mesh stored in the place (`ReplicatedStorage.Models`: Fireball, Water Lock's bubble, Earth Wall, Gust). Without the model, the primitive `visual` is drawn. See [`assets/models/README.md`](../assets/models/README.md).
+**`visual.model`:** every spell names a 3D model that replaces its primitive look: the bolt for projectiles, the column or boulder for zones and lines, the head emblem for buffs, the body for placeables (the primitive stays as the invisible hitbox). A model is either a **block model** (the classic blocky Parts in `Models/BlockModels`, built by `ModelKit` in any place) or an imported mesh stored in the place (`ReplicatedStorage.Models`: Fireball, Water Lock's bubble, Earth Wall, Gust, and the Arcane spells' Lightning bolt, Heal emblem, Black Hole, and Turret). Without the model, the primitive `visual` is drawn. See [`assets/models/README.md`](../assets/models/README.md).
 
 ## Look and feel: the spell registry
 
@@ -158,28 +185,32 @@ Every spell has a **model**, a **particle style**, a **cast animation**, and **s
 - **Sound** (`sfx = { cast, impact }` naming cues in `Audio/Cues`): every spell has a cast sound; every attack has an impact sound. Buffs and Earth Wall have no impact by design (`noImpact` in the registry).
 
 <!-- REGISTRY:start -->
-| Spell | Element | Model | Particles (`VfxStyles`) | Cast pose (`CastPoses`) | Cast sound | Impact sound |
-|---|---|---|---|---|---|---|
-| **Fireball** | Fire | `Fireball` | `Fireball` | Throw | `fireballCast` | `fireballHit` |
-| **Fire Slash** | Fire | `FireSlash` | `FireSlash` | Slash | `slashCast` | `fireballHit` |
-| **Fire Boost** | Fire | `FireBoost` | `FireBoost` | Flex | `boostCast` | n/a |
-| **Fire Pillar** | Fire | `FirePillar` | `FirePillar` | Sweep | `pillarCast` | `pillarBoom` |
-| **Fire Bomb** | Fire | `Fireball` | `FireBomb` | Ascend | `bombCast` | `bombBoom` |
-| **Water Slice** | Water | `WaterSlice` | `WaterSlice` | Slash | `sliceCast` | `waterTrap` |
-| **Water Body** | Water | `WaterBody` | `WaterBody` | Flex | `bodyCast` | n/a |
-| **Water Lock** | Water | `WaterBubble` | `WaterLock` | Point | `waterCast` | `waterTrap` |
-| **Water Wave** | Water | `WaterWave` | `WaterWave` | Smash | `waveCast` | `waterTrap` |
-| **Water Nebula** | Water | `WaterNebula` | `WaterNebula` | Ascend | `nebulaCast` | `nebulaBoom` |
-| **Rock Throw** | Earth | `RockThrow` | `RockThrow` | Throw | `throwCast` | `rockBreak` |
-| **Earth Wall** | Earth | `RockWall` | `EarthWall` | Guard | `rockRaise` | `wallHit` |
-| **Earth Punch** | Earth | `EarthPunch` | `EarthPunch` | Smash | `punchCast` | `rockBreak` |
-| **Earth Pillar** | Earth | `EarthPillar` | `EarthPillar` | Sweep | `rockRaise` | `rockBreak` |
-| **Earthquake** | Earth | `Earthquake` | `Earthquake` | Stomp | `quakeRumble` | `quakeBoom` |
-| **Gust** | Air | `Gust` | `Gust` | Throw | `gustCast` | `gustHit` |
-| **Whirlwind** | Air | `Gust` | `Whirlwind` | Smash | `whirlCast` | `whirlHit` |
-| **Air Boost** | Air | `AirBoost` | `AirBoost` | Flex | `airBoostCast` | n/a |
-| **Air Shield** | Air | `AirShield` | `AirShield` | Guard | `shieldCast` | n/a |
-| **Tornado** | Air | `Tornado` | `Tornado` | Ascend | `tornadoCast` | `tornadoHit` |
+| Spell | School | Rarity | Model | Particles (`VfxStyles`) | Cast pose (`CastPoses`) | Cast sound | Impact sound |
+|---|---|---|---|---|---|---|---|
+| **Fireball** | Fire | base | `Fireball` | `Fireball` | Throw | `fireballCast` | `fireballHit` |
+| **Fire Slash** | Fire | base | `FireSlash` | `FireSlash` | Slash | `slashCast` | `fireballHit` |
+| **Fire Boost** | Fire | base | `FireBoost` | `FireBoost` | Flex | `boostCast` | n/a |
+| **Fire Pillar** | Fire | Uncommon | `FirePillar` | `FirePillar` | Sweep | `pillarCast` | `pillarBoom` |
+| **Fire Bomb** | Fire | Epic | `Fireball` | `FireBomb` | Ascend | `bombCast` | `bombBoom` |
+| **Water Slice** | Water | base | `WaterSlice` | `WaterSlice` | Slash | `sliceCast` | `waterTrap` |
+| **Water Body** | Water | base | `WaterBody` | `WaterBody` | Flex | `bodyCast` | n/a |
+| **Water Lock** | Water | base | `WaterBubble` | `WaterLock` | Point | `waterCast` | `waterTrap` |
+| **Water Wave** | Water | Rare | `WaterWave` | `WaterWave` | Smash | `waveCast` | `waterTrap` |
+| **Water Nebula** | Water | Legendary | `WaterNebula` | `WaterNebula` | Ascend | `nebulaCast` | `nebulaBoom` |
+| **Rock Throw** | Earth | base | `RockThrow` | `RockThrow` | Throw | `throwCast` | `rockBreak` |
+| **Earth Wall** | Earth | base | `RockWall` | `EarthWall` | Guard | `rockRaise` | `wallHit` |
+| **Earth Punch** | Earth | base | `EarthPunch` | `EarthPunch` | Smash | `punchCast` | `rockBreak` |
+| **Earth Pillar** | Earth | Uncommon | `EarthPillar` | `EarthPillar` | Sweep | `rockRaise` | `rockBreak` |
+| **Earthquake** | Earth | Legendary | `Earthquake` | `Earthquake` | Stomp | `quakeRumble` | `quakeBoom` |
+| **Gust** | Air | base | `Gust` | `Gust` | Throw | `gustCast` | `gustHit` |
+| **Whirlwind** | Air | base | `Gust` | `Whirlwind` | Smash | `whirlCast` | `whirlHit` |
+| **Air Boost** | Air | base | `AirBoost` | `AirBoost` | Flex | `airBoostCast` | n/a |
+| **Air Shield** | Air | Common | `AirShield` | `AirShield` | Guard | `shieldCast` | n/a |
+| **Tornado** | Air | Epic | `Tornado` | `Tornado` | Ascend | `tornadoCast` | `tornadoHit` |
+| **Lightning** | Arcane | Rare | `Zap` | `Zap` | Call | `zapCharge` | `zapStrike` |
+| **Heal** | Arcane | Common | `Heal` | `Heal` | Offer | `healChime` | n/a |
+| **Black Hole** | Arcane | Epic | `BlackHole` | `BlackHole` | Conjure | `blackHoleOpen` | `blackHoleCollapse` |
+| **Turret** | Arcane | Rare | `Turret` | `Turret` | Deploy | `turretDeploy` | `turretShot` |
 <!-- REGISTRY:end -->
 
 Regenerate the YAML and this table after changing the registry: `python tools/gen-spell-registry.py`.

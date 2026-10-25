@@ -4,6 +4,20 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (elements, loadout, Spell Crate gacha)
+- **Base elements with three spells.** Fire = Fireball, Fire Slash, Fire Boost; Water = Water Slice, Water Body, Water Lock; Earth = Rock Throw, Earth Wall, Earth Punch; Air = Gust, Whirlwind, Air Boost. The first element is still a free pick; the others are now **bought with coins** (400 each, `BuyElement`, `ElementService.buy`) instead of coming from crates.
+- **Spell Crate gacha.** The Element Crate is now a **Spell Crate** (100 coins) that wins one of the 12 other spells by rarity: **Common 55%, Uncommon 25%, Rare 12%, Epic 6%, Legendary 2%** (`Spells/Rarity`, `Economy/Crates`). A spell you already own pays coins back. The reel shows spell cards in rarity colours, ticks as cards pass, and reveals with a rarity sound and flash. `CrateResult` now carries `spell`, `rarity`, `duplicate`, `refund`, `equipped`.
+- **Loadout.** You draw your element's 3 base spells plus up to **2 crate spells** you equipped in the Spellbook's new **Loadout** tab (`SetLoadout`, `Spells/Loadout`). A loadout can't hold two spells with the same shape; the UI says which spell it clashes with. The match spellbook, the drawing recognizer, and the HUD cards all use the loadout. Spell cards are outlined by rarity.
+- **Earth Wall lets your own spells through.** Your own (and your allies') spells fly through your wall; enemy spells hit it. (It used to block everyone.)
+- **Profile schema 5:** `spells`, `loadout`, `tutorial.done`. Players who had already picked an element skip the tutorial.
+
+### Added (spells, tutorial, cursor, gift box)
+- **Four crate spells back from the old spell list, with models:** **Lightning** (the Zap bolt, Rare), **Heal** (Common), **Black Hole** (Epic), **Turret** (Rare), in a new neutral **Arcane** school. They have their imported models (with plain-shape fallbacks), particle styles, cast poses (Call, Offer, Conjure, Deploy), and sounds. **Air Shield** (the shield) is a Common crate spell; Fire Pillar, Earth Pillar, Water Wave, Fire Bomb, Water Nebula, Earthquake, and Tornado are crate spells too. New role `support` (a V) for Heal.
+- **First-join tutorial** (`TutorialController`, `Fx/GuideArrow`): a welcome screen, then guided steps with bobbing arrows, an outline on the target, a flowing chevron trail on the ground, and an edge-of-screen pointer: choose an element, spin for a spell, draw it in the Training Grove, cast at a dummy, and earn coins in a duel or the Battleground. Skippable, saved once (`TutorialDone`).
+- **Spell cursor** (`CursorController`): while a spell is readied the mouse is a pulsing crosshair in the spell's colour with its name and "Click to cast" (red with the seconds left while it recharges). The normal arrow returns over buttons and menus.
+- **Like & Favourite is a physical gift box** on the hub plaza (hold its prompt to claim). The "Like!" menu button and panel and the `ClaimLikeReward` remote are gone.
+- Admin/debug: `;unlock <player> spells`, `;crate` spins the Spell Crate, `SpellcraftDebug:Invoke("tutorial", false)`.
+
 ### Changed (training-ground hub)
 - **The Training Grove lets you draw and cast again.** It is now a big 100 x 110 stud yard (was 64 x 76) with a fence, corner torches, 11 dummies in two rows, archery targets, and hay bales. Standing inside it (tag `PracticeZone`, `shared/Util/PracticeZone`) is the one place in the hub where drawing works; the server (`MatchService.canDraw`) and client (`ClientState.canDraw`) both check it.
 - **No stone walls in the hub.** The concourse walls, arched bays, windows, banners, buttresses, overhead ribs, entrance pylons, end wall, and the stone ring around the hub are gone, as are the glass walls around the duel pads. The 1v1/2v2/3v3/4v4 pads are now open training mats with hay bales; wooden fences, archery targets, hay bales, and torches line the carpet; invisible barriers still keep players on the grass. The hub reads as a training-ground map ("Spellcraft Arena, Training Grounds").

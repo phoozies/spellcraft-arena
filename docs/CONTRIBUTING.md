@@ -24,7 +24,7 @@ Most models are **block models**: edit the spec in `tools/blender/block_models.p
   local debug = game.ServerStorage.SpellcraftDebug
   debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
   debug:Invoke("coins", 500)
-  debug:Invoke("crate", "Element")     -- returns the CrateResult (or the refusal reason)
+  debug:Invoke("crate", "Spell")     -- returns the CrateResult (or the refusal reason)
   debug:Invoke("wins", 3)
   debug:Invoke("state")             -- {coins, wins, elements, element} per player
   debug:Invoke("unlockall")

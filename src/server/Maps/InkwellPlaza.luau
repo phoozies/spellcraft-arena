@@ -29,6 +29,9 @@
 --                                   players' avatars on these pedestals
 --   ProximityPrompts named "Spellbook", "Quests" and "Crates" open UI on
 --   the client (MenuController / CrateController)
+--   LikeGift                        the gift box: its ProximityPrompt claims the
+--                                   one-time Like & Favourite coin gift
+--                                   (EconomyService)
 --
 -- The spellbook kiosk uses the imported Grimoire model and the crate shop
 -- the Crate model (ReplicatedStorage.Models via ModelKit), with plain-shape
@@ -40,6 +43,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
+local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local MapKit = require(script.Parent.MapKit)
@@ -102,7 +106,12 @@ local function label(part: BasePart, text: string, offset: number, maxDistance: 
 	return textLabel
 end
 
-local function prompt(parent: BasePart, name: string, action: string, objectText: string)
+local function prompt(
+	parent: BasePart,
+	name: string,
+	action: string,
+	objectText: string
+): ProximityPrompt
 	local p = Instance.new("ProximityPrompt")
 	p.Name = name
 	p.ActionText = action
@@ -110,6 +119,7 @@ local function prompt(parent: BasePart, name: string, action: string, objectText
 	p.MaxActivationDistance = 12
 	p.RequiresLineOfSight = false
 	p.Parent = parent
+	return p
 end
 
 local function glow(parent: BasePart, color: Color3, range: number, brightness: number?)
@@ -464,8 +474,8 @@ return function(): Model
 	spawn:AddTag("HubSpawn")
 
 	-- Element shrines: one standing slab per element around the fountain. Each
-	-- lists the element's five spells with the shape to draw for them; the
-	-- prompt opens the Spellbook to pick or equip it.
+	-- lists the element's three base spells with the shape to draw for them and
+	-- its price; the prompt opens the Spellbook to pick, buy, or equip it.
 	for index, element in Elements.LIST do
 		local angle = math.rad(55 + (index - 1) * 70 + (if index > 2 then 20 else 0))
 		local position = PLAZA + Vector3.new(math.sin(angle) * 29, 0, math.cos(angle) * 29)
@@ -492,25 +502,25 @@ return function(): Model
 		title.TextColor3 = element.color
 		title.Text = `{element.icon} {string.upper(element.name)}`
 		title.Parent = gui
-		for slot, id in element.spells do
+		for slot, id in element.base do
 			local def = SpellDefinitions.get(id)
 			if def then
-				local x = (slot - 1) * 76 + 6
+				local x = (slot - 1) * 128 + 4
 				GlyphView.create(
 					gui,
 					def.glyph,
-					64,
+					68,
 					element.color,
-					{ Position = UDim2.fromOffset(x + 2, 80) }
+					{ Position = UDim2.fromOffset(x + 28, 78) }
 				)
 				local name = Instance.new("TextLabel")
 				name.BackgroundTransparency = 1
-				name.Size = UDim2.fromOffset(74, 44)
+				name.Size = UDim2.fromOffset(124, 44)
 				name.Position = UDim2.fromOffset(x, 150)
 				name.Font = Enum.Font.FredokaOne
 				name.TextScaled = true
 				name.TextWrapped = true
-				name.TextColor3 = if def.ultimate then GOLD else Color3.new(1, 1, 1)
+				name.TextColor3 = Color3.new(1, 1, 1)
 				name.Text = def.name
 				name.Parent = gui
 			end
@@ -522,7 +532,7 @@ return function(): Model
 		hint.Font = Enum.Font.GothamMedium
 		hint.TextScaled = true
 		hint.TextColor3 = Color3.fromRGB(197, 202, 233)
-		hint.Text = element.tagline
+		hint.Text = `{element.tagline}  (💰 {element.price})`
 		hint.Parent = gui
 		local light = MapKit.part(model, {
 			name = "ShrineGem",
@@ -836,8 +846,8 @@ return function(): Model
 	prompt(chest, "Quests", "Open", "Daily Quests")
 
 	----------------------------------------------------------------------
-	-- Crate shop (east): one Element Crate on a stage with the four element
-	-- orbs around it. The crate's prompt opens the shop panel.
+	-- Crate shop (east): one Spell Crate on a stage with a glowing orb for each
+	-- rarity beside it. The crate's prompt opens the shop panel.
 	----------------------------------------------------------------------
 	local SHOP = Vector3.new(76, 0, 36)
 	MapKit.part(model, {
@@ -850,7 +860,7 @@ return function(): Model
 	pointedArch(model, CFrame.new(SHOP + Vector3.new(0, 1, -6)), 36, 12, 1.4, STONE_LIGHT)
 	label(
 		signAnchor(model, "CrateShopSign", SHOP + Vector3.new(0, 15, -3)),
-		"Crate Shop\nUnlock new elements!",
+		"Spell Crate\nSpin for new spells!",
 		0,
 		90
 	)
@@ -889,19 +899,72 @@ return function(): Model
 	local priceTag = label(holder, `🎁 {crate.name}\n💰 {crate.price}`, 5.5, 60)
 	priceTag.TextColor3 = GOLD
 	prompt(holder, "Crates", "Open shop", crate.name)
-	for index, element in Elements.LIST do
+	for index, rarity in Rarity.LIST do
 		local orb = MapKit.part(model, {
-			name = `ElementOrb_{element.id}`,
+			name = `RarityOrb_{rarity.id}`,
 			shape = Enum.PartType.Ball,
-			size = Vector3.new(3, 3, 3),
-			cframe = CFrame.new(SHOP + Vector3.new((index - 2.5) * 7.5, 3.2, 1)),
-			color = element.color,
+			size = Vector3.new(2.6, 2.6, 2.6),
+			cframe = CFrame.new(SHOP + Vector3.new((index - 3) * 7, 3, 1)),
+			color = rarity.color,
 			material = Enum.Material.Neon,
 			canCollide = false,
 		})
-		glow(orb, element.color, 12, 1)
-		label(orb, `{element.icon} {element.name}`, 3.2, 50)
+		glow(orb, rarity.color, 12, 1)
+		label(orb, rarity.name, 3, 50).TextColor3 = rarity.color
 	end
+
+	----------------------------------------------------------------------
+	-- Like & Favourite gift box (spawn plaza, west edge): a physical thank-you
+	-- for players who like and favourite the game. Holding its prompt claims the
+	-- one-time coin gift (EconomyService); the client (SupportController)
+	-- disables the prompt once it is claimed and counts down until it opens.
+	----------------------------------------------------------------------
+	local GIFT = Vector3.new(-36, 0, 62)
+	local giftBase = MapKit.part(model, {
+		name = "LikeGiftBox",
+		size = Vector3.new(4.4, 3.2, 4.4),
+		cframe = CFrame.new(GIFT + Vector3.new(0, 1.6, 0)),
+		color = Color3.fromRGB(233, 30, 99),
+		material = Enum.Material.SmoothPlastic,
+	})
+	local giftLid = MapKit.part(model, {
+		name = "LikeGiftLid",
+		size = Vector3.new(5, 1.1, 5),
+		cframe = CFrame.new(GIFT + Vector3.new(0, 3.75, 0)),
+		color = Color3.fromRGB(244, 81, 130),
+		material = Enum.Material.SmoothPlastic,
+	})
+	for _, spec in
+		{
+			{ name = "RibbonA", size = Vector3.new(0.8, 4.8, 4.6) },
+			{ name = "RibbonB", size = Vector3.new(4.6, 4.8, 0.8) },
+		}
+	do
+		MapKit.part(model, {
+			name = `LikeGift{spec.name}`,
+			size = spec.size,
+			cframe = CFrame.new(GIFT + Vector3.new(0, 2.7, 0)),
+			color = GOLD,
+			material = Enum.Material.Neon,
+			canCollide = false,
+		})
+	end
+	local bow = MapKit.part(model, {
+		name = "LikeGiftBow",
+		shape = Enum.PartType.Ball,
+		size = Vector3.new(2, 2, 2),
+		cframe = CFrame.new(GIFT + Vector3.new(0, 5, 0)),
+		color = GOLD,
+		material = Enum.Material.Neon,
+		canCollide = false,
+	})
+	bow:AddTag("SpinFx")
+	glow(giftLid, GOLD_GLOW, 16, 1.4)
+	giftBase:AddTag("LikeGift")
+	label(giftBase, "👍 Like & ⭐ Favourite\nthen claim a gift!", 7, 90)
+	local giftPrompt = prompt(giftBase, "LikeGift", "Claim gift", "Like & Favourite gift")
+	giftPrompt.HoldDuration = 1.2
+	giftPrompt.MaxActivationDistance = 10
 
 	----------------------------------------------------------------------
 	-- Hall of Champions (hall entrance): winners' podium on the left, the

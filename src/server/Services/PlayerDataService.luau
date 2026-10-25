@@ -18,6 +18,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
+local Loadout = require(ReplicatedStorage.Shared.Spells.Loadout)
+local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 
 type Profile = Types.Profile
 
@@ -27,7 +29,10 @@ local STORE_NAME = "PlayerProfiles_v1"
 --    profile.element replace it (players pick their first element again).
 -- 4: settings.music (background music on/off) and rewards.likeFav (the
 --    one-time Like & Favourite gift); both just get their defaults.
-local SCHEMA = 4
+-- 5: elements are bought with coins and crates win SPELLS: profile.spells
+--    (crate spells owned), profile.loadout (up to 2 equipped), and
+--    profile.tutorial.done (players who already picked an element skip it).
+local SCHEMA = 5
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -47,6 +52,9 @@ local function defaultProfile(): Profile
 		coins = Config.COINS.STARTING,
 		elements = {},
 		element = "",
+		spells = {},
+		loadout = {},
+		tutorial = { done = false },
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
@@ -62,6 +70,8 @@ local function reconcile(data: any): Profile
 	if typeof(data) ~= "table" then
 		return base
 	end
+	local previousSchema: number = data.schema or 1
+	local hadTutorial = typeof(data.tutorial) == "table"
 	if (data.schema or 1) < 2 then
 		-- Schema 1 had levels: XP/level are gone, quests rewarded XP (re-roll
 		-- them), and unlocked spells that no longer exist are dropped below.
@@ -114,6 +124,24 @@ local function reconcile(data: any): Profile
 	if typeof(data.element) ~= "string" or not table.find(owned, data.element) then
 		data.element = owned[1] or ""
 	end
+	-- Crate spells: real crate spells only, no repeats; the loadout is the owned
+	-- ones that still fit next to the equipped element's base spells.
+	local spells = {}
+	if typeof(data.spells) == "table" then
+		for _, id in data.spells do
+			local def = if typeof(id) == "string" then SpellDefinitions.get(id) else nil
+			if def and def.rarity and not table.find(spells, id) then
+				table.insert(spells, id)
+			end
+		end
+	end
+	data.spells = spells
+	data.loadout = Loadout.sanitize(data.element, data.loadout, spells)
+	-- Players from before the tutorial existed have already found their way around.
+	if not hadTutorial then
+		data.tutorial = { done = previousSchema < 5 and data.element ~= "" }
+	end
+	data.tutorial.done = data.tutorial.done == true
 	data.schema = SCHEMA
 	return data :: Profile
 end

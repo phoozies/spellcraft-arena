@@ -9,12 +9,16 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local PracticeZone = require(ReplicatedStorage.Shared.Util.PracticeZone)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
+local Loadout = require(ReplicatedStorage.Shared.Spells.Loadout)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 export type ProfileSummary = {
 	coins: number,
 	elements: { string },
 	element: string, -- the equipped element ("" before the first pick)
+	spells: { string }, -- crate spells owned
+	loadout: { string }, -- crate spells equipped beside the element's base spells
+	tutorial: { done: boolean },
 	quests: { Types.DailyQuest },
 	streak: number,
 	stats: { matches: number, wins: number, knockouts: number, casts: number },
@@ -48,6 +52,19 @@ local ClientState = {
 	PresenceChanged = Signal.new(),
 	QueueChanged = Signal.new(),
 }
+
+-- The spells the player can draw right now: this match's spellbook, or (in the
+-- hub and Battleground) their element's base spells plus equipped crate spells.
+function ClientState.drawableSpells(): { string }
+	if ClientState.spellbook then
+		return table.clone(ClientState.spellbook)
+	end
+	local profile = ClientState.profile
+	if profile and profile.element ~= "" then
+		return Loadout.spells(profile.element, profile.loadout)
+	end
+	return {}
+end
 
 -- The key that opens the drawing canvas (player setting).
 function ClientState.drawKeyName(): string

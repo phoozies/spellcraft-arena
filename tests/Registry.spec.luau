@@ -14,7 +14,16 @@ local VfxStyles = require(ReplicatedStorage.Shared.Spells.VfxStyles)
 
 -- Models imported as meshes into the place (ReplicatedStorage.Models); every
 -- other model a spell names must be a block model built by ModelKit.
-local PLACE_MODELS = { Fireball = true, WaterBubble = true, RockWall = true, Gust = true }
+local PLACE_MODELS = {
+	Fireball = true,
+	WaterBubble = true,
+	RockWall = true,
+	Gust = true,
+	Zap = true,
+	Heal = true,
+	BlackHole = true,
+	Turret = true,
+}
 
 return function(t: any)
 	t.describe("Spell registry", function()

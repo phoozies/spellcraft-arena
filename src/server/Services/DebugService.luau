@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
+local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local CrateService = require(script.Parent.CrateService)
 local ElementService = require(script.Parent.ElementService)
 local DestructibleService = require(script.Parent.DestructibleService)
@@ -61,6 +62,9 @@ function DebugService.run(player: Player, command: string, arg: any): any
 				wins = profile.stats.wins,
 				elements = profile.elements,
 				element = profile.element,
+				spells = profile.spells,
+				loadout = profile.loadout,
+				tutorialDone = profile.tutorial.done,
 			}
 	elseif command == "solo" and typeof(arg) == "string" and (Config.MODES :: any)[arg] then
 		MatchService.startMatch(arg :: any, { player }, { solo = true })
@@ -72,6 +76,16 @@ function DebugService.run(player: Player, command: string, arg: any): any
 			for _, id in Elements.ids() do
 				ElementService.grant(player, id)
 			end
+			for _, def in SpellDefinitions.crateSpells() do
+				ElementService.grantSpell(player, def.id)
+			end
+			EconomyService.sendSummary(player)
+		end
+	elseif command == "tutorial" and typeof(arg) == "boolean" then
+		-- Studio QA: true marks the tutorial done, false makes it show again.
+		local profile = PlayerDataService.get(player)
+		if profile then
+			profile.tutorial.done = arg
 			EconomyService.sendSummary(player)
 		end
 	elseif command == "element" and typeof(arg) == "string" and Elements.get(arg) then

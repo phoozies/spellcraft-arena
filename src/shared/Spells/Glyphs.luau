@@ -98,6 +98,7 @@ Glyphs.ROLE = table.freeze({
 	stun = "triangle",
 	heavy = "bolt",
 	area = "chevron",
+	support = "chevron", -- heals and helpers (Heal)
 	ultimate = "star",
 })
 
@@ -109,6 +110,7 @@ Glyphs.ROLE_NAMES = table.freeze({
 	stun = "Stun",
 	heavy = "Heavy attack",
 	area = "Area attack",
+	support = "Support",
 	ultimate = "Ultimate",
 })
 

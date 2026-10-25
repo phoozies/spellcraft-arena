@@ -25,26 +25,31 @@ language: Luau (--!strict), Rojo project, server-authoritative
 
 glossary:
   copy: one use of a spell in the hotbar; drawing a spell's shape adds one copy (one per spell, so at most 5 held)
-  element: Fire, Water, Earth, or Air (src/shared/Spells/Elements.luau); five spells each in five slots; a player equips one at a time
-  spellbook (match): the 5 spells of the player's equipped element, locked in when the match starts
+  base spell: one of an element's 3 spells (slots 1-3); comes with the element
+  crate spell: any other spell (it has a rarity); won from the Spell Crate and equipped in the loadout
+  loadout: the equipped element's 3 base spells plus up to 2 equipped crate spells; no two may share a glyph (src/shared/Spells/Loadout.luau)
+  rarity: Common, Uncommon, Rare, Epic, Legendary (src/shared/Spells/Rarity.luau); decides a crate spell's chance in the gacha
+  element: Fire, Water, Earth, or Air (src/shared/Spells/Elements.luau); three base spells each; the first is a free pick, the others cost coins; a player equips one at a time
+  school: an element, or Arcane (neutral crate spells: Lightning, Heal, Black Hole, Turret)
+  spellbook (match): the player's loadout (3 base spells + equipped crate spells), locked in when the match starts
   elements owned: profile.elements; the first is a free pick, the rest come from Element Crates; profile.element is the equipped one
-  slot: 1-5 within an element (display order; slot 5 is the ultimate)
-  role: the kind of move (basic, fast, boost, defense, stun, heavy, area, ultimate); decides the glyph
+  slot: display order within a school (1-3 base spells, 4 a crate spell, 5 an ultimate)
+  role: the kind of move (basic, fast, boost, defense, stun, heavy, area, support, ultimate); decides the glyph
   ultimate: slot 5; 30-40 damage (or a game-changing effect) on a cooldown of 15s or more
   boost: a match power-up picked between rounds (shared/Match/Boosts.luau); lasts the rest of the match and stacks
   class: PLANNED, NOT BUILT (docs/CLASSES.md); a second layer on top of elements
   archetype: the server behavior a spell row uses (Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon)
-  coins: the only currency; earned by winning; spent on Element Crates
+  coins: the only currency; earned by winning; spent on elements and Spell Crate spins
   wins: profile.stats.wins; the leaderboard stat
   hub: Inkwell Plaza, a sunlit sandstone arena (round plaza, grandstand, Champions' Concourse), where players spawn, pick elements, open crates, and pick teams (no PvP)
-  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), ultimate star"
+  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area and support V (chevron), ultimate star"
   arena: an instanced match map cloned at x = slot * 2000, y = 400
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
   server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, DashService, SpellInputService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
-  client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, SupportController, SpectateController, DashController, MobileController, PresentationController]
+  client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, CursorController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
   rules:
     - init() wires state and looks up remotes; no yielding cross-service calls
     - start() connects events and starts loops
@@ -54,7 +59,7 @@ bootstrap:
 features:
 
   - id: spells
-    summary: The spell dictionary; 20 spells in 4 elements, one row each, behavior chosen by archetype.
+    summary: The spell dictionary; 24 spells (12 base spells in 4 elements, 12 crate spells with rarities), one row each, behavior chosen by archetype.
     source_of_truth: src/shared/Spells/SpellDefinitions.luau (+ src/shared/Spells/Elements.luau for the element lists)
     types: src/shared/Types.luau (SpellDef, SpellStats, Visual)
     catalog:
@@ -62,26 +67,31 @@ features:
         - { id: Fireball,   role: basic,    glyph: circle,   archetype: Projectile, model: Fireball, what: "medium hitbox r5, 15 dmg, cd 3" }
         - { id: FireSlash,  role: fast,     glyph: slash,    archetype: Projectile, model: FireSlash, what: "fast, r4.5, 10 dmg, cd 2" }
         - { id: FireBoost,  role: boost,    glyph: square,  archetype: Buff, model: FireBoost,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
-        - { id: FirePillar, role: area,     glyph: chevron,   archetype: Zone, model: FirePillar,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
-        - { id: FireBomb,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
+        - { id: FirePillar, rarity: Uncommon, role: area,     glyph: chevron,   archetype: Zone, model: FirePillar,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
+        - { id: FireBomb, rarity: Epic,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
       Water:
         - { id: WaterSlice,  role: fast,     glyph: slash,    archetype: Projectile, model: WaterSlice, what: "fast, r4.5, 10 dmg, cd 2" }
         - { id: WaterBody,   role: boost,    glyph: square,  archetype: Buff, model: WaterBody,       what: "invincible 7s, cd 22 (stats.invincible)" }
         - { id: WaterLock,   role: stun,     glyph: triangle, archetype: Control,    model: WaterBubble, what: "r4, 5 dmg + Stun 1.5s, cd 4" }
-        - { id: WaterWave,   role: heavy,    glyph: bolt,     archetype: Projectile, model: WaterWave, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
-        - { id: WaterNebula, role: ultimate, glyph: star,     archetype: Zone, model: WaterNebula,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
+        - { id: WaterWave, rarity: Rare,   role: heavy,    glyph: bolt,     archetype: Projectile, model: WaterWave, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
+        - { id: WaterNebula, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: WaterNebula,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
       Earth:
         - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, model: RockThrow, what: "large rock, r6, 15 dmg, cd 3" }
-        - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
+        - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, cd 4; your own spells pass through it, enemy spells hit it" }
         - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone, model: EarthPunch,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
-        - { id: EarthPillar, role: area,    glyph: chevron,   archetype: Line, model: EarthPillar,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
-        - { id: Earthquake, role: ultimate, glyph: star,     archetype: Zone, model: Earthquake,       what: "ultimate: centered on the caster, r25, 40 dmg, 1.2s cast with the caster rooted, cd 22 (channel, pillar)" }
+        - { id: EarthPillar, rarity: Uncommon, role: area,    glyph: chevron,   archetype: Line, model: EarthPillar,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
+        - { id: Earthquake, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: Earthquake,       what: "ultimate: centered on the caster, r25, 40 dmg, 1.2s cast with the caster rooted, cd 22 (channel, pillar)" }
       Air:
         - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 3" }
         - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
         - { id: AirBoost,  role: boost, glyph: square,     archetype: Buff, model: AirBoost,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
-        - { id: AirShield, role: defense,    glyph: triangle,  archetype: Buff, model: AirShield,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
-        - { id: Tornado,   role: ultimate, glyph: star,     archetype: Projectile, model: Tornado, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
+        - { id: AirShield, rarity: Common, role: defense,    glyph: triangle,  archetype: Buff, model: AirShield,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
+        - { id: Tornado, rarity: Epic,   role: ultimate, glyph: star,     archetype: Projectile, model: Tornado, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
+      Arcane:
+        - { id: Zap,       rarity: Rare,   role: fast,    glyph: slash,   archetype: Zone, model: Zap, what: "Lightning: point-and-click bolt, r5, 18 dmg, range 60, cd 2.5 (reticle)" }
+        - { id: Heal,      rarity: Common, role: support, glyph: chevron, archetype: Buff, model: Heal, what: "restore 25 HP, cd 10 (stats.heal)" }
+        - { id: BlackHole, rarity: Epic,   role: heavy,   glyph: bolt,    archetype: Zone, model: BlackHole, what: "point-and-click, r16, pulls and holds enemies 3s, 10 dmg total, cd 10 (stats.hold, pull)" }
+        - { id: Turret,    rarity: Rare,   role: defense, glyph: triangle, archetype: Placeable, model: Turret, what: "30 HP turret shoots the nearest enemy every 1s for 6 dmg, 20s, cd 12 (stats.turret)" }
     presentation: "every spell's model, particle style, cast pose, and sounds are in the spell registry (feature `spell_registry`; docs/semantic/spell_registry.yaml)"
     stat_flags_added_for_these_spells:
       visual.model: imported model that replaces the primitive look (bolt / placeable skin); the primitive stays the hitbox and the fallback
@@ -93,7 +103,8 @@ features:
       stats.fireInterval: seconds between turret shots (default 1.5)
     invariants:
       - every alias is unique across spells and resolves via WordMatcher, used by admin commands (tests/WordMatcher.spec.luau)
-      - an element never repeats a glyph, every spell's glyph is Glyphs.ROLE[its role] (same in every element), and sfx cue names exist (tests/Glyphs.spec.luau, tests/Audio.spec.luau)
+      - an element's base spells never repeat a glyph, every spell's glyph is Glyphs.ROLE[its role], a loadout never holds two spells with the same glyph (Loadout.problem), and sfx cue names exist (tests/Glyphs.spec.luau, tests/Economy.spec.luau, tests/Audio.spec.luau)
+      - a spell has a rarity exactly when it is not one of an element's 3 base spells (SpellDefinitions asserts it)
       - balance budgets in tests/Balance.spec.luau (normal hit <= 30 and <= 34% HP; ultimates 30-40 dmg with cd >= 15; burst <= 20 dps; hard CC uptime <= 60% and cooldown >= 2s; timed buffs <= 60% uptime; placeables 1-3 alive with a lifetime)
       - stats are frozen tables; never mutate a def at runtime
       - every model use must fall back to plain shapes when ReplicatedStorage.Models lacks it
@@ -143,18 +154,21 @@ features:
     invariants: [clients skip effects farther than 600 studs, never trust or report hits from the client]
 
   - id: elements
-    summary: Four elements of five spells each; a player owns some, equips one, and draws only its spells.
-    shared: src/shared/Spells/Elements.luau (LIST, SLOT_COUNT, get, ids)
-    server: src/server/Services/ElementService.luau (owned, equipped, owns, grant, equip, Changed; ChooseElement remote)
-    client: MenuController Spellbook panel (element list, equip button, the 5 spell cards), hub shrines in InkwellPlaza
+    summary: Four base elements of three spells each; the first is a free pick, the others are bought with coins; a player equips one and draws its base spells plus up to two equipped crate spells (the loadout).
+    shared: "src/shared/Spells/Elements.luau (LIST with price and base, BASE_COUNT, ARCANE, school, get, ids); src/shared/Spells/Loadout.luau (MAX_EXTRA 2; spells, clash, problem, sanitize); src/shared/Spells/Rarity.luau"
+    server: "src/server/Services/ElementService.luau (owned, equipped, owns, ownedSpells, loadout, grant, buy, equip, setExtra, grantSpell, Changed; remotes ChooseElement, BuyElement, SetLoadout)"
+    client: "MenuController Spellbook panel with two tabs: Elements (element list with prices, Choose / Buy / Equip, the 3 base spell cards) and Loadout (3 fixed base cards, 2 extra slots, the collection of all 12 crate spells with unowned ones shown as ?; Equip / Remove with the shape-clash reason); UI/SpellCard.luau; hub shrines in InkwellPlaza"
     rules:
-      - the first element is a free pick (ChooseElement with no elements owned); after that ChooseElement only equips owned ones
-      - no element changes during a match (HandService.isInMatch is the lock)
+      - the first element is a free pick (ChooseElement with no elements owned); after that ChooseElement only equips owned ones; other elements are bought with BuyElement (Elements price, 400, spent through EconomyService)
+      - no element or loadout changes during a match (HandService.isInMatch is the lock)
       - a player who queues without an element gets a random one (MatchService.startMatch)
-      - HandService accepts a spell only if it belongs to the equipped element (hub) or is in the match spellbook
+      - HandService and SpellInputService accept a spell only if it is in the player's loadout (outside a match) or the match spellbook; only the loadout's glyphs are recognized
+      - SetLoadout puts an owned crate spell in extra slot 1 or 2 (or nil to empty it); refused if the spell is not owned or shares a glyph with a base spell or the other extra
+      - switching element drops extras that now clash with the new base spells (Loadout.sanitize)
+      - the first crate spell won is equipped automatically when a slot is free and it fits
     remotes:
-      c2s: [ChooseElement (elementId)]
-    tests: tests/Economy.spec.luau (Elements)
+      c2s: [ChooseElement (elementId), BuyElement (elementId), SetLoadout (slot, spellId?)]
+    tests: tests/Economy.spec.luau (Elements, Rarity, Loadout)
 
   - id: boosts
     summary: Between rounds a player picks 1 of 3 boosts instead of a spell; they last the rest of the match and stack (max 3 each).
@@ -190,17 +204,18 @@ features:
     docs: docs/ECONOMY.md
 
   - id: crates
-    summary: One Element Crate bought with coins; a server-decided spin unlocks an element you don't own.
-    shared: src/shared/Economy/Crates.luau (LIST price 250, unowned, roll, SPIN_TIME 4)
+    summary: A Spell Crate gacha bought with coins; a server-decided spin wins one crate spell, picked by rarity.
+    shared: "src/shared/Economy/Crates.luau (LIST: Spell, price 100; pool, ofRarity, odds, ownsAll, roll(owned, rng) -> {spell, rarity, duplicate, refund}; SPIN_TIME 4); src/shared/Spells/Rarity.luau (weights 55/25/12/6/2, duplicate refunds 20/35/55/75/90)"
     server: src/server/Services/CrateService.luau (open(player, crateId) -> (CrateResult?, reason?))
-    client: src/client/Controllers/CrateController.luau (shop panel + reel of element cards)
-    hub: Crate Shop stage in src/server/Maps/InkwellPlaza.luau (prompt named "Crates")
+    client: src/client/Controllers/CrateController.luau (shop panel with the odds, a reel of spell cards in rarity colours with a tick per card, rarity reveal sound and flash)
+    hub: Spell Crate stage in src/server/Maps/InkwellPlaza.luau (prompt named "Crates", five rarity orbs)
     remotes:
       c2s: [OpenCrate (crateId)]
-      s2c: ["CrateOpened (CrateResult: crate, element, coins)"]
+      s2c: ["CrateOpened (CrateResult: crate, spell, rarity, duplicate, refund, equipped, coins)"]
     rules:
-      - refused during a match, before the first element is picked, while the previous spin (4s) runs, or when all four elements are owned
-      - the result is decided and saved before the reel spins; the reveal waits SPIN_TIME
+      - refused during a match, before the first element is picked, while the previous spin (4s) runs, or when every crate spell is owned
+      - a spell already owned pays back its rarity's refund (less than a spin) instead
+      - the result is decided and saved before the reel spins; the toast and the refund wait SPIN_TIME
     tests: tests/Economy.spec.luau
 
   - id: battleground
@@ -277,19 +292,22 @@ features:
       - src/shared/Match/Boosts.luau
       - src/server/Services/BoostService.luau
     rewards: winners get Config.COINS.MATCH_WIN (+ first win of the day) and +1 win; MatchState.coinsGained drives the Results screen
-    spellbook: the equipped element's 5 spells (set at match start); the draft offers 3 boosts, not spells
+    spellbook: the player's loadout (ElementService.loadout, set at match start); the draft offers 3 boosts, not spells
     draft: BoostService.roll gives 3 distinct boosts the player can still stack; a pick (or an auto-pick on timeout) adds a stack
 
   - id: player_data
     summary: Session-locked DataStore profiles with autosave and BindToClose.
     owner: src/server/Services/PlayerDataService.luau
     store: PlayerProfiles_v1/u_<userId> = { data, lockJobId, lockTime }
-    schema: 4
+    schema: 5
     profile_fields:
       - schema
       - coins
       - elements
       - element
+      - "spells (crate spells owned)"
+      - "loadout (up to 2 equipped crate spells)"
+      - "tutorial {done}"
       - cosmetics
       - "stats {matches, wins, knockouts, casts}"
       - "daily {lastLoginDay, streak, lastFirstWinDay, questDay, quests}"
@@ -299,6 +317,7 @@ features:
       "1->2": drop xp/level; re-roll quests; drop unknown spell ids; ensure starters owned
       "2->3": drop ownedSpells; elements = [], element = "" (the player picks a first element)
       "3->4": add settings.music (true) and rewards.likeFav (false); nothing to transform
+      "4->5": add spells = [] and loadout = []; tutorial.done = true for players who already picked an element, false for everyone else
     invariants: [bump SCHEMA and migrate in reconcile() for breaking changes, never save over another server's lock]
 
   - id: hub
@@ -307,7 +326,7 @@ features:
     layout: north is -Z; round spawn plaza at (0,0,38); Champions' Concourse from z=-4 to the Arena Gate at z=-190; grandstand behind the plaza (south)
     contents:
       - spawn
-      - inkwell fountain + 4 element shrines (each lists its 5 spells and shapes; prompt opens the Spellbook)
+      - inkwell fountain + 4 element shrines (each lists its 3 base spells, shapes, and price; prompt opens the Spellbook)
       - Champions' Concourse - arched sandstone bays with sky-glass windows and glyph banners, red carpet, Arena Gate
       - grandstand (3 tiers) and team flag poles
       - Training Grove (west, 100 x 110, tag PracticeZone + BuildZone: the only hub place to draw and cast; 11 dummies, archery targets, fence, hay)
@@ -317,6 +336,7 @@ features:
       - Battleground portal (BattlegroundPortal tag) in the concourse
       - Training Grove (BuildZone + PracticeZone + dummies)
       - Spellbook kiosk (Grimoire model)
+      - Like & Favourite gift box on the plaza's west edge (tag LikeGift, prompt claims the one-time gift)
       - Daily Quests chest
       - Crate Shop stage (Crate model x5)
       - podium + Most Wins board at the hall entrance
@@ -331,7 +351,7 @@ features:
       c2s: [DrawSpell]   # (points, spellId?): spellId = the card being traced
       s2c: [GlyphResult] # (spellId?, glyphId?, quality?)
     config: [DRAW_COOLDOWN, DRAW_MAX_POINTS, DRAW_MAX_COORD, DRAW_MAX_SECONDS, DEFAULT_DRAW_KEY, QUALITY]
-    client_ui: HudController glyph cards (equipped element; tapping one opens the canvas with a guide), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
+    client_ui: HudController glyph cards (your loadout, outlined by rarity; tapping one opens the canvas with a guide), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
     preview: "tapping a glyph card (ClientState.DrawRequested) opens the canvas for that spell: its shape is drawn faint in the middle (GlyphView.create) with a dot tracing it; DrawSpell then carries the spell id and the server only accepts THAT shape"
     quality: "the recognizer score becomes a 0..1 quality (Spells/Quality.fromScore, Config.QUALITY); each hand copy stores it (HandService.qualities); CastService applies Quality.apply to the spell def at cast time: power (damage, heal, shield, health, hazardDps, damageMult bonus) x0.85..1.5, size (radius) x0.9..1.25, time (duration, statusDuration, lifetime) x0.85..1.3; cooldown, range, and speed never change. Tiers Rough/Good/Great/Perfect show as 1-4 stars on the hotbar slot"
     responsive: "UI/Responsive.bind keeps every UIScale matched to the screen (1280x720 design, 960x540 for phones, capped so a 700x470 panel always fits); used by the HUD and the draw button"
@@ -400,13 +420,28 @@ features:
     tests: tests/Audio.spec.luau
 
   - id: support_reward
-    summary: A one-time coin gift for liking and favouriting the game (honor system; Roblox can't verify either).
-    server: EconomyService.claimLikeReward (after Config.SUPPORT.MIN_SECONDS in the server, once per account, rate-limited remote ClaimLikeReward)
-    client: src/client/Controllers/SupportController.luau (the "Like!" side-menu button and panel with steps, countdown, claim)
+    summary: A one-time coin gift for liking and favouriting the game (honor system; Roblox can't verify either), claimed at a physical gift box in the hub.
+    hub: "the LikeGiftBox part (tag LikeGift) with a hold-to-claim ProximityPrompt, built in src/server/Maps/InkwellPlaza.luau; there is no menu button or panel"
+    server: EconomyService.claimLikeReward, called from the prompt's Triggered event (after Config.SUPPORT.MIN_SECONDS in the server, once per account, 1s rate limit per player)
+    client: src/client/Controllers/SupportController.luau (turns the prompt off once claimed, counts down "ready in Ns" on it, plays the thank-you chime)
     data: profile.rewards.likeFav; Config.SUPPORT { LIKE_FAVORITE_COINS 250, MIN_SECONDS 90 }
     debug: SpellcraftDebug:Invoke("likefav", false) resets it, ("takecoins", n) removes coins
     caution: check Roblox's current policy on rewarding likes or favourites before shipping
     docs: docs/ECONOMY.md
+
+  - id: tutorial
+    summary: A first-join guided walk-through with glowing arrows: choose an element, spin for a spell, draw it, cast it, then earn coins in a duel or the Battleground.
+    client: "src/client/Controllers/TutorialController.luau (welcome screen, coach card, 5 steps, Skip); src/client/Fx/GuideArrow.luau (bobbing world arrow + outline + ground chevron trail + off-screen edge pointer; GUI arrows for buttons)"
+    server: "profile.tutorial.done, set by the TutorialDone remote (EconomyService); schema 5 marks players who already picked an element as done"
+    rules:
+      - steps finish by watching server-driven state (profile element, profile spells, the hand, cooldowns), so the tutorial never changes game rules
+      - the spin step is skipped for a player without coins or spells; joining any fight (match or Battleground) ends the tutorial
+      - arrows find their targets by name or tag (SpellbookKiosk, Crate_Spell, PracticeZone, TrainingDummy, BattlegroundPortal, TeamPad Mode 1v1)
+    debug: SpellcraftDebug:Invoke("tutorial", false) shows it again on the next join
+
+  - id: spell_cursor
+    summary: While a spell is readied the mouse becomes a pulsing crosshair in the spell's colour with its name and "Click to cast"; red with the seconds left while it recharges.
+    client: src/client/Controllers/CursorController.luau (mouse only; the normal arrow returns over buttons, menus, and the drawing canvas)
 
   - id: ui_theme
     summary: The studded Roblox look: blue panels and buttons with stud grids, bevels, and outlined text.
@@ -441,4 +476,4 @@ features:
 testing:
   run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
   specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/WordMatcher.spec.luau]
-  live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Common") / ("wins", 3) / ("likefav", false) / ("takecoins", 250)
+  live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Spell") / ("unlockall") / ("tutorial", false) / ("wins", 3) / ("likefav", false) / ("takecoins", 250)

@@ -1,6 +1,6 @@
 # Economy: coins, crates, wins, and the podium
 
-There are **no levels or XP**. Players win matches to earn **coins**, spend coins on **Element Crates**, and each crate spin unlocks a new **element** (five new spells). **Wins** are the leaderboard stat and put the top 3 players in the server on the hub's **podium**.
+There are **no levels or XP**. Players win matches to earn **coins**, buy **base elements** with them (your first is free), and spin the **Spell Crate** for **crate spells** of five rarities. **Wins** are the leaderboard stat and put the top 3 players in the server on the hub's **podium**.
 
 ```
 win a match ──► +100 coins (+50 first win of the day) ──► Crate Shop
@@ -13,7 +13,7 @@ win a match ──► +100 coins (+50 first win of the day) ──► Crate Shop
 
 | Source | Amount | Where |
 |---|---|---|
-| Starting balance (new profile) | 150 | `Config.COINS.STARTING` (an Element Crate costs 250: one win away) |
+| Starting balance (new profile) | 150 | `Config.COINS.STARTING` (a Spell Crate spin costs 100) |
 | Winning a match | 100 | `Config.COINS.MATCH_WIN`, paid in `MatchService.finishMatch` |
 | First win of the day | +50 | `Config.COINS.FIRST_WIN_OF_DAY` |
 | Daily login chest | 25 × streak day (max 7) | `Config.COINS.DAILY_LOGIN`, `EconomyService.refreshDaily` |
@@ -23,33 +23,37 @@ Losing, knockouts, and round wins pay nothing. Solo test matches (admin/debug `s
 
 `EconomyService` is the **only** code that changes `profile.coins` or `profile.stats.wins` (`addCoins`, `spend`, `recordWin`). It fires `EconomyService.Changed(player)` after every change.
 
-## Crates
+## Elements and crates
 
-Defined in [`src/shared/Economy/Crates.luau`](../src/shared/Economy/Crates.luau) (pure, testable). There is one crate:
+**Elements (bought directly).** Your first element is a free pick. Each other element costs **400 coins** (`price` in [`Elements.luau`](../src/shared/Spells/Elements.luau)); press Buy in the Spellbook's Elements tab (`BuyElement` remote, `ElementService.buy`). An element comes with its three base spells.
+
+**The Spell Crate (gacha).** Defined in [`src/shared/Economy/Crates.luau`](../src/shared/Economy/Crates.luau) (pure, testable). One crate:
 
 | Crate | Price | What it does |
 |---|---|---|
-| 🎁 Element Crate | 250 | Unlocks a random element you don't own yet |
+| 🎁 Spell Crate | 100 | Wins one crate spell, picked by rarity |
 
-You start with one element (a free first pick in the Spellbook) and there are four, so three crates unlock everything. Once you own all four the crate can't be opened.
+Rarities are in [`Spells/Rarity.luau`](../src/shared/Spells/Rarity.luau): Common 55%, Uncommon 25%, Rare 12%, Epic 6%, Legendary 2%. There are 12 crate spells (see [SPELLS.md](SPELLS.md)). A spell you already own pays back coins (20 / 35 / 55 / 75 / 90 by rarity, always less than a spin).
 
 **How a spin is decided (server only, `CrateService.open`):**
 
-1. Validate: known crate id, profile loaded, you've picked your first element, **not in a match**, not mid-spin (`Crates.SPIN_TIME` = 4s per player), enough coins, an element left to win.
-2. `Crates.roll(owned, rng)`: pick uniformly among the elements you don't own.
-3. `EconomyService.spend(price)`, then `ElementService.grant`.
-4. Fire `CrateOpened(result)` to the opener. After `SPIN_TIME` the server sends the profile summary and a toast, so the balance and Spellbook don't spoil the spin.
+1. Validate: known crate id, profile loaded, you've picked your first element, **not in a match**, not mid-spin (`Crates.SPIN_TIME` = 4s per player), enough coins, a crate spell left to win.
+2. `Crates.roll(owned, rng)`: roll a rarity by weight, then a spell of it.
+3. `EconomyService.spend(price)`, then `ElementService.grantSpell`; the new spell is equipped straight into an empty loadout slot when it fits.
+4. Fire `CrateOpened(result)` to the opener. After `SPIN_TIME` the server pays any duplicate refund and sends a toast, so the reveal isn't spoiled.
 
-**Client (`CrateController`):** the Crate Shop panel (side menu **🎁 Crates**, or the crate on the hub's Crate Shop stage) shows the price, the elements you own, and **Open**, which only sends `OpenCrate(crateId)`. When `CrateOpened` arrives, a reel of 40 element cards (the server's result at card 34) eases to a stop under the center marker, then reveals **NEW ELEMENT**. Equip it in the Spellbook.
+**Client (`CrateController`):** the Spell Crate panel (side menu **🎁 Crates**, or the crate on the hub's stage) shows the price and each rarity's odds and **Spin!**, which only sends `OpenCrate(crateId)`. When `CrateOpened` arrives, a reel of 40 spell cards in rarity colours (the server's result at card 34) eases to a stop, ticking as cards pass, then reveals the prize with a rarity sound and flash.
 
-**Adding an element:** add it to `Elements.LIST` with its five spells; the crate, reel, Spellbook, and hub shrines pick it up. **Retuning the crate:** edit `Crates.LIST` (`tests/Economy.spec.luau` covers the rolls).
+**Loadout.** Equip crate spells in the Spellbook's Loadout tab (`SetLoadout`): your element's three base spells plus up to two crate spells you own. Two spells with the same shape can't share a loadout.
+
+**Adding a crate spell:** add a row with a `rarity` to `SpellDefinitions`. **Retuning:** edit `Crates.LIST`, `Rarity.LIST`, or an element's `price` (`tests/Economy.spec.luau` covers the rolls).
 
 ## Like & Favourite gift
 
-A one-time thank-you of **250 coins** (`Config.SUPPORT.LIKE_FAVORITE_COINS`, never more than one crate) for players who Like and Favourite the game. Players open it from the **👍 Like!** button, follow the steps, and press Claim.
+A one-time thank-you of **250 coins** (`Config.SUPPORT.LIKE_FAVORITE_COINS`, less than one element) for players who Like and Favourite the game. It is a **physical gift box on the hub plaza** (tag `LikeGift`): hold its prompt to claim. There is no menu button.
 
-- **Roblox gives no way to check a like or a favourite**, so the claim is on the honor system. The server only opens it after the player has spent `Config.SUPPORT.MIN_SECONDS` (90) in the server, accepts one claim per account (`profile.rewards.likeFav`), and rate-limits the remote. `EconomyService.claimLikeReward` pays it through `addCoins`.
-- Before launching, check Roblox's current rules on rewarding likes or favourites, and switch the feature off (remove `SupportController` and the `ClaimLikeReward` handler) if they don't allow it.
+- **Roblox gives no way to check a like or a favourite**, so the claim is on the honor system. The server only opens it after the player has spent `Config.SUPPORT.MIN_SECONDS` (90) in the server, accepts one claim per account (`profile.rewards.likeFav`), and rate-limits the prompt. `EconomyService.claimLikeReward` pays it through `addCoins`. The client (`SupportController`) turns the prompt off once claimed and counts down "ready in Ns" on it.
+- Before launching, check Roblox's current rules on rewarding likes or favourites, and switch the feature off (remove the gift box and `SupportController`) if they don't allow it.
 - Studio QA: `SpellcraftDebug:Invoke("likefav", false)` makes it claimable again, `("takecoins", 250)` removes the coins.
 
 ## Wins leaderboard and podium (`LeaderboardService`)
@@ -66,20 +70,20 @@ The ranking is per server (players currently here), built from their saved `stat
 | Thing | Where (studs) | Built by |
 |---|---|---|
 | Spellbook kiosk (imported **Grimoire** model on a lectern, prompt "Spellbook") | (-22, 0, 70) | `Maps/InkwellPlaza.luau` |
-| Element shrines (4, list each element's spells and shapes; prompt "Spellbook") | around the fountain | same |
+| Element shrines (4, list each element's 3 base spells, shapes, and price; prompt "Spellbook") | around the fountain | same |
 | Daily Quests chest | (22, 0, 70) | same |
-| Crate Shop stage (the Element Crate, prompt "Crates", with four element orbs) | (76, 0, 36) | same; the crate uses the imported **Crate** model tinted gold, else a colored block |
+| Crate Shop stage (the Spell Crate, prompt "Crates", with five rarity orbs) | (76, 0, 36) | same; the crate uses the imported **Crate** model tinted gold, else a colored block |
 | Podium (3 pedestals) | (-23, 0, -20), the hall entrance | same |
 | Most Wins board | right side of the hall entrance, angled to the plaza | same |
 
 ## Admin and debug
 
-- `;coins <player> <amount>`, `;wins <player> <amount>`, `;crate <player>`, `;unlock <player> <element>` (see [ADMIN.md](ADMIN.md)).
-- Studio playtests: `game.ServerStorage.SpellcraftDebug:Invoke("crate", "Element")` (also `coins`, `wins`, `state`, `unlockall`, `element`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
+- `;coins <player> <amount>`, `;wins <player> <amount>`, `;crate <player>`, `;unlock <player> <element|spells|all>` (see [ADMIN.md](ADMIN.md)).
+- Studio playtests: `game.ServerStorage.SpellcraftDebug:Invoke("crate", "Spell")` (also `coins`, `wins`, `state`, `unlockall`, `element`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
 
 ## Data
 
-`Types.Profile` schema **3**: `elements` (the unlocked elements) and `element` (the equipped one, `""` until the first pick) replace `ownedSpells`. Migration from schema 2 (`PlayerDataService.reconcile`): drop `ownedSpells`; the player picks their first element again. Schema 1 to 2 dropped `xp`/`level` and re-rolled the quests.
+`Types.Profile` schema **5**: `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (crate spells owned), `loadout` (up to 2 equipped crate spells), and `tutorial.done`. Schema 4 to 5 adds the new fields and marks players who already picked an element as done with the tutorial. Schema 3 replaced `ownedSpells` with `elements`/`element`. Migration from schema 2 (`PlayerDataService.reconcile`): drop `ownedSpells`; the player picks their first element again. Schema 1 to 2 dropped `xp`/`level` and re-rolled the quests.
 
 ## Ideas (not built)
 

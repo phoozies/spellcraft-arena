@@ -93,6 +93,15 @@ local Cues: { [string]: Cue } = {
 	tornadoCast = sound(RUMBLE, 0.9, true, 1, 2.6),
 	tornadoHit = sound(RUMBLE, 0.8, true, 1.3, 1.2),
 
+	-- Arcane (crate spells that belong to no element)
+	zapCharge = sound(TWINKLE, 0.7, true, 2, 0.6),
+	zapStrike = sound(EXPLOSION, 0.8, true, 1.9, 0.9),
+	healChime = sound(CHIME, 0.7, true, 1.6, 1.6),
+	blackHoleOpen = sound(RUMBLE, 0.8, true, 0.5, 2.5),
+	blackHoleCollapse = sound(EXPLOSION, 0.9, true, 0.45, 2.2),
+	turretDeploy = sound(GRIND, 0.6, true, 1.9, 0.9),
+	turretShot = sound(HIT, 0.4, true, 2, 0.3),
+
 	-- Movement
 	dash = sound(WIND, 0.6, true, 1.9, 0.5),
 
@@ -104,6 +113,11 @@ local Cues: { [string]: Cue } = {
 	glyphBad = sound(TWINKLE, 0.5, false, 0.55, 0.9),
 	crateReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
 	claimReward = sound(CHIME, 0.8, false, 1.5, 2),
+	reelTick = sound(HIT, 0.25, false, 2, 0.15),
+	crateEpic = sound(CHIME, 0.85, false, 1, 3),
+	crateLegendary = sound(CHIME, 1, false, 0.75, 3.5),
+	uiStep = sound(TWINKLE, 0.5, false, 1.4, 0.8),
+	uiEquip = sound(HIT, 0.45, false, 1.6, 0.3),
 
 	-- Hub ambience (a distant arena crowd, kept quiet)
 	hubCrowd = { id = "rbxassetid://9119562311", volume = 0.22, world = false, loop = true },

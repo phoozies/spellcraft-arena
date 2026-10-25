@@ -4,7 +4,7 @@
 
 ## What exists today: elements
 
-Every player equips **one element** (Fire, Water, Earth, or Air). An element is five spells, each drawn with a shape that depends on its kind of move (a circle for a basic attack, a slash for a fast attack, and so on; see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are unlocked with **Element Crates**.
+Every player equips **one element** (Fire, Water, Earth, or Air). An element is three base spells (plus two crate spells in your loadout), each drawn with a shape that depends on its kind of move (a circle for a basic attack, a slash for a fast attack, and so on; see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are bought with coins.
 
 Classes are meant to sit **on top of** elements, not replace them.
 

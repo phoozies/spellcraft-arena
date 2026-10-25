@@ -16,6 +16,7 @@ local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
+local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -117,7 +118,8 @@ function HudController.toast(message: string, kind: string?)
 end
 
 -- Glyph cards above the hotbar: what to draw for each spell you can ready.
--- In a match that is your match spellbook; in the hub, every spell you own.
+-- In a match that is your match spellbook; elsewhere your loadout (your
+-- element's base spells and the crate spells you equipped).
 -- A card shows the spell's cooldown while it recharges. Tapping a card opens
 -- the drawing canvas with a preview of its shape to trace (the better you
 -- follow it, the stronger the spell: Spells/Quality).
@@ -129,17 +131,7 @@ local function refreshWords()
 		entry.card:Destroy()
 	end
 	table.clear(glyphCards)
-	local ids: { string } = {}
-	if ClientState.spellbook then
-		ids = table.clone(ClientState.spellbook)
-	else
-		local profile = ClientState.profile
-		if profile and profile.element ~= "" then
-			for _, def in SpellDefinitions.ofElement(profile.element) do
-				table.insert(ids, def.id)
-			end
-		end
-	end
+	local ids = ClientState.drawableSpells()
 	for order, id in ids do
 		local def = SpellDefinitions.get(id)
 		if def then
@@ -151,7 +143,12 @@ local function refreshWords()
 				BackgroundTransparency = 0.2,
 			})
 			Theme.corner(card, 10)
-			local stroke = Theme.stroke(card, color, if def.ultimate then 4 else 2)
+			-- Crate spells are outlined in their rarity colour.
+			local stroke = Theme.stroke(
+				card,
+				if def.rarity then Rarity.color(def.rarity) else color,
+				if def.ultimate then 4 else 2
+			)
 			stroke.Transparency = 0.2
 			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
 			local name = Theme.label(card, def.name, {
@@ -272,7 +269,7 @@ local function refreshHotbar()
 		local def = id and SpellDefinitions.get(id)
 		if def then
 			local color = Elements.color(def.element)
-			local element = Elements.get(def.element)
+			local element = Elements.school(def.element)
 			slot.button.Visible = true
 			slot.icon.Text = if element then element.icon else ""
 			slot.icon.TextColor3 = color
@@ -365,6 +362,11 @@ local function buildGlyphRow(root: Frame)
 		BackgroundColor3 = Theme.COLORS.accent,
 	})
 	Theme.corner(drawBar, 2)
+end
+
+-- The row of spell cards above the hotbar (visible where drawing is allowed).
+function HudController.getGlyphRow(): Frame
+	return glyphRow
 end
 
 -- Top-left wallet: coins (spent on crates) and wins (the leaderboard stat).

@@ -173,30 +173,41 @@ COMMANDS.give = {
 }
 
 COMMANDS.unlock = {
-	usage = "unlock <player> <Fire|Water|Earth|Air|all>",
-	help = "Permanently unlock an element for a player (saved).",
+	usage = "unlock <player> <Fire|Water|Earth|Air|spells|all>",
+	help = "Permanently unlock an element (or `spells`: every crate spell) for a player (saved).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local word = args[2] or ""
 		local wanted: { string } = {}
+		local allSpells = string.lower(word) == "spells" or string.lower(word) == "all"
 		if string.lower(word) == "all" then
 			wanted = Elements.ids()
+		elseif allSpells then
+			wanted = {}
 		else
 			local id = string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2))
 			if Elements.get(id) then
 				wanted = { id }
 			end
 		end
-		if #targets == 0 or #wanted == 0 then
-			return "Usage: unlock <player> <Fire|Water|Earth|Air|all>"
+		if #targets == 0 or (#wanted == 0 and not allSpells) then
+			return "Usage: unlock <player> <Fire|Water|Earth|Air|spells|all>"
 		end
 		for _, target in targets do
 			for _, id in wanted do
 				ElementService.grant(target, id)
 			end
+			if allSpells then
+				for _, def in SpellDefinitions.crateSpells() do
+					ElementService.grantSpell(target, def.id)
+				end
+			end
 			EconomyService.sendSummary(target)
 		end
-		return `Unlocked {table.concat(wanted, ", ")} for {names(targets)}.`
+		return `Unlocked {if allSpells then "every crate spell and " else ""}{table.concat(
+			wanted,
+			", "
+		)} for {names(targets)}.`
 	end,
 }
 
@@ -246,10 +257,10 @@ COMMANDS.wins = {
 
 COMMANDS.crate = {
 	usage = "crate <player>",
-	help = "Open an Element Crate for a player (charges their coins, like the shop).",
+	help = "Spin a Spell Crate for a player (charges their coins, like the shop).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local crateId = "Element"
+		local crateId = "Spell"
 		if #targets == 0 or not Crates.get(crateId) then
 			return "Usage: crate <player>"
 		end

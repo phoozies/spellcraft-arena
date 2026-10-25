@@ -27,7 +27,7 @@ Hub ──► queue (pad or Play menu) ──► Match (best of 3)
 
 ### In a match
 
-1. **Intro** (4s): a VS screen shows the mode, the map, and both teams with their avatars, then fades to black while everyone is moved into the arena. Your match **spellbook** is the **five spells of your equipped element**, locked in for the match. These are the shapes you can draw.
+1. **Intro** (4s): a VS screen shows the mode, the map, and both teams with their avatars, then fades to black while everyone is moved into the arena. Your match **spellbook** is your **loadout** (your element's three base spells plus up to two crate spells), locked in for the match. These are the shapes you can draw.
 2. **Countdown** (5s, frozen in place, with big 3 · 2 · 1 numbers), then **FIGHT!** and the **Round** (up to 120s). The last team standing wins the round. If time runs out, the team with the most remaining health wins.
 3. A round banner announces the result ("BLUE WINS ROUND 1" or "DRAW"). Then comes the **Draft** (15s): you're offered **3 boosts** and pick one (Power +15% damage, Vitality +20 max health, Swiftness +3 speed, Focus -12% cooldowns, Health Potion). Boosts last for the rest of the match, stack up to 3 times, and a pick is made for you if time runs out. There are no new spells to earn in a duel.
 4. **First to 2 round wins** takes the match. The **VICTORY!** screen (with confetti), **DEFEAT**, or **DRAW** shows the coins you won counting up (winners get 100, +50 for the first win of the day), then everything fades back to the hub.
@@ -43,7 +43,7 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground where you aim, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
-- **Which shapes work:** only your equipped element's five. Others fizzle with a hint. Each round starts empty-handed, so your first move is to draw.
+- **Which shapes work:** only your loadout's shapes. Others fizzle with a hint. Each round starts empty-handed, so your first move is to draw.
 - **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
 - **Spell VFX and audio:** drawing a glyph pops it over your head; every cast raises the caster's arm and imprints the glyph in a magic circle at their feet. Heal sparkles, Black Hole streams motes inward, and each spell has its own cast and impact sound (`Audio/Cues`). Bolts trail element-themed particles (fire, water, wind), and impacts burst with light and a shockwave ring.
 - **Health bars:** your own HP is shown top-left, with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
@@ -110,7 +110,7 @@ Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and
 
 Everyone starts with **150 coins** and picks **one element for free** the first time they open the Spellbook. Winning a match pays **100 coins** (+50 for the first win of the day); the daily login chest (25 × streak, capped at 7) and daily quests (25-60) pay coins too. Losing pays nothing, so wins are what the economy rewards.
 
-Coins buy **Element Crates** in the hub's Crate Shop (or the 🎁 Crates menu). One crate costs 250 and unlocks an element you don't own yet, so three crates unlock all four. Equip any owned element in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
+Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (100 each, at the hub's crate or the 🎁 Crates menu), which win a crate spell by rarity. Equip owned elements and build your two-spell extra loadout in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
 
 **Classes** (a second layer on top of elements) are planned but not built: see [CLASSES.md](CLASSES.md).
 

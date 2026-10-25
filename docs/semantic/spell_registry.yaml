@@ -5,7 +5,8 @@
 #
 # model      3D model: a block model built by ModelKit from Models/BlockModels (Blender
 #            source tools/blender/block_models.py, FBX in assets/models/blocks), or an
-#            imported mesh stored in the place (Fireball, WaterBubble, RockWall, Gust)
+#            imported mesh stored in the place (Fireball, WaterBubble, RockWall, Gust, Zap,
+#            Heal, BlackHole, Turret)
 # vfx        key into Spells/VfxStyles (bolt trail + impact burst; buffs also an aura)
 # fx         the Fx remote events the spell triggers on clients (FxController)
 # animation  key into Spells/CastPoses (the cast pose, played by Fx/CastAnimations)
@@ -16,6 +17,7 @@ spells:
     name: Fireball
     element: Fire
     slot: 1
+    rarity: base
     role: basic
     archetype: Projectile
     cooldown: 3
@@ -31,6 +33,7 @@ spells:
     name: Fire Slash
     element: Fire
     slot: 2
+    rarity: base
     role: fast
     archetype: Projectile
     cooldown: 2
@@ -46,6 +49,7 @@ spells:
     name: Fire Boost
     element: Fire
     slot: 3
+    rarity: base
     role: boost
     archetype: Buff
     cooldown: 14
@@ -61,6 +65,7 @@ spells:
     name: Fire Pillar
     element: Fire
     slot: 4
+    rarity: Uncommon
     role: area
     archetype: Zone
     cooldown: 7
@@ -76,6 +81,7 @@ spells:
     name: Fire Bomb
     element: Fire
     slot: 5
+    rarity: Epic
     role: ultimate
     archetype: Projectile
     cooldown: 16
@@ -91,6 +97,7 @@ spells:
     name: Water Slice
     element: Water
     slot: 1
+    rarity: base
     role: fast
     archetype: Projectile
     cooldown: 2
@@ -106,6 +113,7 @@ spells:
     name: Water Body
     element: Water
     slot: 2
+    rarity: base
     role: boost
     archetype: Buff
     cooldown: 22
@@ -121,6 +129,7 @@ spells:
     name: Water Lock
     element: Water
     slot: 3
+    rarity: base
     role: stun
     archetype: Control
     cooldown: 4
@@ -136,6 +145,7 @@ spells:
     name: Water Wave
     element: Water
     slot: 4
+    rarity: Rare
     role: heavy
     archetype: Projectile
     cooldown: 8
@@ -151,6 +161,7 @@ spells:
     name: Water Nebula
     element: Water
     slot: 5
+    rarity: Legendary
     role: ultimate
     archetype: Zone
     cooldown: 18
@@ -166,6 +177,7 @@ spells:
     name: Rock Throw
     element: Earth
     slot: 1
+    rarity: base
     role: basic
     archetype: Projectile
     cooldown: 3
@@ -181,6 +193,7 @@ spells:
     name: Earth Wall
     element: Earth
     slot: 2
+    rarity: base
     role: defense
     archetype: Placeable
     cooldown: 4
@@ -196,6 +209,7 @@ spells:
     name: Earth Punch
     element: Earth
     slot: 3
+    rarity: base
     role: heavy
     archetype: Zone
     cooldown: 5
@@ -211,6 +225,7 @@ spells:
     name: Earth Pillar
     element: Earth
     slot: 4
+    rarity: Uncommon
     role: area
     archetype: Line
     cooldown: 9
@@ -226,6 +241,7 @@ spells:
     name: Earthquake
     element: Earth
     slot: 5
+    rarity: Legendary
     role: ultimate
     archetype: Zone
     cooldown: 22
@@ -241,6 +257,7 @@ spells:
     name: Gust
     element: Air
     slot: 1
+    rarity: base
     role: basic
     archetype: Projectile
     cooldown: 3
@@ -256,6 +273,7 @@ spells:
     name: Whirlwind
     element: Air
     slot: 2
+    rarity: base
     role: heavy
     archetype: Projectile
     cooldown: 5
@@ -271,6 +289,7 @@ spells:
     name: Air Boost
     element: Air
     slot: 3
+    rarity: base
     role: boost
     archetype: Buff
     cooldown: 16
@@ -286,6 +305,7 @@ spells:
     name: Air Shield
     element: Air
     slot: 4
+    rarity: Common
     role: defense
     archetype: Buff
     cooldown: 14
@@ -301,6 +321,7 @@ spells:
     name: Tornado
     element: Air
     slot: 5
+    rarity: Epic
     role: ultimate
     archetype: Projectile
     cooldown: 18
@@ -312,3 +333,67 @@ spells:
       cast: tornadoCast
       impact: tornadoHit
     note: "Stacked, turning slabs with flying debris tearing forward"
+  - id: Zap
+    name: Lightning
+    element: Arcane
+    slot: 4
+    rarity: Rare
+    role: fast
+    archetype: Zone
+    cooldown: 2.5
+    model: Zap
+    vfx: Zap
+    fx: [strike, shockwave, cast]
+    animation: Call
+    sfx:
+      cast: zapCharge
+      impact: zapStrike
+    note: "Yellow flash on the ground, then a thunderbolt slams down with a bright burst"
+  - id: Heal
+    name: Heal
+    element: Arcane
+    slot: 4
+    rarity: Common
+    role: support
+    archetype: Buff
+    cooldown: 10
+    model: Heal
+    vfx: Heal
+    fx: [modelPop, cast, aura]
+    animation: Offer
+    sfx:
+      cast: healChime
+      impact: null
+    note: "Green cross and ring rise over the head; healing sparkles and green numbers"
+  - id: BlackHole
+    name: Black Hole
+    element: Arcane
+    slot: 4
+    rarity: Epic
+    role: heavy
+    archetype: Zone
+    cooldown: 10
+    model: BlackHole
+    vfx: BlackHole
+    fx: [spin, shockwave, cast]
+    animation: Conjure
+    sfx:
+      cast: blackHoleOpen
+      impact: blackHoleCollapse
+    note: "Purple warning circle, then a spinning black hole drags enemies in and holds them"
+  - id: Turret
+    name: Turret
+    element: Arcane
+    slot: 4
+    rarity: Rare
+    role: defense
+    archetype: Placeable
+    cooldown: 12
+    model: Turret
+    vfx: Turret
+    fx: [projectile, dust, cast]
+    animation: Deploy
+    sfx:
+      cast: turretDeploy
+      impact: turretShot
+    note: "A metal turret rises from the ground, turns to its target and fires yellow bullets"

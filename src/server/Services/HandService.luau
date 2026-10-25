@@ -4,16 +4,16 @@
 --
 -- Copy model:
 -- * Drawing a spell's glyph adds ONE copy of that spell to the hotbar. A
---   player holds at most ONE copy of each spell (so at most one of each of
---   their element's five spells, never more than MAX_HAND).
+--   player holds at most ONE copy of each spell (never more than MAX_HAND).
 -- * Casting uses the copy up; draw it again to get another.
 -- * SpellInputService adds a 1s cooldown between drawings.
 -- * Every copy remembers how well it was drawn (quality 0..1, see
 --   Spells/Quality); CastService scales the spell by it when the copy is cast.
 --
 -- Which spells work:
--- * Hub: the five spells of the player's equipped element.
--- * Match: the same five (MatchService sets the spellbook at the start).
+-- * Outside a match: the player's loadout (their element's three base spells
+--   plus up to two equipped crate spells).
+-- * Match: the same loadout (MatchService sets the spellbook at the start).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -62,10 +62,10 @@ local function push(player: Player)
 	handRemote:FireClient(player, state.copies, state.readiedSlot, state.spellbook, state.qualities)
 end
 
--- A spell is drawable in the hub when it belongs to the equipped element.
+-- A spell is drawable outside a match when it is in the player's loadout: the
+-- equipped element's base spells and their equipped crate spells.
 local function owns(player: Player, spellId: string): boolean
-	local def = SpellDefinitions.get(spellId)
-	return def ~= nil and ElementService.equipped(player) == def.element
+	return table.find(ElementService.loadout(player), spellId) ~= nil
 end
 
 -- Spell copies the player is holding (hotbar order).
@@ -130,12 +130,12 @@ function HandService.grant(
 			if not ElementService.equipped(player) then
 				return false, "Pick your first element in the Spellbook!"
 			end
-			if ElementService.owns(player, def.element) then
+			if def.rarity then
 				return false,
-					`{def.name} is a {def.element} spell. Equip {def.element} in the Spellbook!`
+					`{def.name} isn't in your loadout. Equip it in the Spellbook, or spin the Spell Crate!`
 			end
 			return false,
-				`You haven't unlocked {def.element} yet. Open an Element Crate in the hub!`
+				`{def.name} is a {def.element} spell. Buy or equip {def.element} in the Spellbook!`
 		end
 	end
 	if table.find(state.copies, spellId) then
@@ -260,6 +260,28 @@ end
 function HandService.start()
 	PlayerDataService.ProfileLoaded:Connect(function(player)
 		push(player)
+	end)
+
+	-- Changing element or loadout outside a match drops held copies of spells
+	-- that are no longer drawable.
+	ElementService.Changed:Connect(function(player)
+		local state = stateOf(player)
+		if state.spellbook then
+			return
+		end
+		local loadout = ElementService.loadout(player)
+		local changed = false
+		for index = #state.copies, 1, -1 do
+			if not table.find(loadout, state.copies[index]) then
+				table.remove(state.copies, index)
+				table.remove(state.qualities, index)
+				changed = true
+			end
+		end
+		if changed then
+			state.readiedSlot = if #state.copies > 0 then 1 else nil
+			push(player)
+		end
 	end)
 
 	local lastSelect: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any

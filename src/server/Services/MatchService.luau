@@ -19,7 +19,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 local ArenaService = require(script.Parent.ArenaService)
@@ -641,11 +640,9 @@ function MatchService.startMatch(
 			toastRemote:FireClient(player, `You fight with {elementId}!`, "reward")
 		end
 		BoostService.reset(player)
-		local hand = {}
-		for _, def in SpellDefinitions.ofElement(elementId) do
-			table.insert(hand, def.id)
-		end
-		HandService.setSpellbook(player, hand)
+		-- The match spellbook is the player's loadout: their element's base
+		-- spells plus their equipped crate spells.
+		HandService.setSpellbook(player, ElementService.loadout(player))
 		toastRemote:FireClient(
 			player,
 			`Match found: {mode} on {ArenaService.DISPLAY_NAMES[arena.mapName]}!`,

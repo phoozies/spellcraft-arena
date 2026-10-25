@@ -14,12 +14,13 @@ ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local TIPS = {
 	"Press F and trace a shape to ready a spell. You can hold up to 5!",
-	"Circle, wave, triangle, lightning, star: the same five shapes work in every element.",
+	"Spin the Spell Crate for new spells, then equip two of them in your loadout!",
+	"Circle, slash, square, triangle, lightning, V, star: each shape is the same kind of move in every element.",
 	"Star is your ultimate: big damage, long recharge.",
-	"Win coins, then open an Element Crate to unlock a new element.",
+	"Win coins to buy new elements and to spin for rarer spells.",
 	"Big, smooth shapes work best. Don't worry about drawing it perfectly!",
 	"Copies of the same spell share one cooldown.",
-	"Earth Walls break block by block. Knock a hole and fire through!",
+	"Your own spells fly through your Earth Wall, but enemy spells smash it block by block!",
 	"After each round you pick a boost: more damage, health, speed, or faster spells.",
 	"Change the draw key in Settings.",
 }

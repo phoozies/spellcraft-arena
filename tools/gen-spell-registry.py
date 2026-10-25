@@ -42,6 +42,7 @@ def definitions():
             "name": grab(r'name = "([^"]+)"'),
             "element": grab(r'element = "(\w+)"'),
             "slot": int(grab(r"slot = (\d)")),
+            "rarity": grab(r'rarity = "(\w+)"'),
             "role": grab(r'role = "(\w+)"'),
             "archetype": grab(r'archetype = "(\w+)"'),
             "cast": grab(r'cast = "(\w+)"'),
@@ -77,7 +78,8 @@ def yaml_text(rows, entries):
         "#",
         "# model      3D model: a block model built by ModelKit from Models/BlockModels (Blender",
         "#            source tools/blender/block_models.py, FBX in assets/models/blocks), or an",
-        "#            imported mesh stored in the place (Fireball, WaterBubble, RockWall, Gust)",
+        "#            imported mesh stored in the place (Fireball, WaterBubble, RockWall, Gust, Zap,",
+        "#            Heal, BlackHole, Turret)",
         "# vfx        key into Spells/VfxStyles (bolt trail + impact burst; buffs also an aura)",
         "# fx         the Fx remote events the spell triggers on clients (FxController)",
         "# animation  key into Spells/CastPoses (the cast pose, played by Fx/CastAnimations)",
@@ -91,6 +93,7 @@ def yaml_text(rows, entries):
         out.append(f"    name: {row['name']}")
         out.append(f"    element: {row['element']}")
         out.append(f"    slot: {row['slot']}")
+        out.append(f"    rarity: {row['rarity'] if row['rarity'] else 'base'}")
         out.append(f"    role: {row['role']}")
         out.append(f"    archetype: {row['archetype']}")
         out.append(f"    cooldown: {row['cooldown']}")
@@ -107,14 +110,14 @@ def yaml_text(rows, entries):
 
 def table_text(rows, entries):
     lines = [
-        "| Spell | Element | Model | Particles (`VfxStyles`) | Cast pose (`CastPoses`) | Cast sound | Impact sound |",
-        "|---|---|---|---|---|---|---|",
+        "| Spell | School | Rarity | Model | Particles (`VfxStyles`) | Cast pose (`CastPoses`) | Cast sound | Impact sound |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         entry = entries[row["id"]]
         impact = row["impact"] or "n/a"
         lines.append(
-            f"| **{row['name']}** | {row['element']} | `{row['model']}` | `{entry['vfx']}` | "
+            f"| **{row['name']}** | {row['element']} | {row['rarity'] or 'base'} | `{row['model']}` | `{entry['vfx']}` | "
             f"{entry['animation']} | `{row['cast']}` | {'`' + impact + '`' if row['impact'] else impact} |"
         )
     return "\n".join(lines)

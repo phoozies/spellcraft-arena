@@ -180,6 +180,34 @@ local ENTRIES: { [string]: Entry } = {
 		animation = "Ascend",
 		note = "Stacked, turning slabs with flying debris tearing forward",
 	},
+
+	-- Arcane (crate spells; models are imported meshes with plain-shape fallbacks)
+	Zap = {
+		vfx = "Zap",
+		fx = { "strike", "shockwave", "cast" },
+		animation = "Call",
+		note = "Yellow flash on the ground, then a thunderbolt slams down with a bright burst",
+	},
+	Heal = {
+		vfx = "Heal",
+		fx = { "modelPop", "cast", "aura" },
+		animation = "Offer",
+		noImpact = true,
+		note = "Green cross and ring rise over the head; healing sparkles and green numbers",
+	},
+	BlackHole = {
+		vfx = "BlackHole",
+		fx = { "spin", "shockwave", "cast" },
+		animation = "Conjure",
+		note = "Purple warning circle, then a spinning black hole drags enemies in and holds them",
+	},
+	Turret = {
+		vfx = "Turret",
+		fx = { "projectile", "dust", "cast" },
+		animation = "Deploy",
+		noImpact = true,
+		note = "A metal turret rises from the ground, turns to its target and fires yellow bullets",
+	},
 }
 
 SpellRegistry.entries = ENTRIES

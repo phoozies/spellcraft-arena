@@ -518,6 +518,12 @@ function FxController.start()
 			onStrike(...)
 		elseif kind == "modelPop" then
 			onModelPop(...)
+		elseif kind == "sfx" then
+			-- A one-off world sound (a turret shot): (cueName, position)
+			local cueName, position = ...
+			if typeof(cueName) == "string" and typeof(position) == "Vector3" and near(position) then
+				AudioController.play(cueName, position)
+			end
 		elseif kind == "pillar" then
 			onPillar(...)
 		elseif kind == "rise" then

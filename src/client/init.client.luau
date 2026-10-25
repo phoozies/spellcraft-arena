@@ -14,6 +14,7 @@ local ORDER = {
 	"DraftController",
 	"PlacementController",
 	"ReticleController",
+	"CursorController",
 	"DrawController",
 	"InputController",
 	"EffectsController",
@@ -25,6 +26,7 @@ local ORDER = {
 	"DashController",
 	"MobileController",
 	"PresentationController",
+	"TutorialController",
 }
 
 local Controllers = script:WaitForChild("Controllers")

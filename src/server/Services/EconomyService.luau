@@ -7,6 +7,7 @@
 -- (Config.COINS.MATCH_WIN, + FIRST_WIN_OF_DAY), from the daily login chest,
 -- and from quests, then spend them on crates (CrateService) to unlock spells.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -64,6 +65,9 @@ local function sendSummary(player: Player)
 		coins = profile.coins,
 		elements = profile.elements,
 		element = profile.element,
+		spells = profile.spells,
+		loadout = profile.loadout,
+		tutorial = profile.tutorial,
 		quests = profile.daily.quests,
 		streak = profile.daily.streak,
 		settings = profile.settings,
@@ -278,16 +282,37 @@ function EconomyService.start()
 		end
 	end)
 
-	-- One claim attempt per second is plenty; the check itself is idempotent.
+	-- The first-join tutorial finished (or was skipped): never show it again.
+	Remotes.get("TutorialDone").OnServerEvent:Connect(function(player)
+		local profile = PlayerDataService.get(player)
+		if profile and not profile.tutorial.done then
+			profile.tutorial.done = true
+			sendSummary(player)
+		end
+	end)
+
+	-- The hub's gift box (tag "LikeGift", built by Maps/InkwellPlaza): standing
+	-- at it and holding its prompt claims the Like & Favourite gift. The prompt
+	-- only fires for a player in range; the claim itself is idempotent.
 	local lastClaimTry: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-	Remotes.get("ClaimLikeReward").OnServerEvent:Connect(function(player)
-		local now = os.clock()
-		if now - (lastClaimTry[player] or 0) < 1 then
+	local function hookGift(box: Instance)
+		local prompt = box:FindFirstChildWhichIsA("ProximityPrompt", true)
+		if not prompt then
 			return
 		end
-		lastClaimTry[player] = now
-		EconomyService.claimLikeReward(player)
-	end)
+		prompt.Triggered:Connect(function(player)
+			local now = os.clock()
+			if now - (lastClaimTry[player] or 0) < 1 then
+				return
+			end
+			lastClaimTry[player] = now
+			EconomyService.claimLikeReward(player)
+		end)
+	end
+	for _, box in CollectionService:GetTagged("LikeGift") do
+		hookGift(box)
+	end
+	CollectionService:GetInstanceAddedSignal("LikeGift"):Connect(hookGift)
 
 	Remotes.get("ClaimQuest").OnServerEvent:Connect(function(player, questId)
 		if typeof(questId) ~= "string" then
