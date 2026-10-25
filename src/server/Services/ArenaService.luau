@@ -50,10 +50,8 @@ local slots: { [number]: boolean } = {}
 local nextId = 0
 
 local function makeProp(instance: Instance, health: number)
-	-- Map props are recreated per arena, so tag on the template copy. Every map
-	-- prop (terrain, trees, cover) is weakened by Config.TERRAIN.PROP_HEALTH so
-	-- the world is easy to knock down.
-	instance:SetAttribute("PropHealth", health * Config.TERRAIN.PROP_HEALTH)
+	-- Map props are recreated per arena, so tag on the template copy.
+	instance:SetAttribute("PropHealth", health)
 end
 
 local function wireJumpPad(pad: Instance)

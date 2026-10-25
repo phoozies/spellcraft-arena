@@ -131,7 +131,7 @@ return function(makeProp: Registrar): Model
 			Vector3.new(3, 2.5, 2),
 			COLORS[(lane.x // 19 % #COLORS) + 1],
 			Enum.Material.Brick,
-			30,
+			Config.PROPS.Brick,
 			makeProp
 		)
 	end

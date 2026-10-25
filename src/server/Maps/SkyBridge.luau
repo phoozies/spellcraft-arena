@@ -110,7 +110,7 @@ return function(makeProp: Registrar): Model
 			Vector3.new(3, 2.5, 2),
 			Color3.fromRGB(214, 216, 226),
 			Enum.Material.Concrete,
-			25,
+			Config.PROPS.Brick,
 			makeProp
 		)
 	end

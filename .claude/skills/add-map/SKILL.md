@@ -29,7 +29,7 @@ Use `MapKit.disc`, `pillar`, `underside` (the rock cone that makes a floor look 
 
 ## Where arenas go (spectating from the hub)
 
-Do not position arenas inside the map. `ArenaService.slotOrigin(slot)` summons them in rings below the floating hub (`Config.ARENA`: `Y`, `RADIUS`, `RING_STEP`, `PER_RING`) so players on the hub rim can look down and watch. Maps are built at design size and then scaled by `Config.ARENA_SCALE` (2): keep a map within roughly 95 design studs of its origin so the scaled arena never overlaps its neighbours (400+ studs apart). Make floors and cover breakable with `MapKit.terrainDisc` / `MapKit.terrain` (`MapKit.groundTerrain(makeProp)`); trees via `MapKit.tree(..., makeProp, health)`. Every prop health is multiplied by `Config.TERRAIN.PROP_HEALTH` when the arena is built. Each arena automatically gets a `SpectatorSign` billboard and persistent streaming.
+Do not position arenas inside the map. `ArenaService.slotOrigin(slot)` summons them in rings below the floating hub (`Config.ARENA`: `Y`, `RADIUS`, `RING_STEP`, `PER_RING`) so players on the hub rim can look down and watch. Maps are built at design size and then scaled by `Config.ARENA_SCALE` (2): keep a map within roughly 95 design studs of its origin so the scaled arena never overlaps its neighbours (400+ studs apart). Make floors and cover breakable with `MapKit.terrainDisc` / `MapKit.terrain` (`MapKit.groundTerrain(makeProp)`); trees via `MapKit.tree(..., makeProp, health)`. Use `Config.PROPS` tiers for scenery health; floors use the much tougher `Config.TERRAIN.HEALTH.Ground`. Each arena automatically gets a `SpectatorSign` billboard and persistent streaming.
 
 ## The hub island
 
