@@ -258,6 +258,10 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 		if target:GetAttribute("Dummy") then
 			return true
 		end
+		-- Battleground NPCs: fair game for anyone inside the Battleground.
+		if target:GetAttribute("Hostile") then
+			return attacker == nil or attacker:GetAttribute("InBattleground") == true
+		end
 		-- Unowned map props: breakable only by players in that arena's match.
 		if attacker then
 			local match = playerMatch[attacker]
@@ -651,7 +655,7 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 		return false
 	end
 	if player:GetAttribute("InBattleground") then
-		toastRemote:FireClient(player, "Leave the Battleground first (step on a green pad).", "fizzle")
+		toastRemote:FireClient(player, "Leave the Battleground first (use a green gate or Return to Hub).", "fizzle")
 		return false
 	end
 	if MatchService.queuedMode(player) == mode then

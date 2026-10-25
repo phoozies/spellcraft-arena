@@ -45,6 +45,7 @@ local toastHolder: Frame
 local feedHolder: Frame
 local boostsLabel: TextLabel
 local battleLabel: TextLabel
+local battleLeave: TextButton
 
 local TOAST_COLORS: { [string]: Color3 } = {
 	fizzle = Color3.fromRGB(120, 144, 156),
@@ -435,7 +436,7 @@ local function refreshMatch()
 end
 
 local function buildBattleBanner(root: Frame)
-	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: everyone is an enemy! Step on a green pad to leave.", {
+	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: beat raiders for coins!", {
 		Name = "BattleBanner",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 8),
@@ -444,6 +445,17 @@ local function buildBattleBanner(root: Frame)
 		TextStrokeTransparency = 0.3,
 		Visible = false,
 	})
+	battleLeave = Theme.button(root, "Return to Hub", {
+		Name = "BattleLeave",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 48),
+		Size = UDim2.fromOffset(150, 30),
+		BackgroundColor3 = Theme.COLORS.panel,
+		Visible = false,
+	})
+	battleLeave.Activated:Connect(function()
+		Remotes.get("LeaveBattleground"):FireServer()
+	end)
 end
 
 local function buildBoosts(root: Frame)

@@ -93,14 +93,25 @@ local Config = {
 		["4v4"] = { teams = 2, perTeam = 4 },
 	},
 
-	-- The Battleground: a drop-in free-for-all arena (Maps/Battleground,
-	-- BattlegroundService) built far from the hub. `CENTER` is the middle of
-	-- its floor, `RADIUS` the floor's radius; knocked-out players respawn
-	-- there after `RESPAWN_DELAY` seconds.
+	-- The Battleground: a drop-in open world (Maps/Battleground,
+	-- BattlegroundService) built far from the hub. Players spawn at a random
+	-- open spot, fight each other and the hostile NPCs there (NpcService), and
+	-- respawn `RESPAWN_DELAY` seconds after a knockout.
+	--   CENTER     the middle of the world (the ground's top is at CENTER.Y)
+	--   HALF_SIZE  half the width of the square world, in studs
+	--   NPC        RESPAWN: seconds until a defeated NPC returns (types can
+	--              override it); COIN_CAP: most coins one player can earn from
+	--              NPCs in any COIN_WINDOW seconds, so farming them can't
+	--              outpay winning matches.
 	BATTLEGROUND = {
 		CENTER = Vector3.new(900, 0, 0),
-		RADIUS = 110,
+		HALF_SIZE = 300,
 		RESPAWN_DELAY = 3,
+		NPC = {
+			RESPAWN = 45,
+			COIN_CAP = 120,
+			COIN_WINDOW = 300,
+		},
 	},
 
 	-- Distance between instanced arenas so concurrent matches never overlap.

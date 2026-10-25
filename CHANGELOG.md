@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (Battleground open world and NPCs)
+- **The Battleground is now an open world, not an arena.** A 600 x 600 stud land of four biomes ringed by mountains, with Raider camps, ruined circles, and the Warlord's Keep. You drop in at a **random open spot** (away from camps and other fighters) and leave through one of four gates or the new **Return to Hub** button (`LeaveBattleground` remote).
+- **Hostile NPCs** (`NpcService`): Sand Raiders, Ember Mages (ranged), Stone Brutes, and the Dune Warlord. They chase, swing, and shoot back with telegraphed windups, give up and heal when you run, and respawn. Every spell hurts them.
+- **NPC knockouts pay coins** (3 / 5 / 12 / 40), capped at 120 per player per 5 minutes (`Config.BATTLEGROUND.NPC`).
+
 ### Changed (Battleground, no more swirls)
 - **The FFA arena is now the Battleground.** The pink FFA queue pad is a blue portal that teleports you to a big open sand arena (`BattlegroundService`, `Maps/Battleground`): drop in any time, everyone inside is an enemy, you respawn 3 seconds after being knocked out, and green exit pads take you back to the hub. FFA as a queued match mode is removed (the Play menu, `Config.MODES`, the match code, and the FFA spawns).
 - **No more swirly shapes.** Fire Boost, Water Body, and Air Boost are drawn as a **square**; Earth Wall and Air Shield as a **triangle**. The swirl, squiggle, and infinity shapes are gone from the library, and so is the movement role. A circle and a square are told apart by how much of its bounding box the stroke fills.

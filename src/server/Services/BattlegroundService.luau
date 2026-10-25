@@ -1,11 +1,12 @@
 --!strict
--- The Battleground: a drop-in free-for-all arena (Maps/Battleground) far from
--- the hub. Step into the hub's Battleground portal to be teleported there;
--- step on a green exit pad to go back.
+-- The Battleground: a drop-in open world (Maps/Battleground) far from the
+-- hub. Step into the hub's Battleground portal to be teleported to a random
+-- open spot there; step on a green gate pad (or press the HUD button) to go
+-- back. NpcService fills the world with hostile NPCs worth coins.
 --
 --   * Anyone inside can hurt anyone else inside (MatchService.relation reads
 --     the player attribute "InBattleground"); nobody outside can hurt them.
---   * When you're knocked out you respawn at a random spawn after a few
+--   * When you're knocked out you respawn at a random spot after a few
 --     seconds, with the usual spawn protection.
 --   * No coins, wins, or boosts: it's for practice and fun. You use your
 --     equipped element's spells, with no health regen (like a match).
@@ -27,20 +28,23 @@ local buildBattleground = require(script.Parent.Parent:WaitForChild("Maps"):Wait
 local BattlegroundService = {}
 
 local TOUCH_COOLDOWN = 2
+-- A random drop-in stops searching once it is this far from NPCs / other fighters.
+local SAFE_NPC_DISTANCE = 70
+local SAFE_FIGHTER_DISTANCE = 80
 
 local toastRemote: RemoteEvent
-local spawns: { BasePart } = {}
+local mapModel: Model
 local lastTouch: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 
 function BattlegroundService.isIn(player: Player): boolean
 	return player:GetAttribute("InBattleground") == true
 end
 
--- Picks a spawn, preferring one away from the other fighters.
+-- Where a fighter drops in: a random open spot in the world, away from every
+-- NPC camp and from the other fighters, not inside scenery.
 local function spawnCFrame(): CFrame
-	if #spawns == 0 then
-		return CFrame.new(Config.BATTLEGROUND.CENTER + Vector3.new(0, 5, 0))
-	end
+	local center = Config.BATTLEGROUND.CENTER
+	local reach = Config.BATTLEGROUND.HALF_SIZE - 40
 	local others: { Vector3 } = {}
 	for _, other in Players:GetPlayers() do
 		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -48,19 +52,31 @@ local function spawnCFrame(): CFrame
 			table.insert(others, root.Position)
 		end
 	end
-	local best: BasePart = spawns[math.random(1, #spawns)]
-	local bestDistance = -1
-	for _ = 1, 5 do
-		local candidate = spawns[math.random(1, #spawns)]
-		local nearest = math.huge
-		for _, position in others do
-			nearest = math.min(nearest, (position - candidate.Position).Magnitude)
+	local overlap = OverlapParams.new()
+	overlap.FilterType = Enum.RaycastFilterType.Include
+	overlap.FilterDescendantsInstances = { mapModel }
+	local best = center + Vector3.new(0, 4, 0)
+	local bestScore = -math.huge
+	for _ = 1, 25 do
+		local position = center + Vector3.new(math.random(-reach, reach), 4, math.random(-reach, reach))
+		local nearestNpc = math.huge
+		for _, spot in CollectionService:GetTagged("NpcSpot") do
+			nearestNpc = math.min(nearestNpc, (spot.Position - position).Magnitude)
 		end
-		if nearest > bestDistance then
-			best, bestDistance = candidate, nearest
+		local nearestFighter = math.huge
+		for _, point in others do
+			nearestFighter = math.min(nearestFighter, (point - position).Magnitude)
+		end
+		local clear = #workspace:GetPartBoundsInBox(CFrame.new(position + Vector3.new(0, 3, 0)), Vector3.new(6, 8, 6), overlap) == 0
+		local score = math.min(nearestNpc, 120) + math.min(nearestFighter, 120)
+		if clear and score > bestScore then
+			best, bestScore = position, score
+			if nearestNpc >= SAFE_NPC_DISTANCE and nearestFighter >= SAFE_FIGHTER_DISTANCE then
+				break
+			end
 		end
 	end
-	return best.CFrame + Vector3.new(0, 3, 0)
+	return CFrame.new(best) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
 end
 
 local function markCharacter(player: Player)
@@ -139,16 +155,22 @@ end
 
 function BattlegroundService.init()
 	toastRemote = Remotes.get("Toast")
-	local map = buildBattleground(Config.BATTLEGROUND.CENTER) :: Model
-	map.Parent = workspace
-	for _, part in map:GetDescendants() do
-		if part:IsA("BasePart") and part:HasTag("BattlegroundSpawn") then
-			table.insert(spawns, part)
-		end
-	end
+	mapModel = buildBattleground(Config.BATTLEGROUND.CENTER) :: Model
+	mapModel.Parent = workspace
 end
 
+local lastLeave: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 function BattlegroundService.start()
+	-- "Return to hub" button on the HUD.
+	Remotes.get("LeaveBattleground").OnServerEvent:Connect(function(player)
+		local now = os.clock()
+		if now - (lastLeave[player] or 0) < 1 then
+			return
+		end
+		lastLeave[player] = now
+		BattlegroundService.leave(player)
+	end)
 	wire("BattlegroundPortal", function(player)
 		local ok, reason = BattlegroundService.enter(player)
 		if not ok and reason then

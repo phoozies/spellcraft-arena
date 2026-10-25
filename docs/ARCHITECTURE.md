@@ -38,7 +38,8 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, boost drafts, teams, PvP rules
     HubService          builds the hub, spawning, team boxes, dummies, hub regen
-    BattlegroundService the drop-in Battleground: portal/exit pads, teleports, respawns, no queue while inside
+    BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
+    NpcService          Battleground NPCs: bodies, AI, coin rewards, respawn at NpcSpot parts
     ElementService      owns profile.elements/element: first free pick, equip, grant (from crates)
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
     CrateService        OpenCrate: validate, spend coins, roll an unowned element, grant it

@@ -22,7 +22,8 @@ local DEFINITIONS: { [string]: string } = {
 	OpenCrate = "(crateId: string) buy and spin an Element Crate; server validates coins + rate",
 	ChooseElement = "(elementId: string) pick your free first element, or equip one you own",
 	SaveSettings = "(key: string, value: string) save a player setting, e.g. drawKey",
-	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
+	LeaveBattleground = "() leave the Battleground and return to the hub",
+	DebugCommand ="(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
 	HandUpdated = "(hand: {string}, readied: string?) your spells and which one is readied",

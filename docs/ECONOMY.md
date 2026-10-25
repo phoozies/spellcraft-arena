@@ -78,3 +78,7 @@ The ranking is per server (players currently here), built from their saved `stat
 - Global all-time wins board via `OrderedDataStore` (`SetAsync` on win, `GetSortedAsync` every few minutes).
 - Robux coin packs (would need a receipt-safe `ProcessReceipt` and the game's no-paid-random-items rule revisited: crates are paid with earned coins only).
 - Selling or dropping classes (see [CLASSES.md](CLASSES.md)).
+
+## Battleground NPC coins
+
+Knocking out a hostile NPC in the Battleground pays `reward` coins (Raider 3, Mage 5, Brute 12, Warlord 40; `src/shared/Battleground/Npcs.luau`) through `EconomyService.addCoins`. Each player can earn at most `Config.BATTLEGROUND.NPC.COIN_CAP` (120) coins from NPCs per `COIN_WINDOW` (300 s); past the cap, kills still count for quests but pay nothing. NPCs come back `RESPAWN` seconds (45; the Warlord 180) after they fall.

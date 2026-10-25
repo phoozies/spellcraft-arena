@@ -29,6 +29,7 @@ local ORDER = {
 	"MatchService",
 	"HubService",
 	"BattlegroundService",
+	"NpcService",
 	"CrateService",
 	"LeaderboardService",
 	"AdminService",

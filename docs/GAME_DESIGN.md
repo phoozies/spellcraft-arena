@@ -85,9 +85,14 @@ The hub has a **box for each team mode** (1v1, 2v2, 3v3, 4v4). Every box has a *
 
 The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically.
 
-### The Battleground (drop-in free-for-all)
+### The Battleground (open world)
 
-A blue **Battleground portal** in the concourse teleports you to a big open sand arena far from the hub, with a raised center platform, ruined walls, pillars, and boulders for cover. There is no queue and no match: you drop in any time, **everyone inside is an enemy**, and anyone you knock out is out for 3 seconds, then respawns at a random edge spawn with spawn protection. You fight with your equipped element's spells (and can raise Earth Walls); there are no coins, wins, or boosts, and no health regen. A banner reminds you where you are, and either **green exit pad** returns you to the hub. You can't join a match queue while you're inside.
+A blue **Battleground portal** in the concourse teleports you to a big open world far from the hub: four biomes (forest, meadow, desert, rocky highlands) ringed by mountains, with Raider camps, ruined stone circles, and the **Warlord's Keep** in the middle. You land at a **random open spot**, away from camps and other fighters. There is no queue and no match.
+
+- **Players are enemies.** Anyone you knock out is out for 3 seconds, then respawns at a new random spot with spawn protection.
+- **NPCs fight back.** Sand Raiders (melee) and Ember Mages (ranged) guard the camps, Stone Brutes (heavy hitters with knockback) the ruins, and the Dune Warlord (melee and bolts, very tough) the Keep. They chase when you get close, give up and heal if you run, and respawn after a while.
+- **Knocking out an NPC pays coins** (3 / 5 / 12 / 40), up to 120 coins per 5 minutes so camps can't be farmed endlessly.
+- You fight with your equipped element's spells and can raise Earth Walls anywhere. There are no wins or boosts and no health regen. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
 
 ## Maps (designed for 8 players; the Sparring Arena suits smaller matches)
 
