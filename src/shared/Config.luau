@@ -129,6 +129,12 @@ local Config = {
 		},
 	},
 
+	-- Parties (PartyService): players grouped in the Battleground.
+	PARTY = {
+		MAX_SIZE = 4,
+		INVITE_SECONDS = 30,
+	},
+
 	-- Distance between instanced arenas so concurrent matches never overlap.
 	ARENA_SPACING = 2000,
 

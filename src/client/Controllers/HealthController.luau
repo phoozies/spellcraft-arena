@@ -184,7 +184,11 @@ local function updateOverheads()
 				local team = character:GetAttribute("Team")
 				-- In the Battleground every other fighter is an enemy.
 				local fighter = inBattle and other:GetAttribute("InBattleground") == true
-				entry.fill.BackgroundColor3 = if fighter then Theme.COLORS.red elseif not inMatch
+				local partyId = other:GetAttribute("PartyId")
+				local partyMate = fighter and partyId ~= nil and partyId == player:GetAttribute("PartyId")
+				entry.fill.BackgroundColor3 = if partyMate then Theme.COLORS.blue
+					elseif fighter then Theme.COLORS.red
+					elseif not inMatch
 					then Color3.fromRGB(176, 190, 197)
 					elseif team == state.myTeamId then Theme.COLORS.blue
 					else Theme.COLORS.red

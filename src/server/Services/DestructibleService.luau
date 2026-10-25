@@ -25,6 +25,8 @@ local DestructibleService = {}
 DestructibleService.Knockout = Signal.new() :: Signal.Signal<Player, Player?, string?>
 -- (structure, destroyer?)
 DestructibleService.Destroyed = Signal.new() :: Signal.Signal<Instance, Player?>
+-- (structure, attacker): a player's hit landed on a structure/summon/NPC
+DestructibleService.Damaged = Signal.new() :: Signal.Signal<Instance, Player>
 
 -- Returns true if `attacker` may damage `victimOwner` (a player, or nil for
 -- unowned things like dummies and map props). Replaced by MatchService.
@@ -322,6 +324,9 @@ function DestructibleService.damage(
 	health -= amount
 	resolved:SetAttribute("Health", health)
 	updateBar(resolved)
+	if attacker then
+		DestructibleService.Damaged:Fire(resolved, attacker)
+	end
 	local propPosition = if resolved:IsA("Model")
 		then resolved:GetPivot().Position
 		elseif resolved:IsA("BasePart") then resolved.Position

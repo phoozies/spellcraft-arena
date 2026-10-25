@@ -13,6 +13,9 @@
 --     physics owner.)
 --   * NPCs only target players inside the Battleground, and only think while
 --     one is nearby, so an empty world costs nothing.
+--   * Hit an NPC and it stays on you, at any distance, until you fall or leave
+--     (no sniping from range). Merely wandering into its notice range is
+--     escapable. A red "!" shows over any NPC that is hunting someone.
 --   * Rewards go through EconomyService, capped per player per window
 --     (Config.BATTLEGROUND.NPC) so farming a respawning camp can't flood
 --     the economy.
@@ -45,6 +48,9 @@ type Npc = {
 	spot: BasePart,
 	home: Vector3,
 	target: Player?,
+	-- The player who last hit it: it never gives up on them (see think).
+	provoked: Player?,
+	alert: BillboardGui,
 	nextMelee: number,
 	nextShot: number,
 	-- Set while a swing/shot is winding up; the NPC stands still.
@@ -401,12 +407,28 @@ local function setWalking(npc: Npc, walking: boolean)
 	end
 end
 
+-- The red "!" over an NPC's head while it is hunting someone.
+local function setAlert(npc: Npc, on: boolean)
+	if npc.alert.Enabled ~= on then
+		npc.alert.Enabled = on
+	end
+end
+
 local function think(npc: Npc, now: number)
 	local def = npc.def
 	local position = npc.root.Position
 
-	-- Keep or drop the current target.
-	if npc.target then
+	-- Whoever hit this NPC stays its target, however far away, until they fall
+	-- (or leave the Battleground): no sniping from out of range.
+	if npc.provoked then
+		if targetRoot(npc.provoked) then
+			npc.target = npc.provoked
+		else
+			npc.provoked, npc.target = nil, nil
+		end
+	end
+	-- Keep or drop an ordinary target (you can outrun one of these).
+	if npc.target and not npc.provoked then
 		local root = targetRoot(npc.target)
 		if
 			not root
@@ -422,6 +444,7 @@ local function think(npc: Npc, now: number)
 			npc.target = player
 		end
 	end
+	setAlert(npc, npc.target ~= nil)
 
 	-- Stuck on scenery? Hop.
 	if (position - npc.stuckAt).Magnitude > 2 then
@@ -522,6 +545,25 @@ local function spawnAt(spot: BasePart)
 	highlight.Enabled = false
 	highlight.Parent = model
 
+	local alert = Instance.new("BillboardGui")
+	alert.Name = "Alert"
+	alert.Size = UDim2.fromOffset(40, 52)
+	alert.StudsOffsetWorldSpace = Vector3.new(0, 5.4 * def.scale, 0)
+	alert.AlwaysOnTop = true
+	alert.MaxDistance = 140
+	alert.Enabled = false
+	alert.Parent = head
+	local mark = Instance.new("TextLabel")
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Font = Enum.Font.FredokaOne
+	mark.TextScaled = true
+	mark.Text = "!"
+	mark.TextColor3 = Color3.fromRGB(235, 40, 40)
+	mark.TextStrokeColor3 = Color3.new(1, 1, 1)
+	mark.TextStrokeTransparency = 0
+	mark.Parent = alert
+
 	model.Parent = folder
 	pcall(function()
 		root:SetNetworkOwner(nil)
@@ -536,6 +578,8 @@ local function spawnAt(spot: BasePart)
 		spot = spot,
 		home = home,
 		target = nil,
+		provoked = nil,
+		alert = alert,
 		nextMelee = 0,
 		nextShot = 0,
 		busyUntil = 0,
@@ -608,6 +652,15 @@ function NpcService.start()
 		end
 	end)
 
+	-- A hit from a Battleground player locks the NPC onto them.
+	DestructibleService.Damaged:Connect(function(instance, attacker)
+		local npc = if instance:IsA("Model") then npcs[instance] else nil
+		if npc and attacker:GetAttribute("InBattleground") then
+			npc.provoked = attacker
+			npc.target = attacker
+		end
+	end)
+
 	local function hook(spot: Instance)
 		if spot:IsA("BasePart") and Npcs.get(spot:GetAttribute("NpcType") :: string) then
 			spawnAt(spot)
@@ -623,11 +676,14 @@ function NpcService.start()
 			task.wait(THINK_INTERVAL)
 			local now = os.clock()
 			for _, npc in npcs do
-				if npc.model.Parent and anyoneNear(npc) then
+				if npc.model.Parent and (npc.provoked or anyoneNear(npc)) then
 					local ok, err = pcall(think, npc, now)
 					if not ok then
 						warn(`[NpcService] {npc.def.id} think failed: {err}`)
 					end
+				elseif npc.target then
+					npc.target = nil
+					setAlert(npc, false)
 				end
 			end
 		end

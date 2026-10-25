@@ -23,11 +23,13 @@ local DEFINITIONS: { [string]: string } = {
 	ChooseElement = "(elementId: string) pick your free first element, or equip one you own",
 	SaveSettings = "(key: string, value: string) save a player setting, e.g. drawKey",
 	LeaveBattleground = "() leave the Battleground and return to the hub",
+	PartyAction = "(action: string, userId: number?) party intent: invite / accept / decline / kick take a userId, leave takes none",
 	DebugCommand ="(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
 	HandUpdated = "(hand: {string}, readiedSlot: number?, spellbook: {string}?, qualities: {number}) your spell copies, which slot is readied, and how well each was drawn",
 	CooldownStarted = "(spellId: string, endsAt: number)",
+	PartyState = "(state: {leaderId: number?, members: {{userId, name}}, invites: {{userId, name, secondsLeft}}}) your party and pending invites",
 	Toast = "(message: string, kind: string) short on-screen notification",
 	MatchStateChanged = "(state: MatchState) phase, timer, scores",
 	DraftOffered = "(cards: {DraftCard}, endsAt: number)",

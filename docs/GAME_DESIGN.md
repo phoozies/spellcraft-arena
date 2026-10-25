@@ -102,7 +102,7 @@ A blue **Battleground portal** in the concourse teleports you to a big open worl
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |
-| **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A compact 46-stud floor, with pillars as cover; invisible walls keep everyone on the floor |
+| **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
 
 Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and identical on every server.
 

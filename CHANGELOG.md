@@ -4,6 +4,15 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (arena size, open Battleground)
+- **The Return to Hub button now shows** whenever you are in the Battleground (it was built but never made visible). The green gates still work too.
+- **Bigger Sparring Arena** (the 1v1/2v2 map): the floor is 4x larger than the original model (about 184 studs), with spawns and the invisible wall ring scaled to match.
+- **One open Battleground.** The mountain ring is now distant scenery you can't collide with; thicker invisible walls at the edge keep everyone on the map, and a once-a-second safety net puts anyone who still ends up below the world or outside the walls back at a random spot.
+
+### Added (NPC aggro, parties)
+- **NPCs stay on whoever hit them.** Hitting an NPC locks it onto you at any distance until you are knocked out or leave the Battleground, so you can't snipe from out of range. NPCs that only noticed you can still be outrun. A **red "!"** shows over any NPC that is hunting someone.
+- **Parties** (`PartyService`, `PartyController`): a Party button under the wallet opens a panel to invite players, accept or decline invites, kick (leader), and leave. Up to 4 per party (`Config.PARTY`). In the Battleground party mates can't hurt each other, their heals and buffs reach each other, their health bars are blue, and you drop in beside a party mate who is already inside. New remotes `PartyAction` and `PartyState`.
+
 ### Added (trace-to-cast quality, mobile layout)
 - **Tap a spell card to see its shape.** The cards above the hotbar are now buttons: tapping one opens the drawing canvas with that spell's shape as a faint guide and a dot tracing how to draw it. The F key / Draw button still open a blank canvas.
 - **Drawing quality.** The closer your stroke follows the shape, the stronger the spell: a Rough to Perfect tier (1 to 4 stars on the hotbar copy, and a "Perfect! +20% power" pop-up) scales damage/healing/shields/health, hit radius, and durations (`Spells/Quality`, `Config.QUALITY`). A straighter slash scores higher. With a card selected the server only accepts that spell's shape (`DrawSpell` now carries the spell id; `GlyphResult` and `HandUpdated` carry quality).

@@ -42,7 +42,7 @@ glossary:
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
-  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
+  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, PartyService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
   client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, PresentationController]
   rules:
@@ -223,9 +223,23 @@ features:
       - one NPC per part tagged NpcSpot (attribute NpcType); a replacement appears after respawn seconds (Config.BATTLEGROUND.NPC.RESPAWN unless the type overrides)
       - NPCs are Destructible models with Hostile=true, so all spells hurt them via DestructibleService; they are not knocked back or stunned
       - they only target players with InBattleground, only think while one is within 260 studs, give up past their leash, then walk home and heal
+      - a player who hits one (DestructibleService.Damaged) provokes it: it chases that player at any distance, ignoring leash and aggro range, until they fall or leave the Battleground (no sniping from range); merely being noticed is escapable
+      - a red "!" billboard (Alert, on the head) shows while an NPC has a target
       - melee swings and ranged bolts have a windup (telegraphed with a red highlight); ranged bolts are Projectile.launch with no caster
       - the player who knocks one out gets its reward through EconomyService, capped at COIN_CAP coins per COIN_WINDOW seconds per player
     tests: tests/Npcs.spec.luau
+
+  - id: party
+    summary: Parties of up to 4 players. Party members can't hurt each other in the Battleground, buffs and heals reach them, and they drop in beside each other.
+    server: "src/server/Services/PartyService.luau (invite, accept, decline, leave, kick; sameParty, membersOf; PartyAction and PartyState remotes)"
+    config: "Config.PARTY: MAX_SIZE 4, INVITE_SECONDS 30"
+    state: player attribute PartyId (set by PartyService; clients tint party mates blue)
+    rules:
+      - the first invite makes the inviter leader; only the leader invites or kicks; when the leader leaves the next member leads; a party of one disbands
+      - PartyAction is rate limited (0.3s) and every argument is type-checked; invites expire after INVITE_SECONDS and need the inviter to still be online
+      - MatchService.relation (inside the Battleground) and areAllies use PartyService.sameParty; matches keep their own teams
+      - BattlegroundService.spawnCFrame drops you within 10 studs of a party member already inside (falls back to the random spot)
+    client: "src/client/Controllers/PartyController.luau (Party button under the wallet, panel with invites / members / players), HealthController (blue bars for party mates)"
 
   - id: leaderboard
     summary: Wins leaderboard - leaderstats, the hub's Most Wins board, and the top-3 podium with avatars.

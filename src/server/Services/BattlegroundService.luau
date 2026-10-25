@@ -6,6 +6,8 @@
 --
 --   * Anyone inside can hurt anyone else inside (MatchService.relation reads
 --     the player attribute "InBattleground"); nobody outside can hurt them.
+--     Party members (PartyService) are the exception: they are allies, and
+--     drop in beside each other.
 --   * When you're knocked out you respawn at a random spot after a few
 --     seconds, with the usual spawn protection.
 --   * No coins, wins, or boosts: it's for practice and fun. You use your
@@ -21,6 +23,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local DestructibleService = require(script.Parent.DestructibleService)
 local ElementService = require(script.Parent.ElementService)
 local MatchService = require(script.Parent.MatchService)
+local PartyService = require(script.Parent.PartyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local buildBattleground = require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("Battleground")) :: any
@@ -42,19 +45,35 @@ end
 
 -- Where a fighter drops in: a random open spot in the world, away from every
 -- NPC camp and from the other fighters, not inside scenery.
-local function spawnCFrame(): CFrame
+local function spawnCFrame(player: Player): CFrame
 	local center = Config.BATTLEGROUND.CENTER
 	local reach = Config.BATTLEGROUND.HALF_SIZE - 40
 	local others: { Vector3 } = {}
+	local friends: { Vector3 } = {}
 	for _, other in Players:GetPlayers() do
 		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if root and BattlegroundService.isIn(other) then
-			table.insert(others, root.Position)
+		if root and other ~= player and BattlegroundService.isIn(other) then
+			if PartyService.sameParty(player, other) then
+				table.insert(friends, root.Position)
+			else
+				table.insert(others, root.Position)
+			end
 		end
 	end
 	local overlap = OverlapParams.new()
 	overlap.FilterType = Enum.RaycastFilterType.Include
 	overlap.FilterDescendantsInstances = { mapModel }
+	-- Drop in beside a party member who is already out there.
+	if #friends > 0 then
+		local anchor = friends[math.random(#friends)]
+		for _ = 1, 12 do
+			local angle = math.random() * math.pi * 2
+			local position = anchor + Vector3.new(math.cos(angle) * 10, 2, math.sin(angle) * 10)
+			if #workspace:GetPartBoundsInBox(CFrame.new(position + Vector3.new(0, 3, 0)), Vector3.new(6, 8, 6), overlap) == 0 then
+				return CFrame.lookAt(position, Vector3.new(anchor.X, position.Y, anchor.Z))
+			end
+		end
+	end
 	local best = center + Vector3.new(0, 4, 0)
 	local bestScore = -math.huge
 	for _ = 1, 25 do
@@ -109,7 +128,7 @@ function BattlegroundService.enter(player: Player): (boolean, string?)
 		return false, nil
 	end
 	player:SetAttribute("InBattleground", true)
-	MatchService.teleport(player, spawnCFrame())
+	MatchService.teleport(player, spawnCFrame(player))
 	markCharacter(player)
 	toastRemote:FireClient(player, "Battleground! Everyone here is an enemy. Good luck!", "round")
 	return true, nil
@@ -181,6 +200,26 @@ function BattlegroundService.start()
 		BattlegroundService.leave(player)
 	end)
 
+	-- Safety net: anyone who still ends up below the world or outside the
+	-- walls is put back at a random spot.
+	task.spawn(function()
+		local center = Config.BATTLEGROUND.CENTER
+		local limit = Config.BATTLEGROUND.HALF_SIZE + 6
+		while true do
+			task.wait(1)
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root and BattlegroundService.isIn(player) then
+					local offset = root.Position - center
+					if offset.Y < -40 or math.abs(offset.X) > limit or math.abs(offset.Z) > limit then
+						root.AssemblyLinearVelocity = Vector3.zero
+						root.CFrame = spawnCFrame(player)
+					end
+				end
+			end
+		end
+	end)
+
 	-- Knocked out in the battleground: back in after a short wait.
 	DestructibleService.Knockout:Connect(function(victim)
 		if not BattlegroundService.isIn(victim) then
@@ -188,7 +227,7 @@ function BattlegroundService.start()
 		end
 		task.delay(Config.BATTLEGROUND.RESPAWN_DELAY, function()
 			if victim.Parent and BattlegroundService.isIn(victim) and not MatchService.isInMatch(victim) then
-				MatchService.respawnAt(victim, spawnCFrame())
+				MatchService.respawnAt(victim, spawnCFrame(victim))
 				markCharacter(victim)
 			end
 		end)

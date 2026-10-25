@@ -28,6 +28,7 @@ local ElementService = require(script.Parent.ElementService)
 local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
+local PartyService = require(script.Parent.PartyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
@@ -274,9 +275,10 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 	if attacker == nil then
 		return true
 	end
-	-- Everyone inside the Battleground may hurt everyone else inside it.
+	-- Everyone inside the Battleground may hurt everyone else inside it,
+	-- except their own party.
 	if attacker:GetAttribute("InBattleground") and victimOwner:GetAttribute("InBattleground") then
-		return true
+		return not PartyService.sameParty(attacker, victimOwner)
 	end
 	local a, b = playerMatch[attacker], playerMatch[victimOwner]
 	if a or b then
@@ -290,6 +292,9 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 end
 
 local function areAllies(a: Player, b: Player): boolean
+	if a:GetAttribute("InBattleground") and b:GetAttribute("InBattleground") then
+		return PartyService.sameParty(a, b)
+	end
 	local match = playerMatch[a]
 	return match ~= nil and match == playerMatch[b] and match.teams[a] == match.teams[b]
 end

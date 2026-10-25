@@ -26,6 +26,7 @@ local ORDER = {
 	"CastService",
 	"SpellInputService",
 	"ArenaService",
+	"PartyService",
 	"MatchService",
 	"HubService",
 	"BattlegroundService",

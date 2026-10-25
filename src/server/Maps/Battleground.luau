@@ -3,7 +3,8 @@
 -- (BattlegroundService) at a random open spot. It is built far from the
 -- hub in the same place, so a "teleport" is just a move.
 --
--- A 600 x 600 stud square of land, ringed by mountains, split into four
+-- A 600 x 600 stud square of land, one open world with distant mountain
+-- scenery and invisible walls at its edge, split into four
 -- biomes (forest, meadow, desert, rocky highlands) dotted with trees, cacti,
 -- and rocks. In it:
 --   * six Raider camps (tents, campfire, banner) and two ruined stone circles
@@ -124,7 +125,8 @@ return function(center: Vector3): Model
 		})
 	end
 
-	-- Mountains all the way around, with invisible walls to keep players in.
+	-- Scenery mountains far beyond the edge (nothing to climb or hit), and
+	-- invisible walls at the edge of the land so nobody can walk off the map.
 	for side = 1, 4 do
 		local along = Vector3.new(if side <= 2 then 1 else 0, 0, if side <= 2 then 0 else 1)
 		local out = Vector3.new(if side == 1 then -1 elseif side == 2 then 1 else 0, 0, if side == 3 then -1 elseif side == 4 then 1 else 0)
@@ -132,19 +134,20 @@ return function(center: Vector3): Model
 			local t = (i - 7.5) / 7 * (half + 20)
 			local height = rng:NextNumber(55, 100)
 			local width = rng:NextNumber(46, 62)
-			local position = center + along * t + out * (half + 22) + Vector3.new(0, height / 2 - 4, 0)
+			local position = center + along * t + out * (half + 75) + Vector3.new(0, height / 2 - 4, 0)
 			MapKit.part(model, {
 				name = "Mountain",
 				size = if side <= 2 then Vector3.new(width, height, 40) else Vector3.new(40, height, width),
 				cframe = CFrame.new(position),
 				color = if i % 3 == 0 then Color3.fromRGB(122, 116, 108) else Color3.fromRGB(150, 140, 126),
 				material = Enum.Material.Slate,
+				canCollide = false,
 			})
 		end
 		local wall = MapKit.part(model, {
 			name = "EdgeWall",
-			size = if side <= 2 then Vector3.new(half * 2 + 100, 200, 2) else Vector3.new(2, 200, half * 2 + 100),
-			cframe = CFrame.new(center + out * (half + 1) + Vector3.new(0, 100, 0)),
+			size = if side <= 2 then Vector3.new(half * 2 + 100, 200, 8) else Vector3.new(8, 200, half * 2 + 100),
+			cframe = CFrame.new(center + out * (half + 4) + Vector3.new(0, 100, 0)),
 			transparency = 1,
 		})
 		wall.CanQuery = false

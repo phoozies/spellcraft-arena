@@ -575,9 +575,13 @@ function HudController.start()
 	ClientState.ProfileChanged:Connect(refreshWords)
 	ClientState.MatchChanged:Connect(refreshMatch)
 	player:GetAttributeChangedSignal("Boosts"):Connect(refreshBoosts)
-	player:GetAttributeChangedSignal("InBattleground"):Connect(function()
-		battleLabel.Visible = player:GetAttribute("InBattleground") == true
-	end)
+	local function refreshBattle()
+		local inside = player:GetAttribute("InBattleground") == true
+		battleLabel.Visible = inside
+		battleLeave.Visible = inside
+	end
+	player:GetAttributeChangedSignal("InBattleground"):Connect(refreshBattle)
+	refreshBattle()
 	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)

@@ -7,6 +7,7 @@ local ORDER = {
 	"LightingController",
 	"AudioController",
 	"HudController",
+	"PartyController",
 	"MenuController",
 	"CrateController",
 	"DraftController",

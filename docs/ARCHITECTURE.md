@@ -39,7 +39,8 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     MatchService        queues, round state machine, boost drafts, teams, PvP rules
     HubService          builds the hub, spawning, team boxes, dummies, hub regen
     BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
-    NpcService          Battleground NPCs: bodies, AI, coin rewards, respawn at NpcSpot parts
+    NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
+    PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
     ElementService      owns profile.elements/element: first free pick, equip, grant (from crates)
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
     CrateService        OpenCrate: validate, spend coins, roll an unowned element, grant it
@@ -77,7 +78,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 | Grimoire | The hub's Spellbook kiosk (`Maps/InkwellPlaza.luau`), open on a lectern |
 | Gust | `FxController` bolt (Gust, Whirlwind) |
 | Crate | The hub's Crate Shop (the Element Crate, trim and gem tinted gold) |
-| Arena | `Maps/SparringArena.luau`, a match map (not in the hub). The floor top is the model's pivot, so the map's floor is at y = 0. An invisible wall ring (radius 24.2, `CanQuery` off so spells pass) keeps players on the floor, because the seating has no ground and its gaps drop into the void |
+| Arena | `Maps/SparringArena.luau`, a match map (not in the hub). The floor top is the model's pivot, so the map's floor is at y = 0. An invisible wall ring (radius 24.2 x the 4 `SCALE` the arena is built at, `CanQuery` off so spells pass) keeps players on the floor, because the seating has no ground and its gaps drop into the void |
 
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
 
