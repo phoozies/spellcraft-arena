@@ -10,7 +10,7 @@
 --   chip           (position, color)                               chips off a damaged block
 --   dust           (position, width, color)                        dust ring under a placed object
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
---   strike         (center, radius, delay, modelName, color)       a bolt model slams down after `delay`
+--   strike         (center, radius, delay, modelName, color, spellId?)  a bolt model slams down after `delay`
 --   modelPop       (character, modelName, color)                   a model pops up over a head and fades
 --   glyph          (character, glyphId, color)                     the drawn glyph pops over a head
 --   dash           (character, direction)                          dash pose, dust puff, and whoosh
@@ -33,6 +33,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+local CastPoses = require(ReplicatedStorage.Shared.Spells.CastPoses)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local SpellRegistry = require(ReplicatedStorage.Shared.Spells.SpellRegistry)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -200,6 +201,16 @@ local function onCast(character: Model, spellId: string, target: Vector3)
 			channel
 		)
 		AudioController.playSpell(spellId, "cast", root.Position)
+		-- The sound of the pose's beat (a stomp's thud lands when the foot does).
+		local beat = CastPoses.BEATS[SpellRegistry.animationFor(spellId) or ""]
+		if beat and beat.cue then
+			local cue = beat.cue
+			task.delay(beat.at, function()
+				if root.Parent then
+					AudioController.play(cue, root.Position)
+				end
+			end)
+		end
 		-- Buffs (Fire Boost, Water Body, Air Boost, Air Shield) glow on the caster.
 		local styleKey = SpellRegistry.vfxFor(spellId)
 		if def.archetype == "Buff" and styleKey and def.stats.duration then
@@ -379,7 +390,8 @@ local function onStrike(
 	radius: number,
 	delay: number,
 	modelName: string,
-	color: Color3
+	color: Color3,
+	spellId: string?
 )
 	if not near(center) then
 		return
@@ -427,7 +439,10 @@ local function onStrike(
 			Debris:AddItem(column, 0.5)
 		end
 		task.delay(0.12, function()
-			SpellVfx.impact(folder, center, nil, color)
+			SpellVfx.impact(folder, center, spellId, color)
+			if spellId then
+				AudioController.playSpell(spellId, "impact", center)
+			end
 		end)
 	end)
 end

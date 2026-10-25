@@ -26,6 +26,26 @@ return function(t: any)
 			end
 		end)
 
+		t.it("layered cues point at real, unlayered cues", function()
+			for _, cue in Cues do
+				for _, other in cue.with or {} do
+					t.expect(Cues[other] ~= nil).toBeTruthy()
+					t.expect(Cues[other].with).toBeNil()
+				end
+			end
+		end)
+
+		t.it("every projectile spell hits with a sound of its own", function()
+			local seen: { [string]: string } = {}
+			for _, def in SpellDefinitions.list do
+				local impact = def.sfx and def.sfx.impact
+				if def.archetype == "Projectile" and impact then
+					t.expect(seen[impact]).toBeNil()
+					seen[impact] = def.id
+				end
+			end
+		end)
+
 		t.it("the like-and-favourite chime exists", function()
 			t.expect(Cues.claimReward ~= nil).toBeTruthy()
 		end)

@@ -61,6 +61,9 @@ function AudioController.play(cueName: string, at: Vector3?)
 		return
 	end
 	lastPlayed[cueName] = now
+	for _, other in cue.with or {} do
+		AudioController.play(other, at)
+	end
 
 	local sound = Instance.new("Sound")
 	sound.SoundId = cue.id

@@ -89,9 +89,16 @@ return function(t: any)
 				for _, key in keys do
 					t.expect(key.d > 0 and key.d <= 0.5).toBeTruthy()
 					t.expect((key.hold or 0) <= 1).toBeTruthy()
-					for _, arm in { key.right, key.left } do
+					t.expect(math.abs(key.twist or 0) <= 90).toBeTruthy()
+					for _, limb in { key.right, key.left, key.rightLeg, key.leftLeg } do
+						local limb: any = limb
 						for _, angle in
-							{ arm and arm.fwd or 0, arm and arm.side or 0, arm and arm.elbow or 0 }
+							{
+								limb and limb.fwd or 0,
+								limb and limb.side or 0,
+								limb and limb.elbow or 0,
+								limb and limb.knee or 0,
+							}
 						do
 							t.expect(math.abs(angle) <= 180).toBeTruthy()
 						end
@@ -99,6 +106,50 @@ return function(t: any)
 				end
 				if name == "" then
 					error("empty pose name")
+				end
+			end
+		end)
+
+		t.it("no two spells of one element share a cast pose", function()
+			local seen: { [string]: string } = {}
+			for _, def in SpellDefinitions.list do
+				local pose = SpellRegistry.animationFor(def.id) :: string
+				local key = def.element .. "|" .. pose
+				t.expect(seen[key]).toBeNil()
+				seen[key] = def.id
+			end
+		end)
+
+		t.it("every beat rides on a real pose, lands inside it, and has a known kind", function()
+			for name, beat in CastPoses.BEATS do
+				local keys = CastPoses.POSES[name]
+				t.expect(keys ~= nil).toBeTruthy()
+				t.expect(table.find(CastPoses.BEAT_KINDS, beat.kind) ~= nil).toBeTruthy()
+				local length = 0
+				for _, key in keys do
+					length += key.d + (key.hold or 0)
+				end
+				t.expect(beat.at > 0 and beat.at <= length).toBeTruthy()
+				if beat.cue then
+					t.expect(Cues[beat.cue] ~= nil).toBeTruthy()
+				end
+			end
+		end)
+
+		t.it("every impact style names a known hit kind", function()
+			for _, style in VfxStyles.STYLES do
+				if style.hit then
+					t.expect(table.find(VfxStyles.HITS, style.hit) ~= nil).toBeTruthy()
+				end
+				t.expect((style.hitScale or 1) > 0).toBeTruthy()
+			end
+		end)
+
+		t.it("every projectile spell has its own kind of impact", function()
+			for _, def in SpellDefinitions.list do
+				if def.archetype == "Projectile" and def.id ~= "Turret" then
+					local style = VfxStyles.STYLES[SpellRegistry.vfxFor(def.id) :: string]
+					t.expect(style ~= nil and style.hit ~= nil).toBeTruthy()
 				end
 			end
 		end)

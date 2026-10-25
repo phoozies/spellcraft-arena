@@ -1,8 +1,8 @@
 --!strict
 -- Client-side spell visuals built only from Roblox's built-in particle
--- textures (no uploaded assets): bolt trails/particles per element, impact
--- bursts with a light flash and shockwave ring, the cast animation (arm
--- raise + magic circle + hand sparkle), block shatter chunks, chips, dust.
+-- textures (no uploaded assets): bolt trails/particles per element, a
+-- distinct impact per spell kind (explosion, splash, rubble, ...), the cast
+-- animation (pose + the beat that rides on it + magic circle + hand sparkle), block shatter chunks, chips, dust.
 --
 -- Everything here is cosmetic and local. Every function is safe to call
 -- with characters/parts that may be mid-destroy.
@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+local CastPoses = require(ReplicatedStorage.Shared.Spells.CastPoses)
 local VfxStyles = require(ReplicatedStorage.Shared.Spells.VfxStyles)
 local CastAnimations = require(script.Parent.CastAnimations)
 
@@ -164,25 +165,781 @@ function SpellVfx.shockwave(parent: Instance, position: Vector3, radius: number,
 	Debris:AddItem(ring, 0.4)
 end
 
--- Impact burst: particles + a quick light flash + small shockwave.
+local WHITE = Color3.new(1, 1, 1)
+
+-- A glowing ball that swells from `from` to `to` studs and fades out.
+local function flash(
+	parent: Instance,
+	position: Vector3,
+	from: number,
+	to: number,
+	seconds: number,
+	color: Color3,
+	transparency: number
+)
+	local p = Instance.new("Part")
+	p.Shape = Enum.PartType.Ball
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Transparency = transparency
+	p.Size = Vector3.one * from
+	p.Position = position
+	p.Parent = parent
+	TweenService
+		:Create(p, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.one * to,
+			Transparency = 1,
+		})
+		:Play()
+	Debris:AddItem(p, seconds + 0.1)
+end
+
+-- A bit (droplet, rock chunk) flung out, falling under gravity, gone after
+-- `life` seconds. Never collides, so it can't shove anybody.
+local function fling(
+	parent: Instance,
+	position: Vector3,
+	velocity: Vector3,
+	size: Vector3,
+	color: Color3,
+	material: Enum.Material,
+	life: number,
+	round: boolean
+)
+	local bit = Instance.new("Part")
+	bit.Shape = if round then Enum.PartType.Ball else Enum.PartType.Block
+	bit.Size = size
+	bit.Color = color
+	bit.Material = material
+	bit.CanCollide = false
+	bit.CanQuery = false
+	bit.CanTouch = false
+	bit.CastShadow = false
+	bit.CFrame = CFrame.new(position)
+	bit.AssemblyLinearVelocity = velocity
+	bit.AssemblyAngularVelocity =
+		Vector3.new(math.random(-9, 9), math.random(-9, 9), math.random(-9, 9))
+	bit.Parent = parent
+	task.delay(life * 0.65, function()
+		if bit.Parent then
+			TweenService:Create(bit, TweenInfo.new(life * 0.35), { Transparency = 1 }):Play()
+		end
+	end)
+	Debris:AddItem(bit, life)
+end
+
+-- A thin glowing bar from `a` to `b` that shrinks and fades (cuts, lightning).
+local function bar(
+	parent: Instance,
+	a: Vector3,
+	b: Vector3,
+	thickness: number,
+	color: Color3,
+	seconds: number
+)
+	local length = (b - a).Magnitude
+	if length < 0.05 then
+		return
+	end
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Size = Vector3.new(thickness, thickness, length)
+	p.CFrame = CFrame.lookAt((a + b) / 2, b)
+	p.Parent = parent
+	TweenService
+		:Create(p, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(thickness * 0.2, thickness * 0.2, length),
+			Transparency = 1,
+		})
+		:Play()
+	Debris:AddItem(p, seconds + 0.1)
+end
+
+-- An expanding translucent disc facing the camera (a ring of air, a pop).
+local function airRing(
+	parent: Instance,
+	position: Vector3,
+	radius: number,
+	color: Color3,
+	delay: number,
+	seconds: number
+)
+	task.delay(delay, function()
+		local camera = workspace.CurrentCamera
+		local facing = if camera
+			then CFrame.lookAt(position, camera.CFrame.Position)
+			else CFrame.new(position)
+		local ring = Instance.new("Part")
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.CanTouch = false
+		ring.CastShadow = false
+		ring.Material = Enum.Material.Neon
+		ring.Color = color
+		ring.Transparency = 0.5
+		ring.Size = Vector3.new(0.12, 1, 1)
+		ring.CFrame = facing * CFrame.Angles(0, math.pi / 2, 0)
+		ring.Parent = parent
+		TweenService
+			:Create(ring, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = Vector3.new(0.12, radius * 2, radius * 2),
+				Transparency = 1,
+			})
+			:Play()
+		Debris:AddItem(ring, seconds + 0.1)
+	end)
+end
+
+-- A random unit vector on the upper half of a sphere.
+local function randomUp(): Vector3
+	local angle = math.random() * math.pi * 2
+	return Vector3.new(math.cos(angle), math.random() * 0.9, math.sin(angle)).Unit
+end
+
+type HitDraw = (Instance, Vector3, Color3, number, Style) -> ()
+
+-- One drawing per kind in VfxStyles.HITS. `tint` is the spell's color and
+-- `scale` the style's hitScale. Each also gets the style's particle burst and
+-- light from SpellVfx.impact.
+local HIT_KINDS: { [string]: HitDraw } = {}
+
+-- Fireball / Fire Bomb: a white-hot flash inside an orange blast, flames,
+-- rolling smoke, and embers thrown outward.
+function HIT_KINDS.explosion(parent, position, tint, scale, style)
+	flash(parent, position, 2 * scale, 9 * scale, 0.32, tint, 0.15)
+	flash(parent, position, 1 * scale, 5 * scale, 0.2, Color3.fromRGB(255, 244, 214), 0)
+	local anchor = anchorAt(parent, position)
+	local smoke = emitter(anchor, TEX.smoke, Color3.fromRGB(70, 62, 60), style)
+	smoke.Rate = 0
+	smoke.LightEmission = 0
+	smoke.Size = NumberSequence.new(2 * scale, 5 * scale)
+	smoke.Lifetime = NumberRange.new(0.8, 1.2)
+	smoke.Speed = NumberRange.new(3, 9 * scale)
+	smoke.Acceleration = Vector3.new(0, 5, 0)
+	smoke:Emit(math.floor(8 * scale))
+	local embers = emitter(anchor, TEX.sparkle, Color3.fromRGB(255, 190, 80), style)
+	embers.Rate = 0
+	embers.Size = NumberSequence.new(0.5 * scale, 0)
+	embers.Lifetime = NumberRange.new(0.6, 1)
+	embers.Speed = NumberRange.new(18, 40)
+	embers.Acceleration = Vector3.new(0, -45, 0)
+	embers:Emit(math.floor(14 * scale))
+	SpellVfx.shockwave(parent, position, 5 * scale, tint)
+	Debris:AddItem(anchor, 1.4)
+end
+
+-- Fire Slash: two cut marks cross where the blade landed, with sparks.
+function HIT_KINDS.slashCut(parent, position, tint, scale, style)
+	local camera = workspace.CurrentCamera
+	local facing = if camera
+		then CFrame.lookAt(position, camera.CFrame.Position)
+		else CFrame.new(position)
+	local roll = math.random() * math.pi
+	for i, length in { 8 * scale, 5.5 * scale } do
+		local angle = roll + (if i == 1 then 0.6 else -0.7)
+		local reach = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), math.sin(angle), 0))
+			* (length / 2)
+		bar(
+			parent,
+			position - reach,
+			position + reach,
+			if i == 1 then 0.4 else 0.28,
+			if i == 1 then WHITE else tint,
+			0.3
+		)
+	end
+	local anchor = anchorAt(parent, position)
+	local sparks = emitter(anchor, TEX.sparkle, tint, style)
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new(0.45, 0)
+	sparks.Speed = NumberRange.new(14, 30)
+	sparks.Acceleration = Vector3.new(0, -30, 0)
+	sparks:Emit(14)
+	SpellVfx.shockwave(parent, position, 2.5 * scale, tint)
+	Debris:AddItem(anchor, 1)
+end
+
+-- Water Slice / Water Wave: droplets thrown up and out, mist, and ripples.
+function HIT_KINDS.splash(parent, position, tint, scale, style)
+	local drop = tint:Lerp(WHITE, 0.3)
+	for _ = 1, math.floor(14 * scale) do
+		local angle = math.random() * math.pi * 2
+		local speed = (8 + math.random() * 12) * math.sqrt(scale)
+		fling(
+			parent,
+			position,
+			Vector3.new(math.cos(angle) * speed, 16 + math.random() * 14, math.sin(angle) * speed),
+			Vector3.one * (0.3 + math.random() * 0.35) * math.sqrt(scale),
+			drop,
+			Enum.Material.SmoothPlastic,
+			0.75,
+			true
+		)
+	end
+	local anchor = anchorAt(parent, position)
+	local mist = emitter(anchor, TEX.smoke, tint:Lerp(WHITE, 0.6), style)
+	mist.Rate = 0
+	mist.LightEmission = 0.25
+	mist.Size = NumberSequence.new(1.5 * scale, 4 * scale)
+	mist.Lifetime = NumberRange.new(0.5, 0.8)
+	mist.Speed = NumberRange.new(4, 11)
+	mist:Emit(math.floor(8 * scale))
+	SpellVfx.shockwave(parent, position, 4.5 * scale, tint)
+	task.delay(0.1, function()
+		SpellVfx.shockwave(parent, position, 3 * scale, drop)
+	end)
+	Debris:AddItem(anchor, 1.2)
+end
+
+-- Water Lock: a bubble swells and pops, leaving small bubbles drifting up.
+function HIT_KINDS.bubble(parent, position, tint, scale, style)
+	local shell = Instance.new("Part")
+	shell.Shape = Enum.PartType.Ball
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.CanQuery = false
+	shell.CanTouch = false
+	shell.CastShadow = false
+	shell.Material = Enum.Material.Glass
+	shell.Color = Color3.fromRGB(190, 235, 255)
+	shell.Transparency = 0.35
+	shell.Size = Vector3.one * 2 * scale
+	shell.Position = position
+	shell.Parent = parent
+	TweenService
+		:Create(shell, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.one * 6.5 * scale,
+			Transparency = 0.55,
+		})
+		:Play()
+	task.delay(0.16, function()
+		-- Pop: the shell bursts outward and vanishes.
+		TweenService:Create(shell, TweenInfo.new(0.1), {
+			Size = Vector3.one * 8.5 * scale,
+			Transparency = 1,
+		}):Play()
+		SpellVfx.shockwave(parent, position, 4 * scale, tint)
+		local anchor = anchorAt(parent, position)
+		local spray = emitter(anchor, TEX.sparkle, WHITE, style)
+		spray.Rate = 0
+		spray.Size = NumberSequence.new(0.5, 0)
+		spray.Speed = NumberRange.new(10, 20)
+		spray:Emit(16)
+		Debris:AddItem(anchor, 1)
+	end)
+	Debris:AddItem(shell, 0.5)
+	for _ = 1, 9 do
+		local small = Instance.new("Part")
+		small.Shape = Enum.PartType.Ball
+		small.Anchored = true
+		small.CanCollide = false
+		small.CanQuery = false
+		small.CanTouch = false
+		small.CastShadow = false
+		small.Material = Enum.Material.Glass
+		small.Color = Color3.fromRGB(190, 235, 255)
+		small.Transparency = 0.3
+		small.Size = Vector3.one * (0.4 + math.random() * 0.6)
+		small.Position = position
+		small.Parent = parent
+		local drift = randomUp() * (2 + math.random() * 3) + Vector3.new(0, 2.5, 0)
+		TweenService
+			:Create(small, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = position + drift,
+				Transparency = 1,
+			})
+			:Play()
+		Debris:AddItem(small, 0.9)
+	end
+end
+
+-- Rock Throw: the boulder cracks into chunks that tumble away, with dust.
+function HIT_KINDS.rubble(parent, position, tint, scale, _style)
+	local rock = tint:Lerp(Color3.fromRGB(120, 120, 120), 0.35)
+	for _ = 1, math.floor(7 * scale) do
+		local angle = math.random() * math.pi * 2
+		local speed = 8 + math.random() * 14
+		local side = 0.4 + math.random() * 0.5
+		fling(
+			parent,
+			position,
+			Vector3.new(math.cos(angle) * speed, 12 + math.random() * 12, math.sin(angle) * speed),
+			Vector3.new(side, side * (0.7 + math.random() * 0.6), side),
+			rock,
+			Enum.Material.Slate,
+			0.9,
+			false
+		)
+	end
+	SpellVfx.dust(parent, position, 3 * scale, tint)
+end
+
+-- Gust / Whirlwind: rings of air push out, with puffs and streaking lines.
+function HIT_KINDS.wind(parent, position, tint, scale, style)
+	local air = tint:Lerp(WHITE, 0.5)
+	airRing(parent, position, 5 * scale, air, 0, 0.4)
+	airRing(parent, position, 8 * scale, air, 0.08, 0.45)
+	local camera = workspace.CurrentCamera
+	local facing = if camera
+		then CFrame.lookAt(position, camera.CFrame.Position)
+		else CFrame.new(position)
+	for i = 1, 7 do
+		local angle = i / 7 * math.pi * 2 + math.random() * 0.4
+		local dir = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), math.sin(angle), 0))
+		local streak = Instance.new("Part")
+		streak.Anchored = true
+		streak.CanCollide = false
+		streak.CanQuery = false
+		streak.CanTouch = false
+		streak.CastShadow = false
+		streak.Material = Enum.Material.Neon
+		streak.Color = air
+		streak.Transparency = 0.2
+		streak.Size = Vector3.new(0.14, 0.14, 2.6 * scale)
+		streak.CFrame = CFrame.lookAt(position + dir, position + dir * 2)
+		streak.Parent = parent
+		TweenService
+			:Create(streak, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				CFrame = CFrame.lookAt(position + dir * 6 * scale, position + dir * 7 * scale),
+				Transparency = 1,
+			})
+			:Play()
+		Debris:AddItem(streak, 0.45)
+	end
+	local anchor = anchorAt(parent, position)
+	local puffs = emitter(anchor, TEX.smoke, air, style)
+	puffs.Rate = 0
+	puffs.LightEmission = 0.1
+	puffs.Size = NumberSequence.new(1.2 * scale, 3.5 * scale)
+	puffs.Lifetime = NumberRange.new(0.4, 0.7)
+	puffs.Speed = NumberRange.new(10, 18)
+	puffs:Emit(math.floor(14 * scale))
+	Debris:AddItem(anchor, 1)
+end
+
+-- Tornado: the wind rings, plus debris torn up and flung away.
+function HIT_KINDS.storm(parent, position, tint, scale, style)
+	HIT_KINDS.wind(parent, position, tint, scale * 0.8, style)
+	airRing(parent, position, 11 * scale, tint:Lerp(WHITE, 0.5), 0.18, 0.5)
+	for _ = 1, math.floor(8 * scale) do
+		local angle = math.random() * math.pi * 2
+		local speed = 12 + math.random() * 16
+		local side = 0.4 + math.random() * 0.6
+		fling(
+			parent,
+			position,
+			Vector3.new(math.cos(angle) * speed, 14 + math.random() * 16, math.sin(angle) * speed),
+			Vector3.new(side, side * 0.5, side * 1.4),
+			if math.random() < 0.5
+				then Color3.fromRGB(139, 112, 82)
+				else Color3.fromRGB(150, 160, 150),
+			Enum.Material.Slate,
+			1,
+			false
+		)
+	end
+end
+
+-- Lightning: a white flash, jagged forks crackling outward, and a ground ring.
+function HIT_KINDS.bolt(parent, position, tint, scale, style)
+	flash(parent, position, 2 * scale, 10 * scale, 0.22, WHITE, 0)
+	for _ = 1, 6 do
+		local dir = randomUp()
+		local point = position
+		for _ = 1, 3 do
+			local nextPoint = point
+				+ dir * (2 + math.random() * 1.5) * scale
+				+ Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+					* 2
+					* scale
+			bar(parent, point, nextPoint, 0.5, tint, 0.32)
+			bar(parent, point, nextPoint, 0.2, WHITE, 0.2)
+			point = nextPoint
+		end
+	end
+	local anchor = anchorAt(parent, position)
+	local sparks = emitter(anchor, TEX.sparkle, tint, style)
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new(0.6, 0)
+	sparks.Speed = NumberRange.new(20, 45)
+	sparks.Acceleration = Vector3.new(0, -30, 0)
+	sparks:Emit(math.floor(18 * scale))
+	SpellVfx.shockwave(parent, position, 6 * scale, tint)
+	Debris:AddItem(anchor, 1)
+end
+
+-- Bullets: a quick pop of sparks, no ring.
+function HIT_KINDS.spark(parent, position, tint, _scale, style)
+	flash(parent, position, 0.4, 1.6, 0.12, tint, 0.2)
+	local anchor = anchorAt(parent, position)
+	local sparks = emitter(anchor, TEX.sparkle, tint, style)
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new(0.3, 0)
+	sparks.Speed = NumberRange.new(8, 18)
+	sparks:Emit(6)
+	Debris:AddItem(anchor, 0.8)
+end
+
+-- Impact: the style's particle burst and light flash, then the drawing for its
+-- `hit` kind (an explosion, a splash, rubble, ...). A style without a kind
+-- gets a plain ring.
 function SpellVfx.impact(parent: Instance, position: Vector3, fxKey: string?, color: Color3)
 	local style = SpellVfx.styleFor(fxKey)
 	local tint = style.tint or color
+	local scale = style.hitScale or 1
 	local anchor = anchorAt(parent, position)
 	local e = emitter(anchor, style.texture, tint, style)
 	e.Rate = 0
 	e.Speed = NumberRange.new(style.speed * 3, style.speed * 6)
-	e:Emit(style.burst)
+	e:Emit(math.floor(style.burst * math.sqrt(scale)))
 	if style.lightRange > 0 then
 		local light = Instance.new("PointLight")
 		light.Color = tint
-		light.Range = style.lightRange * 1.5
+		light.Range = style.lightRange * 1.5 * scale
 		light.Brightness = 4
 		light.Parent = anchor
 		TweenService:Create(light, TweenInfo.new(0.3), { Brightness = 0 }):Play()
 	end
-	SpellVfx.shockwave(parent, position, 4, tint)
+	local draw = if style.hit then HIT_KINDS[style.hit] else nil
+	if draw then
+		draw(parent, position, tint, scale, style)
+	else
+		SpellVfx.shockwave(parent, position, 4, tint)
+	end
 	Debris:AddItem(anchor, 1)
+end
+
+-- Cast beats: the body effect that rides on a cast pose (Spells/CastPoses
+-- BEATS). Each runs from the moment of the cast and lands at beat.at seconds.
+local BEATS: { [string]: (Instance, Model, CastPoses.Beat, Color3) -> () } = {}
+
+local function handOf(character: Model, side: string): BasePart?
+	local part = character:FindFirstChild(side .. "Hand")
+		or character:FindFirstChild(side .. " Arm")
+	return if part and part:IsA("BasePart") then part else nil
+end
+
+-- Fireball overhead / boulder lifted: a ball swells above the hand(s) and is
+-- released as the arm comes down.
+function BEATS.orb(parent, character, beat, color)
+	local right = handOf(character, "Right")
+	local left = if beat.two then handOf(character, "Left") else nil
+	if not right then
+		return
+	end
+	local rock = beat.material == "Slate"
+	local orb = Instance.new("Part")
+	orb.Shape = Enum.PartType.Ball
+	orb.Anchored = true
+	orb.CanCollide = false
+	orb.CanQuery = false
+	orb.CanTouch = false
+	orb.CastShadow = false
+	orb.Material = if rock then Enum.Material.Slate else Enum.Material.Neon
+	orb.Color = if rock then color:Lerp(Color3.fromRGB(120, 120, 120), 0.3) else color
+	orb.Size = Vector3.one * 0.3
+	orb.Parent = parent
+	local size = if rock then 3.4 else 2.4
+	if not rock then
+		local fire = emitter(orb, TEX.fire, color, STYLES.Fireball)
+		fire.Rate = 40
+		fire.Size = NumberSequence.new(1.2, 0)
+		fire.Speed = NumberRange.new(1, 3)
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = 12
+		light.Brightness = 3
+		light.Parent = orb
+	end
+	every(beat.at, function(t)
+		if not right.Parent then
+			orb:Destroy()
+			return false
+		end
+		local grow = math.min(t / (beat.at * 0.8), 1)
+		orb.Size = Vector3.one * math.max(size * grow, 0.3)
+		local base = if left and left.Parent
+			then (right.Position + left.Position) / 2
+			else right.Position
+		orb.Position = base + Vector3.new(0, 0.6 + size * grow * 0.4, 0)
+		return true
+	end)
+	-- Released: the ball drops away into the throw.
+	task.delay(beat.at, function()
+		if not orb.Parent then
+			return
+		end
+		for _, child in orb:GetChildren() do
+			if child:IsA("ParticleEmitter") then
+				child.Enabled = false
+			end
+		end
+		TweenService
+			:Create(orb, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = Vector3.one * size * 1.5,
+				Transparency = 1,
+			})
+			:Play()
+	end)
+	Debris:AddItem(orb, beat.at + 0.4)
+end
+
+-- Slashes: the hand leaves a glowing streak as it cuts across.
+function BEATS.trail(parent, character, beat, color)
+	local hand = handOf(character, "Right")
+	if not hand then
+		return
+	end
+	task.delay(beat.at, function()
+		if not hand.Parent then
+			return
+		end
+		local near = Instance.new("Attachment")
+		near.Position = Vector3.new(0, -0.5, 0)
+		near.Parent = hand
+		local far = Instance.new("Attachment")
+		far.Position = Vector3.new(0, -3, 0)
+		far.Parent = hand
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = near
+		trail.Attachment1 = far
+		trail.Color = ColorSequence.new(WHITE, color)
+		trail.Transparency = NumberSequence.new(0.1, 1)
+		trail.Lifetime = 0.28
+		trail.LightEmission = 1
+		trail.FaceCamera = true
+		trail.Parent = hand
+		task.delay(0.22, function()
+			trail.Enabled = false
+		end)
+		Debris:AddItem(trail, 0.7)
+		Debris:AddItem(near, 0.7)
+		Debris:AddItem(far, 0.7)
+	end)
+end
+
+-- Stomps and ground punches: dust, chips, and a ring where the foot (or fist) lands.
+function BEATS.stomp(parent, character, beat, color)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	task.delay(beat.at, function()
+		if not root.Parent then
+			return
+		end
+		local feet = root.Position
+			- Vector3.new(0, 2.8, 0)
+			+ root.CFrame.LookVector * (beat.reach or 0)
+		SpellVfx.dust(parent, feet, 4, color)
+		SpellVfx.chip(
+			parent,
+			feet + Vector3.new(0, 0.3, 0),
+			color:Lerp(Color3.fromRGB(120, 110, 100), 0.4)
+		)
+		SpellVfx.shockwave(parent, feet + Vector3.new(0, 0.2, 0), 6, color)
+	end)
+end
+
+-- Big spells: sparks stream into the raised hand, then flash as it comes down.
+function BEATS.gather(parent, character, beat, color)
+	local hand = handOf(character, "Right")
+	if not hand then
+		return
+	end
+	local zone = Instance.new("Part")
+	zone.Anchored = true
+	zone.CanCollide = false
+	zone.CanQuery = false
+	zone.CanTouch = false
+	zone.Transparency = 1
+	zone.Size = Vector3.one * 7
+	zone.Position = hand.Position
+	zone.Parent = parent
+	local stream = Instance.new("ParticleEmitter")
+	stream.Texture = TEX.sparkle
+	stream.Color = ColorSequence.new(color, WHITE)
+	stream.LightEmission = 1
+	stream.Shape = Enum.ParticleEmitterShape.Sphere
+	stream.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	stream.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	stream.Speed = NumberRange.new(-14, -10)
+	stream.Lifetime = NumberRange.new(0.3, 0.4)
+	stream.Rate = 70
+	stream.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	stream.Parent = zone
+	every(beat.at, function()
+		if not hand.Parent then
+			zone:Destroy()
+			return false
+		end
+		zone.Position = hand.Position + Vector3.new(0, 1, 0)
+		return true
+	end)
+	task.delay(beat.at, function()
+		stream.Enabled = false
+		if hand.Parent then
+			local at = hand.Position + Vector3.new(0, 1, 0)
+			flash(parent, at, 0.8, 4.5, 0.22, color:Lerp(WHITE, 0.4), 0.2)
+			stream.Speed = NumberRange.new(12, 22)
+			stream:Emit(14)
+		end
+	end)
+	Debris:AddItem(zone, beat.at + 0.6)
+end
+
+-- Spinning moves: flat rings of wind whirl out around the body.
+function BEATS.swirl(parent, character, beat, color)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	local air = color:Lerp(WHITE, 0.55)
+	for i = 0, 2 do
+		task.delay(beat.at + i * 0.08, function()
+			if not root.Parent then
+				return
+			end
+			local ring = Instance.new("Part")
+			ring.Shape = Enum.PartType.Cylinder
+			ring.Anchored = true
+			ring.CanCollide = false
+			ring.CanQuery = false
+			ring.CanTouch = false
+			ring.CastShadow = false
+			ring.Material = Enum.Material.Neon
+			ring.Color = air
+			ring.Transparency = 0.55
+			ring.Size = Vector3.new(0.12, 3, 3)
+			local center = root.Position + Vector3.new(0, 1.5 - i * 1.5, 0)
+			ring.CFrame = CFrame.new(center) * CFrame.Angles(0, 0, math.pi / 2)
+			ring.Parent = parent
+			TweenService
+				:Create(ring, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Size = Vector3.new(0.12, 11, 11),
+					Transparency = 1,
+					CFrame = ring.CFrame * CFrame.Angles(math.pi, 0, 0),
+				})
+				:Play()
+			Debris:AddItem(ring, 0.6)
+		end)
+	end
+end
+
+-- Water moves: droplets spray from both hands.
+function BEATS.splash(parent, character, beat, color)
+	task.delay(beat.at, function()
+		local drop = color:Lerp(WHITE, 0.3)
+		for _, side in { "Right", "Left" } do
+			local hand = handOf(character, side)
+			if hand then
+				for _ = 1, 7 do
+					local out = hand.CFrame.LookVector * 0
+					local angle = math.random() * math.pi * 2
+					fling(
+						parent,
+						hand.Position,
+						out
+							+ Vector3.new(
+								math.cos(angle) * 9,
+								10 + math.random() * 9,
+								math.sin(angle) * 9
+							),
+						Vector3.one * (0.25 + math.random() * 0.25),
+						drop,
+						Enum.Material.SmoothPlastic,
+						0.7,
+						true
+					)
+				end
+			end
+		end
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			SpellVfx.shockwave(parent, root.Position - Vector3.new(0, 2.7, 0), 5, color)
+		end
+	end)
+end
+
+-- Gust: a ring of wind and puffs shoves out in front of the caster.
+function BEATS.push(parent, character, beat, color)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	task.delay(beat.at, function()
+		if not root.Parent then
+			return
+		end
+		local look = root.CFrame.LookVector
+		local front = root.Position + look * 3 + Vector3.new(0, 0.5, 0)
+		local air = color:Lerp(WHITE, 0.55)
+		for i = 0, 1 do
+			task.delay(i * 0.07, function()
+				local ring = Instance.new("Part")
+				ring.Shape = Enum.PartType.Cylinder
+				ring.Anchored = true
+				ring.CanCollide = false
+				ring.CanQuery = false
+				ring.CanTouch = false
+				ring.CastShadow = false
+				ring.Material = Enum.Material.Neon
+				ring.Color = air
+				ring.Transparency = 0.45
+				ring.Size = Vector3.new(0.12, 2, 2)
+				ring.CFrame = CFrame.lookAt(front, front + look) * CFrame.Angles(0, math.pi / 2, 0)
+				ring.Parent = parent
+				TweenService
+					:Create(
+						ring,
+						TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{
+							Size = Vector3.new(0.12, 8, 8),
+							Transparency = 1,
+							CFrame = ring.CFrame + look * 6,
+						}
+					)
+					:Play()
+				Debris:AddItem(ring, 0.5)
+			end)
+		end
+		local anchor = anchorAt(parent, front)
+		anchor.CFrame = CFrame.lookAt(front, front + look)
+		local puffs = emitter(anchor, TEX.smoke, air, STYLES.Gust)
+		puffs.Rate = 0
+		puffs.LightEmission = 0.1
+		puffs.Size = NumberSequence.new(1.2, 3)
+		puffs.Lifetime = NumberRange.new(0.4, 0.6)
+		puffs.Speed = NumberRange.new(14, 22)
+		puffs.SpreadAngle = Vector2.new(22, 22)
+		puffs.EmissionDirection = Enum.NormalId.Front
+		puffs:Emit(12)
+		Debris:AddItem(anchor, 1)
+	end)
+end
+
+function SpellVfx.castBeat(parent: Instance, character: Model, poseName: string, color: Color3)
+	local beat = CastPoses.BEATS[poseName]
+	local run = if beat then BEATS[beat.kind] else nil
+	if beat and run then
+		run(parent, character, beat, color)
+	end
 end
 
 -- Cast animation: the caster strikes the spell's pose (Spells/CastPoses via
@@ -203,6 +960,8 @@ function SpellVfx.castAnimation(
 
 	-- Body pose (every client does this for every caster).
 	CastAnimations.play(character, animation or "Throw", holdSeconds)
+	-- The effect that rides on the pose (a fireball overhead, a slash trail, ...).
+	SpellVfx.castBeat(parent, character, animation or "Throw", color)
 
 	-- Magic circle under the feet.
 	local circle = Instance.new("Part")

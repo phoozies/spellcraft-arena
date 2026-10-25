@@ -52,7 +52,7 @@ local ENTRIES: { [string]: Entry } = {
 	Fireball = {
 		vfx = "Fireball",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Throw",
+		animation = "Fireball",
 		note = "Flaming ball with a smoky trail; bursts on impact",
 	},
 	FireSlash = {
@@ -71,7 +71,7 @@ local ENTRIES: { [string]: Entry } = {
 	FirePillar = {
 		vfx = "FirePillar",
 		fx = { "pillar", "shockwave", "cast" },
-		animation = "Sweep",
+		animation = "Erupt",
 		note = "Red warning circle, then a layered fire column erupts",
 	},
 	FireBomb = {
@@ -85,13 +85,13 @@ local ENTRIES: { [string]: Entry } = {
 	WaterSlice = {
 		vfx = "WaterSlice",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Slash",
+		animation = "Slice",
 		note = "Block crescent of water with a sparkling trail",
 	},
 	WaterBody = {
 		vfx = "WaterBody",
 		fx = { "modelPop", "cast", "aura" },
-		animation = "Flex",
+		animation = "Flow",
 		noImpact = true,
 		note = "Water drop emblem over the head; a blue shimmer while you are untouchable",
 	},
@@ -104,13 +104,13 @@ local ENTRIES: { [string]: Entry } = {
 	WaterWave = {
 		vfx = "WaterWave",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Smash",
+		animation = "Wave",
 		note = "Blocky breaking wave with foam, rolling through everything",
 	},
 	WaterNebula = {
 		vfx = "WaterNebula",
 		fx = { "pillar", "shockwave", "cast" },
-		animation = "Ascend",
+		animation = "Downpour",
 		note = "Warning circle, then a swirling water column with stars crashes down",
 	},
 
@@ -118,26 +118,26 @@ local ENTRIES: { [string]: Entry } = {
 	RockThrow = {
 		vfx = "RockThrow",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Throw",
+		animation = "Heave",
 		note = "Chunky boulder with a dust trail",
 	},
 	EarthWall = {
 		vfx = "EarthWall",
 		fx = { "dust", "chip", "shatter", "cast" },
-		animation = "Guard",
+		animation = "Bulwark",
 		noImpact = true,
 		note = "Wall rises with dust; chips fly when hit and it shatters piece by piece",
 	},
 	EarthPunch = {
 		vfx = "EarthPunch",
 		fx = { "rise", "dust", "shockwave", "cast" },
-		animation = "Smash",
+		animation = "GroundPunch",
 		note = "Warning circle, then a boulder cluster bursts out of the ground",
 	},
 	EarthPillar = {
 		vfx = "EarthPillar",
 		fx = { "rise", "dust", "shockwave", "cast" },
-		animation = "Sweep",
+		animation = "StompRise",
 		note = "A row of stone spikes erupts one after another",
 	},
 	Earthquake = {
@@ -151,19 +151,19 @@ local ENTRIES: { [string]: Entry } = {
 	Gust = {
 		vfx = "Gust",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Throw",
+		animation = "Fan",
 		note = "Swirling puff with wind streaks",
 	},
 	Whirlwind = {
 		vfx = "Whirlwind",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Smash",
+		animation = "Spin",
 		note = "Wide swirl of wind that blows everyone away",
 	},
 	AirBoost = {
 		vfx = "AirBoost",
 		fx = { "modelPop", "cast", "aura" },
-		animation = "Flex",
+		animation = "Surge",
 		noImpact = true,
 		note = "Winged emblem over the head; wind streaks trail you while you are fast",
 	},
@@ -177,7 +177,7 @@ local ENTRIES: { [string]: Entry } = {
 	Tornado = {
 		vfx = "Tornado",
 		fx = { "projectile", "projectileEnd", "cast" },
-		animation = "Ascend",
+		animation = "Cyclone",
 		note = "Stacked, turning slabs with flying debris tearing forward",
 	},
 
