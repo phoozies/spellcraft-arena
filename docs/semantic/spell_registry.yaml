@@ -306,7 +306,7 @@ spells:
     element: Air
     slot: 4
     rarity: Common
-    role: defense
+    role: ward
     archetype: Buff
     cooldown: 14
     model: AirShield
@@ -338,7 +338,7 @@ spells:
     element: Arcane
     slot: 4
     rarity: Rare
-    role: fast
+    role: storm
     archetype: Zone
     cooldown: 2.5
     model: Zap
@@ -369,8 +369,8 @@ spells:
     name: Black Hole
     element: Arcane
     slot: 4
-    rarity: Epic
-    role: heavy
+    rarity: Legendary
+    role: vortex
     archetype: Zone
     cooldown: 10
     model: BlackHole
@@ -386,7 +386,7 @@ spells:
     element: Arcane
     slot: 4
     rarity: Rare
-    role: defense
+    role: summon
     archetype: Placeable
     cooldown: 12
     model: Turret

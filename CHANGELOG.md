@@ -4,6 +4,10 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (five new shapes)
+- **Heart, spiral, zigzag (M), hook (J), and X** join the seven shapes (12 in all). Heal is a **heart**, Lightning a **zigzag**, Turret a **hook**, Air Shield an **X** (drawn in one unbroken stroke: down, up the side, down), and Black Hole a **spiral**. Their roles are `support`, `storm`, `summon`, `ward`, and `vortex`. All five are unused by any base spell, so every crate spell now fits next to every element's base trio; only Water Wave (bolt), Fire Pillar and Earth Pillar (V) can still clash.
+- **Black Hole is now Legendary.** It drags every enemy it catches to the exact center and holds them there for 3 seconds. Held enemies can still cast spells (it roots, it does not stun). 10 damage in total.
+
 ### Changed (elements, loadout, Spell Crate gacha)
 - **Base elements with three spells.** Fire = Fireball, Fire Slash, Fire Boost; Water = Water Slice, Water Body, Water Lock; Earth = Rock Throw, Earth Wall, Earth Punch; Air = Gust, Whirlwind, Air Boost. The first element is still a free pick; the others are now **bought with coins** (400 each, `BuyElement`, `ElementService.buy`) instead of coming from crates.
 - **Spell Crate gacha.** The Element Crate is now a **Spell Crate** (100 coins) that wins one of the 12 other spells by rarity: **Common 55%, Uncommon 25%, Rare 12%, Epic 6%, Legendary 2%** (`Spells/Rarity`, `Economy/Crates`). A spell you already own pays coins back. The reel shows spell cards in rarity colours, ticks as cards pass, and reveals with a rarity sound and flash. `CrateResult` now carries `spell`, `rarity`, `duplicate`, `refund`, `equipped`.

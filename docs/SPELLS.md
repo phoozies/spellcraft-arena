@@ -12,13 +12,17 @@ Every spell has a **role**, and the role decides the shape you draw. A shape mea
 | Role | Shape | Spells |
 |---|---|---|
 | Basic attack | Circle | Fireball, Rock Throw, Gust |
-| Fast attack | Diagonal slash (a straight line) | Fire Slash, Water Slice, Lightning |
+| Fast attack | Diagonal slash (a straight line) | Fire Slash, Water Slice |
 | Boost | Square | Fire Boost, Water Body, Air Boost |
-| Defense | Triangle | Earth Wall, Air Shield, Turret |
+| Defense | Triangle | Earth Wall |
 | Stun | Triangle | Water Lock |
-| Heavy attack | Lightning bolt | Water Wave, Earth Punch, Whirlwind, Black Hole |
+| Heavy attack | Lightning bolt | Water Wave, Earth Punch, Whirlwind |
 | Area attack | V (chevron) | Fire Pillar, Earth Pillar |
-| Support | V (chevron) | Heal |
+| Support | Heart | Heal |
+| Storm | Zigzag (M) | Lightning |
+| Summon | Hook (J) | Turret |
+| Ward | X (one unbroken stroke: down, up the side, down) | Air Shield |
+| Vortex | Spiral | Black Hole |
 | Ultimate | Star | Fire Bomb, Water Nebula, Earthquake, Tornado |
 
 No spell uses a swirl or a squiggle.
@@ -111,7 +115,7 @@ Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all 
 | 1 | **Gust** | circle | Projectile | 3s | A fast gust of air. 15 damage. |
 | 2 | **Whirlwind** | lightning bolt | Projectile | 5s | A wide gust that blows everyone it hits far away. 15 damage. |
 | 3 | **Air Boost** | square | Buff | 16s | Ride the wind: much faster and a higher jump for 6 seconds. |
-| 4 | **Air Shield** | triangle | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
+| 4 | **Air Shield** | X | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
 | 5 | **Tornado** ★ | star | Projectile | 18s | ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage. |
 
 ### Crate spells
@@ -123,8 +127,8 @@ Won from the Spell Crate (100 coins a spin). A spin rolls a rarity by weight, th
 | Common | 55% | 20 | Heal, Air Shield |
 | Uncommon | 25% | 35 | Fire Pillar, Earth Pillar |
 | Rare | 12% | 55 | Lightning, Water Wave, Turret |
-| Epic | 6% | 75 | Black Hole, Fire Bomb, Tornado |
-| Legendary | 2% | 90 | Water Nebula, Earthquake |
+| Epic | 6% | 75 | Fire Bomb, Tornado |
+| Legendary | 2% | 90 | Black Hole, Water Nebula, Earthquake |
 
 ### ✨ Arcane
 
@@ -132,10 +136,10 @@ Neutral crate spells that belong to no element.
 
 | Rarity | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
-| Rare | **Lightning** | slash | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
-| Common | **Heal** | V | Buff | 10s | A warm light mends you: restore 25 health. |
-| Epic | **Black Hole** | lightning bolt | Zone | 10s | Point and click: a black hole sucks enemies in, traps them for 3 seconds, and deals 10 damage over time. Range 70. |
-| Rare | **Turret** | triangle | Placeable | 12s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
+| Rare | **Lightning** | zigzag (M) | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
+| Common | **Heal** | heart | Buff | 10s | A warm light mends you: restore 25 health. |
+| Legendary | **Black Hole** | spiral | Zone | 10s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70. |
+| Rare | **Turret** | hook (J) | Placeable | 12s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
 
 ### Notes on the spells
 
@@ -209,7 +213,7 @@ Every spell has a **model**, a **particle style**, a **cast animation**, and **s
 | **Tornado** | Air | Epic | `Tornado` | `Tornado` | Ascend | `tornadoCast` | `tornadoHit` |
 | **Lightning** | Arcane | Rare | `Zap` | `Zap` | Call | `zapCharge` | `zapStrike` |
 | **Heal** | Arcane | Common | `Heal` | `Heal` | Offer | `healChime` | n/a |
-| **Black Hole** | Arcane | Epic | `BlackHole` | `BlackHole` | Conjure | `blackHoleOpen` | `blackHoleCollapse` |
+| **Black Hole** | Arcane | Legendary | `BlackHole` | `BlackHole` | Conjure | `blackHoleOpen` | `blackHoleCollapse` |
 | **Turret** | Arcane | Rare | `Turret` | `Turret` | Deploy | `turretDeploy` | `turretShot` |
 <!-- REGISTRY:end -->
 

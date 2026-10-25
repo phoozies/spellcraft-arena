@@ -247,9 +247,15 @@ function Zone.cast(ctx: any): boolean?
 					if stats.hold and not held[hit.character] then
 						local offset = hit.position - center
 						if Vector3.new(offset.X, 0, offset.Z).Magnitude <= HOLD_RADIUS then
-							-- Trapped in the core for the rest of the zone.
+							-- Dragged to the very center and held for the rest of the
+							-- zone. Root stops moving, not casting.
 							held[hit.character] = true
 							StatusService.apply(hit.character, "Root", duration - elapsed)
+							local root = hit.character:FindFirstChild("HumanoidRootPart")
+							if root and root:IsA("BasePart") then
+								root.CFrame = CFrame.new(center.X, root.Position.Y, center.Z)
+									* root.CFrame.Rotation
+							end
 						end
 					end
 					if stats.status then

@@ -34,7 +34,7 @@ glossary:
   spellbook (match): the player's loadout (3 base spells + equipped crate spells), locked in when the match starts
   elements owned: profile.elements; the first is a free pick, the rest come from Element Crates; profile.element is the equipped one
   slot: display order within a school (1-3 base spells, 4 a crate spell, 5 an ultimate)
-  role: the kind of move (basic, fast, boost, defense, stun, heavy, area, support, ultimate); decides the glyph
+  role: the kind of move (basic, fast, boost, defense, stun, heavy, area, support, storm, summon, ward, vortex, ultimate); decides the glyph
   ultimate: slot 5; 30-40 damage (or a game-changing effect) on a cooldown of 15s or more
   boost: a match power-up picked between rounds (shared/Match/Boosts.luau); lasts the rest of the match and stacks
   class: PLANNED, NOT BUILT (docs/CLASSES.md); a second layer on top of elements
@@ -42,7 +42,7 @@ glossary:
   coins: the only currency; earned by winning; spent on elements and Spell Crate spins
   wins: profile.stats.wins; the leaderboard stat
   hub: Inkwell Plaza, a sunlit sandstone arena (round plaza, grandstand, Champions' Concourse), where players spawn, pick elements, open crates, and pick teams (no PvP)
-  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area and support V (chevron), ultimate star"
+  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), support heart, storm zigzag M, summon hook J, ward X, vortex spiral, ultimate star"
   arena: an instanced match map cloned at x = slot * 2000, y = 400
 
 bootstrap:
@@ -85,13 +85,13 @@ features:
         - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 3" }
         - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
         - { id: AirBoost,  role: boost, glyph: square,     archetype: Buff, model: AirBoost,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
-        - { id: AirShield, rarity: Common, role: defense,    glyph: triangle,  archetype: Buff, model: AirShield,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
+        - { id: AirShield, rarity: Common, role: ward, glyph: x,  archetype: Buff, model: AirShield,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
         - { id: Tornado, rarity: Epic,   role: ultimate, glyph: star,     archetype: Projectile, model: Tornado, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
       Arcane:
-        - { id: Zap,       rarity: Rare,   role: fast,    glyph: slash,   archetype: Zone, model: Zap, what: "Lightning: point-and-click bolt, r5, 18 dmg, range 60, cd 2.5 (reticle)" }
-        - { id: Heal,      rarity: Common, role: support, glyph: chevron, archetype: Buff, model: Heal, what: "restore 25 HP, cd 10 (stats.heal)" }
-        - { id: BlackHole, rarity: Epic,   role: heavy,   glyph: bolt,    archetype: Zone, model: BlackHole, what: "point-and-click, r16, pulls and holds enemies 3s, 10 dmg total, cd 10 (stats.hold, pull)" }
-        - { id: Turret,    rarity: Rare,   role: defense, glyph: triangle, archetype: Placeable, model: Turret, what: "30 HP turret shoots the nearest enemy every 1s for 6 dmg, 20s, cd 12 (stats.turret)" }
+        - { id: Zap,       rarity: Rare,   role: storm,   glyph: zigzag,  archetype: Zone, model: Zap, what: "Lightning: point-and-click bolt, r5, 18 dmg, range 60, cd 2.5 (reticle)" }
+        - { id: Heal,      rarity: Common, role: support, glyph: heart,   archetype: Buff, model: Heal, what: "restore 25 HP, cd 10 (stats.heal)" }
+        - { id: BlackHole, rarity: Legendary, role: vortex, glyph: spiral, archetype: Zone, model: BlackHole, what: "point-and-click, r16, drags enemies to the center and roots them 3s (they can still cast), 10 dmg total, cd 10 (stats.hold, pull)" }
+        - { id: Turret,    rarity: Rare,   role: summon,  glyph: hook,    archetype: Placeable, model: Turret, what: "30 HP turret shoots the nearest enemy every 1s for 6 dmg, 20s, cd 12 (stats.turret)" }
     presentation: "every spell's model, particle style, cast pose, and sounds are in the spell registry (feature `spell_registry`; docs/semantic/spell_registry.yaml)"
     stat_flags_added_for_these_spells:
       visual.model: imported model that replaces the primitive look (bolt / placeable skin); the primitive stays the hitbox and the fallback

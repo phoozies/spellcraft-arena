@@ -212,21 +212,11 @@ return function(t)
 			end
 		)
 
-		t.it("no spell is drawn with a swirl or a squiggle", function()
-			for _, def in SpellDefinitions.list do
-				t.expect(def.glyph ~= "spiral" and def.glyph ~= "wave" and def.glyph ~= "infinity")
-					.toBeTruthy()
-			end
-			t.expect(Glyphs.get("spiral")).toBeNil()
-			t.expect(Glyphs.get("wave")).toBeNil()
-		end)
-
 		t.it(
-			"Earth Wall and Air Shield are triangles; Fire Boost, Water Body and Air Boost are squares",
+			"Earth Wall is a triangle; Air Shield an X; Fire Boost, Water Body and Air Boost are squares",
 			function()
-				for _, id in { "EarthWall", "AirShield" } do
-					t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("triangle")
-				end
+				t.expect((SpellDefinitions.get("EarthWall") :: any).glyph).toBe("triangle")
+				t.expect((SpellDefinitions.get("AirShield") :: any).glyph).toBe("x")
 				for _, id in { "FireBoost", "WaterBody", "AirBoost" } do
 					t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("square")
 				end

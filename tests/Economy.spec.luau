@@ -163,13 +163,24 @@ return function(t: any)
 			t.expect(#Loadout.spells("Nope", { "Heal" })).toBe(0)
 		end)
 		t.it("never holds two spells with the same shape", function()
-			-- Heal and Fire Pillar are both chevrons.
+			-- Heal is a heart, so it fits beside any base trio.
 			t.expect(Loadout.problem("Heal", Loadout.spells("Fire", {}))).toBeNil()
-			t.expect(Loadout.problem("FirePillar", Loadout.spells("Fire", { "Heal" })) ~= nil)
+			-- Fire Pillar and Earth Pillar are both V shapes.
+			t.expect(
+				Loadout.problem("EarthPillar", Loadout.spells("Fire", { "FirePillar" })) ~= nil
+			)
 				.toBeTruthy()
-			-- Earth Wall is a triangle, so Air Shield (a triangle too) cannot join Earth.
-			t.expect(Loadout.problem("AirShield", Loadout.spells("Earth", {})) ~= nil).toBeTruthy()
-			t.expect(Loadout.problem("AirShield", Loadout.spells("Fire", {}))).toBeNil()
+			-- Earth Punch is a bolt, so Water Wave (a bolt too) cannot join Earth.
+			t.expect(Loadout.problem("WaterWave", Loadout.spells("Earth", {})) ~= nil).toBeTruthy()
+			t.expect(Loadout.problem("WaterWave", Loadout.spells("Fire", {}))).toBeNil()
+		end)
+		t.it("the Arcane spells and Air Shield have shapes no base spell uses", function()
+			for _, element in Elements.LIST do
+				local base = Loadout.spells(element.id, {})
+				for _, id in { "Heal", "Zap", "Turret", "BlackHole", "AirShield" } do
+					t.expect(Loadout.problem(id, base)).toBeNil()
+				end
+			end
 		end)
 		t.it("only takes crate spells", function()
 			t.expect(Loadout.problem("Fireball", {}) ~= nil).toBeTruthy()

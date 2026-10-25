@@ -38,6 +38,52 @@ local function star(): { Vector2 }
 	return points
 end
 
+local function heart(): { Vector2 }
+	-- The classic heart curve, traced from the bottom tip up the left side,
+	-- around both lobes, and back down (y points down on screen).
+	local raw = {}
+	local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
+	for i = 0, 40 do
+		local t = math.pi + (i / 40) * math.pi * 2
+		local x = 16 * math.sin(t) ^ 3
+		local y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t))
+		minX, maxX = math.min(minX, x), math.max(maxX, x)
+		minY, maxY = math.min(minY, y), math.max(maxY, y)
+		table.insert(raw, Vector2.new(x, y))
+	end
+	local points = {}
+	for _, p in raw do
+		table.insert(
+			points,
+			Vector2.new((p.X - minX) / (maxX - minX), (p.Y - minY) / (maxY - minY))
+		)
+	end
+	points[#points] = points[1]
+	return points
+end
+
+local function spiral(): { Vector2 }
+	-- Two turns winding outward from the middle.
+	local points = {}
+	for i = 0, 48 do
+		local f = i / 48
+		local a = f * math.pi * 4
+		local r = 0.06 + f * 0.44
+		table.insert(points, Vector2.new(0.5 + math.cos(a) * r, 0.5 + math.sin(a) * r))
+	end
+	return points
+end
+
+local function hook(): { Vector2 }
+	-- A "J": straight down the right side, then a half circle round to the left.
+	local points = { Vector2.new(0.78, 0), Vector2.new(0.78, 0.5) }
+	for i = 1, 10 do
+		local a = (i / 10) * math.pi
+		table.insert(points, Vector2.new(0.39 + math.cos(a) * 0.39, 0.5 + math.sin(a) * 0.5))
+	end
+	return points
+end
+
 Glyphs.LIST = {
 	{ id = "circle", name = "Circle", closed = true, points = circle() },
 	{
@@ -83,6 +129,33 @@ Glyphs.LIST = {
 		},
 	},
 	{ id = "star", name = "Star", closed = true, points = star() },
+	{ id = "heart", name = "Heart", closed = true, points = heart() },
+	{ id = "spiral", name = "Spiral", closed = false, points = spiral() },
+	{
+		id = "zigzag",
+		name = "Zigzag (M)",
+		closed = false,
+		points = {
+			Vector2.new(0, 1),
+			Vector2.new(0.25, 0),
+			Vector2.new(0.5, 0.7),
+			Vector2.new(0.75, 0),
+			Vector2.new(1, 1),
+		},
+	},
+	{ id = "hook", name = "Hook (J)", closed = false, points = hook() },
+	{
+		-- One unbroken stroke: down the first diagonal, up the side, down the second.
+		id = "x",
+		name = "X",
+		closed = false,
+		points = {
+			Vector2.new(0, 0),
+			Vector2.new(1, 1),
+			Vector2.new(1, 0),
+			Vector2.new(0, 1),
+		},
+	},
 } :: { Glyph }
 
 -- Which shape each KIND of move uses, the same in every element, so a shape
@@ -98,7 +171,11 @@ Glyphs.ROLE = table.freeze({
 	stun = "triangle",
 	heavy = "bolt",
 	area = "chevron",
-	support = "chevron", -- heals and helpers (Heal)
+	support = "heart", -- heals (Heal)
+	storm = "zigzag", -- lightning (Lightning)
+	summon = "hook", -- things you put down to fight for you (Turret)
+	ward = "x", -- shields that block the next hit (Air Shield)
+	vortex = "spiral", -- pulling and trapping (Black Hole)
 	ultimate = "star",
 })
 
@@ -111,6 +188,10 @@ Glyphs.ROLE_NAMES = table.freeze({
 	heavy = "Heavy attack",
 	area = "Area attack",
 	support = "Support",
+	storm = "Storm",
+	summon = "Summon",
+	ward = "Ward",
+	vortex = "Vortex",
 	ultimate = "Ultimate",
 })
 
