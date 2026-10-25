@@ -1,6 +1,7 @@
 --!strict
 -- Settings panel: rebind the key that opens the drawing canvas (click
--- "Change", press any key, done) and switch the background music on or off.
+-- "Change", press any key, done) and switch the background music and the sound
+-- effects on or off.
 -- Both choices are saved to the player's profile; the server validates them
 -- (and refuses reserved keys like WASD, Space, the hotbar numbers, and "/"
 -- which Roblox chat uses).
@@ -21,20 +22,30 @@ local keyLabel: TextLabel
 local changeButton: TextButton
 local hint: TextLabel
 local musicButton: TextButton
+local sfxButton: TextButton
 
 local function musicOn(): boolean
 	local profile = ClientState.profile
 	return not (profile and profile.settings and profile.settings.music == false)
 end
 
-local function refreshMusic()
-	local on = musicOn()
-	musicButton.Text = if on then "🔊 On" else "🔇 Off"
-	musicButton.BackgroundColor3 = if on then Theme.COLORS.good else Theme.COLORS.bad
+local function sfxOn(): boolean
+	local profile = ClientState.profile
+	return not (profile and profile.settings and profile.settings.sfx == false)
+end
+
+local function styleSwitch(button: TextButton, on: boolean)
+	button.Text = if on then "🔊 On" else "🔇 Off"
+	button.BackgroundColor3 = if on then Theme.COLORS.good else Theme.COLORS.bad
+end
+
+local function refreshSwitches()
+	styleSwitch(musicButton, musicOn())
+	styleSwitch(sfxButton, sfxOn())
 end
 
 local function refresh()
-	refreshMusic()
+	refreshSwitches()
 	if ClientState.capturingKey then
 		return
 	end
@@ -112,37 +123,47 @@ function SettingsController.init()
 			startCapture()
 		end
 	end)
-	-- Background music: one big switch.
-	local musicRow = Theme.frame(panel, {
-		Position = UDim2.fromOffset(16, 152),
-		Size = UDim2.new(1, -32, 0, 64),
-		BackgroundColor3 = Theme.COLORS.panelLight,
-	})
-	Theme.corner(musicRow)
-	Theme.label(musicRow, "Background music", {
-		Size = UDim2.new(0.5, 0, 1, -16),
-		Position = UDim2.fromOffset(12, 8),
-		TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	musicButton = Theme.button(musicRow, "🔊 On", {
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -10, 0.5, 0),
-		Size = UDim2.fromOffset(170, Theme.TOUCH - 8),
-	})
-	musicButton.Activated:Connect(function()
-		local on = not musicOn()
-		Remotes.get("SaveSettings"):FireServer("music", on)
-		-- Switch right away; the server confirms via ProfileUpdated.
-		local profile = ClientState.profile
-		if profile and profile.settings then
-			profile.settings.music = on
-			ClientState.ProfileChanged:Fire()
-		end
-		refreshMusic()
-	end)
+	-- Background music and sound effects: one big switch each.
+	local function addSwitch(
+		title: string,
+		y: number,
+		key: "music" | "sfx",
+		isOn: () -> boolean
+	): TextButton
+		local switchRow = Theme.frame(panel, {
+			Position = UDim2.fromOffset(16, y),
+			Size = UDim2.new(1, -32, 0, 64),
+			BackgroundColor3 = Theme.COLORS.panelLight,
+		})
+		Theme.corner(switchRow)
+		Theme.label(switchRow, title, {
+			Size = UDim2.new(0.5, 0, 1, -16),
+			Position = UDim2.fromOffset(12, 8),
+			TextXAlignment = Enum.TextXAlignment.Left,
+		})
+		local button = Theme.button(switchRow, "🔊 On", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -10, 0.5, 0),
+			Size = UDim2.fromOffset(170, Theme.TOUCH - 8),
+		})
+		button.Activated:Connect(function()
+			local on = not isOn()
+			Remotes.get("SaveSettings"):FireServer(key, on)
+			-- Switch right away; the server confirms via ProfileUpdated.
+			local profile = ClientState.profile
+			if profile and profile.settings then
+				profile.settings[key] = on
+				ClientState.ProfileChanged:Fire()
+			end
+			refreshSwitches()
+		end)
+		return button
+	end
+	musicButton = addSwitch("Background music", 146, "music", musicOn)
+	sfxButton = addSwitch("Sound effects", 216, "sfx", sfxOn)
 
 	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_DRAW_KEY}`, {
-		Position = UDim2.fromOffset(16, 228),
+		Position = UDim2.fromOffset(16, 290),
 		Size = UDim2.fromOffset(180, Theme.TOUCH - 8),
 	})
 	reset.Activated:Connect(function()
@@ -150,7 +171,7 @@ function SettingsController.init()
 		keyLabel.Text = Config.DEFAULT_DRAW_KEY
 	end)
 	hint = Theme.label(panel, "Click Change, then press the key you want.", {
-		Position = UDim2.fromOffset(16, 292),
+		Position = UDim2.fromOffset(16, 340),
 		Size = UDim2.new(1, -32, 0, 24),
 		Font = Theme.BODY_FONT,
 		TextColor3 = Theme.COLORS.subtext,
@@ -160,7 +181,7 @@ function SettingsController.init()
 		panel,
 		"Gamepad: X, then draw with the right stick. Touch: tap ✏ Draw, then drag.",
 		{
-			Position = UDim2.fromOffset(16, 322),
+			Position = UDim2.fromOffset(16, 366),
 			Size = UDim2.new(1, -32, 0, 24),
 			Font = Theme.BODY_FONT,
 			TextColor3 = Theme.COLORS.subtext,

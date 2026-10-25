@@ -370,7 +370,7 @@ features:
 
   - id: audio_and_vfx
     summary: Every spell has a cast and an impact sound plus particle effects; all local to each client.
-    audio: src/shared/Audio/Cues.luau (cue table) + src/client/Controllers/AudioController.luau (play, falloff, throttle, hub ambience); spells name cues in SpellDefinitions `sfx = { cast, impact }`
+    audio: src/shared/Audio/Cues.luau (cue table) + src/client/Controllers/AudioController.luau (play, falloff, throttle, sound-effects switch); spells name cues in SpellDefinitions `sfx = { cast, impact }`
     vfx: src/client/Fx/SpellVfx.luau (glyphEmblem, pillar, rise, quake, glyph imprint in castAnimation, per-spell bolt styles) driven from FxController (Fx kinds pillar, rise, quake, glyph); effects are chosen by spell stats (pillar, rise, channel), not by name
     mood: src/client/Controllers/LightingController.luau (warm afternoon in the hub vs the arenas' neutral daylight)
     invariants: [a cue with an empty id is silent, every effect works without imported models]
@@ -420,7 +420,7 @@ features:
     summary: Looping background music, a hub playlist and a fight playlist, with a Music on/off setting.
     tracks: src/shared/Audio/Music.luau (4 royalty-free APM tracks from the Roblox audio library)
     player: src/client/Controllers/AudioController.luau (music group volume Config.MUSIC.VOLUME; fades; hub tracks in the hub, fight tracks in matches and the Battleground; skips a track that never loads)
-    setting: profile.settings.music (default true), saved with SaveSettings("music", boolean) from the Settings panel (SettingsController)
+    setting: profile.settings.music and profile.settings.sfx (default true), saved with SaveSettings("music" | "sfx", boolean) from the Settings panel (SettingsController); sfx mutes the AudioController sound-effects group
     tests: tests/Audio.spec.luau
 
   - id: support_reward
