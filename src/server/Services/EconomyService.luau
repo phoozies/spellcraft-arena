@@ -259,9 +259,9 @@ function EconomyService.start()
 		if not profile or typeof(key) ~= "string" then
 			return
 		end
-		if key == "music" then
+		if key == "music" or key == "sfx" then
 			if typeof(value) == "boolean" then
-				profile.settings.music = value
+				profile.settings[key] = value
 				sendSummary(player)
 			end
 			return

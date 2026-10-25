@@ -4,6 +4,10 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (sound effects switch, no hub crowd)
+- **The hub's cheering crowd ambience is gone** (`hubCrowd` cue and its loop in `AudioController`).
+- **New Sound effects switch in Settings** next to Background music. It saves to the profile as `settings.sfx` (default on; old profiles pick it up through the settings defaults, no schema bump) and mutes the whole sound-effects group.
+
 ### Fixed (wind moves push NPCs)
 - **Gust, Whirlwind and Tornado now blow Battleground NPCs back.** Knockback only ever reached players (`DestructibleService.push` skipped anything without an owner, and projectiles only pushed player characters). `push` now also shoves server-owned NPCs: they go limp for 0.7s so their walking can't undo it, and get the push velocity. Live test: Whirlwind sent a Sand Raider about 63 studs and Tornado about 68.
 - Training dummies are anchored posts and still do not move. Knockback from Earth Punch and Earth Pillar (zones and lines) still only reaches players.

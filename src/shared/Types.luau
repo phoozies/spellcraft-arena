@@ -184,6 +184,7 @@ export type Profile = {
 	settings: {
 		drawKey: string, -- Enum.KeyCode name that starts drawing a spell
 		music: boolean, -- background music on or off
+		sfx: boolean, -- sound effects on or off
 	},
 	rewards: {
 		likeFav: boolean, -- the one-time Like & Favourite coin gift was claimed

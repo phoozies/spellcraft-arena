@@ -2,8 +2,8 @@
 -- All the game's sound, from the cue table (shared/Audio/Cues). Other
 -- controllers ask for a cue by name (or a spell's cast/impact cue) and a
 -- place in the world; this one makes the Sound, applies distance falloff,
--- throttles spam, runs the hub's ambience loop, and plays the background music
--- (a looping playlist per mood, muted by the Music setting).
+-- throttles spam, and plays the background music (a looping playlist per mood,
+-- muted by the Music setting). Sound effects are muted by the Sound effects setting.
 --
 -- Local only: every client plays its own copy of what the server announced.
 
@@ -33,8 +33,6 @@ local GAPS: { [string]: number } = { rockBreak = 0.35, hit = 0.12, turretShot = 
 
 local folder: Folder
 local sfxGroup: SoundGroup
-local ambientGroup: SoundGroup
-local ambience: Sound? = nil
 local musicGroup: SoundGroup
 local musicSound: Sound? = nil
 local musicMood: string? = nil
@@ -171,33 +169,6 @@ function AudioController.playSpell(spellId: string, which: "cast" | "impact", at
 	end
 end
 
-local function startAmbience()
-	local cue = Cues.hubCrowd
-	if not cue or cue.id == "" then
-		return
-	end
-	local sound = Instance.new("Sound")
-	sound.Name = "HubCrowd"
-	sound.SoundId = cue.id
-	sound.Looped = true
-	sound.Volume = 0
-	sound.SoundGroup = ambientGroup
-	sound.Parent = SoundService
-	sound:Play()
-	ambience = sound
-end
-
--- The hub murmurs with a distant arena crowd; matches are loud enough without it.
-local function refreshAmbience()
-	local sound = ambience
-	local cue = Cues.hubCrowd
-	if not sound or not cue then
-		return
-	end
-	local target = if ClientState.match.phase == "Idle" then cue.volume else 0
-	TweenService:Create(sound, TweenInfo.new(1.5), { Volume = target }):Play()
-end
-
 -- ---------------------------------------------------------------------
 -- Background music
 -- ---------------------------------------------------------------------
@@ -206,6 +177,16 @@ end
 function AudioController.musicEnabled(): boolean
 	local profile = ClientState.profile
 	return not (profile and profile.settings and profile.settings.music == false)
+end
+
+-- Sound effects are on unless the player turned them off (profile.settings.sfx).
+function AudioController.sfxEnabled(): boolean
+	local profile = ClientState.profile
+	return not (profile and profile.settings and profile.settings.sfx == false)
+end
+
+local function refreshSfx()
+	sfxGroup.Volume = if AudioController.sfxEnabled() then 1 else 0
 end
 
 local function fighting(): boolean
@@ -282,14 +263,12 @@ function AudioController.init()
 	folder.Name = "ClientAudio"
 	folder.Parent = workspace
 	sfxGroup = makeGroup("Spellcraft_Sfx", 1)
-	ambientGroup = makeGroup("Spellcraft_Ambient", 1)
 	musicGroup = makeGroup("Spellcraft_Music", Config.MUSIC.VOLUME)
 end
 
 function AudioController.start()
-	startAmbience()
-	refreshAmbience()
-	ClientState.MatchChanged:Connect(refreshAmbience)
+	ClientState.ProfileChanged:Connect(refreshSfx)
+	refreshSfx()
 	-- Music follows the setting and the player's whereabouts.
 	ClientState.MatchChanged:Connect(refreshMusic)
 	ClientState.ProfileChanged:Connect(refreshMusic)

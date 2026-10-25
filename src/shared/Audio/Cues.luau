@@ -8,7 +8,7 @@
 --   pitch    playback speed (1 = as recorded; lower sounds bigger/sadder)
 --   length   play only the first N seconds (long recordings, short moments)
 --   world    true = heard from a place in the world, false = plays in your ears
---   loop     true = ambience that AudioController starts/stops itself
+--   loop     true = a looping cue that AudioController.loop plays (not AudioController.play)
 --   with     other cues played together with this one (a splash plus a thud);
 --            those cues may not layer further
 --
@@ -156,9 +156,6 @@ local Cues: { [string]: Cue } = {
 	crateLegendary = sound(CHIME, 1, false, 0.75, 3.5),
 	uiStep = sound(TWINKLE, 0.5, false, 1.4, 0.8),
 	uiEquip = sound(HIT, 0.45, false, 1.6, 0.3),
-
-	-- Hub ambience (a distant arena crowd, kept quiet)
-	hubCrowd = { id = "rbxassetid://9119562311", volume = 0.22, world = false, loop = true },
 }
 
 return table.freeze(Cues)
