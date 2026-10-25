@@ -245,30 +245,44 @@ function MapKit.barrierRing(parent: Instance, radius: number, height: number, y:
 end
 
 -- A tree standing on `position`: a block-model oak, birch or pine, or a plain
--- trunk-and-ball when the model isn't available.
-function MapKit.tree(parent: Instance, position: Vector3, scale: number, rng: Random, kind: string?)
+-- trunk-and-ball when the model isn't available. Pass `makeProp` (and a health)
+-- to make it breakable: the whole tree is one prop and falls apart when hit.
+function MapKit.tree(
+	parent: Instance,
+	position: Vector3,
+	scale: number,
+	rng: Random,
+	kind: string?,
+	makeProp: ((Instance, number) -> ())?,
+	health: number?
+)
 	local kinds = { "TreeOak", "TreeBirch", "TreePine" }
 	local tree = ModelKit.clone(kind or kinds[rng:NextInteger(1, #kinds)], "solid", scale)
 	if tree then
 		tree:PivotTo(CFrame.new(position) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
-		tree.Parent = parent
-		return
+	else
+		tree = Instance.new("Model")
+		tree.Name = "Tree"
+		MapKit.part(tree, {
+			name = "Trunk",
+			size = Vector3.new(2 * scale, 10 * scale, 2 * scale),
+			cframe = CFrame.new(position + Vector3.new(0, 5 * scale, 0)),
+			color = Color3.fromRGB(110, 80, 56),
+			material = Enum.Material.Wood,
+		})
+		MapKit.part(tree, {
+			name = "Leaves",
+			shape = Enum.PartType.Ball,
+			size = Vector3.new(11, 9, 11) * scale,
+			cframe = CFrame.new(position + Vector3.new(0, 12 * scale, 0)),
+			color = Color3.fromRGB(72, 150, 72),
+			material = Enum.Material.Grass,
+		})
 	end
-	MapKit.part(parent, {
-		name = "Trunk",
-		size = Vector3.new(2 * scale, 10 * scale, 2 * scale),
-		cframe = CFrame.new(position + Vector3.new(0, 5 * scale, 0)),
-		color = Color3.fromRGB(110, 80, 56),
-		material = Enum.Material.Wood,
-	})
-	MapKit.part(parent, {
-		name = "Leaves",
-		shape = Enum.PartType.Ball,
-		size = Vector3.new(11, 9, 11) * scale,
-		cframe = CFrame.new(position + Vector3.new(0, 12 * scale, 0)),
-		color = Color3.fromRGB(72, 150, 72),
-		material = Enum.Material.Grass,
-	})
+	tree.Parent = parent
+	if makeProp then
+		makeProp(tree, health or 100)
+	end
 end
 
 export type TerrainOptions = {
@@ -374,20 +388,9 @@ function MapKit.terrainDisc(
 	}, withShape)
 end
 
--- Launch velocity of a ballistic arc from `from` that lands on `to`, covering
--- the ground at roughly `speed` studs/s (flight time kept between 1 and 2.2 s).
-function MapKit.launchVelocity(from: Vector3, to: Vector3, speed: number): Vector3
-	local g = workspace.Gravity
-	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
-	local t = math.clamp(flat.Magnitude / speed, 1, 2.2)
-	local vy = ((to.Y - from.Y) + 0.5 * g * t * t) / t
-	return flat / t + Vector3.new(0, vy, 0)
-end
-
 -- Scales a finished map about its origin (the floor's center, top at y = 0, so
--- the ground stays at y = 0). Jump pads that name a "LaunchTo" landing spot are
--- re-aimed for the new distances.
-function MapKit.scale(model: Instance, factor: number, padSpeed: number)
+-- the ground stays at y = 0).
+function MapKit.scale(model: Instance, factor: number)
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BasePart") then
 			local cframe = descendant.CFrame
@@ -395,17 +398,6 @@ function MapKit.scale(model: Instance, factor: number, padSpeed: number)
 			descendant.CFrame = cframe.Rotation + cframe.Position * factor
 		elseif descendant:IsA("Attachment") then
 			descendant.Position *= factor
-		end
-	end
-	for _, descendant in model:GetDescendants() do
-		local landing = descendant:GetAttribute("LaunchTo")
-		if descendant:IsA("BasePart") and typeof(landing) == "Vector3" then
-			local to = landing * factor
-			descendant:SetAttribute("LaunchTo", to)
-			descendant:SetAttribute(
-				"LaunchVelocity",
-				MapKit.launchVelocity(descendant.Position, to, padSpeed)
-			)
 		end
 	end
 end

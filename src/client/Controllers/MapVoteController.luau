@@ -106,7 +106,7 @@ function MapVoteController.init()
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIGridLayout")
-	-- Four maps across, two down: eight maps.
+	-- Four maps across, two down: up to eight maps.
 	layout.CellSize = UDim2.new(0.25, -6, 0.5, -6)
 	layout.CellPadding = UDim2.fromOffset(8, 8)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder

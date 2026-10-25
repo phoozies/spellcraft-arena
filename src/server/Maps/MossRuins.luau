@@ -1,8 +1,8 @@
 --!strict
 -- Moss Ruins — an overgrown courtyard: broken marble arches, toppled columns,
 -- mossy blocks and trees ringing a stone dais. Lots of cover (some of it
--- breakable). A wall at the rim keeps everyone on the grass. The grass floor
--- is breakable terrain.
+-- breakable). A wall at the rim keeps everyone on the grass. The grass floor,
+-- the arches and the trees are all breakable.
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -50,21 +50,23 @@ return function(makeProp: Registrar): Model
 			* CFrame.Angles(0, -a + math.pi / 2, 0)
 		for _, side in { -1, 1 } do
 			local height = if side < 0 then 16 else 10
-			MapKit.part(model, {
+			local post = MapKit.part(model, {
 				name = "ArchPost",
 				size = Vector3.new(3.5, height, 3.5),
 				cframe = frame * CFrame.new(side * 7, height / 2, 0),
 				color = MARBLE,
 				material = Enum.Material.Marble,
 			})
+			makeProp(post, 180)
 		end
-		MapKit.part(model, {
+		local lintel = MapKit.part(model, {
 			name = "ArchLintel",
 			size = Vector3.new(10, 3, 3.5),
 			cframe = frame * CFrame.new(-3, 17.5, 0),
 			color = MARBLE,
 			material = Enum.Material.Marble,
 		})
+		makeProp(lintel, 120)
 	end
 
 	-- Toppled columns (breakable cover).
@@ -103,7 +105,7 @@ return function(makeProp: Registrar): Model
 	for i = 1, 12 do
 		local a = (i / 12) * math.pi * 2 + rng:NextNumber(-0.1, 0.1)
 		local at = Vector3.new(math.cos(a) * (RADIUS - 5), 0, math.sin(a) * (RADIUS - 5))
-		MapKit.tree(model, at, 1.2, rng)
+		MapKit.tree(model, at, 1.2, rng, nil, makeProp, 100)
 	end
 
 	MapKit.barrierRing(model, RADIUS, 50)

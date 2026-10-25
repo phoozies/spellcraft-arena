@@ -1,5 +1,5 @@
 --!strict
--- The duel maps and the floating hub: all 8 maps follow the arena contract
+-- The duel maps and the floating hub: all 7 maps follow the arena contract
 -- (Bounds, 4 spawns per team, SmallModeWalls), arenas are summoned below the
 -- hub island (not on it, not overlapping, above the kill height), the hub keeps
 -- every tag its services look for, and the dash is a short leap.
@@ -11,7 +11,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local EXPECTED_MAPS = {
 	"CrayonCanyon",
-	"SkyIslands",
 	"SparringArena",
 	"FrostHollow",
 	"EmberForge",
@@ -29,7 +28,7 @@ return function(t: any)
 			then require(services.ArenaService :: ModuleScript) :: any
 			else nil
 
-		t.it("there are eight maps, each with a display name", function()
+		t.it("there are seven maps, each with a display name", function()
 			if not arenaService then
 				return -- server scripts aren't present in this context
 			end

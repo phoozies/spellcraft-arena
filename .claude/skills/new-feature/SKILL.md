@@ -5,7 +5,7 @@ description: Step-by-step process for adding a gameplay feature to Spellcraft Ar
 
 # Adding a feature
 
-Follow in order. Read `repo-map` first if you do not know where things live.
+Follow in order. Read `repo-map` first if you do not know where things live. **Start by creating a `feature/<name>` branch from `main`** (the git workflow in `CLAUDE.md`); `ship-change` covers committing, merging, deleting the branch, and syncing to Roblox at the end.
 
 1. **Find the owner.** Check `docs/semantic/features.yaml` for an existing feature to extend. Decide which service owns each piece of state (rule 2 in `CLAUDE.md`). Never write `profile.coins`, `stats.wins`, `elements`, `spells` or `loadout` outside their owner.
 2. **Tunables first.** Add numbers to `src/shared/Config.luau` (or the right data module: `SpellDefinitions`, `Crates`, `Rarity`, `Elements`, `Boosts`). Nothing hard-coded in a system.

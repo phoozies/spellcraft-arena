@@ -4,9 +4,17 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (git workflow)
+- **Documented project workflow** (`CLAUDE.md`, `docs/CONTRIBUTING.md`, `ship-change` and `new-feature` skills): every change starts on a `feature/<name>` branch; when tests pass or the user says so, commit, push, merge into `main`, delete the branch, and sync to Roblox. Never merge on red tests.
+
+### Changed (seven maps, easier to destroy)
+- **Sky Islands is removed** (7 duel maps now); its jump-pad re-aiming code went with it.
+- **Crayon Canyon's glass lane gates are gone**: the canyon is open in 1v1 and 2v2 too.
+- **Everything on the maps breaks more easily.** Every map prop (floor and mesa cells, rocks, pillars, arches, columns, cover walls) now has half its design health (`Config.TERRAIN.PROP_HEALTH` 0.5, applied in `ArenaService.makeProp`), and terrain splash is 75% (was 50%) so craters are wider. **Moss Ruins' trees and arches are now breakable** (`MapKit.tree` takes `makeProp`). Cliffs, end walls and the hub stay solid.
+
 ### Added (breakable terrain, bigger arenas)
-- **Terrain breaks.** The floors of Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple and Sky Bridge (platforms, middle island), Crayon Canyon's floor, mesas and ramps, Sky Islands' island tops, and six new rock outcrops in the Sparring Arena are made of cells (`MapKit.terrain`) that take spell damage like any prop. The hit cell takes the full damage and the cells touching it take half (`Config.TERRAIN.SPLASH`), so a heavy spell breaks through faster and opens a wider hole; blast the floor out and players fall (ring-outs). Cliffs, end walls, and the Sparring Arena's imported floor mesh stay solid. Every round starts on a fresh arena, so the terrain respawns. Terrain gives no quest credit, and a bolt skimming over the floor does not break it (`GroundTile`).
-- **Arenas are twice as big** (`Config.ARENA_SCALE`, applied by `MapKit.scale` in `ArenaService.init`, all 8 maps); Sky Islands jump pads are re-aimed for the longer hops. The summon ring below the hub is wider to fit them (`Config.ARENA.RADIUS` 380 -> 560, `RING_STEP` 420 -> 600).
+- **Terrain breaks.** The floors of Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple and Sky Bridge (platforms, middle island), Crayon Canyon's floor, mesas and ramps, and six new rock outcrops in the Sparring Arena are made of cells (`MapKit.terrain`) that take spell damage like any prop. The hit cell takes the full damage and the cells touching it take half (`Config.TERRAIN.SPLASH`), so a heavy spell breaks through faster and opens a wider hole; blast the floor out and players fall (ring-outs). Cliffs, end walls, and the Sparring Arena's imported floor mesh stay solid. Every round starts on a fresh arena, so the terrain respawns. Terrain gives no quest credit, and a bolt skimming over the floor does not break it (`GroundTile`).
+- **Arenas are twice as big** (`Config.ARENA_SCALE`, applied by `MapKit.scale` in `ArenaService.init`, all maps). The summon ring below the hub is wider to fit them (`Config.ARENA.RADIUS` 380 -> 560, `RING_STEP` 420 -> 600).
 - `tests/Terrain.spec.luau`.
 
 ### Changed (dash cooldown)

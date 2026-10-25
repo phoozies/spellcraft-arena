@@ -16,4 +16,4 @@ Do these before telling the user a change is done.
 4. **`CHANGELOG.md`**: add to `## [Unreleased]` in Keep a Changelog style (`### Added`, `### Changed`, `### Fixed`), player-visible behaviour first, then the files or config keys that matter.
 5. **Rules check** (`CLAUDE.md`): the server decides; one owner per state; data not code for spells; models have fallbacks; tunables in `Config`; balance budgets and unique glyphs and aliases still pass.
 6. **Review** remote, DataStore or performance changes with the `roblox-dev:roblox-reviewer` agent.
-7. **Git**: only commit or push when asked. Branch from `main`, keep PRs focused. Do not commit `*.rbxl` or `sourcemap.json`.
+7. **Git** (the project workflow in `CLAUDE.md`, authorised by the user): work on a `feature/<name>` branch cut from `main`. When tests are green, or the user says so: commit, push, merge into `main`, delete the branch (local and remote), pull `main`, and sync to Roblox (`test-in-studio`). Do not merge on red tests; if the user asked only for a PR, stop after opening it. Keep PRs focused. Never force-push `main`. Do not commit `*.rbxl` or `sourcemap.json`.

@@ -138,17 +138,8 @@ return function(makeProp: Registrar): Model
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 78)
 
-	local small = MapKit.folder(model, "SmallModeWalls")
-	for _, z in { -55, 55 } do
-		MapKit.part(small, {
-			name = "LaneGate",
-			size = Vector3.new(106, 16, 2),
-			cframe = CFrame.new(0, 8, z),
-			color = Color3.fromRGB(129, 212, 250),
-			material = Enum.Material.Glass,
-			transparency = 0.6,
-		})
-	end
+	-- No dividing gates: the whole canyon is open in every mode.
+	MapKit.folder(model, "SmallModeWalls")
 
 	MapKit.bounds(model, Vector3.new(106, 80, 180), Vector3.new(0, 30, 0))
 	return model

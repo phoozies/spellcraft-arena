@@ -12,7 +12,7 @@ Most models are **block models**: edit the spec in `tools/blender/block_models.p
 
 ## Workflow
 
-- **Branch from `main`** and keep PRs focused, one system at a time.
+- **Branch from `main`** and keep PRs focused, one system at a time. Every new feature or change gets its own `feature/<name>` branch. When it is tested (or the maintainer says so): commit, push, merge into `main`, delete the branch locally and on the remote, then sync Studio to the new `main`. Don't merge with failing tests.
 - **Format and lint before pushing.** Run `stylua src tests` and `selene src tests`. CI runs both and also does a `rojo build`.
 - **Run the tests** in Studio. During a playtest, run this from the Server command bar, where module caches are fresh. In Edit mode Studio can serve stale cached modules after a sync.
   ```lua
