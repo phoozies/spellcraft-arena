@@ -1,4 +1,4 @@
-# Game Design — Wordcraft Arena
+# Game Design — Spellcraft Arena
 
 *Working title.* An all-ages, cross-platform PvP game inspired by Scribblenauts: **draw a shape, get the spell, out-think your opponent.**
 

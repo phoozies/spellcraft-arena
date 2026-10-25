@@ -21,7 +21,7 @@ The imported models live in the place file, not the project. To add or change on
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
 - **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;unlock me all`, `;coins me 5000`, `;crate me Epic`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
   ```lua
-  local debug = game.ServerStorage.WordcraftDebug
+  local debug = game.ServerStorage.SpellcraftDebug
   debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
   debug:Invoke("coins", 500)
   debug:Invoke("crate", "Element")     -- returns the CrateResult (or the refusal reason)

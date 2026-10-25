@@ -87,7 +87,7 @@ function DebugService.start()
 	end)
 
 	-- Handy from the Studio command bar / MCP execute_luau:
-	--   _G.WordcraftDebug("solo", "1v1")
+	--   _G.SpellcraftDebug("solo", "1v1")
 	-- selene: allow(global_usage)
 	local globals: any = _G
 	local function runAll(command: string, arg: any)
@@ -97,13 +97,13 @@ function DebugService.start()
 		end
 		return results
 	end
-	globals.WordcraftDebug = runAll
+	globals.SpellcraftDebug = runAll
 
 	-- The command bar and the MCP don't share _G or module caches with the
 	-- running game, but they do share instances: invoke this instead, e.g.
-	--   game.ServerStorage.WordcraftDebug:Invoke("crate", "Common")
+	--   game.ServerStorage.SpellcraftDebug:Invoke("crate", "Common")
 	local bindable = Instance.new("BindableFunction")
-	bindable.Name = "WordcraftDebug"
+	bindable.Name = "SpellcraftDebug"
 	bindable.OnInvoke = runAll
 	bindable.Parent = game:GetService("ServerStorage")
 end

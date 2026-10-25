@@ -1,4 +1,4 @@
-# Wordcraft Arena: semantic layer
+# Spellcraft Arena: semantic layer
 #
 # A machine-readable map of every gameplay feature: what it does, which
 # files own it, how data flows across the client/server boundary, the rules
@@ -18,7 +18,7 @@
 # docs/CONTRIBUTING.md says so).
 
 version: "3 # bump when the shape of this file changes"
-game: Wordcraft Arena
+game: Spellcraft Arena
 genre: all-ages PvP; pick an element, draw a spell's shape to get that spell, then cast it
 platforms: [PC, mobile, console, VR]
 language: Luau (--!strict), Rojo project, server-authoritative
@@ -42,14 +42,14 @@ glossary:
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
-  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, PartyService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
+  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
   client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, PresentationController]
   rules:
     - init() wires state and looks up remotes; no yielding cross-service calls
     - start() connects events and starts loops
     - cycles are broken by injection (DestructibleService.setRelationResolver, CastService.setWorldHooks)
-    - command bar / Studio MCP code does NOT share module caches or _G with the running game; use instances (ServerStorage.WordcraftDebug BindableFunction) to reach live state
+    - command bar / Studio MCP code does NOT share module caches or _G with the running game; use instances (ServerStorage.SpellcraftDebug BindableFunction) to reach live state
 
 features:
 
@@ -229,6 +229,17 @@ features:
       - the player who knocks one out gets its reward through EconomyService, capped at COIN_CAP coins per COIN_WINDOW seconds per player
     tests: tests/Npcs.spec.luau
 
+  - id: map_vote
+    summary: Before a duel (1v1) starts, the two players vote on which map to fight in; the most votes wins, ties and no votes are random.
+    server: "src/server/Services/MapVoteService.luau (run, isVoting; MapVote and MapVoteState remotes); MatchService.startMatch runs the vote, then starts again with options.map"
+    config: "Config.MAP_VOTE: MODES { 1v1 }, SECONDS 12"
+    rules:
+      - the vote closes when the time is up or everyone has voted; votes can be changed until then
+      - MapVote is type-checked (a real map name), only accepted from a player in the open vote, and rate limited
+      - while voting, players count as in a match (MatchService.isInMatch) so they can't queue, enter the Battleground, or step on another box; if someone leaves during the vote the match is cancelled
+      - solo/debug starts and forced maps (options.map) skip the vote
+    client: "src/client/Controllers/MapVoteController.luau (one card per map with its votes and a countdown)"
+
   - id: party
     summary: Parties of up to 4 players. Party members can't hurt each other in the Battleground, buffs and heals reach them, and they drop in beside each other.
     server: "src/server/Services/PartyService.luau (invite, accept, decline, leave, kick; sameParty, membersOf; PartyAction and PartyState remotes)"
@@ -342,7 +353,7 @@ features:
 
   - id: admin_and_debug
     admin: src/server/Services/AdminService.luau (";" commands; coins, wins, crate, give, unlock, startmatch, ...) docs/ADMIN.md
-    debug: src/server/Services/DebugService.luau (Studio only; ServerStorage.WordcraftDebug:Invoke(command, arg) with coins, wins, crate, state, solo, unlockall, knockback)
+    debug: src/server/Services/DebugService.luau (Studio only; ServerStorage.SpellcraftDebug:Invoke(command, arg) with coins, wins, crate, state, solo, unlockall, knockback)
 
   - id: classes_planned
     summary: NOT BUILT. A second layer on top of elements (element + class); only the notes and open questions exist.
@@ -351,4 +362,4 @@ features:
 testing:
   run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
   specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Models.spec.luau, tests/WordMatcher.spec.luau]
-  live_checks: ServerStorage.WordcraftDebug:Invoke("state") / ("crate", "Common") / ("wins", 3)
+  live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Common") / ("wins", 3)

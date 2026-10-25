@@ -1,5 +1,5 @@
 {
-  "name": "wordcraft-arena",
+  "name": "spellcraft-arena",
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {

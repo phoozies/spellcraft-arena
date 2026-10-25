@@ -125,10 +125,11 @@ return function(center: Vector3): Model
 		})
 	end
 
+	-- Sides 1 and 2 are the west and east edges, 3 and 4 the north and south.
 	-- Scenery mountains far beyond the edge (nothing to climb or hit), and
 	-- invisible walls at the edge of the land so nobody can walk off the map.
 	for side = 1, 4 do
-		local along = Vector3.new(if side <= 2 then 1 else 0, 0, if side <= 2 then 0 else 1)
+		local along = Vector3.new(if side <= 2 then 0 else 1, 0, if side <= 2 then 1 else 0)
 		local out = Vector3.new(if side == 1 then -1 elseif side == 2 then 1 else 0, 0, if side == 3 then -1 elseif side == 4 then 1 else 0)
 		for i = 1, 14 do
 			local t = (i - 7.5) / 7 * (half + 20)
@@ -137,7 +138,7 @@ return function(center: Vector3): Model
 			local position = center + along * t + out * (half + 75) + Vector3.new(0, height / 2 - 4, 0)
 			MapKit.part(model, {
 				name = "Mountain",
-				size = if side <= 2 then Vector3.new(width, height, 40) else Vector3.new(40, height, width),
+				size = if side <= 2 then Vector3.new(40, height, width) else Vector3.new(width, height, 40),
 				cframe = CFrame.new(position),
 				color = if i % 3 == 0 then Color3.fromRGB(122, 116, 108) else Color3.fromRGB(150, 140, 126),
 				material = Enum.Material.Slate,
@@ -146,7 +147,7 @@ return function(center: Vector3): Model
 		end
 		local wall = MapKit.part(model, {
 			name = "EdgeWall",
-			size = if side <= 2 then Vector3.new(half * 2 + 100, 200, 8) else Vector3.new(8, 200, half * 2 + 100),
+			size = if side <= 2 then Vector3.new(8, 200, half * 2 + 100) else Vector3.new(half * 2 + 100, 200, 8),
 			cframe = CFrame.new(center + out * (half + 4) + Vector3.new(0, 100, 0)),
 			transparency = 1,
 		})

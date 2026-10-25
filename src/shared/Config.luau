@@ -129,6 +129,12 @@ local Config = {
 		},
 	},
 
+	-- Map vote before a match (MapVoteService): which modes vote, and how long.
+	MAP_VOTE = {
+		MODES = { ["1v1"] = true },
+		SECONDS = 12,
+	},
+
 	-- Parties (PartyService): players grouped in the Battleground.
 	PARTY = {
 		MAX_SIZE = 4,

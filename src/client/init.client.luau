@@ -1,5 +1,5 @@
 --!strict
--- Wordcraft Arena client entry point. Same two-phase bootstrap as the
+-- Spellcraft Arena client entry point. Same two-phase bootstrap as the
 -- server: init() every controller, then start() every controller.
 
 local ORDER = {
@@ -8,6 +8,7 @@ local ORDER = {
 	"AudioController",
 	"HudController",
 	"PartyController",
+	"MapVoteController",
 	"MenuController",
 	"CrateController",
 	"DraftController",

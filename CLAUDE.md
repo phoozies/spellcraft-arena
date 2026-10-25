@@ -1,4 +1,4 @@
-# Wordcraft Arena: guide for AI agents
+# Spellcraft Arena: guide for AI agents
 
 All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Rojo project in `--!strict` Luau, fully server-authoritative.
 
@@ -39,7 +39,7 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 
 - No Rojo CLI here: run `node tools/studio-sync.js` (background), then in **Edit** mode enable `HttpService.HttpEnabled`, run the body of `tools/studio-sync.luau`, and disable HTTP again.
 - Tests: during Play, from the **Server** context: `require(game.ServerScriptService.Tests.Runner)()`.
-- Live state: the command bar/MCP has its **own module cache and `_G`**, so requiring a service gives a fresh copy. Use `game.ServerStorage.WordcraftDebug:Invoke("state" | "coins", n | "wins", n | "crate", "unlockall" | "element", "Water")` instead (Studio only).
+- Live state: the command bar/MCP has its **own module cache and `_G`**, so requiring a service gives a fresh copy. Use `game.ServerStorage.SpellcraftDebug:Invoke("state" | "coins", n | "wins", n | "crate", "unlockall" | "element", "Water")` instead (Studio only).
 - Studio playtests may save to the real DataStore when API access is on: debug commands change the tester's saved profile.
 
 ## Blender models

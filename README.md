@@ -1,4 +1,4 @@
-# Wordcraft Arena *(working title)*
+# Spellcraft Arena *(working title)*
 
 A Scribblenauts-inspired PvP game for Roblox: **draw a shape, get the spell, outsmart your opponents.** It's built for all ages and plays on PC, mobile, console, and VR.
 

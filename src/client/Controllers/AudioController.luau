@@ -147,8 +147,8 @@ function AudioController.init()
 	folder = Instance.new("Folder")
 	folder.Name = "ClientAudio"
 	folder.Parent = workspace
-	sfxGroup = makeGroup("Wordcraft_Sfx", 1)
-	ambientGroup = makeGroup("Wordcraft_Ambient", 1)
+	sfxGroup = makeGroup("Spellcraft_Sfx", 1)
+	ambientGroup = makeGroup("Spellcraft_Ambient", 1)
 end
 
 function AudioController.start()

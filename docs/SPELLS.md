@@ -1,6 +1,6 @@
 # Spells
 
-Wordcraft Arena has **20 spells in 4 elements**: Fire, Water, Earth, and Air, five each. You equip **one element at a time** and can draw its five spells. Your first element is a free pick; the other three are unlocked from **Element Crates** (see [ECONOMY.md](ECONOMY.md)). In a match your equipped element is locked in and its five spells are your spellbook.
+Spellcraft Arena has **20 spells in 4 elements**: Fire, Water, Earth, and Air, five each. You equip **one element at a time** and can draw its five spells. Your first element is a free pick; the other three are unlocked from **Element Crates** (see [ECONOMY.md](ECONOMY.md)). In a match your equipped element is locked in and its five spells are your spellbook.
 
 > **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau) and [`Elements.luau`](../src/shared/Spells/Elements.luau).
 > The tables below are generated from them (see "Regenerating"). Don't hand-edit numbers here.

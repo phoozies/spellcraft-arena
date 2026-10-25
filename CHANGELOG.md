@@ -9,6 +9,13 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 - **Bigger Sparring Arena** (the 1v1/2v2 map): the floor is 4x larger than the original model (about 184 studs), with spawns and the invisible wall ring scaled to match.
 - **One open Battleground.** The mountain ring is now distant scenery you can't collide with; thicker invisible walls at the edge keep everyone on the map, and a once-a-second safety net puts anyone who still ends up below the world or outside the walls back at a random spot.
 
+### Added (duel map vote, name change)
+- **Vote for the map in duels.** After a 1v1 is found, both players see a vote screen with every map and a countdown (`Config.MAP_VOTE`); the most votes wins, ties and no votes are random. New `MapVoteService`, `MapVoteController`, and remotes `MapVote` / `MapVoteState`.
+- **Renamed to Spellcraft Arena** everywhere (docs, project name, debug bindable `ServerStorage.SpellcraftDebug`, GUI names).
+
+### Fixed (Battleground walls)
+- **The walls that split the Battleground are gone.** Each edge wall and mountain row was laid along the wrong axis, so they cut across the middle of the map and left the real edges open. They now run along the four edges: invisible walls at the border keep players on the map, and the mountains are distant scenery.
+
 ### Added (NPC aggro, parties)
 - **NPCs stay on whoever hit them.** Hitting an NPC locks it onto you at any distance until you are knocked out or leave the Battleground, so you can't snipe from out of range. NPCs that only noticed you can still be outrun. A **red "!"** shows over any NPC that is hunting someone.
 - **Parties** (`PartyService`, `PartyController`): a Party button under the wallet opens a panel to invite players, accept or decline invites, kick (leader), and leave. Up to 4 per party (`Config.PARTY`). In the Battleground party mates can't hurt each other, their heals and buffs reach each other, their health bars are blue, and you drop in beside a party mate who is already inside. New remotes `PartyAction` and `PartyState`.

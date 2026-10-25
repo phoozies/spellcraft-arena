@@ -28,6 +28,7 @@ local ElementService = require(script.Parent.ElementService)
 local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
+local MapVoteService = require(script.Parent.MapVoteService)
 local PartyService = require(script.Parent.PartyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -64,6 +65,8 @@ local queues: { [string]: { Player } } =
 	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
+-- Players waiting on a map vote before their match is created.
+local votingPlayers: { [Player]: boolean } = {}
 local matchCounter = 0
 
 local stateRemote: RemoteEvent
@@ -547,10 +550,44 @@ end
 function MatchService.startMatch(
 	mode: Types.MatchMode,
 	players: { Player },
-	options: { solo: boolean?, teams: { [Player]: string }? }?
+	options: { solo: boolean?, teams: { [Player]: string }?, map: string? }?
 )
+	-- Duels (Config.MAP_VOTE.MODES) vote on the map first; the match then
+	-- starts again with the winner. Solo tests and forced maps skip the vote.
+	if (Config.MAP_VOTE.MODES :: any)[mode] and not (options and (options.solo or options.map)) then
+		for _, player in players do
+			MatchService.leaveQueue(player)
+			votingPlayers[player] = true
+		end
+		task.spawn(function()
+			local map = MapVoteService.run(players, mode)
+			local here = true
+			for _, player in players do
+				votingPlayers[player] = nil
+				if player.Parent == nil or playerMatch[player] or player:GetAttribute("InBattleground") then
+					here = false
+				end
+			end
+			if not here then
+				for _, player in players do
+					if player.Parent then
+						toastRemote:FireClient(player, "Your opponent left, so the match was cancelled.", "fizzle")
+					end
+				end
+				return
+			end
+			local forced: { teams: { [Player]: string }?, map: string? } = { teams = options and options.teams, map = map }
+			MatchService.startMatch(mode, players, forced)
+		end)
+		return
+	end
+
 	matchCounter += 1
-	local arena = ArenaService.create(ArenaService.pickMap(mode), mode)
+	local requested = options and options.map
+	local mapName = if requested and table.find(ArenaService.MAP_NAMES, requested)
+		then requested :: string
+		else ArenaService.pickMap(mode)
+	local arena = ArenaService.create(mapName, mode)
 	local match: Match = {
 		id = matchCounter,
 		mode = mode,
@@ -656,7 +693,7 @@ function MatchService.leaveQueue(player: Player)
 end
 
 function MatchService.joinQueue(player: Player, mode: string): boolean
-	if not queues[mode] or playerMatch[player] then
+	if not queues[mode] or playerMatch[player] or votingPlayers[player] then
 		return false
 	end
 	if player:GetAttribute("InBattleground") then
@@ -673,8 +710,10 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 	return true
 end
 
+-- True from the map vote until the match ends, so nothing else (a queue, a
+-- team box, the Battleground) can grab a player the match is waiting on.
 function MatchService.isInMatch(player: Player): boolean
-	return playerMatch[player] ~= nil
+	return playerMatch[player] ~= nil or votingPlayers[player] == true
 end
 
 -- Takes a player out of their match (leaving the game, or the admin ;hub

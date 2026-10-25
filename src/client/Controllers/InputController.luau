@@ -163,21 +163,21 @@ function InputController.start()
 		end
 	end)
 
-	ContextActionService:BindAction("WordcraftCast", function(_, state)
+	ContextActionService:BindAction("SpellcraftCast", function(_, state)
 		if state == Enum.UserInputState.Begin then
 			cast(nil)
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.ButtonR2)
 
-	ContextActionService:BindAction("WordcraftSlot", function(_, state, input)
+	ContextActionService:BindAction("SpellcraftSlot", function(_, state, input)
 		if state == Enum.UserInputState.Begin then
 			cycleSlot(if input.KeyCode == Enum.KeyCode.DPadLeft then -1 else 1)
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.DPadLeft, Enum.KeyCode.DPadRight)
 
-	ContextActionService:BindAction("WordcraftRotate", function(_, state, input)
+	ContextActionService:BindAction("SpellcraftRotate", function(_, state, input)
 		if state == Enum.UserInputState.Begin and PlacementController.isActive() then
 			PlacementController.rotate(
 				if input.KeyCode == Enum.KeyCode.ButtonL1 then -math.pi / 4 else math.pi / 4

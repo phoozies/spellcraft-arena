@@ -422,7 +422,7 @@ return function(): Model
 		material = Enum.Material.Metal,
 		canCollide = false,
 	})
-	label(quill, "WORDCRAFT ARENA", 15)
+	label(quill, "SPELLCRAFT ARENA", 15)
 
 	local spawn = MapKit.part(model, {
 		name = "HubSpawn",
@@ -1041,6 +1041,24 @@ return function(): Model
 				material = Enum.Material.Grass,
 			})
 		end
+	end
+
+	-- Invisible walls along the edge of the grass so nobody can walk off the
+	-- hub. Spells pass through them (CanQuery off).
+	local walls = MapKit.folder(model, "Barriers")
+	for _, edge in {
+		{ pos = Vector3.new(0, 50, -40 + 170 + 4), size = Vector3.new(356, 100, 8) },
+		{ pos = Vector3.new(0, 50, -40 - 170 - 4), size = Vector3.new(356, 100, 8) },
+		{ pos = Vector3.new(170 + 4, 50, -40), size = Vector3.new(8, 100, 356) },
+		{ pos = Vector3.new(-170 - 4, 50, -40), size = Vector3.new(8, 100, 356) },
+	} do
+		local wall = MapKit.part(walls, {
+			name = "HubBarrier",
+			size = edge.size,
+			cframe = CFrame.new(edge.pos),
+			transparency = 1,
+		})
+		wall.CanQuery = false
 	end
 
 	return model

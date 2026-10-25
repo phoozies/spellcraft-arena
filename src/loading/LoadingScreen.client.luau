@@ -24,7 +24,7 @@ local TIPS = {
 }
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "WordcraftLoading"
+gui.Name = "SpellcraftLoading"
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 100
 gui.ResetOnSpawn = false
@@ -54,7 +54,7 @@ local function label(text: string, y: number, height: number, color: Color3): Te
 end
 
 local glyph = label("★", 0.3, 90, Color3.fromRGB(255, 202, 40))
-label("WORDCRAFT ARENA", 0.45, 70, Color3.new(1, 1, 1))
+label("SPELLCRAFT ARENA", 0.45, 70, Color3.new(1, 1, 1))
 local tip = label(TIPS[math.random(1, #TIPS)], 0.62, 28, Color3.fromRGB(197, 202, 233))
 
 local barBack = Instance.new("Frame")
@@ -89,7 +89,7 @@ local nextTip = start + 3
 -- Done when the game is loaded and our HUD exists (client bootstrapped),
 -- with a short minimum so the screen doesn't just flash.
 while true do
-	local loaded = game:IsLoaded() and player.PlayerGui:FindFirstChild("WordcraftHud") ~= nil
+	local loaded = game:IsLoaded() and player.PlayerGui:FindFirstChild("SpellcraftHud") ~= nil
 	local elapsed = os.clock() - start
 	local progress = if loaded then 1 else math.min(0.9, elapsed / 6)
 	barFill.Size = UDim2.fromScale(progress, 1)

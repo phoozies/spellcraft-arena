@@ -67,7 +67,7 @@ The ranking is per server (players currently here), built from their saved `stat
 ## Admin and debug
 
 - `;coins <player> <amount>`, `;wins <player> <amount>`, `;crate <player>`, `;unlock <player> <element>` (see [ADMIN.md](ADMIN.md)).
-- Studio playtests: `game.ServerStorage.WordcraftDebug:Invoke("crate", "Element")` (also `coins`, `wins`, `state`, `unlockall`, `element`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
+- Studio playtests: `game.ServerStorage.SpellcraftDebug:Invoke("crate", "Element")` (also `coins`, `wins`, `state`, `unlockall`, `element`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
 
 ## Data
 

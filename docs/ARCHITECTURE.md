@@ -40,12 +40,13 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     HubService          builds the hub, spawning, team boxes, dummies, hub regen
     BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
+    MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
     PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
     ElementService      owns profile.elements/element: first free pick, equip, grant (from crates)
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
     CrateService        OpenCrate: validate, spend coins, roll an unowned element, grant it
     LeaderboardService  leaderstats (Wins, Coins), Most Wins board, top-3 podium avatars
-    DebugService        Studio-only test commands (ServerStorage.WordcraftDebug BindableFunction)
+    DebugService        Studio-only test commands (ServerStorage.SpellcraftDebug BindableFunction)
   Maps/                 MapKit + one builder per map (code-built, versioned)
 
 src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)

@@ -532,7 +532,7 @@ end
 
 function HudController.init()
 	gui = Instance.new("ScreenGui")
-	gui.Name = "WordcraftHud"
+	gui.Name = "SpellcraftHud"
 	gui.ResetOnSpawn = false
 	gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling

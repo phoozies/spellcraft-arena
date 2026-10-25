@@ -343,7 +343,7 @@ end
 
 local function buildCanvas()
 	gui = Instance.new("ScreenGui")
-	gui.Name = "WordcraftDraw"
+	gui.Name = "SpellcraftDraw"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.DisplayOrder = 50
@@ -424,7 +424,7 @@ end
 
 local function buildButton()
 	local buttonGui = Instance.new("ScreenGui")
-	buttonGui.Name = "WordcraftDrawButton"
+	buttonGui.Name = "SpellcraftDrawButton"
 	buttonGui.ResetOnSpawn = false
 	buttonGui.DisplayOrder = 5
 	buttonGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
@@ -477,7 +477,7 @@ function DrawController.start()
 		end
 	end)
 
-	ContextActionService:BindAction("WordcraftDrawPad", function(_, state)
+	ContextActionService:BindAction("SpellcraftDrawPad", function(_, state)
 		if state == Enum.UserInputState.Begin then
 			setActive(not active)
 		end
