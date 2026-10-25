@@ -8,7 +8,7 @@
 
 ## 3D models
 
-The imported models live in the place file, not the project. To add or change one, follow `assets/models/README.md` (import the FBX, run `tools/prepare-models.luau`, save the place). Always keep a plain-shape fallback in code, because a place built by CI won't have the models.
+Most models are **block models**: edit the spec in `tools/blender/block_models.py`, regenerate `src/shared/Models/BlockModels.luau` (`python tools/blender/block_models.py --luau .`) and the FBX/blend with Blender, and they work in every place with no import. Meshes imported by hand live in the place file, not the project: follow `assets/models/README.md` (import the FBX, run `tools/prepare-models.luau`, save the place). Always keep a plain-shape fallback in code.
 
 ## Workflow
 
@@ -19,12 +19,19 @@ The imported models live in the place file, not the project. To add or change on
   require(game.ServerScriptService.Tests.Runner)()
   ```
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
-- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;give me all`, `;startmatch 1v1`). The older command-bar helpers also still work during Play:
+- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;unlock me all`, `;coins me 5000`, `;crate me Epic`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
   ```lua
-  _G.WordcraftDebug("solo", "1v1")   -- match against nobody; rounds end on the timer
-  _G.WordcraftDebug("xp", 500)
-  _G.WordcraftDebug("unlockall")
+  local debug = game.ServerStorage.SpellcraftDebug
+  debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
+  debug:Invoke("coins", 500)
+  debug:Invoke("crate", "Element")     -- returns the CrateResult (or the refusal reason)
+  debug:Invoke("wins", 3)
+  debug:Invoke("state")             -- {coins, wins, elements, element} per player
+  debug:Invoke("unlockall")
+  debug:Invoke("likefav", false)   -- make the Like & Favourite gift claimable again
+  debug:Invoke("takecoins", 250)   -- remove coins
   ```
+  Studio playtests with API access save to the real DataStore, so these change your saved profile.
   Use **Test → Clients and Servers** (2–8 players) to check PvP, teams, and drafts.
 
 ## Code conventions
@@ -34,11 +41,12 @@ The imported models live in the place file, not the project. To add or change on
 - **Server-authoritative:** remote handlers validate type, range, ownership, and rate. Never trust a client number.
 - **Tunables** go in `Config.luau`. Spell numbers go in `SpellDefinitions.luau`. Nothing is hard-coded inside systems.
 - New remotes go in `Net/Remotes.luau` with a one-line payload description.
-- UI uses `UI/Theme` builders, scale-friendly layouts, and touch targets of at least 52 px. Make every button `Selectable` for gamepad.
+- UI uses `UI/Theme` builders (the studded-Roblox look: blue studded panels and buttons, orange/green/red accents), scale-friendly layouts, and touch targets of at least 52 px. Make every button `Selectable` for gamepad. `Theme.button` shows its text in a child label above the studs, so keep setting `button.Text`, `TextColor3`, and the like as usual.
 
 ## Checklist for a new spell / map / system
 
 - [ ] Data row or builder added (see SPELLS.md or MapKit's arena contract)
-- [ ] Tests pass and docs are updated (SPELLS.md table regenerated)
+- [ ] New spell: model (block model), particle style, cast pose, and a `SpellRegistry` entry, then `python tools/gen-spell-registry.py`
+- [ ] Tests pass and docs are updated (SPELLS.md table regenerated, `docs/semantic/features.yaml` updated)
 - [ ] Tried on PC, plus the device emulator for phone and console
 - [ ] `roblox-dev:roblox-reviewer` audit for remote, DataStore, or performance changes

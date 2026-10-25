@@ -5,12 +5,19 @@
 --   poof           (position, color)                               debris burst
 --   beam           (from, to, color)                               chain flash
 --   number         (position, amount, kind)                        floating damage/heal/shield number
---   cast           (character, spellId, target)                    arm raise + magic circle
+--   cast           (character, spellId, target)                    cast pose + magic circle (+ buff aura)
 --   shatter        (cframe, size, color, material)                 block breaks into chunks
 --   chip           (position, color)                               chips off a damaged block
 --   dust           (position, width, color)                        dust ring under a placed object
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
--- and spins parts tagged "SpinFx" (Tornado, Black Hole) locally.
+--   strike         (center, radius, delay, modelName, color)       a bolt model slams down after `delay`
+--   modelPop       (character, modelName, color)                   a model pops up over a head and fades
+--   glyph          (character, glyphId, color)                     the drawn glyph pops over a head
+--   dash           (character, direction)                          dash pose, dust puff, and whoosh
+--   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)
+--   rise           (center, radius, delay, color, kind, height, model?)  boulder/pillar rises from the ground
+--   quake          (center, radius, duration, color, model?)       Earthquake wind-up rumble and cracks
+-- and spins parts/models tagged "SpinFx" locally.
 -- The looks live in Fx/SpellVfx.
 --
 -- The server stays authoritative for hits; visuals here are a straight-line
@@ -26,8 +33,11 @@ local TweenService = game:GetService("TweenService")
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local SpellRegistry = require(ReplicatedStorage.Shared.Spells.SpellRegistry)
 local Types = require(ReplicatedStorage.Shared.Types)
+local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
+local AudioController = require(script.Parent.AudioController)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local NUMBER_COLORS: { [string]: Color3 } = {
@@ -42,12 +52,13 @@ local FxController = {}
 local DRAW_DISTANCE = 600
 local MAX_DEBRIS = 120
 
--- Spells whose bolt is drawn with an imported model (ReplicatedStorage.Models)
--- instead of a plain shape: model name, and bolt width as a multiple of the
--- spell's visual size.
-local BOLT_MODELS: { [string]: { model: string, widthPerSize: number } } = {
-	Fireball = { model = "Fireball", widthPerSize = 1.6 },
-	WaterLock = { model = "WaterBubble", widthPerSize = 1.3 },
+-- A bolt whose visual has `model` is drawn with that imported model
+-- (ReplicatedStorage.Models) instead of a plain shape. Its width is the
+-- spell's visual size times this factor (default 1).
+local BOLT_WIDTH: { [string]: number } = {
+	Fireball = 1.6,
+	WaterBubble = 1.3,
+	Gust = 1,
 }
 
 type Bolt = {
@@ -94,12 +105,12 @@ local function onProjectile(
 	local facing = CFrame.lookAt(origin, origin + direction)
 	local part: BasePart? = nil
 	local model: Model? = nil
-	local modelInfo = fxKey and BOLT_MODELS[fxKey]
-	if modelInfo then
-		model = ModelKit.clone(modelInfo.model, "effect")
+	local modelName = visual.model
+	if modelName then
+		model = ModelKit.clone(modelName, "effect")
 		if model then
 			local width = model:GetExtentsSize().X
-			model:ScaleTo((visual.size.X * modelInfo.widthPerSize) / math.max(width, 0.01))
+			model:ScaleTo((visual.size.X * (BOLT_WIDTH[modelName] or 1)) / math.max(width, 0.01))
 			model:PivotTo(facing)
 			part = model.PrimaryPart
 			model.Parent = folder
@@ -162,18 +173,110 @@ local function onProjectileEnd(id: number, position: Vector3)
 		Debris:AddItem(bolt.model or bolt.part, 0.4)
 		if near(position) then
 			SpellVfx.impact(folder, position, bolt.fxKey, bolt.color)
+			if bolt.fxKey then
+				AudioController.playSpell(bolt.fxKey, "impact", position)
+			end
 		end
 	end
 end
 
-local function onCast(character: Model, spellId: string, _target: Vector3)
+local function onCast(character: Model, spellId: string, target: Vector3)
 	if typeof(character) ~= "Instance" or not character.Parent then
 		return
 	end
 	local def = SpellDefinitions.get(spellId)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if def and root and root:IsA("BasePart") and near(root.Position) then
-		SpellVfx.castAnimation(folder, character, def.visual.color)
+		-- A channelled spell (Earthquake) holds its pose for the whole channel.
+		local channel = if def.stats.channel then def.stats.delay else nil
+		SpellVfx.castAnimation(
+			folder,
+			character,
+			def.visual.color,
+			def.glyph,
+			SpellRegistry.animationFor(spellId),
+			channel
+		)
+		AudioController.playSpell(spellId, "cast", root.Position)
+		-- Buffs (Fire Boost, Water Body, Air Boost, Air Shield) glow on the caster.
+		local styleKey = SpellRegistry.vfxFor(spellId)
+		if def.archetype == "Buff" and styleKey and def.stats.duration then
+			SpellVfx.buffAura(character, styleKey, def.stats.duration)
+		end
+	end
+end
+
+-- Elemental column (Fire Pillar, Water Nebula, Earthquake).
+local function onPillar(
+	center: Vector3,
+	radius: number,
+	color: Color3,
+	elementId: string,
+	spellId: string?
+)
+	if not near(center) then
+		return
+	end
+	-- A channelled column (Earthquake) has no column model: its model is the
+	-- cracks drawn during the wind-up.
+	local def = if spellId then SpellDefinitions.get(spellId) else nil
+	local modelName = if def and not def.stats.channel then def.visual.model else nil
+	SpellVfx.pillar(folder, center, radius, color, elementId, modelName)
+	if spellId then
+		AudioController.playSpell(spellId, "impact", center)
+	end
+end
+
+-- A boulder / stone pillar rises out of the ground (Earth Punch, Earth Pillar).
+local function onRise(
+	center: Vector3,
+	radius: number,
+	delay: number,
+	color: Color3,
+	kind: string,
+	height: number,
+	modelName: string?
+)
+	if not near(center) then
+		return
+	end
+	SpellVfx.rise(folder, center, radius, delay, color, kind, height, modelName)
+	task.delay(delay, function()
+		AudioController.play("rockBreak", center)
+	end)
+end
+
+-- Earthquake wind-up.
+local function onQuake(
+	center: Vector3,
+	radius: number,
+	duration: number,
+	color: Color3,
+	modelName: string?
+)
+	if near(center) then
+		SpellVfx.quake(folder, center, radius, duration, color, modelName)
+	end
+end
+
+-- A player dashed: the dash pose, a puff at their feet, and a whoosh.
+local function onDash(character: Model, direction: Vector3)
+	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") or not near(root.Position) then
+		return
+	end
+	CastAnimations.play(character, "Dash")
+	local feet = root.Position - Vector3.new(0, 2.8, 0)
+	SpellVfx.dust(folder, feet, 5, Color3.fromRGB(220, 220, 230))
+	SpellVfx.dust(folder, feet - direction * 3, 4, Color3.fromRGB(220, 220, 230))
+	AudioController.play("dash", root.Position)
+end
+
+-- A player just drew a glyph: show it over their head.
+local function onGlyph(character: Model, glyphId: string, color: Color3)
+	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") and near(root.Position) then
+		SpellVfx.glyphEmblem(folder, character, glyphId, color)
 	end
 end
 
@@ -266,6 +369,102 @@ local function onNumber(position: Vector3, amount: number, kind: string)
 	Debris:AddItem(anchor, 1)
 end
 
+-- Strike: after the server's telegraph delay, the bolt model drops from the
+-- sky onto the circle, flashes, and fades.
+local function onStrike(
+	center: Vector3,
+	radius: number,
+	delay: number,
+	modelName: string,
+	color: Color3
+)
+	if not near(center) then
+		return
+	end
+	task.delay(math.max(0, delay - 0.12), function()
+		local bolt = ModelKit.clone(modelName, "effect")
+		local height = radius * 4.5
+		local landing = CFrame.new(center + Vector3.new(0, height / 2, 0))
+		if bolt then
+			local _, size = bolt:GetBoundingBox()
+			bolt:ScaleTo(height / math.max(size.Y, 0.01))
+			bolt:PivotTo(landing + Vector3.new(0, height, 0))
+			bolt.Parent = folder
+			-- Slam down in a blink, then fade out.
+			local start = os.clock()
+			local connection: RBXScriptConnection
+			connection = RunService.RenderStepped:Connect(function()
+				local t = math.min((os.clock() - start) / 0.12, 1)
+				bolt:PivotTo(landing + Vector3.new(0, height * (1 - t), 0))
+				if t >= 1 then
+					connection:Disconnect()
+				end
+			end)
+			task.delay(0.15, function()
+				for _, part in bolt:GetDescendants() do
+					if part:IsA("BasePart") then
+						TweenService:Create(part, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+					end
+				end
+			end)
+			Debris:AddItem(bolt, 0.6)
+		else
+			-- Fallback: a plain neon column.
+			local column = Instance.new("Part")
+			column.Anchored = true
+			column.CanCollide = false
+			column.CanQuery = false
+			column.CanTouch = false
+			column.Material = Enum.Material.Neon
+			column.Color = color
+			column.Size = Vector3.new(1.2, height, 1.2)
+			column.CFrame = landing
+			column.Parent = folder
+			TweenService:Create(column, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+			Debris:AddItem(column, 0.5)
+		end
+		task.delay(0.12, function()
+			SpellVfx.impact(folder, center, nil, color)
+		end)
+	end)
+end
+
+-- Model pop: the model pops up over the character's head, bobs, and fades.
+local function onModelPop(character: Model, modelName: string, color: Color3)
+	local head = typeof(character) == "Instance" and character:FindFirstChild("Head")
+	if not head or not head:IsA("BasePart") or not near(head.Position) then
+		return
+	end
+	local look = ModelKit.clone(modelName, "effect")
+	if not look then
+		SpellVfx.impact(folder, head.Position + Vector3.new(0, 2, 0), nil, color)
+		return
+	end
+	local _, size = look:GetBoundingBox()
+	look:ScaleTo(2.5 / math.max(size.X, size.Y, size.Z, 0.01))
+	look.Parent = folder
+	local start = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - start
+		if not head.Parent or t > 1.2 then
+			connection:Disconnect()
+			look:Destroy()
+			return
+		end
+		-- Rise, spin, and shrink away in the last third.
+		local rise = 2.5 + math.min(t, 0.4) * 5 + t * 0.6
+		look:PivotTo(
+			CFrame.new(head.Position + Vector3.new(0, rise, 0))
+				* CFrame.Angles(0, t * math.pi * 2, 0)
+		)
+		if t > 0.8 then
+			look:ScaleTo(math.max(look:GetScale() * 0.9, 0.05))
+		end
+	end)
+	SpellVfx.impact(folder, head.Position, nil, color)
+end
+
 local function step(dt: number)
 	local now = os.clock()
 	for id, bolt in bolts do
@@ -284,9 +483,13 @@ local function step(dt: number)
 		end
 	end
 	local spin = CFrame.Angles(math.pi * dt, 0, 0)
-	for _, part in CollectionService:GetTagged("SpinFx") do
-		if part:IsA("BasePart") then
-			part.CFrame *= spin
+	local turn = CFrame.Angles(0, math.pi * 1.5 * dt, 0)
+	for _, thing in CollectionService:GetTagged("SpinFx") do
+		if thing:IsA("BasePart") then
+			thing.CFrame *= spin
+		elseif thing:IsA("Model") then
+			-- Imported swirls turn about their vertical axis.
+			thing:PivotTo(thing:GetPivot() * turn)
 		end
 	end
 end
@@ -311,6 +514,20 @@ function FxController.start()
 			onNumber(...)
 		elseif kind == "cast" then
 			onCast(...)
+		elseif kind == "strike" then
+			onStrike(...)
+		elseif kind == "modelPop" then
+			onModelPop(...)
+		elseif kind == "pillar" then
+			onPillar(...)
+		elseif kind == "rise" then
+			onRise(...)
+		elseif kind == "quake" then
+			onQuake(...)
+		elseif kind == "glyph" then
+			onGlyph(...)
+		elseif kind == "dash" then
+			onDash(...)
 		elseif kind == "shatter" then
 			local cframe: CFrame = (...)
 			if near(cframe.Position) then

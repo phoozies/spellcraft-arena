@@ -8,143 +8,21 @@
 -- with characters/parts that may be mid-destroy.
 
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
+local VfxStyles = require(ReplicatedStorage.Shared.Spells.VfxStyles)
+local CastAnimations = require(script.Parent.CastAnimations)
 
 local SpellVfx = {}
 
-local TEX = {
-	sparkle = "rbxasset://textures/particles/sparkles_main.dds",
-	fire = "rbxasset://textures/particles/fire_main.dds",
-	smoke = "rbxasset://textures/particles/smoke_main.dds",
-}
+local TEX = VfxStyles.TEX
+local STYLES = VfxStyles.STYLES
 
--- Per-spell look. Anything not listed uses `default` tinted with the
--- spell's own color.
-export type Style = {
-	texture: string,
-	rate: number,
-	size: number,
-	speed: number,
-	lifetime: number,
-	trailWidth: number,
-	lightRange: number,
-	burst: number,
-	tint: Color3?,
-	secondary: string?, -- extra emitter texture (e.g. smoke behind fire)
-}
-
-local STYLES: { [string]: Style } = {
-	default = {
-		texture = TEX.sparkle,
-		rate = 30,
-		size = 0.6,
-		speed = 2,
-		lifetime = 0.4,
-		trailWidth = 0.8,
-		lightRange = 8,
-		burst = 18,
-	},
-	Fireball = {
-		texture = TEX.fire,
-		rate = 60,
-		size = 1.4,
-		speed = 1,
-		lifetime = 0.35,
-		trailWidth = 1.4,
-		lightRange = 12,
-		burst = 30,
-		tint = Color3.fromRGB(255, 140, 50),
-		secondary = TEX.smoke,
-	},
-	Spark = {
-		texture = TEX.sparkle,
-		rate = 80,
-		size = 0.4,
-		speed = 4,
-		lifetime = 0.25,
-		trailWidth = 0.4,
-		lightRange = 7,
-		burst = 14,
-		tint = Color3.fromRGB(255, 245, 120),
-	},
-	Lightning = {
-		texture = TEX.sparkle,
-		rate = 120,
-		size = 0.5,
-		speed = 6,
-		lifetime = 0.2,
-		trailWidth = 0.6,
-		lightRange = 14,
-		burst = 26,
-		tint = Color3.fromRGB(255, 250, 160),
-	},
-	IceShard = {
-		texture = TEX.sparkle,
-		rate = 50,
-		size = 0.5,
-		speed = 1.5,
-		lifetime = 0.5,
-		trailWidth = 0.6,
-		lightRange = 8,
-		burst = 20,
-		tint = Color3.fromRGB(200, 245, 255),
-	},
-	WaterLock = {
-		texture = TEX.sparkle,
-		rate = 50,
-		size = 0.7,
-		speed = 1,
-		lifetime = 0.6,
-		trailWidth = 1,
-		lightRange = 8,
-		burst = 24,
-		tint = Color3.fromRGB(90, 180, 255),
-	},
-	WindGust = {
-		texture = TEX.smoke,
-		rate = 50,
-		size = 2,
-		speed = 3,
-		lifetime = 0.4,
-		trailWidth = 2.5,
-		lightRange = 0,
-		burst = 16,
-		tint = Color3.fromRGB(235, 245, 255),
-	},
-	Magnet = {
-		texture = TEX.sparkle,
-		rate = 40,
-		size = 0.6,
-		speed = 2,
-		lifetime = 0.4,
-		trailWidth = 0.8,
-		lightRange = 8,
-		burst = 18,
-		tint = Color3.fromRGB(230, 60, 60),
-	},
-	Shrink = {
-		texture = TEX.sparkle,
-		rate = 60,
-		size = 0.5,
-		speed = 2,
-		lifetime = 0.5,
-		trailWidth = 0.6,
-		lightRange = 8,
-		burst = 22,
-		tint = Color3.fromRGB(255, 120, 180),
-	},
-	Cannonball = {
-		texture = TEX.smoke,
-		rate = 30,
-		size = 1,
-		speed = 1,
-		lifetime = 0.5,
-		trailWidth = 0.6,
-		lightRange = 0,
-		burst = 16,
-		tint = Color3.fromRGB(90, 90, 90),
-	},
-}
+export type Style = VfxStyles.Style
 
 function SpellVfx.styleFor(fxKey: string?): Style
 	return (fxKey and STYLES[fxKey]) or STYLES.default
@@ -225,6 +103,44 @@ function SpellVfx.decorateBolt(part: BasePart, fxKey: string?, color: Color3)
 	end
 end
 
+-- Spawns a copy of a block model (ModelKit) for an effect, or nil when the
+-- place has no such model. `width` is the width (studs, X) it is scaled to.
+local function spawnModel(parent: Instance, modelName: string?, width: number): Model?
+	if not modelName then
+		return nil
+	end
+	local model = ModelKit.clone(modelName, "effect")
+	if not model then
+		return nil
+	end
+	local _, size = model:GetBoundingBox()
+	model:ScaleTo(width / math.max(size.X, 0.01))
+	model.Parent = parent
+	return model
+end
+
+-- Fades every part of a model out over `seconds`.
+local function fadeModel(model: Model, seconds: number)
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part.Transparency < 1 then
+			TweenService:Create(part, TweenInfo.new(seconds), { Transparency = 1 }):Play()
+		end
+	end
+end
+
+-- Runs `step(elapsed)` every frame for `seconds`, then stops (and stops early
+-- if `step` returns false).
+local function every(seconds: number, step: (number) -> boolean?)
+	local start = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.Heartbeat:Connect(function()
+		local t = os.clock() - start
+		if t >= seconds or step(t) == false then
+			connection:Disconnect()
+		end
+	end)
+end
+
 -- Expanding flat ring on the ground (impacts, slams, zone pops).
 function SpellVfx.shockwave(parent: Instance, position: Vector3, radius: number, color: Color3)
 	local ring = Instance.new("Part")
@@ -269,48 +185,24 @@ function SpellVfx.impact(parent: Instance, position: Vector3, fxKey: string?, co
 	Debris:AddItem(anchor, 1)
 end
 
--- Cast animation: the right arm snaps up toward the target, a glowing
--- magic circle spins out under the caster, and the hand sparkles.
-local raised: { [Motor6D]: number } = setmetatable({}, { __mode = "k" }) :: any
-
-local function shoulderOf(character: Model): (Motor6D?, CFrame)
-	local upper = character:FindFirstChild("RightUpperArm")
-	local r15 = upper and upper:FindFirstChild("RightShoulder")
-	if r15 and r15:IsA("Motor6D") then
-		return r15, CFrame.Angles(math.rad(95), 0, 0) -- raise forward
-	end
-	local torso = character:FindFirstChild("Torso")
-	local r6 = torso and torso:FindFirstChild("Right Shoulder")
-	if r6 and r6:IsA("Motor6D") then
-		return r6, CFrame.Angles(0, 0, math.rad(95))
-	end
-	return nil, CFrame.identity
-end
-
-function SpellVfx.castAnimation(parent: Instance, character: Model, color: Color3)
+-- Cast animation: the caster strikes the spell's pose (Spells/CastPoses via
+-- CastAnimations), a glowing magic circle spins out under their feet, the glyph
+-- they drew is imprinted on the ground, and the hand sparkles.
+function SpellVfx.castAnimation(
+	parent: Instance,
+	character: Model,
+	color: Color3,
+	glyphId: string?,
+	animation: string?,
+	holdSeconds: number?
+)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		return
 	end
 
-	-- Arm raise (local C0 offset; every client does this for every caster).
-	local motor, raise = shoulderOf(character)
-	if motor then
-		local base = motor:GetAttribute("BaseC0")
-		if typeof(base) ~= "CFrame" then
-			base = motor.C0
-			motor:SetAttribute("BaseC0", base)
-		end
-		local token = (raised[motor] or 0) + 1
-		raised[motor] = token
-		TweenService:Create(motor, TweenInfo.new(0.08), { C0 = (base :: CFrame) * raise }):Play()
-		task.delay(0.3, function()
-			if raised[motor] == token and motor.Parent then
-				TweenService:Create(motor, TweenInfo.new(0.2, Enum.EasingStyle.Quad), { C0 = base })
-					:Play()
-			end
-		end)
-	end
+	-- Body pose (every client does this for every caster).
+	CastAnimations.play(character, animation or "Throw", holdSeconds)
 
 	-- Magic circle under the feet.
 	local circle = Instance.new("Part")
@@ -342,6 +234,49 @@ function SpellVfx.castAnimation(parent: Instance, character: Model, color: Color
 	Debris:AddItem(circle, 0.5)
 	Debris:AddItem(inner, 0.5)
 
+	-- The glyph you drew, imprinted on the ground under the caster.
+	if glyphId then
+		local plate = Instance.new("Part")
+		plate.Name = "GlyphImprint"
+		plate.Anchored = true
+		plate.CanCollide = false
+		plate.CanQuery = false
+		plate.CanTouch = false
+		plate.Transparency = 1
+		plate.Size = Vector3.new(7, 0.1, 7)
+		plate.CFrame = CFrame.new(feet + Vector3.new(0, 0.15, 0))
+			* CFrame.Angles(0, math.rad(root.Orientation.Y), 0)
+		plate.Parent = parent
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		gui.CanvasSize = Vector2.new(220, 220)
+		gui.LightInfluence = 0
+		gui.Brightness = 3
+		gui.Parent = plate
+		local view =
+			GlyphView.create(gui, glyphId, 200, color, { Position = UDim2.fromOffset(10, 10) })
+		if view then
+			task.delay(0.15, function()
+				for _, line in view:GetChildren() do
+					if line:IsA("Frame") then
+						TweenService:Create(
+							line,
+							TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+							{
+								BackgroundTransparency = 1,
+							}
+						):Play()
+					end
+				end
+			end)
+		end
+		TweenService:Create(plate, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {
+			CFrame = plate.CFrame * CFrame.Angles(0, math.rad(80), 0),
+		}):Play()
+		Debris:AddItem(plate, 0.8)
+	end
+
 	-- Hand sparkle.
 	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
 	if hand and hand:IsA("BasePart") then
@@ -353,6 +288,114 @@ function SpellVfx.castAnimation(parent: Instance, character: Model, color: Color
 		e:Emit(14)
 		Debris:AddItem(attachment, 0.6)
 	end
+end
+
+-- A buff's lingering look on the caster (Fire Boost, Water Body, Air Boost, Air
+-- Shield): particles rising from or swirling round them and an outline, until
+-- the buff ends. A recast replaces the previous aura.
+function SpellVfx.buffAura(character: Model, styleKey: string, duration: number)
+	local aura = VfxStyles.AURAS[styleKey]
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not aura or not root or not root:IsA("BasePart") then
+		return
+	end
+	local name = "Aura_" .. styleKey
+	for _, old in { root:FindFirstChild(name), character:FindFirstChild(name) } do
+		old:Destroy()
+	end
+
+	local holder = Instance.new("Attachment")
+	holder.Name = name
+	holder.Parent = root
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = aura.texture
+	e.Color = ColorSequence.new(aura.color, aura.color:Lerp(Color3.new(1, 1, 1), 0.5))
+	e.LightEmission = 0.8
+	e.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, aura.size * 0.4),
+		NumberSequenceKeypoint.new(0.3, aura.size),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	e.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.3),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	e.Lifetime = NumberRange.new(aura.lifetime * 0.6, aura.lifetime)
+	e.Speed = NumberRange.new(aura.speed * 0.5, aura.speed)
+	e.SpreadAngle = Vector2.new(30, 30)
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Acceleration = Vector3.new(0, aura.lift, 0)
+	e.Rate = aura.rate
+	e.RotSpeed = NumberRange.new(-120, 120)
+	e.Parent = holder
+	if aura.light then
+		local light = Instance.new("PointLight")
+		light.Color = aura.color
+		light.Range = aura.light
+		light.Brightness = 2
+		light.Parent = holder
+	end
+
+	local highlight: Highlight? = nil
+	if aura.outline then
+		local h = Instance.new("Highlight")
+		h.Name = name
+		h.FillColor = aura.color
+		h.OutlineColor = aura.outline
+		h.FillTransparency = aura.fill or 1
+		h.OutlineTransparency = 0.1
+		h.DepthMode = Enum.HighlightDepthMode.Occluded
+		h.Parent = character
+		highlight = h
+	end
+
+	-- Four small blocks orbit the caster (water bubbles, wind blades).
+	local orbiters: { Part } = {}
+	if aura.spin then
+		for i = 1, 4 do
+			local bit = Instance.new("Part")
+			bit.Name = name
+			bit.Anchored = true
+			bit.CanCollide = false
+			bit.CanQuery = false
+			bit.CanTouch = false
+			bit.CastShadow = false
+			bit.Material = Enum.Material.Neon
+			bit.Color = aura.color
+			bit.Transparency = 0.2
+			bit.Size = Vector3.new(0.7, 0.7, 0.7)
+			bit.Parent = character
+			orbiters[i] = bit
+		end
+	end
+
+	local function cleanup()
+		holder:Destroy()
+		if highlight then
+			highlight:Destroy()
+		end
+		for _, bit in orbiters do
+			bit:Destroy()
+		end
+	end
+	every(duration, function(t)
+		if not root.Parent or not holder.Parent then
+			cleanup()
+			return false
+		end
+		for i, bit in orbiters do
+			local angle = t * 3.2 + i * math.pi / 2
+			bit.CFrame = root.CFrame
+				* CFrame.new(
+					math.cos(angle) * 3.4,
+					math.sin(t * 2 + i) * 1.4,
+					math.sin(angle) * 3.4
+				)
+				* CFrame.Angles(t * 2, t * 3, 0)
+		end
+		return true
+	end)
+	task.delay(duration, cleanup)
 end
 
 -- Breaks a block into tumbling chunks that fade out.
@@ -456,6 +499,306 @@ function SpellVfx.dust(parent: Instance, position: Vector3, width: number, color
 		color:Lerp(Color3.new(1, 1, 1), 0.4)
 	)
 	Debris:AddItem(anchor, 1)
+end
+
+-- The glyph a player just drew pops up over their head, rises, and fades,
+-- so everyone can see which spell they readied.
+function SpellVfx.glyphEmblem(parent: Instance, character: Model, glyphId: string, color: Color3)
+	local head = character:FindFirstChild("Head")
+	if not head or not head:IsA("BasePart") then
+		return
+	end
+	local anchor = anchorAt(parent, head.Position + Vector3.new(0, 4.5, 0))
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(110, 110)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = 140
+	gui.Parent = anchor
+	local view = GlyphView.create(gui, glyphId, 100, color, { Position = UDim2.fromOffset(5, 5) })
+	if view then
+		local pop = Instance.new("UIScale")
+		pop.Scale = 0.2
+		pop.Parent = view
+		TweenService:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		task.delay(0.55, function()
+			for _, line in view:GetChildren() do
+				if line:IsA("Frame") then
+					TweenService:Create(line, TweenInfo.new(0.4), { BackgroundTransparency = 1 })
+						:Play()
+				end
+			end
+		end)
+	end
+	TweenService
+		:Create(anchor, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = anchor.CFrame + Vector3.new(0, 3, 0),
+		})
+		:Play()
+	local sparks = emitter(anchor, TEX.sparkle, color, STYLES.default)
+	sparks.Rate = 0
+	sparks:Emit(16)
+	Debris:AddItem(anchor, 1.2)
+end
+
+-- Elemental column erupting out of the ground (Fire Pillar, Water Nebula,
+-- Earthquake): a tall glowing cylinder shoots up, then fades, with spray,
+-- sparks, or rubble depending on the element.
+function SpellVfx.pillar(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	color: Color3,
+	elementId: string?,
+	modelName: string?
+)
+	local height = 70
+	local width = math.max(radius * 1.5, 4)
+	local column = Instance.new("Part")
+	column.Name = "Pillar"
+	column.Shape = Enum.PartType.Cylinder
+	column.Anchored = true
+	column.CanCollide = false
+	column.CanQuery = false
+	column.CanTouch = false
+	column.CastShadow = false
+	column.Material = if elementId == "Earth" then Enum.Material.Slate else Enum.Material.Neon
+	column.Color = color
+	column.Transparency = if elementId == "Earth" then 0.3 else 0.15
+	column.Size = Vector3.new(height, 0.5, 0.5)
+	column.CFrame = CFrame.new(center + Vector3.new(0, height / 2, 0))
+		* CFrame.Angles(0, 0, math.pi / 2)
+	column.Parent = parent
+	-- The blocky model is the body of the column; the neon cylinder is its glow.
+	local body = spawnModel(parent, modelName, width)
+	if body then
+		column.Transparency = 0.6
+		local scale = body:GetScale()
+		body:ScaleTo(scale * 0.2)
+		body:PivotTo(CFrame.new(center))
+		every(0.9, function(t)
+			local grow = math.min(t / 0.14, 1)
+			body:ScaleTo(scale * (0.2 + 0.8 * grow))
+			body:PivotTo(CFrame.new(center) * CFrame.Angles(0, t * 3, 0))
+			return body.Parent ~= nil
+		end)
+		task.delay(0.35, function()
+			if body.Parent then
+				fadeModel(body, 0.55)
+			end
+		end)
+		Debris:AddItem(body, 1)
+	end
+	TweenService
+		:Create(column, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(height, width, width),
+		})
+		:Play()
+	task.delay(0.35, function()
+		if column.Parent then
+			TweenService
+				:Create(
+					column,
+					TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{
+						Size = Vector3.new(height, width * 1.3, width * 1.3),
+						Transparency = 1,
+					}
+				)
+				:Play()
+		end
+	end)
+	-- A white-hot core inside the column.
+	local core = column:Clone()
+	core.Name = "PillarCore"
+	core.Color = Color3.new(1, 1, 1)
+	core.Material = Enum.Material.Neon
+	core.Size = Vector3.new(height, 0.3, 0.3)
+	core.Parent = parent
+	TweenService:Create(core, TweenInfo.new(0.14, Enum.EasingStyle.Quad), {
+		Size = Vector3.new(height, width * 0.45, width * 0.45),
+	}):Play()
+	TweenService:Create(core, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Transparency = 1,
+	}):Play()
+
+	local anchor = anchorAt(parent, center + Vector3.new(0, 1, 0))
+	anchor.Size = Vector3.new(width, 2, width)
+	local style = table.clone(STYLES.default)
+	style.size = if elementId == "Earth" then 1.8 else 2.4
+	style.speed = 22
+	style.lifetime = 0.9
+	local texture = if elementId == "Fire"
+		then TEX.fire
+		elseif elementId == "Earth" then TEX.smoke
+		else TEX.sparkle
+	local spray = emitter(anchor, texture, color, style)
+	spray.Rate = 0
+	spray.EmissionDirection = Enum.NormalId.Top
+	spray.SpreadAngle = Vector2.new(25, 25)
+	spray.Acceleration = Vector3.new(0, -12, 0)
+	spray.Shape = Enum.ParticleEmitterShape.Cylinder
+	spray:Emit(60)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = radius * 3
+	light.Brightness = 5
+	light.Parent = anchor
+	TweenService:Create(light, TweenInfo.new(0.8), { Brightness = 0 }):Play()
+	SpellVfx.shockwave(parent, center + Vector3.new(0, 0.3, 0), radius, color)
+	if elementId == "Earth" then
+		SpellVfx.dust(parent, center, radius, color)
+	end
+	Debris:AddItem(column, 1)
+	Debris:AddItem(core, 1)
+	Debris:AddItem(anchor, 1.4)
+end
+
+-- A boulder or stone pillar bursts up out of the ground after `delay`
+-- seconds, holds a moment, and sinks back (Earth Punch, Earth Pillar).
+function SpellVfx.rise(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	delay: number,
+	color: Color3,
+	kind: string,
+	height: number,
+	modelName: string?
+)
+	task.delay(delay, function()
+		-- The blocky model (Earth Punch's boulder, Earth Pillar's spike) rises
+		-- instead of the plain shape.
+		local model =
+			spawnModel(parent, modelName, if kind == "boulder" then radius * 1.7 else radius * 1.2)
+		if model then
+			if kind ~= "boulder" then
+				-- Spikes match the spell's height rather than its width.
+				local _, tall = model:GetBoundingBox()
+				model:ScaleTo(model:GetScale() * height / math.max(tall.Y, 0.01))
+			end
+			local _, size = model:GetBoundingBox()
+			local depth = size.Y
+			local yaw = math.random() * math.pi
+			model:PivotTo(CFrame.new(center - Vector3.new(0, depth, 0)) * CFrame.Angles(0, yaw, 0))
+			every(1.5, function(t)
+				local lift = if t < 0.12
+					then t / 0.12
+					elseif t < 0.9 then 1
+					else math.max(1 - (t - 0.9) / 0.45, 0)
+				model:PivotTo(
+					CFrame.new(center - Vector3.new(0, depth * (1 - lift), 0))
+						* CFrame.Angles(0, yaw, 0)
+				)
+				return model.Parent ~= nil
+			end)
+			SpellVfx.dust(parent, center, radius * 0.8, color)
+			Debris:AddItem(model, 1.5)
+			return
+		end
+		local rock = Instance.new("Part")
+		rock.Name = "RisingRock"
+		rock.Anchored = true
+		rock.CanCollide = false
+		rock.CanQuery = false
+		rock.CanTouch = false
+		rock.Color = color
+		rock.Material = Enum.Material.Slate
+		local top: number
+		if kind == "boulder" then
+			rock.Shape = Enum.PartType.Ball
+			rock.Size = Vector3.one * radius * 1.7
+			top = center.Y + radius * 0.55
+			rock.CFrame = CFrame.new(center.X, center.Y - radius, center.Z)
+		else
+			rock.Size = Vector3.new(radius * 0.9, height, radius * 0.9)
+			top = center.Y + height / 2 - 0.5
+			rock.CFrame = CFrame.new(center.X, center.Y - height / 2, center.Z)
+				* CFrame.Angles(0, math.random() * math.pi, 0)
+		end
+		rock.Parent = parent
+		TweenService
+			:Create(rock, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				CFrame = CFrame.new(center.X, top, center.Z) * rock.CFrame.Rotation,
+			})
+			:Play()
+		SpellVfx.dust(parent, center, radius * 0.8, color)
+		task.delay(0.9, function()
+			if rock.Parent then
+				TweenService
+					:Create(
+						rock,
+						TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+						{
+							CFrame = rock.CFrame - Vector3.new(
+								0,
+								if kind == "boulder" then radius * 1.4 else height,
+								0
+							),
+							Transparency = 1,
+						}
+					)
+					:Play()
+			end
+		end)
+		Debris:AddItem(rock, 1.5)
+	end)
+end
+
+-- Earthquake wind-up: the ground pulses with rings and kicks up dust for
+-- the whole cast, so everyone can see the blast zone and get out of it.
+function SpellVfx.quake(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	duration: number,
+	color: Color3,
+	modelName: string?
+)
+	-- Cracks spread over the blast zone while the caster channels.
+	local cracks = spawnModel(parent, modelName, radius * 2)
+	if cracks then
+		cracks:PivotTo(CFrame.new(center + Vector3.new(0, 0.1, 0)))
+		for _, part in cracks:GetDescendants() do
+			if part:IsA("BasePart") and part.Name ~= "Root" then
+				part.Transparency = 1
+				TweenService
+					:Create(
+						part,
+						TweenInfo.new(math.max(duration * 0.4, 0.2)),
+						{ Transparency = 0 }
+					)
+					:Play()
+			end
+		end
+		task.delay(duration + 0.2, function()
+			if cracks.Parent then
+				fadeModel(cracks, 0.8)
+			end
+		end)
+		Debris:AddItem(cracks, duration + 1.2)
+	end
+	task.spawn(function()
+		local elapsed = 0
+		while elapsed < duration do
+			SpellVfx.shockwave(
+				parent,
+				center + Vector3.new(0, 0.3, 0),
+				radius * (0.35 + 0.65 * elapsed / duration),
+				color
+			)
+			local angle = math.random() * math.pi * 2
+			local distance = math.random() * radius * 0.9
+			SpellVfx.dust(
+				parent,
+				center + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance),
+				6,
+				color
+			)
+			task.wait(0.35)
+			elapsed += 0.35
+		end
+	end)
 end
 
 return SpellVfx

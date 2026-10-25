@@ -4,9 +4,8 @@
 --   Action        Keyboard/Mouse   Gamepad          Touch                 VR
 --   Cast          Left click       R2               Tap the world         Right trigger
 --   Ready slot    1-5              D-pad ←/→        Tap hotbar            D-pad / hotbar
---   Spell box     T                Y                Tap the box           Y
+--   Draw a spell  F (rebindable)   X (right stick)  ✏ Draw button, drag   F / X
 --   Rotate        R                L1 / R1          ⟳ button              L1 / R1
---   Speak spell   hold 🎤          hold 🎤          hold 🎤               hold 🎤
 --
 -- Aim: mouse cursor (PC), screen center (gamepad), tap point (touch), or
 -- the right controller's pointing ray (VR).
@@ -21,9 +20,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local ClientState = require(script.Parent.ClientState)
+local DrawController = require(script.Parent.DrawController)
 local HudController = require(script.Parent.HudController)
 local MenuController = require(script.Parent.MenuController)
 local PlacementController = require(script.Parent.PlacementController)
+local ReticleController = require(script.Parent.ReticleController)
 
 local player = Players.LocalPlayer
 
@@ -85,13 +86,17 @@ function InputController.aimPoint(screenPoint: Vector2?): Vector3?
 end
 
 local function cast(screenPoint: Vector2?)
-	if UserInputService:GetFocusedTextBox() or MenuController.isOpen() then
+	if
+		UserInputService:GetFocusedTextBox()
+		or MenuController.isOpen()
+		or DrawController.isActive()
+	then
 		return
 	end
 	local id = ClientState.readied
 	local def = id and SpellDefinitions.get(id)
 	if not def then
-		HudController.toast("Type or say a spell first!", "fizzle")
+		HudController.toast("Draw a spell first!", "fizzle")
 		return
 	end
 	if PlacementController.isActive() then
@@ -103,7 +108,10 @@ local function cast(screenPoint: Vector2?)
 		Remotes.get("CastSpell"):FireServer(point, rotation)
 		return
 	end
-	local target = InputController.aimPoint(screenPoint)
+	-- Point-and-click spells (Fire Pillar, Earth Punch, ...) land on the reticle's clamped point.
+	local target = if ReticleController.isActive() and not screenPoint
+		then ReticleController.getTarget()
+		else InputController.aimPoint(screenPoint)
 	if target then
 		Remotes.get("CastSpell"):FireServer(target)
 	end
@@ -126,6 +134,9 @@ function InputController.start()
 	PlacementController.setAimProvider(function()
 		return InputController.aimPoint(nil), nil
 	end)
+	ReticleController.setAimProvider(function()
+		return InputController.aimPoint(nil)
+	end)
 
 	-- Mouse clicks go through UserInputService so clicks on GUI are ignored.
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -134,9 +145,6 @@ function InputController.start()
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			cast(nil)
-		elseif input.KeyCode == ClientState.typeKeyCode() then
-			-- Rebindable in Settings (default T).
-			task.defer(HudController.focusSpellBox)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			PlacementController.rotate(math.pi / 4)
 		else
@@ -155,21 +163,21 @@ function InputController.start()
 		end
 	end)
 
-	ContextActionService:BindAction("WordcraftCast", function(_, state)
+	ContextActionService:BindAction("SpellcraftCast", function(_, state)
 		if state == Enum.UserInputState.Begin then
 			cast(nil)
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.ButtonR2)
 
-	ContextActionService:BindAction("WordcraftSlot", function(_, state, input)
+	ContextActionService:BindAction("SpellcraftSlot", function(_, state, input)
 		if state == Enum.UserInputState.Begin then
 			cycleSlot(if input.KeyCode == Enum.KeyCode.DPadLeft then -1 else 1)
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.DPadLeft, Enum.KeyCode.DPadRight)
 
-	ContextActionService:BindAction("WordcraftRotate", function(_, state, input)
+	ContextActionService:BindAction("SpellcraftRotate", function(_, state, input)
 		if state == Enum.UserInputState.Begin and PlacementController.isActive() then
 			PlacementController.rotate(
 				if input.KeyCode == Enum.KeyCode.ButtonL1 then -math.pi / 4 else math.pi / 4
@@ -178,13 +186,6 @@ function InputController.start()
 		end
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonR1)
-
-	ContextActionService:BindAction("WordcraftSpellBox", function(_, state)
-		if state == Enum.UserInputState.Begin then
-			HudController.focusSpellBox()
-		end
-		return Enum.ContextActionResult.Sink
-	end, false, Enum.KeyCode.ButtonY)
 end
 
 return InputController

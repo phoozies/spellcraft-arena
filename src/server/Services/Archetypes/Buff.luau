@@ -1,9 +1,15 @@
 --!strict
 -- Buff archetype: effects on the caster.
 -- Reads stats: heal, shield (absorb HP), duration, reflect, scale (Giant),
--- revive (Phoenix), cooldownCut (Wizard Hat).
+-- revive (Phoenix), cooldownCut (Wizard Hat), damageMult (Fire Boost),
+-- invincible (Water Body), barrier (Air Shield), haste (Air Boost).
+-- With `visual.model` every nearby client pops that model up over
+-- the caster's head (Fx "modelPop").
 
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
@@ -33,6 +39,20 @@ local function aura(ctx: any, duration: number)
 	Debris:AddItem(orb, duration)
 end
 
+-- Sets a character attribute for `duration` seconds; a newer cast of the
+-- same attribute restarts the timer and only the latest timer clears it.
+local function timedAttribute(character: Model, name: string, value: any, duration: number)
+	character:SetAttribute(name, value)
+	local tokenName = name .. "Token"
+	local token = ((character:GetAttribute(tokenName) :: number?) or 0) + 1
+	character:SetAttribute(tokenName, token)
+	task.delay(duration, function()
+		if character.Parent and character:GetAttribute(tokenName) == token then
+			character:SetAttribute(name, nil)
+		end
+	end)
+end
+
 function Buff.cast(ctx: any): boolean?
 	local stats = ctx.def.stats
 	local character = ctx.character
@@ -60,6 +80,18 @@ function Buff.cast(ctx: any): boolean?
 	if stats.reflect then
 		StatusService.apply(character, "Reflect", duration)
 	end
+	if stats.damageMult then
+		timedAttribute(character, "DamageMult", stats.damageMult, duration)
+	end
+	if stats.invincible then
+		StatusService.apply(character, "Invincible", duration)
+	end
+	if stats.barrier then
+		timedAttribute(character, "Barrier", true, duration)
+	end
+	if stats.haste then
+		StatusService.apply(character, "Haste", duration)
+	end
 	if stats.scale then
 		StatusService.apply(character, "Giant", duration)
 	end
@@ -70,6 +102,10 @@ function Buff.cast(ctx: any): boolean?
 		StatusService.apply(character, "CooldownCut", duration)
 	end
 	aura(ctx, duration)
+	if ctx.def.visual.model then
+		Remotes.get("Fx")
+			:FireAllClients("modelPop", ctx.character, ctx.def.visual.model, ctx.def.visual.color)
+	end
 	return true
 end
 

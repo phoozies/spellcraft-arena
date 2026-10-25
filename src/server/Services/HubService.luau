@@ -1,6 +1,7 @@
 --!strict
 -- The central hub (Inkwell Plaza): builds it, spawns players there, and runs
--- the team boxes, the FFA queue pad, training dummies, and the leaderboard.
+-- the team boxes, and training dummies. (The wins board
+-- and podium are LeaderboardService; the crate shop is CrateService.)
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -12,6 +13,7 @@ local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
@@ -25,16 +27,38 @@ local HubService = {}
 local hub: Model
 local toastRemote: RemoteEvent
 
--- Health only regenerates in the hub; arenas rely on healing spells.
+-- Health regenerates fast in the hub, and slowly everywhere else once you
+-- have gone Config.PASSIVE_REGEN_DELAY seconds without taking damage.
 -- (The default Roblox regen script is replaced by StarterCharacterScripts.Health.)
+local lastHealth: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+local lastDamaged: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 local function regenTick(dt: number)
+	local now = os.clock()
 	for _, player in Players:GetPlayers() do
-		if not MatchService.isInMatch(player) then
-			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
-				humanoid.Health =
-					math.min(humanoid.MaxHealth, humanoid.Health + Config.HUB_REGEN_PER_SECOND * dt)
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then
+			-- Any drop in health (from anything) restarts the out-of-combat timer.
+			if humanoid.Health < (lastHealth[player] or humanoid.Health) then
+				lastDamaged[player] = now
 			end
+			if humanoid.Health < humanoid.MaxHealth then
+				local perSecond = 0
+				if
+					not MatchService.isInMatch(player)
+					and not player:GetAttribute("InBattleground")
+				then
+					perSecond = Config.HUB_REGEN_PER_SECOND
+				elseif now - (lastDamaged[player] or 0) >= Config.PASSIVE_REGEN_DELAY then
+					perSecond = Config.PASSIVE_REGEN_PER_SECOND
+				end
+				if perSecond > 0 then
+					humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + perSecond * dt)
+				end
+			end
+			lastHealth[player] = humanoid.Health
+		else
+			lastHealth[player] = nil
 		end
 	end
 end
@@ -56,9 +80,9 @@ local function setupLighting()
 	end
 end
 
-local function spawnDummy(spot: BasePart)
+-- A plain straw-coloured dummy for when the TrainingDummy block model is missing.
+local function buildFallbackDummy(spot: BasePart): (Model, BasePart)
 	local model = Instance.new("Model")
-	model.Name = "TrainingDummy"
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Size = Vector3.new(3, 5, 2)
@@ -66,7 +90,7 @@ local function spawnDummy(spot: BasePart)
 	body.Material = Enum.Material.Fabric
 	body.Anchored = true
 	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0))
-		* CFrame.Angles(0, math.pi / 2, 0)
+		* CFrame.Angles(0, -math.pi / 2, 0)
 	body.Parent = model
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -81,6 +105,22 @@ local function spawnDummy(spot: BasePart)
 	face.Texture = "rbxasset://textures/face.png"
 	face.Face = Enum.NormalId.Front
 	face.Parent = head
+	return model, body
+end
+
+local function spawnDummy(spot: BasePart)
+	-- The block-model dummy (a straw man on a post), facing east into the grove.
+	local model = ModelKit.clone("TrainingDummy", "solid")
+	local body: BasePart
+	if model then
+		model:PivotTo(
+			CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, -math.pi / 2, 0)
+		)
+		body = model:FindFirstChild("Body") :: BasePart
+	else
+		model, body = buildFallbackDummy(spot)
+	end
+	model.Name = "TrainingDummy"
 	model.PrimaryPart = body
 
 	local bar = Instance.new("BillboardGui")
@@ -112,38 +152,6 @@ local function spawnDummy(spot: BasePart)
 			end
 		end)
 	end)
-end
-
-local function wireQueuePad(pad: BasePart)
-	local mode = pad:GetAttribute("Mode")
-	if typeof(mode) ~= "string" then
-		return
-	end
-	local debounce: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-	pad.Touched:Connect(function(hit)
-		local character = hit.Parent
-		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player then
-			return
-		end
-		local now = os.clock()
-		if (debounce[player] or 0) > now then
-			return
-		end
-		debounce[player] = now + 2
-		MatchService.joinQueue(player, mode)
-	end)
-end
-
-local function refreshPadLabels()
-	local counts = MatchService.queueCounts()
-	for _, pad in CollectionService:GetTagged("QueuePad") do
-		local mode = pad:GetAttribute("Mode")
-		local label = pad:FindFirstChild("Text", true)
-		if typeof(mode) == "string" and label and label:IsA("TextLabel") then
-			label.Text = `{mode}\n{counts[mode] or 0} waiting`
-		end
-	end
 end
 
 ----------------------------------------------------------------------
@@ -192,10 +200,13 @@ local function collectBoxes()
 			and typeof(team) == "string"
 			and typeof(slots) == "number"
 		then
-			local box = boxes[mode]
+			-- A mode can have several boxes; each pad names its box.
+			local boxAttribute = instance:GetAttribute("Box")
+			local boxId = if typeof(boxAttribute) == "string" then boxAttribute else mode
+			local box = boxes[boxId]
 			if not box then
 				box = { mode = mode, pads = {}, header = nil, signature = "", startsAt = nil }
-				boxes[mode] = box
+				boxes[boxId] = box
 			end
 			table.insert(box.pads, {
 				part = instance,
@@ -207,8 +218,10 @@ local function collectBoxes()
 		end
 	end
 	for _, header in CollectionService:GetTagged("TeamBoxHeader") do
+		local boxAttribute = header:GetAttribute("Box")
 		local mode = header:GetAttribute("Mode")
-		local box = if typeof(mode) == "string" then boxes[mode] else nil
+		local key = if typeof(boxAttribute) == "string" then boxAttribute else mode
+		local box = if typeof(key) == "string" then boxes[key] else nil
 		if box then
 			box.header = labelOf(header)
 		end
@@ -330,31 +343,6 @@ local function updateBoxes()
 	end
 end
 
-local function updateLeaderboard()
-	local board = hub:FindFirstChild("Leaderboard")
-	local label = board and board:FindFirstChild("Text", true)
-	if not label or not label:IsA("TextLabel") then
-		return
-	end
-	local rows = {}
-	for player, kos in MatchService.sessionKnockouts do
-		if player.Parent then
-			table.insert(rows, { name = player.DisplayName, kos = kos })
-		end
-	end
-	table.sort(rows, function(a, b)
-		return a.kos > b.kos
-	end)
-	local lines = { "Top Spellcasters" }
-	for i = 1, math.min(5, #rows) do
-		table.insert(lines, `{i}. {rows[i].name} — {rows[i].kos} KOs`)
-	end
-	if #rows == 0 then
-		table.insert(lines, "(play a match!)")
-	end
-	label.Text = table.concat(lines, "\n")
-end
-
 function HubService.init()
 	-- Replace the template baseplate at runtime (the saved place is untouched).
 	for _, name in { "Baseplate", "SpawnLocation" } do
@@ -370,17 +358,11 @@ function HubService.init()
 end
 
 function HubService.start()
-	for _, pad in CollectionService:GetTagged("QueuePad") do
-		if pad:IsA("BasePart") then
-			wireQueuePad(pad)
-		end
-	end
 	for _, spot in CollectionService:GetTagged("DummySpot") do
 		if spot:IsA("BasePart") then
 			spawnDummy(spot)
 		end
 	end
-	MatchService.QueueChanged:Connect(refreshPadLabels)
 	collectBoxes()
 
 	PlayerDataService.ProfileLoaded:Connect(function(player)
@@ -388,9 +370,14 @@ function HubService.start()
 	end)
 
 	DestructibleService.Knockout:Connect(function(victim)
-		if not MatchService.isInMatch(victim) then
+		-- (The Battleground respawns its own fighters.)
+		if not MatchService.isInMatch(victim) and not victim:GetAttribute("InBattleground") then
 			task.delay(HUB_RESPAWN_DELAY, function()
-				if victim.Parent and not MatchService.isInMatch(victim) then
+				if
+					victim.Parent
+					and not MatchService.isInMatch(victim)
+					and not victim:GetAttribute("InBattleground")
+				then
 					MatchService.spawnInHub(victim)
 				end
 			end)
@@ -405,9 +392,6 @@ function HubService.start()
 			updateBoxes()
 			if tick % 2 == 0 then
 				regenTick(dt * 2)
-			end
-			if tick % 20 == 0 then
-				updateLeaderboard()
 			end
 		end
 	end)

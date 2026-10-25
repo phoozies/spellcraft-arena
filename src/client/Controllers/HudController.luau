@@ -1,5 +1,5 @@
 --!strict
--- The always-on HUD: hotbar (hand), spell box + mic button, level/XP bar,
+-- The always-on HUD: hotbar (hand), glyph cards (what to draw), coins/wins wallet,
 -- match bar (phase, timer, scores), toasts, and kill feed.
 -- Layout is scale-based with a UIScale clamp so it fits phones through TVs,
 -- and respects device safe areas (ScreenInsets).
@@ -9,12 +9,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
+local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
+local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 
@@ -30,26 +33,26 @@ local slots: {
 		cooldownText: TextLabel,
 		icon: TextLabel,
 		name: TextLabel,
+		stars: TextLabel,
 		stroke: UIStroke,
 	}
 } =
 	{}
-local spellBox: TextBox
-local micButton: TextButton
-local levelLabel: TextLabel
-local xpFill: Frame
+local coinsLabel: TextLabel
+local winsLabel: TextLabel
 local matchBar: Frame
 local matchText: TextLabel
 local scoreText: TextLabel
 local toastHolder: Frame
 local feedHolder: Frame
-local heardLabel: TextLabel
+local boostsLabel: TextLabel
+local battleLabel: TextLabel
+local battleLeave: TextButton
 
 local TOAST_COLORS: { [string]: Color3 } = {
 	fizzle = Color3.fromRGB(120, 144, 156),
 	ready = Color3.fromRGB(102, 187, 106),
 	cooldown = Color3.fromRGB(255, 167, 38),
-	levelup = Color3.fromRGB(255, 202, 40),
 	reward = Color3.fromRGB(255, 202, 40),
 	victory = Color3.fromRGB(255, 202, 40),
 	round = Color3.fromRGB(66, 165, 245),
@@ -59,6 +62,21 @@ local TOAST_COLORS: { [string]: Color3 } = {
 
 function HudController.getGui(): ScreenGui
 	return gui
+end
+
+-- How many times you've picked a match boost (the server mirrors your picks
+-- to the player attribute "Boosts", e.g. "Power:2,Focus:1").
+function HudController.boostStacks(boostId: string): number
+	local text = player:GetAttribute("Boosts")
+	if typeof(text) ~= "string" then
+		return 0
+	end
+	for id, stacks in string.gmatch(text, "(%w+):(%d+)") do
+		if id == boostId then
+			return tonumber(stacks) or 0
+		end
+	end
+	return 0
 end
 
 function HudController.toast(message: string, kind: string?)
@@ -98,107 +116,80 @@ function HudController.toast(message: string, kind: string?)
 	end)
 end
 
-function HudController.focusSpellBox()
-	spellBox:CaptureFocus()
-end
-
-local function submitSpellBox()
-	local text = spellBox.Text
-	spellBox.Text = ""
-	if #text == 0 then
-		return
-	end
-	-- Admin commands aren't words, so they skip the typing cooldown.
-	if string.sub(text, 1, #Config.ADMIN_PREFIX) == Config.ADMIN_PREFIX then
-		Remotes.get("SubmitWord"):FireServer(string.sub(text, 1, 120))
-		return
-	end
-	local now = os.clock()
-	if now < ClientState.typeReadyAt then
-		HudController.toast(
-			`Typing cooldown ({math.ceil((ClientState.typeReadyAt - now) * 10) / 10}s)`,
-			"cooldown"
-		)
-		return
-	end
-	ClientState.typeReadyAt = now + Config.TYPE_COOLDOWN
-	Remotes.get("SubmitWord"):FireServer(string.sub(text, 1, 64))
-end
-
--- Blocks pasting: a real keystroke changes the text by at most one
--- character, so any bigger jump (Ctrl+V, right-click paste, drag-drop) is
--- undone. The server's 1s typing cooldown backs this up for chat and voice.
-local function guardAgainstPaste(box: TextBox)
-	local lastText = box.Text
-	local reverting = false
-	box:GetPropertyChangedSignal("Text"):Connect(function()
-		if reverting then
-			return
-		end
-		local text = box.Text
-		if #text - #lastText > 1 and text ~= "" then
-			reverting = true
-			box.Text = lastText
-			box.CursorPosition = #lastText + 1
-			reverting = false
-			HudController.toast("No pasting — type it out!", "fizzle")
-			return
-		end
-		lastText = text
-	end)
-	box.Focused:Connect(function()
-		lastText = box.Text
-	end)
-end
-
--- Chips above the spell box: your match spellbook (the words you can type
--- this match) or, in the hub, any spell still recharging.
-local wordsRow: Frame
-local wordChips: { [string]: TextLabel } = {}
+-- Glyph cards above the hotbar: what to draw for each spell you can ready.
+-- In a match that is your match spellbook; in the hub, every spell you own.
+-- A card shows the spell's cooldown while it recharges. Tapping a card opens
+-- the drawing canvas with a preview of its shape to trace (the better you
+-- follow it, the stronger the spell: Spells/Quality).
+local glyphRow: Frame
+local glyphCards: { [string]: { card: Frame, name: TextLabel, cover: TextLabel } } = {}
 
 local function refreshWords()
-	for _, chip in wordChips do
-		chip.Parent:Destroy()
+	for _, entry in glyphCards do
+		entry.card:Destroy()
 	end
-	table.clear(wordChips)
+	table.clear(glyphCards)
 	local ids: { string } = {}
 	if ClientState.spellbook then
 		ids = table.clone(ClientState.spellbook)
 	else
-		for id in ClientState.cooldowns do
-			if ClientState.cooldownLeft(id) > 0 then
-				table.insert(ids, id)
+		local profile = ClientState.profile
+		if profile and profile.element ~= "" then
+			for _, def in SpellDefinitions.ofElement(profile.element) do
+				table.insert(ids, def.id)
 			end
 		end
 	end
 	for order, id in ids do
 		local def = SpellDefinitions.get(id)
 		if def then
-			local chip = Theme.frame(wordsRow, {
-				Size = UDim2.fromOffset(96, 26),
+			local color = Elements.color(def.element)
+			local card = Theme.frame(glyphRow, {
+				Name = def.id,
+				Size = UDim2.fromOffset(62, 74),
 				LayoutOrder = order,
 				BackgroundTransparency = 0.2,
 			})
-			Theme.corner(chip, 13)
-			local stroke = Theme.stroke(chip, Rarity.INFO[def.rarity].color, 2)
+			Theme.corner(card, 10)
+			local stroke = Theme.stroke(card, color, if def.ultimate then 4 else 2)
 			stroke.Transparency = 0.2
-			wordChips[id] = Theme.label(chip, string.lower(def.name), {
-				Size = UDim2.new(1, -10, 1, -4),
-				Position = UDim2.fromOffset(5, 2),
+			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
+			local name = Theme.label(card, def.name, {
+				Size = UDim2.new(1, -4, 0, 16),
+				Position = UDim2.new(0, 2, 1, -18),
 			})
+			local cover = Theme.label(card, "", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = Color3.new(0, 0, 0),
+				BackgroundTransparency = 1,
+				TextColor3 = Theme.COLORS.bad,
+				ZIndex = 4,
+			})
+			Theme.corner(cover, 10)
+			local hit = Instance.new("TextButton")
+			hit.Name = "Draw"
+			hit.Text = ""
+			hit.BackgroundTransparency = 1
+			hit.Size = UDim2.fromScale(1, 1)
+			hit.ZIndex = 6
+			hit.Parent = card
+			hit.Activated:Connect(function()
+				ClientState.DrawRequested:Fire(id)
+			end)
+			glyphCards[id] = { card = card, name = name, cover = cover }
 		end
 	end
 end
 
 local function tickWords()
-	for id, label in wordChips do
-		local def = SpellDefinitions.get(id)
+	for id, entry in glyphCards do
 		local left = ClientState.cooldownLeft(id)
-		if def then
-			label.Text = if left > 0
-				then `{string.lower(def.name)} {math.ceil(left * 10) / 10}s`
-				else string.lower(def.name)
-			label.TextColor3 = if left > 0 then Theme.COLORS.bad else Theme.COLORS.text
+		if left > 0 then
+			entry.cover.BackgroundTransparency = 0.45
+			entry.cover.Text = if left >= 1 then tostring(math.ceil(left)) else ""
+		else
+			entry.cover.BackgroundTransparency = 1
+			entry.cover.Text = ""
 		end
 	end
 end
@@ -241,6 +232,14 @@ local function buildHotbar(root: Frame)
 			Position = UDim2.fromOffset(4, 2),
 			TextColor3 = Theme.COLORS.subtext,
 		})
+		local stars = Theme.label(button, "", {
+			Name = "Quality",
+			AnchorPoint = Vector2.new(1, 0),
+			Size = UDim2.fromOffset(40, 14),
+			Position = UDim2.new(1, -3, 0, 3),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = 2,
+		})
 		local cooldown = Theme.frame(button, {
 			Name = "Cooldown",
 			AnchorPoint = Vector2.new(0, 1),
@@ -261,6 +260,7 @@ local function buildHotbar(root: Frame)
 			cooldownText = cooldownText,
 			icon = icon,
 			name = name,
+			stars = stars,
 			stroke = stroke,
 		}
 	end
@@ -271,24 +271,35 @@ local function refreshHotbar()
 		local id = ClientState.hand[i]
 		local def = id and SpellDefinitions.get(id)
 		if def then
-			local info = Rarity.INFO[def.rarity]
+			local color = Elements.color(def.element)
+			local element = Elements.get(def.element)
 			slot.button.Visible = true
-			slot.icon.Text = info.glyph
-			slot.icon.TextColor3 = def.visual.color
+			slot.icon.Text = if element then element.icon else ""
+			slot.icon.TextColor3 = color
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
+			-- How well this copy was drawn: 1 to 4 stars.
+			local quality = ClientState.qualities[i]
+			if quality then
+				local tier = Quality.tier(quality)
+				slot.stars.Text = string.rep("★", tier.stars)
+				slot.stars.TextColor3 = tier.color
+			else
+				slot.stars.Text = ""
+			end
 			local isReadied = i == ClientState.readiedSlot
-			slot.stroke.Color = if isReadied then Theme.COLORS.accent else info.color
+			slot.stroke.Color = if isReadied then Theme.COLORS.accent else color
 			slot.stroke.Thickness = if isReadied then 5 else 3
 			slot.button.BackgroundColor3 = if isReadied
 				then Color3.fromRGB(84, 80, 140)
 				else Theme.COLORS.panelLight
 		else
-			-- Empty slot: hint that typing a word fills it. All 5 slots
+			-- Empty slot: hint that drawing a glyph fills it. All 5 slots
 			-- show, since you can stockpile up to 5 copies.
 			slot.button.Visible = true
 			slot.icon.Text = ""
-			slot.name.Text = if i == #ClientState.hand + 1 then "type!" else ""
+			slot.stars.Text = ""
+			slot.name.Text = if i == #ClientState.hand + 1 then "draw!" else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
 			slot.stroke.Thickness = 3
@@ -298,7 +309,7 @@ local function refreshHotbar()
 	refreshWords()
 end
 
-local typeBar: Frame
+local drawBar: Frame
 
 local function tickCooldowns()
 	-- Copies of the same spell share one cooldown, so every slot holding
@@ -316,8 +327,8 @@ local function tickCooldowns()
 		end
 	end
 	tickWords()
-	local typeLeft = math.max(0, ClientState.typeReadyAt - os.clock())
-	typeBar.Size = UDim2.new(math.clamp(typeLeft / Config.TYPE_COOLDOWN, 0, 1), 0, 0, 4)
+	local drawLeft = math.max(0, ClientState.drawReadyAt - os.clock())
+	drawBar.Size = UDim2.new(math.clamp(drawLeft / Config.DRAW_COOLDOWN, 0, 1), 0, 0, 4)
 	local state = ClientState.match
 	if state.phase ~= "Idle" and state.endsAt > 0 then
 		local left = math.max(0, math.ceil(state.endsAt - workspace:GetServerTimeNow()))
@@ -331,130 +342,74 @@ local function tickCooldowns()
 	end
 end
 
-local function buildSpellBox(root: Frame)
-	local holder = Theme.frame(root, {
-		Name = "SpellInput",
+local function buildGlyphRow(root: Frame)
+	glyphRow = Theme.frame(root, {
+		Name = "Glyphs",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -104),
-		Size = UDim2.fromOffset(360, Theme.TOUCH),
+		Position = UDim2.new(0.5, 0, 1, -110),
+		Size = UDim2.fromOffset(560, 74),
 		BackgroundTransparency = 1,
 	})
-	spellBox = Instance.new("TextBox")
-	spellBox.Name = "SpellBox"
-	spellBox.Size = UDim2.new(1, -(Theme.TOUCH + 8), 1, 0)
-	spellBox.BackgroundColor3 = Theme.COLORS.panel
-	spellBox.BackgroundTransparency = 0.15
-	spellBox.TextColor3 = Theme.COLORS.text
-	spellBox.PlaceholderText = `Type a spell... ({Config.DEFAULT_TYPE_KEY})`
-	spellBox.PlaceholderColor3 = Theme.COLORS.subtext
-	spellBox.Font = Theme.FONT
-	spellBox.TextScaled = true
-	spellBox.ClearTextOnFocus = true
-	spellBox.Text = ""
-	Theme.corner(spellBox, 14)
-	Theme.stroke(spellBox, Theme.COLORS.accent, 2)
-	Theme.padding(spellBox, 8)
-	spellBox.Parent = holder
-	guardAgainstPaste(spellBox)
-	-- Thin bar under the box that drains during the typing cooldown.
-	typeBar = Theme.frame(holder, {
-		Name = "TypeCooldown",
-		Position = UDim2.new(0, 0, 1, 2),
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 6)
+	layout.Parent = glyphRow
+	-- Thin bar under the cards that drains during the drawing cooldown.
+	drawBar = Theme.frame(root, {
+		Name = "DrawCooldown",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -104),
 		Size = UDim2.new(0, 0, 0, 4),
 		BackgroundColor3 = Theme.COLORS.accent,
 	})
-	Theme.corner(typeBar, 2)
-	wordsRow = Theme.frame(root, {
-		Name = "Words",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -164),
-		Size = UDim2.fromOffset(520, 26),
-		BackgroundTransparency = 1,
-	})
-	local wordsLayout = Instance.new("UIListLayout")
-	wordsLayout.FillDirection = Enum.FillDirection.Horizontal
-	wordsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	wordsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	wordsLayout.Padding = UDim.new(0, 6)
-	wordsLayout.Parent = wordsRow
-	spellBox.FocusLost:Connect(function(enterPressed)
-		if enterPressed then
-			submitSpellBox()
-		end
-	end)
-
-	micButton = Theme.button(holder, "🎤", {
-		Name = "Mic",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.fromScale(1, 0),
-		Size = UDim2.fromOffset(Theme.TOUCH, Theme.TOUCH),
-	})
-	local function setListening(on: boolean)
-		Remotes.get("VoiceListen"):FireServer(on)
-		micButton.BackgroundColor3 = if on then Theme.COLORS.bad else Theme.COLORS.panelLight
-	end
-	micButton.MouseButton1Down:Connect(function()
-		setListening(true)
-	end)
-	micButton.MouseButton1Up:Connect(function()
-		setListening(false)
-	end)
-	micButton.MouseLeave:Connect(function()
-		if micButton.BackgroundColor3 == Theme.COLORS.bad then
-			setListening(false)
-		end
-	end)
-	local function syncMic()
-		micButton.Visible = ReplicatedStorage:GetAttribute("VoiceSpellsEnabled") == true
-	end
-	ReplicatedStorage:GetAttributeChangedSignal("VoiceSpellsEnabled"):Connect(syncMic)
-	syncMic()
-
-	heardLabel = Theme.label(holder, "", {
-		Name = "Heard",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 0, -4),
-		Size = UDim2.new(1, 0, 0, 20),
-		TextColor3 = Theme.COLORS.subtext,
-	})
+	Theme.corner(drawBar, 2)
 end
 
-local function buildLevel(root: Frame)
+-- Top-left wallet: coins (spent on crates) and wins (the leaderboard stat).
+local function buildWallet(root: Frame)
 	local holder = Theme.frame(root, {
-		Name = "Level",
+		Name = "Wallet",
 		Position = UDim2.fromOffset(12, 12),
-		Size = UDim2.fromOffset(220, 44),
+		Size = UDim2.fromOffset(240, 44),
 		BackgroundTransparency = 0.15,
 	})
 	Theme.corner(holder)
-	levelLabel = Theme.label(holder, "Lv 1", {
-		Size = UDim2.new(0, 60, 1, -8),
-		Position = UDim2.fromOffset(6, 4),
+	coinsLabel = Theme.label(holder, "💰 0", {
+		Size = UDim2.new(0.55, -8, 1, -8),
+		Position = UDim2.fromOffset(8, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.accent,
 	})
-	local back = Theme.frame(holder, {
-		Position = UDim2.new(0, 70, 0.5, -7),
-		Size = UDim2.new(1, -80, 0, 14),
-		BackgroundColor3 = Color3.fromRGB(20, 20, 40),
+	winsLabel = Theme.label(holder, "🏆 0", {
+		Size = UDim2.new(0.45, -8, 1, -8),
+		Position = UDim2.new(0.55, 0, 0, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
 	})
-	Theme.corner(back, 7)
-	xpFill = Theme.frame(back, {
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Theme.COLORS.accent,
-	})
-	Theme.corner(xpFill, 7)
 end
 
-local function refreshLevel()
+local shownCoins = 0
+local function refreshWallet()
 	local profile = ClientState.profile
 	if not profile then
 		return
 	end
-	levelLabel.Text = `Lv {profile.level}`
-	local ratio = if profile.xpNeeded > 0 then profile.xpInto / profile.xpNeeded else 1
-	TweenService
-		:Create(xpFill, TweenInfo.new(0.4), { Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1) })
-		:Play()
+	winsLabel.Text = `🏆 {profile.stats.wins}`
+	-- Count up/down to the new balance so earning and spending are felt.
+	local from, to = shownCoins, profile.coins
+	shownCoins = to
+	local start = os.clock()
+	task.spawn(function()
+		while coinsLabel.Parent and shownCoins == to do
+			local t = math.min((os.clock() - start) / 0.5, 1)
+			coinsLabel.Text = `💰 {math.floor(from + (to - from) * t + 0.5)}`
+			if t >= 1 then
+				break
+			end
+			task.wait()
+		end
+	end)
 end
 
 local function buildMatchBar(root: Frame)
@@ -480,6 +435,19 @@ local function buildMatchBar(root: Frame)
 	})
 end
 
+-- Your picked match boosts as a row of icons under the match bar.
+local function refreshBoosts()
+	local parts = {}
+	for _, boost in Boosts.LIST do
+		local stacks = HudController.boostStacks(boost.id)
+		if stacks > 0 then
+			table.insert(parts, `{boost.icon}x{stacks}`)
+		end
+	end
+	boostsLabel.Text = table.concat(parts, "  ")
+	boostsLabel.Visible = #parts > 0
+end
+
 local function refreshMatch()
 	local state = ClientState.match
 	matchBar.Visible = state.phase ~= "Idle"
@@ -500,6 +468,40 @@ local function refreshMatch()
 	end
 end
 
+local function buildBattleBanner(root: Frame)
+	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: beat raiders for coins!", {
+		Name = "BattleBanner",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(560, 36),
+		TextColor3 = Theme.COLORS.accent,
+		TextStrokeTransparency = 0.3,
+		Visible = false,
+	})
+	battleLeave = Theme.button(root, "Return to Hub", {
+		Name = "BattleLeave",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 48),
+		Size = UDim2.fromOffset(150, 30),
+		BackgroundColor3 = Theme.COLORS.panel,
+		Visible = false,
+	})
+	battleLeave.Activated:Connect(function()
+		Remotes.get("LeaveBattleground"):FireServer()
+	end)
+end
+
+local function buildBoosts(root: Frame)
+	boostsLabel = Theme.label(root, "", {
+		Name = "Boosts",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 76),
+		Size = UDim2.fromOffset(300, 28),
+		TextStrokeTransparency = 0.4,
+		Visible = false,
+	})
+end
+
 local function buildFeed(root: Frame)
 	feedHolder = Theme.frame(root, {
 		Name = "KillFeed",
@@ -515,7 +517,7 @@ local function buildFeed(root: Frame)
 end
 
 local function addFeed(killer: string?, victim: string, spell: string?)
-	local text = if killer then `{killer} ✦ {victim}` else `{victim} was knocked out`
+	local text = if killer then `{killer} ★ {victim}` else `{victim} was knocked out`
 	if killer and spell then
 		text = `{killer} [{spell}] {victim}`
 	end
@@ -528,23 +530,9 @@ local function addFeed(killer: string?, victim: string, spell: string?)
 	end)
 end
 
-local function updateScale(scale: UIScale)
-	local camera = workspace.CurrentCamera
-	if not camera then
-		return
-	end
-	local size = camera.ViewportSize
-	local s = math.min(size.X / 1280, size.Y / 720)
-	-- Touch screens get slightly larger UI for finger-sized targets.
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		s *= 1.15
-	end
-	scale.Scale = math.clamp(s, 0.6, 1.4)
-end
-
 function HudController.init()
 	gui = Instance.new("ScreenGui")
-	gui.Name = "WordcraftHud"
+	gui.Name = "SpellcraftHud"
 	gui.ResetOnSpawn = false
 	gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -558,9 +546,11 @@ function HudController.init()
 	scale.Parent = gui
 
 	buildHotbar(root)
-	buildSpellBox(root)
-	buildLevel(root)
+	buildGlyphRow(root)
+	buildWallet(root)
 	buildMatchBar(root)
+	buildBoosts(root)
+	buildBattleBanner(root)
 	buildFeed(root)
 
 	toastHolder = Theme.frame(root, {
@@ -574,34 +564,35 @@ function HudController.init()
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = toastHolder
 
-	updateScale(scale)
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			updateScale(scale)
-		end)
-	end
+	Responsive.bind(scale)
 	gui.Parent = player:WaitForChild("PlayerGui")
 	GuiService.AutoSelectGuiEnabled = true
 end
 
 function HudController.start()
 	ClientState.HandChanged:Connect(refreshHotbar)
-	ClientState.ProfileChanged:Connect(refreshLevel)
-	ClientState.ProfileChanged:Connect(function()
-		spellBox.PlaceholderText = `Type a spell... ({ClientState.typeKeyName()})`
-	end)
+	ClientState.ProfileChanged:Connect(refreshWallet)
+	ClientState.ProfileChanged:Connect(refreshWords)
 	ClientState.MatchChanged:Connect(refreshMatch)
+	player:GetAttributeChangedSignal("Boosts"):Connect(refreshBoosts)
+	local function refreshBattle()
+		local inside = player:GetAttribute("InBattleground") == true
+		battleLabel.Visible = inside
+		battleLeave.Visible = inside
+	end
+	player:GetAttributeChangedSignal("InBattleground"):Connect(refreshBattle)
+	refreshBattle()
+	-- The spell cards (tap to trace) only show where drawing is allowed.
+	local function refreshDrawable()
+		local allowed = ClientState.canDraw()
+		glyphRow.Visible = allowed
+		drawBar.Visible = allowed
+	end
+	ClientState.PresenceChanged:Connect(refreshDrawable)
+	refreshDrawable()
+	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)
-	Remotes.get("VoiceHeard").OnClientEvent:Connect(function(text)
-		heardLabel.Text = `Heard: "{text}"`
-		task.delay(2.5, function()
-			if heardLabel.Text == `Heard: "{text}"` then
-				heardLabel.Text = ""
-			end
-		end)
-	end)
 	refreshHotbar()
 	RunService.Heartbeat:Connect(tickCooldowns)
 end

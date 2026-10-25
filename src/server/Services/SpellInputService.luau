@@ -1,35 +1,74 @@
 --!strict
--- Every way a player can "say" a spell funnels into SpellInputService.submit():
---   * Chat: a chat message that is exactly a spell word is consumed (not
---     broadcast) and grants that spell.
---   * The on-screen spell box (SubmitWord remote) — works with on-screen
---     keyboards on mobile, console, and VR. Pasting is blocked client-side.
---   * Voice (VoiceService calls submit with source "voice").
+-- Drawing a spell: the client sends the stroke it drew (DrawSpell remote),
+-- the server decides what it is.
 --
--- A word adds ONE copy of the spell to the hotbar (HandService.grant; up to
--- 5 copies, duplicates allowed). Words are limited to one per
--- Config.TYPE_COOLDOWN seconds per player across all sources.
+--   DrawSpell(points, spellId?) ──► validate (table of Vector2, count, range, 1s cooldown)
+--   ──► GlyphRecognizer (only the equipped element's five shapes) ──► the
+--   spell drawn with that shape ──► HandService.grant (hotbar copy; only the equipped
+--   element's spells work, in the hub and in matches)
+--   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback
 --
--- Messages starting with Config.ADMIN_PREFIX go to the admin command handler
--- (AdminService installs it) instead, from chat or the spell box.
+-- Quality: the recognizer's score for the stroke becomes a 0..1 quality
+-- (Spells/Quality) stored on the copy; the better the stroke follows the
+-- shape, the stronger the cast (CastService). A client that tapped a spell's
+-- card sends that `spellId` as the shape it is tracing: the stroke must be
+-- THAT spell's shape (any other shape fizzles); without it, any of the
+-- equipped element's shapes is accepted.
+--
+-- A drawing adds ONE copy of the spell to the hotbar (one copy per spell).
+-- Drawings are limited to one per Config.DRAW_COOLDOWN seconds, and only
+-- allowed in fights: during a match's rounds and in the Battleground (MatchService
+-- installs the rule with setDrawGate; not in the hub, and not while a match counts down).
+--
+-- Chat is no longer a way to cast: messages starting with Config.ADMIN_PREFIX
+-- go to the admin command handler (AdminService installs it); everything else
+-- is normal chat.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
+local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
+local ElementService = require(script.Parent.ElementService)
 local HandService = require(script.Parent.HandService)
-
-type Source = "chat" | "box" | "voice"
 
 local SpellInputService = {}
 
 local toastRemote: RemoteEvent
-local lastWord: { [Player]: number } = {}
-local noTypeCooldown: { [Player]: boolean } = {}
+local resultRemote: RemoteEvent
+local fxRemote: RemoteEvent
+local lastDraw: { [Player]: number } = {}
+local noDrawCooldown: { [Player]: boolean } = {}
+
+-- (player) -> (allowed, reason). Installed by MatchService.
+local drawGate: ((Player) -> (boolean, string?))? = nil
+
+function SpellInputService.setDrawGate(gate: (Player) -> (boolean, string?))
+	drawGate = gate
+end
+
+-- Per element: shape -> the spell drawn with it. Only an element's own five
+-- shapes are ever recognized, so look-alike shapes can't be confused with them.
+local SPELL_BY_GLYPH: { [string]: { [string]: string } } = {}
+local ALLOWED: { [string]: { [string]: boolean } } = {}
+for _, element in Elements.LIST do
+	local byGlyph: { [string]: string } = {}
+	local allowed: { [string]: boolean } = {}
+	for _, id in element.spells do
+		local def = SpellDefinitions.get(id)
+		if def then
+			byGlyph[def.glyph] = def.id
+			allowed[def.glyph] = true
+		end
+	end
+	SPELL_BY_GLYPH[element.id] = byGlyph
+	ALLOWED[element.id] = allowed
+end
 
 -- (player, text) -> handled. Installed by AdminService; returns true when
 -- the player is an admin and the text was a command. Must not yield (it runs
@@ -44,39 +83,95 @@ local function isCommand(text: string): boolean
 	return string.sub(text, 1, #Config.ADMIN_PREFIX) == Config.ADMIN_PREFIX
 end
 
--- Admin: skip the typing cooldown for a player.
-function SpellInputService.setNoTypeCooldown(player: Player, enabled: boolean)
-	noTypeCooldown[player] = if enabled then true else nil
+-- Admin: skip the drawing cooldown for a player.
+function SpellInputService.setNoDrawCooldown(player: Player, enabled: boolean)
+	noDrawCooldown[player] = if enabled then true else nil
 end
 
--- Seconds until this player may type another word.
-function SpellInputService.typeCooldownLeft(player: Player): number
-	if noTypeCooldown[player] then
+-- Seconds until this player may draw another spell.
+function SpellInputService.drawCooldownLeft(player: Player): number
+	if noDrawCooldown[player] then
 		return 0
 	end
-	return math.max(0, (lastWord[player] or 0) + Config.TYPE_COOLDOWN - os.clock())
+	return math.max(0, (lastDraw[player] or 0) + Config.DRAW_COOLDOWN - os.clock())
 end
 
--- Returns the spell id that was granted, or nil.
-function SpellInputService.submit(player: Player, text: string, source: Source): string?
-	local left = SpellInputService.typeCooldownLeft(player)
-	if left > 0 then
-		toastRemote:FireClient(player, `Typing cooldown ({math.ceil(left * 10) / 10}s)`, "cooldown")
+-- Returns a clean list of Vector2 from untrusted remote data, or nil.
+local function sanitize(raw: any): { Vector2 }?
+	if
+		typeof(raw) ~= "table"
+		or #raw > Config.DRAW_MAX_POINTS
+		or #raw < GlyphRecognizer.MIN_POINTS
+	then
 		return nil
 	end
-	lastWord[player] = os.clock()
+	local limit = Config.DRAW_MAX_COORD
+	local points: { Vector2 } = {}
+	for i = 1, #raw do
+		local p = raw[i]
+		if typeof(p) ~= "Vector2" then
+			return nil
+		end
+		-- NaN/inf and far-off-screen values are rejected outright.
+		if p.X ~= p.X or p.Y ~= p.Y or math.abs(p.X) > limit or math.abs(p.Y) > limit then
+			return nil
+		end
+		points[i] = p
+	end
+	return points
+end
 
-	local spellId = if source == "voice"
-		then WordMatcher.findInText(text)
-		else WordMatcher.matchWord(text)
+-- Recognizes a stroke and readies the spell. Returns the granted spell id.
+function SpellInputService.submitStroke(
+	player: Player,
+	points: { Vector2 },
+	targetId: string?
+): string?
+	if drawGate then
+		local allowed, reason = drawGate(player)
+		if not allowed then
+			toastRemote:FireClient(player, reason or "You can't draw right now.", "fizzle")
+			resultRemote:FireClient(player, nil, nil)
+			return nil
+		end
+	end
+	local left = SpellInputService.drawCooldownLeft(player)
+	if left > 0 then
+		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "cooldown")
+		return nil
+	end
+	lastDraw[player] = os.clock()
+
+	local elementId = ElementService.equipped(player)
+	local element = if elementId then Elements.get(elementId) else nil
+	if not element then
+		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "fizzle")
+		resultRemote:FireClient(player, nil, nil)
+		return nil
+	end
+	local target = if targetId then SpellDefinitions.get(targetId) else nil
+	if target and target.element ~= element.id then
+		target = nil -- not one of your spells: treated as a free drawing
+	end
+	local glyphId, score = GlyphRecognizer.recognize(points, ALLOWED[element.id])
+	local spellId = if glyphId then SPELL_BY_GLYPH[element.id][glyphId] else nil
+	if spellId and target and spellId ~= target.id then
+		-- Drew a different shape than the one on the card.
+		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "fizzle")
+		resultRemote:FireClient(player, nil, glyphId)
+		return nil
+	end
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
 		toastRemote:FireClient(player, hints[math.random(1, #hints)], "fizzle")
+		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
-	local ok, message = HandService.grant(player, spellId)
+	local quality = Quality.fromScore(score)
+	local ok, message = HandService.grant(player, spellId, nil, quality)
 	if not ok then
 		toastRemote:FireClient(player, message or "Fizzle!", "fizzle")
+		resultRemote:FireClient(player, nil, glyphId)
 		return nil
 	end
 	local def = SpellDefinitions.get(spellId)
@@ -89,28 +184,28 @@ function SpellInputService.submit(player: Player, text: string, source: Source):
 		end
 		toastRemote:FireClient(
 			player,
-			`+1 {def.name}!` .. (if held > 1 then ` (x{held})` else ""),
+			`+1 {def.name}! {Quality.tier(quality).name}` .. (if held > 1 then ` (x{held})` else ""),
 			"ready"
 		)
+	end
+	resultRemote:FireClient(player, spellId, glyphId, quality)
+	-- Everyone nearby sees the glyph pop up over the caster's head.
+	local character = player.Character
+	if def and character then
+		fxRemote:FireAllClients("glyph", character, def.glyph, def.visual.color)
 	end
 	return spellId
 end
 
-local function runCommand(player: Player, text: string): boolean
-	return commandHandler ~= nil and commandHandler(player, text)
-end
-
 local function hookChat()
 	if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService then
-		warn(
-			"[SpellInput] Legacy chat detected; chat casting disabled (spell box and voice still work)."
-		)
+		warn("[SpellInput] Legacy chat detected; admin chat commands disabled.")
 		return
 	end
 	local channels = TextChatService:WaitForChild("TextChannels", 30)
 	local general = channels and channels:WaitForChild("RBXGeneral", 30)
 	if not general or not general:IsA("TextChannel") then
-		warn("[SpellInput] RBXGeneral channel not found; chat casting disabled.")
+		warn("[SpellInput] RBXGeneral channel not found; admin chat commands disabled.")
 		return
 	end
 	-- ShouldDeliverCallback runs once per recipient, so de-dupe by MessageId.
@@ -122,7 +217,6 @@ local function hookChat()
 		end
 		local player = Players:GetPlayerByUserId(source.UserId)
 		local command = player ~= nil and isCommand(message.Text)
-		local isSpell = not command and WordMatcher.matchWord(message.Text) ~= nil
 		if not handled[message.MessageId] then
 			handled[message.MessageId] = true
 			task.delay(10, function()
@@ -131,38 +225,36 @@ local function hookChat()
 			end)
 			if player and command then
 				-- Non-admins' ";..." messages are delivered as normal chat.
-				command = runCommand(player, message.Text)
+				command = commandHandler ~= nil and commandHandler(player, message.Text)
 				handled[message.MessageId .. ":cmd"] = command
-			elseif player and isSpell then
-				task.spawn(SpellInputService.submit, player, message.Text, "chat")
 			end
 		elseif command then
 			command = handled[message.MessageId .. ":cmd"] == true
 		end
-		return not (isSpell or command)
+		return not command
 	end
 end
 
 function SpellInputService.init()
 	toastRemote = Remotes.get("Toast")
+	resultRemote = Remotes.get("GlyphResult")
+	fxRemote = Remotes.get("Fx")
 end
 
 function SpellInputService.start()
-	Remotes.get("SubmitWord").OnServerEvent:Connect(function(player, text)
-		if typeof(text) ~= "string" or #text == 0 or #text > 120 then
-			return
+	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw, targetId)
+		local points = sanitize(raw)
+		if points then
+			SpellInputService.submitStroke(
+				player,
+				points,
+				if typeof(targetId) == "string" then targetId else nil
+			)
 		end
-		if isCommand(text) and runCommand(player, text) then
-			return
-		end
-		if #text > 64 then
-			return
-		end
-		SpellInputService.submit(player, text, "box")
 	end)
 	Players.PlayerRemoving:Connect(function(player)
-		lastWord[player] = nil
-		noTypeCooldown[player] = nil
+		lastDraw[player] = nil
+		noDrawCooldown[player] = nil
 	end)
 	task.spawn(hookChat)
 end

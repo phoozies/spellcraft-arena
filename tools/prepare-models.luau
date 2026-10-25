@@ -71,6 +71,64 @@ local SPECS = {
 			Grimoire_Gem = { color = rgb(0, 226, 255), material = M.Neon },
 		},
 	},
+
+	-- Crate spells and the shop crate (tools/blender/build_spell_models.py).
+	-- The game rescales most of these at runtime (bolt width, zone size,
+	-- turret height), so these sizes are just sensible defaults.
+	Gust = {
+		width = 7, -- Gust's visual is 7 studs
+		vfx = true,
+		parts = {
+			Gust_Swirl = { color = rgb(220, 240, 255), material = M.Neon, transparency = 0.35 },
+			Gust_Core = { color = rgb(255, 255, 255), material = M.ForceField, transparency = 0.2 },
+			Gust_Streaks = { color = rgb(180, 215, 255), material = M.Neon, transparency = 0.5 },
+		},
+	},
+	Zap = {
+		height = 22, -- a tall bolt from the sky; FxController rescales it per strike
+		vfx = true,
+		parts = {
+			Zap_Bolt = { color = rgb(255, 238, 88), material = M.Neon },
+			Zap_Glow = { color = rgb(140, 200, 255), material = M.Neon, transparency = 0.7 },
+		},
+	},
+	Heal = {
+		width = 2.5,
+		vfx = true,
+		parts = {
+			Heal_Cross = { color = rgb(102, 187, 106), material = M.Neon },
+			Heal_Ring = { color = rgb(200, 255, 205), material = M.Neon, transparency = 0.3 },
+		},
+	},
+	BlackHole = {
+		width = 6,
+		vfx = true,
+		parts = {
+			BlackHole_Core = { color = rgb(8, 0, 16), material = M.SmoothPlastic },
+			BlackHole_Disk = { color = rgb(140, 50, 240), material = M.Neon, transparency = 0.25 },
+			BlackHole_Ring = { color = rgb(255, 140, 50), material = M.Neon, transparency = 0.1 },
+		},
+	},
+	Turret = {
+		height = 5, -- matches the Turret spell's visual (4 x 5 x 4)
+		solid = false, -- welded onto an invisible hitbox body; the body collides
+		parts = {
+			Turret_Base = { color = rgb(69, 90, 100), material = M.DiamondPlate },
+			Turret_Head = { color = rgb(84, 110, 122), material = M.Metal, reflectance = 0.1 },
+			Turret_Barrel = { color = rgb(38, 38, 44), material = M.Metal },
+			Turret_Lens = { color = rgb(255, 64, 64), material = M.Neon },
+		},
+	},
+	Crate = {
+		width = 4,
+		solid = true,
+		parts = {
+			Crate_Body = { color = rgb(140, 92, 52), material = M.WoodPlanks },
+			-- Trim and gem are re-tinted per rarity by the hub's Crate Shop.
+			Crate_Trim = { color = rgb(216, 166, 52), material = M.Metal },
+			Crate_Gem = { color = rgb(76, 216, 255), material = M.Neon },
+		},
+	},
 }
 
 local MIN = 0.001
@@ -101,7 +159,8 @@ for name, spec in SPECS do
 		local floor = model:FindFirstChild(spec.floorPivot) :: BasePart
 		pivot = Vector3.new(box.Position.X, floor.Position.Y + floor.Size.Y / 2, box.Position.Z)
 	end
-	local s = spec.width / measure
+	-- Scale to `width` (X), or to `height` (Y) for tall models.
+	local s = if spec.height then spec.height / size.Y else spec.width / measure
 
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") then

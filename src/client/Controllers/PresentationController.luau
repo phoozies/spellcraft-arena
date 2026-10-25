@@ -5,10 +5,10 @@
 --   Countdown  fade back in, big 3 · 2 · 1 numbers
 --   Round      "FIGHT!"
 --   Draft      round banner ("BLUE WINS ROUND 1" / "DRAW")
---   Results    VICTORY (confetti) / DEFEAT / DRAW, XP counting up, then a
---              fade out back to the hub
--- Plus KO pop-ups (you knocked someone out / you got knocked out) and a
--- level-up banner. Cosmetic only.
+--   Results    VICTORY (confetti) / DEFEAT / DRAW, coins counting up (wins
+--              only), then a fade out back to the hub
+-- Plus KO pop-ups (you knocked someone out / you got knocked out).
+-- Cosmetic only.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -225,27 +225,23 @@ local function showIntro(state: Types.MatchState)
 	layout.Parent = row
 
 	local order = 0
-	local ffa = state.mode == "FFA"
 	for index, team in teams do
 		if index > 1 then
 			order += 1
 			local vs = Theme.label(row, "VS", {
-				Size = UDim2.fromOffset(if ffa then 30 else 90, 90),
+				Size = UDim2.fromOffset(90, 90),
 				LayoutOrder = order,
 				TextColor3 = GOLD,
 				TextStrokeTransparency = 0,
 			})
-			if ffa then
-				vs.Text = "·"
-			end
 		end
 		for _, entry in byTeam[team] do
 			order += 1
-			avatarCard(row, entry, order, if ffa then GOLD else teamColor(team))
+			avatarCard(row, entry, order, teamColor(team))
 		end
 	end
 
-	Theme.label(backdrop, "Type spells to fight — best of 3!", {
+	Theme.label(backdrop, "Draw spells to fight — best of 3!", {
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.fromScale(0.5, 0.88),
 		Size = UDim2.new(0.8, 0, 0, 34),
@@ -362,19 +358,20 @@ local function showResults(state: Types.MatchState)
 		})
 	end
 
-	-- XP counts up.
-	local xpLabel = Theme.label(backdrop, "+0 XP", {
+	-- Coins earned (winners only) count up.
+	local coinsLabel = Theme.label(backdrop, "+0 coins", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.55),
 		Size = UDim2.new(0.5, 0, 0, 56),
 		TextColor3 = GOLD,
 	})
-	local target = state.xpGained or 0
+	local target = state.coinsGained or 0
+	coinsLabel.Visible = target > 0
 	task.spawn(function()
 		local start = os.clock()
-		while xpLabel.Parent do
+		while coinsLabel.Parent do
 			local t = math.min(1, (os.clock() - start) / 1.2)
-			xpLabel.Text = `+{math.floor(target * t)} XP`
+			coinsLabel.Text = `+{math.floor(target * t)} coins`
 			if t >= 1 then
 				break
 			end
@@ -426,7 +423,7 @@ local function onState()
 end
 
 ---------------------------------------------------------------------------
--- KO + level up
+-- KO pop-ups
 ---------------------------------------------------------------------------
 
 local function onKnockout(killer: string?, victim: string, _spell: string?)
@@ -438,14 +435,6 @@ local function onKnockout(killer: string?, victim: string, _spell: string?)
 		if killer then
 			popText(`by {killer}`, Theme.COLORS.subtext, 1.4, 40, 0.4)
 		end
-	end
-end
-
-local function onToast(message: string, kind: string)
-	if kind == "levelup" then
-		local level = string.match(message, "level (%d+)")
-		popText(if level then `LEVEL {level}!` else "LEVEL UP!", GOLD, 1.8, 120, 0.25)
-		confetti(60)
 	end
 end
 
@@ -475,7 +464,6 @@ end
 function PresentationController.start()
 	ClientState.MatchChanged:Connect(onState)
 	Remotes.get("Knockout").OnClientEvent:Connect(onKnockout)
-	Remotes.get("Toast").OnClientEvent:Connect(onToast)
 end
 
 return PresentationController

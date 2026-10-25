@@ -3,10 +3,10 @@
 --
 --   Queue -> Countdown -> Round -> (Draft -> Countdown -> Round)* -> Results -> Hub
 --
--- * Best of 3 rounds (Config.ROUNDS_TO_WIN). Each player's hand starts as 3
---   random owned spells and gains +1 from the draft after each round (max 5).
--- * Teams: "Blue" / "Red" for 1v1, 2v2, 4v4; FFA puts every player on their
---   own team (their name).
+-- * Best of 3 rounds (Config.ROUNDS_TO_WIN). Each player's spellbook is the
+--   five spells of their equipped element. The draft after each round
+--   offers match boosts (Power, Vitality, ...), not spells (BoostService).
+-- * Teams: "Blue" / "Red".
 -- * Owns the PvP relation rules used by DestructibleService and the world
 --   hooks used by CastService.
 
@@ -16,18 +16,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local DraftRoller = require(ReplicatedStorage.Shared.Match.DraftRoller)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
+local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 local ArenaService = require(script.Parent.ArenaService)
+local BoostService = require(script.Parent.BoostService)
+local ElementService = require(script.Parent.ElementService)
 local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
+local MapVoteService = require(script.Parent.MapVoteService)
+local PartyService = require(script.Parent.PartyService)
+local SpellInputService = require(script.Parent.SpellInputService)
+local PracticeZone = require(ReplicatedStorage.Shared.Util.PracticeZone)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
+local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
 
 type Match = {
@@ -45,7 +51,7 @@ type Match = {
 	roundWins: { [string]: number },
 	alive: { [Player]: boolean },
 	knockouts: { [Player]: number },
-	xp: { [Player]: number },
+	coins: { [Player]: number }, -- coins earned this match (shown on Results)
 	offers: { [Player]: { Types.DraftCard } },
 	ended: boolean,
 	lastRoundWinner: string?,
@@ -57,14 +63,12 @@ local MatchService = {}
 -- Fired with (player, mode) when someone joins/leaves a queue, for UI.
 MatchService.QueueChanged = Signal.new()
 
-local queues: { [string]: { Player } } =
-	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {}, ["FFA"] = {} }
+local queues: { [string]: { Player } } = { ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
+-- Players waiting on a map vote before their match is created.
+local votingPlayers: { [Player]: boolean } = {}
 local matchCounter = 0
-
--- Session leaderboard (resets when the server restarts).
-MatchService.sessionKnockouts = {} :: { [Player]: number }
 
 local stateRemote: RemoteEvent
 local draftRemote: RemoteEvent
@@ -131,6 +135,22 @@ local function spawnAt(player: Player, cframe: CFrame, frozen: boolean)
 	end
 end
 
+-- Moves a living character somewhere (a Battleground drop-in) with a short
+-- spawn shield, without reloading it.
+function MatchService.teleport(player: Player, cframe: CFrame)
+	local character = player.Character
+	if character then
+		character:PivotTo(cframe)
+		protect(character)
+		character:SetAttribute("Team", nil)
+	end
+end
+
+-- Reloads a player's character at `cframe` (a Battleground respawn).
+function MatchService.respawnAt(player: Player, cframe: CFrame)
+	spawnAt(player, cframe, false)
+end
+
 function MatchService.spawnInHub(player: Player)
 	spawnAt(player, hubSpawnCFrame(), false)
 	local character = player.Character
@@ -139,7 +159,7 @@ function MatchService.spawnInHub(player: Player)
 	end
 end
 
--- Team ids: "Blue"/"Red", or a player's UserId in FFA (display names aren't unique).
+-- Team ids: "Blue" / "Red".
 local function teamDisplay(match: Match, team: string): string
 	return match.teamNames[team] or team
 end
@@ -177,7 +197,7 @@ local function sendState(match: Match)
 				won = if results
 					then match.winner ~= nil and match.teams[player] == match.winner
 					else nil,
-				xpGained = if results then match.xp[player] or 0 else nil,
+				coinsGained = if results then match.coins[player] or 0 else nil,
 			}
 			stateRemote:FireClient(player, state)
 		end
@@ -230,8 +250,8 @@ local function teamHealth(match: Match, team: string): number
 	return total
 end
 
-local function grantXp(match: Match, player: Player, amount: number)
-	match.xp[player] = (match.xp[player] or 0) + amount
+local function grantCoins(match: Match, player: Player, amount: number)
+	match.coins[player] = (match.coins[player] or 0) + amount
 end
 
 ----------------------------------------------------------------------
@@ -242,6 +262,10 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 	if victimOwner == nil then
 		if target:GetAttribute("Dummy") then
 			return true
+		end
+		-- Battleground NPCs: fair game for anyone inside the Battleground.
+		if target:GetAttribute("Hostile") then
+			return attacker == nil or attacker:GetAttribute("InBattleground") == true
 		end
 		-- Unowned map props: breakable only by players in that arena's match.
 		if attacker then
@@ -255,6 +279,11 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 	if attacker == nil then
 		return true
 	end
+	-- Everyone inside the Battleground may hurt everyone else inside it,
+	-- except their own party.
+	if attacker:GetAttribute("InBattleground") and victimOwner:GetAttribute("InBattleground") then
+		return not PartyService.sameParty(attacker, victimOwner)
+	end
 	local a, b = playerMatch[attacker], playerMatch[victimOwner]
 	if a or b then
 		return a == b
@@ -262,11 +291,14 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 			and a.phase == "Round"
 			and a.teams[attacker] ~= a.teams[victimOwner]
 	end
-	-- No PvP in the hub; players fight in matches (the sparring arena is a map).
+	-- No PvP in the hub; players fight in matches and in the Battleground.
 	return false
 end
 
 local function areAllies(a: Player, b: Player): boolean
+	if a:GetAttribute("InBattleground") and b:GetAttribute("InBattleground") then
+		return PartyService.sameParty(a, b)
+	end
 	local match = playerMatch[a]
 	return match ~= nil and match == playerMatch[b] and match.teams[a] == match.teams[b]
 end
@@ -291,15 +323,16 @@ local function spawnRound(match: Match)
 	local indexByGroup: { [string]: number } = {}
 	for _, player in connected(match) do
 		local team = match.teams[player]
-		local group = if match.mode == "FFA" then "FFA" else TEAM_SPAWN_GROUP[team]
+		local group = TEAM_SPAWN_GROUP[team]
 		indexByGroup[group] = (indexByGroup[group] or 0) + 1
 		spawnAt(player, ArenaService.spawnCFrame(match.arena, group, indexByGroup[group]), true)
+		BoostService.applyToCharacter(player)
 		match.alive[player] = true
 		local character = player.Character
 		if character then
 			character:SetAttribute("Team", team)
 		end
-		-- Every round starts empty-handed: type to summon your spells.
+		-- Every round starts empty-handed: draw to summon your spells.
 		HandService.resetCooldowns(player)
 		HandService.clearCopies(player)
 	end
@@ -327,9 +360,12 @@ local function runDraft(match: Match)
 	local rng = Random.new()
 	local anyOffers = false
 	for _, player in connected(match) do
-		local hand = HandService.getSpellbook(player) or {}
-		if #hand < Config.MAX_HAND then
-			local cards = DraftRoller.roll(hand, rng)
+		local ids = BoostService.roll(player, rng)
+		if #ids > 0 then
+			local cards: { Types.DraftCard } = {}
+			for _, id in ids do
+				table.insert(cards, { boostId = id })
+			end
 			match.offers[player] = cards
 			anyOffers = true
 			draftRemote:FireClient(player, cards, workspace:GetServerTimeNow() + Config.DRAFT_TIME)
@@ -345,11 +381,11 @@ local function runDraft(match: Match)
 	for player, cards in match.offers do
 		if player.Parent and #cards > 0 then
 			local card = cards[math.random(1, #cards)]
-			HandService.addToSpellbook(player, card.spellId)
-			local def = SpellDefinitions.get(card.spellId)
+			BoostService.pick(player, card.boostId)
+			local boost = Boosts.get(card.boostId)
 			toastRemote:FireClient(
 				player,
-				`Auto-picked {if def then def.name else card.spellId}`,
+				`Auto-picked {if boost then boost.name else card.boostId}`,
 				"ready"
 			)
 		end
@@ -422,32 +458,31 @@ local function finishMatch(match: Match, winner: string?)
 	match.endsAt = workspace:GetServerTimeNow() + Config.RESULTS_TIME
 
 	for _, player in connected(match) do
-		grantXp(match, player, Config.XP.PARTICIPATION)
 		local won = winner ~= nil and match.teams[player] == winner
 		local profile = PlayerDataService.get(player)
 		if profile then
 			profile.stats.matches += 1
 			profile.stats.knockouts += match.knockouts[player] or 0
 		end
-		ProgressionService.track(player, "match")
-		if won then
-			grantXp(match, player, Config.XP.MATCH_WIN)
-			if profile then
-				profile.stats.wins += 1
-			end
-			ProgressionService.track(player, "win")
-			if ProgressionService.consumeFirstWin(player) then
-				grantXp(match, player, Config.XP.FIRST_WIN_OF_DAY)
+		EconomyService.track(player, "match")
+		-- Coins are earned by winning (no XP or levels). A solo test match
+		-- (admin/debug) never pays out.
+		if won and not match.solo then
+			grantCoins(match, player, Config.COINS.MATCH_WIN)
+			EconomyService.recordWin(player)
+			EconomyService.track(player, "win")
+			if EconomyService.consumeFirstWin(player) then
+				grantCoins(match, player, Config.COINS.FIRST_WIN_OF_DAY)
 				toastRemote:FireClient(
 					player,
-					`First win of the day! +{Config.XP.FIRST_WIN_OF_DAY} XP`,
+					`First win of the day! +{Config.COINS.FIRST_WIN_OF_DAY} bonus coins`,
 					"reward"
 				)
 			end
 		end
 		-- The Victory/Defeat screen (client PresentationController) shows the
-		-- result and XP from the Results state below.
-		ProgressionService.addXp(player, match.xp[player] or 0, "match")
+		-- result and coins from the Results state below.
+		EconomyService.addCoins(player, match.coins[player] or 0, "match")
 	end
 	sendState(match)
 
@@ -455,6 +490,7 @@ local function finishMatch(match: Match, winner: string?)
 		for _, player in match.players do
 			if playerMatch[player] == match then
 				playerMatch[player] = nil
+				BoostService.reset(player)
 				if player.Parent then
 					HandService.clearMatch(player)
 					MatchService.spawnInHub(player)
@@ -496,11 +532,6 @@ local function runMatch(match: Match)
 		match.lastRoundWinner = roundWinner
 		if roundWinner then
 			match.roundWins[roundWinner] = (match.roundWins[roundWinner] or 0) + 1
-			for _, player in connected(match) do
-				if match.teams[player] == roundWinner then
-					grantXp(match, player, Config.XP.ROUND_WIN)
-				end
-			end
 			if match.roundWins[roundWinner] >= Config.ROUNDS_TO_WIN then
 				winner = roundWinner
 				break
@@ -520,10 +551,53 @@ end
 function MatchService.startMatch(
 	mode: Types.MatchMode,
 	players: { Player },
-	options: { solo: boolean?, teams: { [Player]: string }? }?
+	options: { solo: boolean?, teams: { [Player]: string }?, map: string? }?
 )
+	-- Duels (Config.MAP_VOTE.MODES) vote on the map first; the match then
+	-- starts again with the winner. Solo tests and forced maps skip the vote.
+	if (Config.MAP_VOTE.MODES :: any)[mode] and not (options and (options.solo or options.map)) then
+		for _, player in players do
+			MatchService.leaveQueue(player)
+			votingPlayers[player] = true
+		end
+		task.spawn(function()
+			local map = MapVoteService.run(players, mode)
+			local here = true
+			for _, player in players do
+				votingPlayers[player] = nil
+				if
+					player.Parent == nil
+					or playerMatch[player]
+					or player:GetAttribute("InBattleground")
+				then
+					here = false
+				end
+			end
+			if not here then
+				for _, player in players do
+					if player.Parent then
+						toastRemote:FireClient(
+							player,
+							"Your opponent left, so the match was cancelled.",
+							"fizzle"
+						)
+					end
+				end
+				return
+			end
+			local forced: { teams: { [Player]: string }?, map: string? } =
+				{ teams = options and options.teams, map = map }
+			MatchService.startMatch(mode, players, forced)
+		end)
+		return
+	end
+
 	matchCounter += 1
-	local arena = ArenaService.create(ArenaService.pickMap(mode), mode)
+	local requested = options and options.map
+	local mapName = if requested and table.find(ArenaService.MAP_NAMES, requested)
+		then requested :: string
+		else ArenaService.pickMap(mode)
+	local arena = ArenaService.create(mapName, mode)
 	local match: Match = {
 		id = matchCounter,
 		mode = mode,
@@ -539,39 +613,37 @@ function MatchService.startMatch(
 		roundWins = {},
 		alive = {},
 		knockouts = {},
-		xp = {},
+		coins = {},
 		offers = {},
 		ended = false,
 	}
-	if mode == "FFA" then
-		for _, player in players do
-			local id = tostring(player.UserId)
-			match.teams[player] = id
-			match.teamNames[id] = player.DisplayName
-			table.insert(match.teamOrder, id)
-		end
-	else
-		match.teamOrder = { "Blue", "Red" }
-		local chosen = options and options.teams
-		for i, player in shuffle(players) do
-			local team = chosen and chosen[player]
-			match.teams[player] = if team == "Blue" or team == "Red"
-				then team
-				else if i % 2 == 1 then "Blue" else "Red"
-		end
+	match.teamOrder = { "Blue", "Red" }
+	local chosen = options and options.teams
+	for i, player in shuffle(players) do
+		local team = chosen and chosen[player]
+		match.teams[player] = if team == "Blue" or team == "Red"
+			then team
+			else if i % 2 == 1 then "Blue" else "Red"
 	end
 
 	for _, player in players do
 		MatchService.leaveQueue(player)
+		player:SetAttribute("InBattleground", nil) -- a match pulls you out of the Battleground
 		playerMatch[player] = match
-		local profile = PlayerDataService.get(player)
-		local owned = if profile then profile.ownedSpells else SpellDefinitions.starters()
+		-- Everyone fights with their equipped element; anyone who never picked
+		-- one gets a random element for now.
+		local elementId = ElementService.equipped(player)
+		if not elementId then
+			local all = Elements.ids()
+			elementId = all[math.random(1, #all)]
+			ElementService.grant(player, elementId)
+			EconomyService.sendSummary(player)
+			toastRemote:FireClient(player, `You fight with {elementId}!`, "reward")
+		end
+		BoostService.reset(player)
 		local hand = {}
-		for _, id in shuffle(owned) do
-			if #hand >= Config.STARTING_HAND then
-				break
-			end
-			table.insert(hand, id)
+		for _, def in SpellDefinitions.ofElement(elementId) do
+			table.insert(hand, def.id)
 		end
 		HandService.setSpellbook(player, hand)
 		toastRemote:FireClient(
@@ -631,7 +703,15 @@ function MatchService.leaveQueue(player: Player)
 end
 
 function MatchService.joinQueue(player: Player, mode: string): boolean
-	if not queues[mode] or playerMatch[player] then
+	if not queues[mode] or playerMatch[player] or votingPlayers[player] then
+		return false
+	end
+	if player:GetAttribute("InBattleground") then
+		toastRemote:FireClient(
+			player,
+			"Leave the Battleground first (use a green gate or Return to Hub).",
+			"fizzle"
+		)
 		return false
 	end
 	if MatchService.queuedMode(player) == mode then
@@ -644,8 +724,33 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 	return true
 end
 
+-- Where drawing is allowed: in the Battleground, in the hub's Training Grove, and
+-- in a match once the round is on (not elsewhere in the hub, nor in the intro,
+-- the countdown, the draft, or the results).
+-- Installed into SpellInputService as its draw gate.
+function MatchService.canDraw(player: Player): (boolean, string?)
+	if player:GetAttribute("InBattleground") then
+		return true, nil
+	end
+	local match = playerMatch[player]
+	if match and match.phase == "Round" then
+		return true, nil
+	end
+	if match then
+		return false, "Hold on, you can draw when the round starts!"
+	end
+	-- The hub's Training Grove.
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root and not votingPlayers[player] and PracticeZone.contains(root.Position) then
+		return true, nil
+	end
+	return false, "You can only draw in the Training Grove, duels, and the Battleground."
+end
+
+-- True from the map vote until the match ends, so nothing else (a queue, a
+-- team box, the Battleground) can grab a player the match is waiting on.
 function MatchService.isInMatch(player: Player): boolean
-	return playerMatch[player] ~= nil
+	return playerMatch[player] ~= nil or votingPlayers[player] == true
 end
 
 -- Takes a player out of their match (leaving the game, or the admin ;hub
@@ -659,6 +764,7 @@ function MatchService.removeFromMatch(player: Player)
 	playerMatch[player] = nil
 	match.alive[player] = false
 	match.offers[player] = nil
+	BoostService.reset(player)
 	if player.Parent then
 		HandService.clearMatch(player)
 		stateRemote:FireClient(player, { phase = "Idle", round = 0, endsAt = 0, scores = {} })
@@ -697,32 +803,13 @@ local function processQueues()
 			end
 		end
 		local info = (Config.MODES :: any)[mode]
-		if mode == "FFA" then
-			if #list >= info.minPlayers then
-				ffaReadySince = ffaReadySince or os.clock()
-				if
-					#list >= info.maxPlayers
-					or os.clock() - (ffaReadySince :: number) >= Config.FFA_FILL_WAIT
-				then
-					local group = {}
-					for i = 1, math.min(#list, info.maxPlayers) do
-						table.insert(group, list[i])
-					end
-					ffaReadySince = nil
-					MatchService.startMatch("FFA", group)
-				end
-			else
-				ffaReadySince = nil
+		local needed = info.teams * info.perTeam
+		while #list >= needed do
+			local group = {}
+			for i = 1, needed do
+				table.insert(group, list[i])
 			end
-		else
-			local needed = info.teams * info.perTeam
-			while #list >= needed do
-				local group = {}
-				for i = 1, needed do
-					table.insert(group, list[i])
-				end
-				MatchService.startMatch(mode :: Types.MatchMode, group)
-			end
+			MatchService.startMatch(mode :: Types.MatchMode, group)
 		end
 	end
 	broadcastCounts()
@@ -744,6 +831,7 @@ function MatchService.init()
 	hubStructures.Parent = workspace
 
 	DestructibleService.setRelationResolver(relation)
+	SpellInputService.setDrawGate(MatchService.canDraw)
 	CastService.setWorldHooks({
 		teamOf = function(player)
 			local match = playerMatch[player]
@@ -789,9 +877,16 @@ function MatchService.start()
 			return
 		end
 		match.offers[player] = nil
-		HandService.addToSpellbook(player, card.spellId)
-		if Rarity.INFO[card.rarity].order >= 2 then
-			ProgressionService.track(player, "draftRare")
+		if BoostService.pick(player, card.boostId) then
+			local boost = Boosts.get(card.boostId)
+			toastRemote:FireClient(
+				player,
+				`{if boost then boost.name else card.boostId} boost! {if boost
+					then boost.description
+					else ""}`,
+				"reward"
+			)
+			EconomyService.track(player, "boost")
 		end
 	end)
 
@@ -803,9 +898,7 @@ function MatchService.start()
 		match.alive[victim] = false
 		if killer and playerMatch[killer] == match and killer ~= victim then
 			match.knockouts[killer] = (match.knockouts[killer] or 0) + 1
-			MatchService.sessionKnockouts[killer] = (MatchService.sessionKnockouts[killer] or 0) + 1
-			grantXp(match, killer, Config.XP.KNOCKOUT)
-			ProgressionService.track(killer, "knockout")
+			EconomyService.track(killer, "knockout")
 			local streak = match.knockouts[killer]
 			if streak == 3 then
 				toastAll(match, `{killer.DisplayName} is on a SPELL STREAK!`, "streak")
@@ -823,7 +916,6 @@ function MatchService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		MatchService.leaveQueue(player)
-		MatchService.sessionKnockouts[player] = nil
 		MatchService.removeFromMatch(player)
 	end)
 

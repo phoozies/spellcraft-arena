@@ -1,15 +1,18 @@
 --!strict
 -- Sparring Arena — a colosseum map built from the imported "Arena" model
 -- (marble pillars, sandstone seating, a slate floor with a neon rune ring).
--- A compact 46-stud fighting floor: great for 1v1 and 2v2, still fine for 3v3
--- and FFA. If the model isn't in the place, a plain round platform with
--- pillars stands in.
+-- A roomy fighting floor (the model's 46-stud floor scaled up by SCALE, about
+-- 184 studs): built for duels; bigger teams just get more room. If the model isn't
+-- in the place, a plain round platform with pillars stands in.
 --
--- The fighting floor is 46 studs wide; the seating and the gaps in it have no
+-- The fighting floor is ~184 studs wide; the seating and the gaps in it have no
 -- ground beyond the floor's edge, so walking off the floor means falling into
 -- the void. A ring of invisible walls just outside the floor edge keeps
 -- everyone on the floor (the pillars stand inside it, as cover). The walls
 -- ignore spells (CanQuery off), so bolts still fly over the seating.
+--
+-- A stone wizard statue (the WizardStatue block model) stands on the rune ring
+-- at the center: solid cover for everyone, with its staff orb glowing.
 --
 -- Follows the arena contract documented in MapKit (Bounds, Spawns,
 -- SmallModeWalls); the floor top is at y = 0.
@@ -19,10 +22,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local MapKit = require(script.Parent.MapKit)
 
-local FLOOR_DIAMETER = 46
-local WALL_RADIUS = 24.2 -- inner face at ~23.2, just past the floor's edge (radius 23)
+-- How much bigger than the imported model's design size the arena is built.
+local SCALE = 4
+local FLOOR_DIAMETER = 46 * SCALE
+local WALL_RADIUS = 24.2 * SCALE -- inner face just past the floor's edge (radius 23 * SCALE)
 local WALL_SEGMENTS = 24
 local WALL_HEIGHT = 40
+-- The wizard statue at the center (the model is about 21 studs tall at scale 1).
+local STATUE_SCALE = 2
+
+-- Scales everything in `model` about the arena's origin (the floor's center,
+-- top at y = 0), so the floor top stays at y = 0.
+local function scaleAboutOrigin(model: Instance, factor: number)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			local cframe = descendant.CFrame
+			descendant.Size *= factor
+			descendant.CFrame = cframe.Rotation + cframe.Position * factor
+		elseif descendant:IsA("Attachment") then
+			descendant.Position *= factor
+		end
+	end
+end
 
 local function buildFallbackArt(model: Model)
 	MapKit.part(model, {
@@ -38,11 +59,35 @@ local function buildFallbackArt(model: Model)
 		MapKit.part(model, {
 			name = "Pillar",
 			size = Vector3.new(2, 12, 2),
-			cframe = CFrame.new(math.cos(a) * 22.5, 6, math.sin(a) * 22.5),
+			cframe = CFrame.new(math.cos(a) * 22.5 * SCALE, 6, math.sin(a) * 22.5 * SCALE),
 			color = Color3.fromRGB(240, 232, 220),
 			material = Enum.Material.Marble,
 		})
 	end
+end
+
+local function buildStatue(model: Model)
+	local statue = ModelKit.clone("WizardStatue", "solid", STATUE_SCALE)
+	if statue then
+		statue:PivotTo(CFrame.new(0, 0, 0))
+		statue.Parent = model
+		return
+	end
+	-- Fallback: a plain stone plinth with a pillar on it.
+	MapKit.part(model, {
+		name = "StatuePlinth",
+		size = Vector3.new(15, 2, 15),
+		cframe = CFrame.new(0, 1, 0),
+		color = Color3.fromRGB(112, 112, 124),
+		material = Enum.Material.Slate,
+	})
+	MapKit.part(model, {
+		name = "StatuePillar",
+		size = Vector3.new(6, 24, 6),
+		cframe = CFrame.new(0, 14, 0),
+		color = Color3.fromRGB(158, 158, 170),
+		material = Enum.Material.Slate,
+	})
 end
 
 return function(_makeProp: (Instance, number) -> ()): Model
@@ -55,9 +100,12 @@ return function(_makeProp: (Instance, number) -> ()): Model
 			child.Parent = model
 		end
 		art:Destroy()
+		scaleAboutOrigin(model, SCALE)
 	else
 		buildFallbackArt(model)
 	end
+
+	buildStatue(model)
 
 	-- Invisible wall ring.
 	local barriers = MapKit.folder(model, "Barriers")
@@ -76,8 +124,7 @@ return function(_makeProp: (Instance, number) -> ()): Model
 	end
 
 	local spawns = MapKit.folder(model, "Spawns")
-	MapKit.teamSpawns(spawns, Vector3.zero, 16, 0.5)
-	MapKit.ffaSpawns(spawns, Vector3.new(0, 0.5, 0), 14, 8)
+	MapKit.teamSpawns(spawns, Vector3.zero, 16 * SCALE, 0.5)
 
 	-- Already compact, so there's nothing to close off for the small modes.
 	MapKit.folder(model, "SmallModeWalls")

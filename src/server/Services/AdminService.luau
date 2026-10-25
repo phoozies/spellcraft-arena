@@ -1,5 +1,5 @@
 --!strict
--- Admin commands, typed in chat or the spell box with Config.ADMIN_PREFIX
+-- Admin commands, typed in chat with Config.ADMIN_PREFIX
 -- (";"), e.g. ";give me fireball" or ";startmatch 2v2". See docs/ADMIN.md.
 --
 -- Who is an admin: UserIds in Config.ADMIN_USER_IDS, the place owner (or
@@ -16,15 +16,18 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local LevelCurve = require(ReplicatedStorage.Shared.Progression.LevelCurve)
+local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
+local CrateService = require(script.Parent.CrateService)
 local DestructibleService = require(script.Parent.DestructibleService)
+local EconomyService = require(script.Parent.EconomyService)
+local ElementService = require(script.Parent.ElementService)
 local HandService = require(script.Parent.HandService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
 local SpellInputService = require(script.Parent.SpellInputService)
 local StatusService = require(script.Parent.StatusService)
 
@@ -109,7 +112,7 @@ local function rootOf(player: Player): BasePart?
 	return character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- "fireball", "rock wall", "all" -> spell ids
+-- "fireball", "earth wall", "all" -> spell ids
 local function resolveSpells(text: string): { string }
 	if string.lower(text) == "all" then
 		local ids = {}
@@ -170,69 +173,97 @@ COMMANDS.give = {
 }
 
 COMMANDS.unlock = {
-	usage = "unlock <player> <spell|all>",
-	help = "Permanently unlock spells in a player's spellbook (saved).",
+	usage = "unlock <player> <Fire|Water|Earth|Air|all>",
+	help = "Permanently unlock an element for a player (saved).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local spells = resolveSpells(joinFrom(args, 2))
-		if #targets == 0 or #spells == 0 then
-			return "Usage: unlock <player> <spell|all>"
-		end
-		for _, target in targets do
-			local profile = PlayerDataService.get(target)
-			if profile then
-				for _, id in spells do
-					if not table.find(profile.ownedSpells, id) then
-						table.insert(profile.ownedSpells, id)
-					end
-				end
-				ProgressionService.sendSummary(target)
+		local word = args[2] or ""
+		local wanted: { string } = {}
+		if string.lower(word) == "all" then
+			wanted = Elements.ids()
+		else
+			local id = string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2))
+			if Elements.get(id) then
+				wanted = { id }
 			end
 		end
-		return `Unlocked {#spells} spell(s) for {names(targets)}.`
+		if #targets == 0 or #wanted == 0 then
+			return "Usage: unlock <player> <Fire|Water|Earth|Air|all>"
+		end
+		for _, target in targets do
+			for _, id in wanted do
+				ElementService.grant(target, id)
+			end
+			EconomyService.sendSummary(target)
+		end
+		return `Unlocked {table.concat(wanted, ", ")} for {names(targets)}.`
 	end,
 }
 
-COMMANDS.xp = {
-	usage = "xp <player> <amount>",
-	help = "Grant XP (levels up normally).",
+COMMANDS.coins = {
+	usage = "coins <player> <amount>",
+	help = "Grant coins (spent on crates).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local amount = tonumber(args[2])
 		if #targets == 0 or not amount or amount <= 0 then
-			return "Usage: xp <player> <amount>"
+			return "Usage: coins <player> <amount>"
 		end
 		for _, target in targets do
-			ProgressionService.addXp(target, math.min(amount, 100000), "admin")
+			EconomyService.addCoins(target, math.min(amount, 1000000), "admin")
 		end
-		return `Gave {amount} XP to {names(targets)}.`
+		return `Gave {amount} coins to {names(targets)}.`
 	end,
 }
 
-COMMANDS.level = {
-	usage = "level <player> <1-10>",
-	help = "Set a player's level (sets XP to that level's threshold).",
+COMMANDS.wins = {
+	usage = "wins <player> <amount>",
+	help = "Set a player's win count (leaderboard + podium).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local level = tonumber(args[2])
-		if #targets == 0 or not level then
-			return "Usage: level <player> <1-10>"
+		local amount = tonumber(args[2])
+		if #targets == 0 or not amount or amount < 0 then
+			return "Usage: wins <player> <amount>"
 		end
-		level = math.clamp(math.floor(level), 1, Config.MAX_LEVEL)
 		for _, target in targets do
 			local profile = PlayerDataService.get(target)
 			if profile then
-				local needed = LevelCurve.THRESHOLDS[level]
-				if needed > profile.xp then
-					ProgressionService.addXp(target, needed - profile.xp, "admin")
+				local wanted = math.floor(math.min(amount, 1000000))
+				-- recordWin is the only writer that notifies the leaderboard;
+				-- set one below the target, then record the last win.
+				profile.stats.wins = math.max(0, wanted - 1)
+				if wanted > 0 then
+					EconomyService.recordWin(target)
 				else
-					profile.xp = needed
-					profile.level = level
-					ProgressionService.sendSummary(target)
+					EconomyService.sendSummary(target)
+					EconomyService.Changed:Fire(target)
 				end
 			end
 		end
-		return `Set {names(targets)} to level {level}.`
+		return `Set {names(targets)} to {amount} wins.`
+	end,
+}
+
+COMMANDS.crate = {
+	usage = "crate <player>",
+	help = "Open an Element Crate for a player (charges their coins, like the shop).",
+	run = function(admin, args)
+		local targets = findPlayers(admin, args[1])
+		local crateId = "Element"
+		if #targets == 0 or not Crates.get(crateId) then
+			return "Usage: crate <player>"
+		end
+		local opened = 0
+		for _, target in targets do
+			local result, reason = CrateService.open(target, crateId)
+			if result then
+				opened += 1
+				Remotes.get("CrateOpened"):FireClient(target, result)
+			elseif reason then
+				reply(admin, `{target.Name}: {reason}`)
+			end
+		end
+		return `Opened {opened} {crateId} crate(s).`
 	end,
 }
 
@@ -305,14 +336,14 @@ COMMANDS.speed = {
 
 COMMANDS.freecast = {
 	usage = "freecast <player>",
-	help = "Toggle no typing cooldown and no recharges (testing).",
+	help = "Toggle no draw cooldown and no recharges (testing).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local states = {}
 		for _, target in targets do
 			local on = target:GetAttribute("FreeCast") ~= true
 			target:SetAttribute("FreeCast", if on then true else nil)
-			SpellInputService.setNoTypeCooldown(target, on)
+			SpellInputService.setNoDrawCooldown(target, on)
 			HandService.setFreeCasting(target, on)
 			table.insert(states, `{target.Name}: {if on then "ON" else "off"}`)
 		end
@@ -361,15 +392,12 @@ COMMANDS.hub = {
 }
 
 COMMANDS.startmatch = {
-	usage = "startmatch <1v1|2v2|3v3|4v4|FFA> [players...]",
+	usage = "startmatch <1v1|2v2|3v3|4v4> [players...]",
 	help = "Start a match now with the listed players (default: everyone in the hub).",
 	run = function(admin, args)
-		local mode = args[1] and string.upper(args[1])
-		if mode ~= "FFA" then
-			mode = args[1] and string.lower(args[1])
-		end
+		local mode = args[1] and string.lower(args[1])
 		if not mode or not (Config.MODES :: any)[mode] then
-			return "Usage: startmatch <1v1|2v2|3v3|4v4|FFA> [players...]"
+			return "Usage: startmatch <1v1|2v2|3v3|4v4> [players...]"
 		end
 		local chosen: { Player } = {}
 		if #args >= 2 then
@@ -396,7 +424,7 @@ COMMANDS.startmatch = {
 		end
 		-- Short-handed matches end on the round timer like solo tests.
 		local info = (Config.MODES :: any)[mode]
-		local needed = if mode == "FFA" then 2 else info.teams * info.perTeam
+		local needed = info.teams * info.perTeam
 		MatchService.startMatch(mode :: any, free, { solo = #free < needed })
 		return `Started {mode} with {names(free)}.`
 	end,

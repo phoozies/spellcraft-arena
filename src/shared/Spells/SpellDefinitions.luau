@@ -3,17 +3,32 @@
 -- comes from its `archetype` (see src/server/Services/Archetypes). To add a
 -- spell, add a row — no new code needed. Keep docs/SPELLS.md in sync.
 --
--- Aliases are what players can type or say. They are matched after
--- normalization (lowercase, no punctuation), so list plain words only.
+-- Elements: every spell belongs to one of four elements (shared/Spells/
+-- Elements) and fills one of its five slots (slot 5 is the ultimate). Its
+-- `role` (basic, fast, boost, defense, stun, heavy, area, ultimate) decides
+-- the shape the player draws (Glyphs.ROLE), the same in every element, and an
+-- element never repeats a shape.
 --
--- Copy model: typing a word adds one copy of the spell to the hotbar
+-- Aliases are admin names (`;give fireball`), matched after normalization
+-- (lowercase, no punctuation), so list plain words only.
+--
+-- Getting spells: a player equips one element and can draw its five spells.
+-- The first element is a free pick; the others are unlocked from crates.
+--
+-- Copy model: drawing a glyph adds one copy of the spell to the hotbar
 -- (up to 5 held, duplicates allowed); casting uses a copy up. `cooldown` is
 -- the spell's CAST cooldown, shared by every copy of that spell. Players
 -- have 100 HP and can stockpile copies, so damage per cast cooldown is the
--- budget that matters (~16-20 DPS for the best spammable spells, a ~6s
--- time-to-kill). Numbers here are base values: projectile speed is scaled
--- by Config.PROJECTILE_SPEED_SCALE. tests/Balance.spec.luau enforces it.
+-- budget that matters (~16-20 DPS for the best spammable spells). Ultimates
+-- hit for 30-40 on long cooldowns. Numbers here are base values: projectile
+-- speed is scaled by Config.PROJECTILE_SPEED_SCALE. tests/Balance.spec.luau
+-- enforces the budgets.
+--
+-- Hitbox sizes (`radius`, studs; players add Config.HITBOX_BONUS = 2):
+--   medium 4.5-5 · large 6-7 · wide 8.5-11 · huge 12-25 (areas)
 
+local Elements = require(script.Parent.Elements)
+local Glyphs = require(script.Parent.Glyphs)
 local Types = require(script.Parent.Parent.Types)
 
 type SpellDef = Types.SpellDef
@@ -24,67 +39,295 @@ local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
 end
 
+local ROLE = Glyphs.ROLE
+
 local DEFINITIONS: { SpellDef } = {
-	-- Level 1 — starters
+	----------------------------------------------------------------------
+	-- Fire
+	----------------------------------------------------------------------
 	{
 		id = "Fireball",
 		name = "Fireball",
-		aliases = { "fireball", "fire", "flame", "blaze" },
-		rarity = "Common",
-		unlockLevel = 1,
-		starter = true,
+		aliases = { "fireball", "fire ball", "fire" },
+		element = "Fire",
+		slot = 1,
+		role = "basic",
+		glyph = ROLE.basic,
+		sfx = { cast = "fireballCast", impact = "fireballHit" },
 		archetype = "Projectile",
-		cooldown = 0.9,
-		description = "Hurl a ball of fire that burns players and structures.",
-		-- radius is the bolt's hit radius (plus Config.HITBOX_BONUS against targets):
-		-- a big, forgiving fireball. The visual is sized to match.
-		stats = { damage = 16, speed = 95, range = 160, radius = 3.5, knockback = 18 },
+		cooldown = 3,
+		description = "Hurl a ball of fire with a medium hitbox. 15 damage.",
+		stats = { damage = 15, speed = 95, range = 160, radius = 5, knockback = 18 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(3.2, 3.2, 3.2),
+			size = Vector3.new(4.5, 4.5, 4.5),
 			color = rgb(255, 112, 40),
 			material = M.Neon,
+			model = "Fireball",
+		},
+	},
+	{
+		id = "FireSlash",
+		name = "Fire Slash",
+		aliases = { "fire slash", "fireslash", "slash" },
+		element = "Fire",
+		slot = 2,
+		role = "fast",
+		glyph = ROLE.fast,
+		sfx = { cast = "slashCast", impact = "fireballHit" },
+		archetype = "Projectile",
+		cooldown = 2,
+		description = "A fast crescent of fire with a medium hitbox. 10 damage, 2 second cooldown.",
+		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(7, 1, 1.6),
+			color = rgb(255, 150, 50),
+			material = M.Neon,
+			model = "FireSlash",
+		},
+	},
+	{
+		id = "FireBoost",
+		name = "Fire Boost",
+		aliases = { "fire boost", "fireboost" },
+		element = "Fire",
+		slot = 3,
+		role = "boost",
+		glyph = ROLE.boost,
+		sfx = { cast = "boostCast" },
+		archetype = "Buff",
+		cooldown = 14,
+		description = "Your fire burns hotter: +25% damage for 8 seconds.",
+		stats = { damageMult = 1.25, duration = 8 },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(7, 7, 7),
+			color = rgb(255, 120, 40),
+			material = M.ForceField,
+			transparency = 0.5,
+			model = "FireBoost",
+		},
+	},
+	{
+		id = "FirePillar",
+		name = "Fire Pillar",
+		aliases = { "fire pillar", "firepillar" },
+		element = "Fire",
+		slot = 4,
+		role = "area",
+		glyph = ROLE.area,
+		sfx = { cast = "pillarCast", impact = "pillarBoom" },
+		archetype = "Zone",
+		cooldown = 7,
+		description = "Point and click: a huge pillar of fire erupts where you aim after a short warning. 30 damage in a large area. Range 70.",
+		stats = {
+			delay = 0.7,
+			damage = 30,
+			radius = 12,
+			range = 70,
+			knockback = 22,
+			reticle = true,
+			pillar = true,
+		},
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(2, 2, 2),
+			color = rgb(255, 120, 40),
+			material = M.Neon,
+			model = "FirePillar",
+		},
+	},
+	{
+		id = "FireBomb",
+		name = "Fire Bomb",
+		aliases = { "fire bomb", "firebomb", "bomb" },
+		element = "Fire",
+		slot = 5,
+		role = "ultimate",
+		ultimate = true,
+		glyph = ROLE.ultimate,
+		sfx = { cast = "bombCast", impact = "bombBoom" },
+		archetype = "Projectile",
+		cooldown = 16,
+		description = "ULTIMATE: a huge fireball with a very large hitbox. 35 damage.",
+		stats = { damage = 35, speed = 60, range = 120, radius = 10, knockback = 40 },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(11, 11, 11),
+			color = rgb(255, 80, 30),
+			material = M.Neon,
+			model = "Fireball",
+		},
+	},
+
+	----------------------------------------------------------------------
+	-- Water
+	----------------------------------------------------------------------
+	{
+		id = "WaterSlice",
+		name = "Water Slice",
+		aliases = { "water slice", "waterslice", "slice" },
+		element = "Water",
+		slot = 1,
+		role = "fast",
+		glyph = ROLE.fast,
+		sfx = { cast = "sliceCast", impact = "waterTrap" },
+		archetype = "Projectile",
+		cooldown = 2,
+		description = "A fast slice of water with a medium hitbox. 10 damage.",
+		stats = { damage = 10, speed = 150, range = 130, radius = 4.5, knockback = 8 },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(7, 1, 1.6),
+			color = rgb(80, 180, 255),
+			material = M.Neon,
+			model = "WaterSlice",
+		},
+	},
+	{
+		id = "WaterBody",
+		name = "Water Body",
+		aliases = { "water body", "waterbody" },
+		element = "Water",
+		slot = 2,
+		role = "boost",
+		glyph = ROLE.boost,
+		sfx = { cast = "bodyCast" },
+		archetype = "Buff",
+		cooldown = 22,
+		description = "Turn to flowing water: you can't be hurt or affected by spells for 7 seconds.",
+		stats = { invincible = true, duration = 7 },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(7, 7, 7),
+			color = rgb(64, 164, 255),
+			material = M.ForceField,
+			transparency = 0.4,
+			model = "WaterBody",
 		},
 	},
 	{
 		id = "WaterLock",
 		name = "Water Lock",
-		aliases = { "water lock", "waterlock", "water", "bubble", "trap" },
-		rarity = "Common",
-		unlockLevel = 1,
-		starter = true,
+		aliases = { "water lock", "waterlock", "bubble", "trap" },
+		element = "Water",
+		slot = 3,
+		role = "stun",
+		glyph = ROLE.stun,
+		sfx = { cast = "waterCast", impact = "waterTrap" },
 		archetype = "Control",
-		cooldown = 3,
-		description = "Trap an enemy in a bubble so they can't move for 1.5 seconds.",
+		cooldown = 4,
+		description = "Trap an enemy in a bubble: 5 damage and a 1.5 second stun (no moving or casting).",
 		stats = {
-			damage = 4,
+			damage = 5,
 			speed = 75,
 			range = 120,
-			radius = 2.5,
-			status = "Root",
+			radius = 4,
+			status = "Stun",
 			statusDuration = 1.5,
 			model = "WaterBubble", -- the trap bubble around the victim
 		},
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(2.5, 2.5, 2.5),
+			size = Vector3.new(3.5, 3.5, 3.5),
 			color = rgb(64, 164, 255),
 			material = M.Glass,
 			transparency = 0.3,
+			model = "WaterBubble",
 		},
 	},
 	{
-		id = "RockWall",
-		name = "Rock Wall",
-		aliases = { "rock wall", "rockwall", "wall", "rock", "stone" },
-		rarity = "Common",
-		unlockLevel = 1,
-		starter = true,
-		archetype = "Placeable",
-		cooldown = 1,
-		description = "Raise a rocky earth wall that blocks spells. It breaks apart piece by piece.",
+		id = "WaterWave",
+		name = "Water Wave",
+		aliases = { "water wave", "waterwave", "wave" },
+		element = "Water",
+		slot = 4,
+		role = "heavy",
+		glyph = ROLE.heavy,
+		sfx = { cast = "waveCast", impact = "waterTrap" },
+		archetype = "Projectile",
+		cooldown = 8,
+		description = "Send a large wave rolling forward through everything in its path. 25 damage.",
+		stats = { damage = 25, speed = 70, range = 110, radius = 11, knockback = 25, pierce = true },
+		visual = {
+			shape = "Block",
+			size = Vector3.new(19, 8, 3),
+			color = rgb(60, 150, 255),
+			material = M.Glass,
+			transparency = 0.25,
+			model = "WaterWave",
+		},
+	},
+	{
+		id = "WaterNebula",
+		name = "Water Nebula",
+		aliases = { "water nebula", "waternebula", "nebula" },
+		element = "Water",
+		slot = 5,
+		role = "ultimate",
+		ultimate = true,
+		glyph = ROLE.ultimate,
+		sfx = { cast = "nebulaCast", impact = "nebulaBoom" },
+		archetype = "Zone",
+		cooldown = 18,
+		description = "ULTIMATE: point and click: a towering water pillar crashes down in a large area. 35 damage. Range 70.",
 		stats = {
-			health = 50, -- total damage the whole wall takes before it's gone
+			delay = 0.9,
+			damage = 35,
+			radius = 13,
+			range = 70,
+			knockback = 28,
+			reticle = true,
+			pillar = true,
+		},
+		visual = {
+			shape = "Cylinder",
+			size = Vector3.new(2, 2, 2),
+			color = rgb(70, 160, 255),
+			material = M.Neon,
+			model = "WaterNebula",
+		},
+	},
+
+	----------------------------------------------------------------------
+	-- Earth
+	----------------------------------------------------------------------
+	{
+		id = "RockThrow",
+		name = "Rock Throw",
+		aliases = { "rock throw", "rockthrow", "rock" },
+		element = "Earth",
+		slot = 1,
+		role = "basic",
+		glyph = ROLE.basic,
+		sfx = { cast = "throwCast", impact = "rockBreak" },
+		archetype = "Projectile",
+		cooldown = 3,
+		description = "Hurl a large boulder. 15 damage and a solid shove.",
+		stats = { damage = 15, speed = 80, range = 130, radius = 6, knockback = 22 },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(6.3, 6.3, 6.3),
+			color = rgb(150, 118, 86),
+			material = M.Slate,
+			model = "RockThrow",
+		},
+	},
+	{
+		id = "EarthWall",
+		name = "Earth Wall",
+		aliases = { "earth wall", "earthwall", "wall", "rock wall", "rockwall" },
+		element = "Earth",
+		slot = 2,
+		role = "defense",
+		glyph = ROLE.defense,
+		sfx = { cast = "rockRaise", impact = "wallHit" },
+		archetype = "Placeable",
+		cooldown = 4,
+		description = "Raise a rocky wall with 35 health that blocks spells. It breaks apart piece by piece.",
+		stats = {
+			health = 35, -- total damage the whole wall takes before it's gone
 			lifetime = 20,
 			maxActive = 3,
 			hitByAll = true, -- every spell hits it, your own included
@@ -99,722 +342,214 @@ local DEFINITIONS: { SpellDef } = {
 			material = M.Ground,
 		},
 	},
-
-	-- Level 2
 	{
-		id = "WindGust",
-		name = "Wind Gust",
-		aliases = { "wind gust", "wind", "gust", "push" },
-		rarity = "Common",
-		unlockLevel = 2,
-		archetype = "Projectile",
-		cooldown = 1.5,
-		description = "A blast of wind that shoves enemies away.",
-		stats = { damage = 4, speed = 110, range = 90, radius = 4, knockback = 85 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(4, 4, 4),
-			color = rgb(220, 240, 255),
-			material = M.ForceField,
-			transparency = 0.4,
-		},
-	},
-	{
-		id = "WoodenCrate",
-		name = "Wooden Crate",
-		aliases = { "wooden crate", "crate", "box" },
-		rarity = "Common",
-		unlockLevel = 2,
-		archetype = "Placeable",
-		cooldown = 0.5,
-		description = "Drop a crate to hide behind or climb on.",
-		stats = { health = 70, lifetime = 25, maxActive = 3 },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(5, 5, 5),
-			color = rgb(160, 110, 60),
-			material = M.WoodPlanks,
-		},
-	},
-	{
-		id = "HealLeaf",
-		name = "Heal Leaf",
-		aliases = { "heal leaf", "heal", "leaf", "medicine" },
-		rarity = "Common",
-		unlockLevel = 2,
-		archetype = "Buff",
-		cooldown = 4,
-		description = "Restore 15 health.",
-		stats = { heal = 15 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(1.5, 1.5, 1.5),
-			color = rgb(102, 187, 106),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "Spark",
-		name = "Spark",
-		aliases = { "spark", "zap" },
-		rarity = "Common",
-		unlockLevel = 2,
-		archetype = "Projectile",
-		cooldown = 0.5,
-		description = "A quick little zap. Low damage, super fast.",
-		stats = { damage = 9, speed = 170, range = 140, radius = 1 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(1, 1, 1),
-			color = rgb(255, 238, 88),
-			material = M.Neon,
-		},
-	},
-
-	-- Level 3
-	{
-		id = "IceShard",
-		name = "Ice Shard",
-		aliases = { "ice shard", "ice", "shard", "freeze" },
-		rarity = "Common",
-		unlockLevel = 3,
-		archetype = "Projectile",
-		cooldown = 1,
-		description = "An icy spike that slows whoever it hits.",
-		stats = {
-			damage = 11,
-			speed = 120,
-			range = 150,
-			radius = 1.5,
-			status = "Slow",
-			statusDuration = 2,
-		},
-		visual = {
-			shape = "Wedge",
-			size = Vector3.new(1, 1, 3),
-			color = rgb(178, 235, 242),
-			material = M.Ice,
-		},
-	},
-	{
-		id = "BouncePad",
-		name = "Bounce Pad",
-		aliases = { "bounce pad", "trampoline", "spring", "bounce" },
-		rarity = "Common",
-		unlockLevel = 3,
-		archetype = "Placeable",
-		cooldown = 1,
-		description = "A springy pad that launches anyone who steps on it.",
-		stats = { health = 60, lifetime = 20, maxActive = 2, bounce = 110 },
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(1, 8, 8),
-			color = rgb(236, 64, 122),
-			material = M.SmoothPlastic,
-		},
-	},
-	{
-		id = "MudPuddle",
-		name = "Mud Puddle",
-		aliases = { "mud puddle", "mud", "swamp" },
-		rarity = "Common",
-		unlockLevel = 3,
+		id = "EarthPunch",
+		name = "Earth Punch",
+		aliases = { "earth punch", "earthpunch", "punch" },
+		element = "Earth",
+		slot = 3,
+		role = "heavy",
+		glyph = ROLE.heavy,
+		sfx = { cast = "punchCast", impact = "rockBreak" },
 		archetype = "Zone",
-		cooldown = 3,
-		description = "A sticky puddle that slows enemies inside it.",
+		cooldown = 5,
+		description = "Point and click: a boulder bursts out of the ground beneath your target. 20 damage. Range 60.",
 		stats = {
-			radius = 10,
-			duration = 4,
-			status = "Slow",
-			statusDuration = 1,
+			delay = 0.4,
+			damage = 20,
+			radius = 7,
 			range = 60,
-			maxActive = 1,
-		},
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(0.4, 20, 20),
-			color = rgb(109, 76, 65),
-			material = M.Mud,
-		},
-	},
-	{
-		id = "Shield",
-		name = "Shield",
-		aliases = { "shield", "barrier", "protect" },
-		rarity = "Rare",
-		unlockLevel = 3,
-		archetype = "Buff",
-		cooldown = 6,
-		description = "A bubble that absorbs the next 25 damage (doesn't stack).",
-		stats = { shield = 25, duration = 5 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(7, 7, 7),
-			color = rgb(129, 212, 250),
-			material = M.ForceField,
-			transparency = 0.5,
-		},
-	},
-
-	-- Level 4
-	{
-		id = "Lightning",
-		name = "Lightning",
-		aliases = { "lightning", "thunder", "bolt" },
-		rarity = "Rare",
-		unlockLevel = 4,
-		archetype = "Projectile",
-		cooldown = 2,
-		description = "A bolt that chains to a nearby enemy. Double damage on bubbled foes!",
-		stats = {
-			damage = 14,
-			speed = 220,
-			range = 170,
-			radius = 1.5,
-			chain = 1,
-			comboStatus = "Root",
-			comboMultiplier = 2,
-		},
-		visual = {
-			shape = "Block",
-			size = Vector3.new(0.6, 0.6, 4),
-			color = rgb(255, 241, 118),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "Ladder",
-		name = "Ladder",
-		aliases = { "ladder", "stairs", "steps" },
-		rarity = "Common",
-		unlockLevel = 4,
-		archetype = "Placeable",
-		cooldown = 1,
-		description = "Climbable steps to reach high ground.",
-		stats = { health = 80, lifetime = 25, maxActive = 2 },
-		visual = {
-			shape = "Wedge",
-			size = Vector3.new(6, 10, 12),
-			color = rgb(188, 140, 90),
-			material = M.Wood,
-		},
-	},
-	{
-		id = "Dash",
-		name = "Dash",
-		aliases = { "dash", "sprint", "zoom", "run" },
-		rarity = "Common",
-		unlockLevel = 4,
-		archetype = "Movement",
-		cooldown = 1.5,
-		description = "Zoom forward in a burst of speed.",
-		stats = { dashSpeed = 110 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(1, 1, 1),
-			color = rgb(255, 255, 255),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "Cannon",
-		name = "Cannon",
-		aliases = { "cannon", "turret" },
-		rarity = "Rare",
-		unlockLevel = 4,
-		archetype = "Placeable",
-		cooldown = 6,
-		description = "A cannon that fires at the closest enemy.",
-		stats = {
-			health = 150,
-			lifetime = 20,
-			maxActive = 1,
-			turret = true,
-			damage = 8,
-			range = 80,
-		},
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(5, 3, 3),
-			color = rgb(69, 90, 100),
-			material = M.Metal,
-		},
-	},
-
-	-- Level 5
-	{
-		id = "Tornado",
-		name = "Tornado",
-		aliases = { "tornado", "twister", "cyclone" },
-		rarity = "Rare",
-		unlockLevel = 5,
-		archetype = "Zone",
-		cooldown = 5,
-		description = "A swirling twister that pulls enemies in.",
-		stats = { radius = 18, duration = 3, pull = 35, damage = 4, range = 70, maxActive = 1 },
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(24, 10, 10),
-			color = rgb(207, 216, 220),
-			material = M.ForceField,
-			transparency = 0.4,
-		},
-	},
-	{
-		id = "Snowman",
-		name = "Snowman",
-		aliases = { "snowman", "decoy" },
-		rarity = "Rare",
-		unlockLevel = 5,
-		archetype = "Summon",
-		cooldown = 5,
-		description = "A snowman decoy that cannons and summons target first.",
-		stats = { health = 90, lifetime = 12, decoy = true },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(4, 4, 4),
-			color = rgb(250, 250, 250),
-			material = M.Snow,
-		},
-	},
-	{
-		id = "Bridge",
-		name = "Bridge",
-		aliases = { "bridge", "plank" },
-		rarity = "Common",
-		unlockLevel = 5,
-		archetype = "Placeable",
-		cooldown = 1,
-		description = "A long plank to cross gaps.",
-		stats = { health = 100, lifetime = 25, maxActive = 2 },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(6, 1, 24),
-			color = rgb(161, 136, 127),
-			material = M.WoodPlanks,
-		},
-	},
-	{
-		id = "BananaPeel",
-		name = "Banana Peel",
-		aliases = { "banana peel", "banana", "slip" },
-		rarity = "Common",
-		unlockLevel = 5,
-		archetype = "Placeable",
-		cooldown = 2,
-		description = "A sneaky peel. Enemies who step on it slip and slide.",
-		stats = {
-			health = 20,
-			lifetime = 25,
-			maxActive = 2,
-			trap = true,
-			status = "Slippery",
-			statusDuration = 2,
-		},
-		visual = {
-			shape = "Block",
-			size = Vector3.new(2, 0.3, 1.2),
-			color = rgb(255, 235, 59),
-			material = M.SmoothPlastic,
-		},
-	},
-
-	-- Level 6
-	{
-		id = "Meteor",
-		name = "Meteor",
-		aliases = { "meteor", "comet", "asteroid" },
-		rarity = "Epic",
-		unlockLevel = 6,
-		archetype = "Zone",
-		cooldown = 4,
-		description = "Call down a meteor. Big boom after a short warning.",
-		stats = {
-			radius = 12,
-			damage = 30,
-			delay = 1.5,
-			range = 120,
-			knockback = 70,
-			destroysStructures = false,
+			knockback = 28,
+			reticle = true,
+			rise = true,
 		},
 		visual = {
 			shape = "Ball",
 			size = Vector3.new(8, 8, 8),
-			color = rgb(255, 87, 34),
-			material = M.CrackedLava,
+			color = rgb(150, 118, 86),
+			material = M.Slate,
+			model = "EarthPunch",
 		},
 	},
 	{
-		id = "Teleport",
-		name = "Teleport",
-		aliases = { "teleport", "blink", "warp" },
-		rarity = "Rare",
-		unlockLevel = 6,
-		archetype = "Movement",
-		cooldown = 4,
-		description = "Blink to where you're aiming.",
-		stats = { teleport = true, range = 45 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(3, 3, 3),
-			color = rgb(149, 117, 205),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "VineSnare",
-		name = "Vine Snare",
-		aliases = { "vine snare", "vine", "vines", "roots" },
-		rarity = "Rare",
-		unlockLevel = 6,
-		archetype = "Control",
-		cooldown = 5,
-		description = "Roots grab every enemy in a small area.",
-		stats = { radius = 10, status = "Root", statusDuration = 1.2, range = 70, damage = 6 },
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(0.5, 20, 20),
-			color = rgb(56, 142, 60),
-			material = M.Grass,
-		},
-	},
-	{
-		id = "Tower",
-		name = "Tower",
-		aliases = { "tower", "fort", "watchtower" },
-		rarity = "Rare",
-		unlockLevel = 6,
-		archetype = "Placeable",
-		cooldown = 4,
-		description = "A tall tower for high ground.",
-		stats = { health = 250, lifetime = 30, maxActive = 1 },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(8, 18, 8),
-			color = rgb(141, 110, 99),
-			material = M.Brick,
-		},
-	},
-
-	-- Level 7
-	{
-		id = "Dragon",
-		name = "Dragon",
-		aliases = { "dragon", "wyvern" },
-		rarity = "Epic",
-		unlockLevel = 7,
-		archetype = "Summon",
-		cooldown = 8,
-		description = "A baby dragon that flies at enemies and breathes fire.",
-		stats = { health = 110, lifetime = 10, flier = true, damage = 8, range = 60 },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(4, 3, 6),
-			color = rgb(229, 57, 53),
-			material = M.SmoothPlastic,
-		},
-	},
-	{
-		id = "BlackIce",
-		name = "Black Ice",
-		aliases = { "black ice", "frost", "glacier", "icy" },
-		rarity = "Rare",
-		unlockLevel = 7,
-		archetype = "Zone",
-		cooldown = 4,
-		description = "Super slippery ice. Enemies slide around helplessly.",
+		id = "EarthPillar",
+		name = "Earth Pillar",
+		aliases = { "earth pillar", "earthpillar" },
+		element = "Earth",
+		slot = 4,
+		role = "area",
+		glyph = ROLE.area,
+		sfx = { cast = "rockRaise", impact = "rockBreak" },
+		archetype = "Line",
+		cooldown = 9,
+		description = "A wave of stone pillars erupts in a line in front of you. 30 damage to anyone it catches.",
 		stats = {
-			radius = 14,
-			duration = 5,
-			status = "Slippery",
-			statusDuration = 1,
-			range = 60,
-			maxActive = 1,
+			damage = 30,
+			radius = 6.5,
+			count = 6,
+			spacing = 9,
+			step = 0.12,
+			delay = 0.35,
+			knockback = 24,
 		},
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(0.3, 28, 28),
-			color = rgb(84, 110, 122),
-			material = M.Glacier,
-			transparency = 0.2,
-		},
-	},
-	{
-		id = "Magnet",
-		name = "Magnet",
-		aliases = { "magnet", "pull", "attract" },
-		rarity = "Rare",
-		unlockLevel = 7,
-		archetype = "Control",
-		cooldown = 3,
-		description = "Yank the enemy you hit toward you.",
-		stats = { damage = 5, speed = 100, range = 100, radius = 2, knockback = -80 },
 		visual = {
 			shape = "Block",
-			size = Vector3.new(2, 2, 1),
-			color = rgb(198, 40, 40),
-			material = M.Metal,
-		},
-	},
-	{
-		id = "Balloon",
-		name = "Balloon",
-		aliases = { "balloon", "float", "fly" },
-		rarity = "Common",
-		unlockLevel = 7,
-		archetype = "Movement",
-		cooldown = 2,
-		description = "Float upward to escape or get the high ground.",
-		stats = { lift = 70 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(3, 3.5, 3),
-			color = rgb(244, 67, 54),
-			material = M.SmoothPlastic,
-		},
-	},
-
-	-- Level 8
-	{
-		id = "Volcano",
-		name = "Volcano",
-		aliases = { "volcano", "lava", "magma" },
-		rarity = "Epic",
-		unlockLevel = 8,
-		archetype = "Placeable",
-		cooldown = 8,
-		description = "A mini volcano that burns enemies nearby.",
-		stats = { health = 180, lifetime = 12, maxActive = 1, hazardDps = 8, radius = 12 },
-		visual = {
-			shape = "Wedge",
-			size = Vector3.new(10, 7, 10),
-			color = rgb(93, 64, 55),
-			material = M.Basalt,
-		},
-	},
-	{
-		id = "Mirror",
-		name = "Mirror",
-		aliases = { "mirror", "reflect" },
-		rarity = "Epic",
-		unlockLevel = 8,
-		archetype = "Buff",
-		cooldown = 8,
-		description = "For 2 seconds, projectiles that hit you bounce back.",
-		stats = { reflect = true, duration = 2 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(7, 7, 7),
-			color = rgb(224, 224, 224),
-			material = M.Glass,
-			transparency = 0.5,
-		},
-	},
-	{
-		id = "Robot",
-		name = "Robot",
-		aliases = { "robot", "golem", "bot" },
-		rarity = "Epic",
-		unlockLevel = 8,
-		archetype = "Summon",
-		cooldown = 8,
-		description = "A clunky robot buddy that punches enemies.",
-		stats = { health = 160, lifetime = 12, melee = true, damage = 10, range = 60 },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(4, 6, 3),
-			color = rgb(144, 164, 174),
-			material = M.DiamondPlate,
-		},
-	},
-	{
-		id = "Giant",
-		name = "Giant",
-		aliases = { "giant", "grow", "big", "huge" },
-		rarity = "Rare",
-		unlockLevel = 8,
-		archetype = "Buff",
-		cooldown = 10,
-		description = "Grow huge: bigger, tougher, and harder to knock back.",
-		stats = { scale = 1.6, shield = 30, duration = 6 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(2, 2, 2),
-			color = rgb(255, 167, 38),
-			material = M.Neon,
-		},
-	},
-
-	-- Level 9
-	{
-		id = "BlackHole",
-		name = "Black Hole",
-		aliases = { "black hole", "blackhole", "vortex", "void" },
-		rarity = "Legendary",
-		unlockLevel = 9,
-		archetype = "Zone",
-		cooldown = 12,
-		description = "A tiny black hole that drags everything in and crushes it.",
-		stats = { radius = 20, duration = 3.5, pull = 55, damage = 8, range = 80, maxActive = 1 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(5, 5, 5),
-			color = rgb(20, 0, 40),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "Castle",
-		name = "Castle",
-		aliases = { "castle", "fortress" },
-		rarity = "Epic",
-		unlockLevel = 9,
-		archetype = "Placeable",
-		cooldown = 10,
-		description = "A big castle wall. Very hard to break, but it crumbles block by block.",
-		stats = { health = 450, lifetime = 25, maxActive = 1, segments = { x = 5, y = 3 } },
-		visual = {
-			shape = "Block",
-			size = Vector3.new(20, 14, 4),
-			color = rgb(176, 168, 160),
-			material = M.Cobblestone,
-		},
-	},
-	{
-		id = "Shrink",
-		name = "Shrink",
-		aliases = { "shrink", "tiny", "small", "mini" },
-		rarity = "Epic",
-		unlockLevel = 9,
-		archetype = "Control",
-		cooldown = 6,
-		description = "Shrink an enemy so they're tiny and weak for 3 seconds.",
-		stats = {
-			damage = 4,
-			speed = 100,
-			range = 110,
-			radius = 2,
-			status = "Shrink",
-			statusDuration = 3,
-		},
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(1.5, 1.5, 1.5),
-			color = rgb(240, 98, 146),
-			material = M.Neon,
-		},
-	},
-	{
-		id = "Rainbow",
-		name = "Rainbow",
-		aliases = { "rainbow" },
-		rarity = "Rare",
-		unlockLevel = 9,
-		archetype = "Zone",
-		cooldown = 8,
-		description = "A rainbow that heals you and your teammates inside it.",
-		stats = { radius = 14, duration = 5, heal = 6, teamHeal = true, range = 50, maxActive = 1 },
-		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(0.4, 28, 28),
-			color = rgb(255, 128, 171),
-			material = M.Neon,
-			transparency = 0.5,
-		},
-	},
-
-	-- Level 10
-	{
-		id = "Phoenix",
-		name = "Phoenix",
-		aliases = { "phoenix", "rebirth", "revive" },
-		rarity = "Legendary",
-		unlockLevel = 10,
-		archetype = "Buff",
-		cooldown = 25,
-		description = "If you're knocked out in the next 8 seconds, rise again at half health.",
-		stats = { revive = true, duration = 8 },
-		visual = {
-			shape = "Ball",
-			size = Vector3.new(3, 3, 3),
-			color = rgb(255, 145, 0),
-			material = M.Neon,
+			size = Vector3.new(5.5, 14, 5.5),
+			color = rgb(150, 118, 86),
+			material = M.Slate,
+			model = "EarthPillar",
 		},
 	},
 	{
 		id = "Earthquake",
 		name = "Earthquake",
-		aliases = { "earthquake", "quake", "tremor" },
-		rarity = "Legendary",
-		unlockLevel = 10,
+		aliases = { "earthquake", "quake" },
+		element = "Earth",
+		slot = 5,
+		role = "ultimate",
+		ultimate = true,
+		glyph = ROLE.ultimate,
+		sfx = { cast = "quakeRumble", impact = "quakeBoom" },
 		archetype = "Zone",
-		cooldown = 12,
-		description = "Shake the ground. Smashes structures and knocks players around.",
+		cooldown = 22,
+		description = "ULTIMATE: the ground shakes around you, then bursts. A quick 1.2 second cast leaves you rooted, but it deals 40 damage in a huge area.",
 		stats = {
-			radius = 30,
-			damage = 20,
-			delay = 0.5,
-			knockback = 60,
-			destroysStructures = true,
-			range = 40,
+			delay = 1.2,
+			damage = 40,
+			radius = 25,
+			range = 0, -- centered on the caster
+			knockback = 40,
+			channel = true,
+			pillar = true,
 		},
 		visual = {
 			shape = "Cylinder",
-			size = Vector3.new(0.5, 60, 60),
-			color = rgb(121, 85, 72),
-			material = M.Ground,
+			size = Vector3.new(2, 2, 2),
+			color = rgb(176, 128, 80),
+			material = M.Slate,
+			model = "Earthquake",
 		},
 	},
+
+	----------------------------------------------------------------------
+	-- Air
+	----------------------------------------------------------------------
 	{
-		id = "TimeStop",
-		name = "Time Stop",
-		aliases = { "time stop", "timestop", "freeze time", "pause", "stop" },
-		rarity = "Legendary",
-		unlockLevel = 10,
-		archetype = "Control",
-		cooldown = 15,
-		description = "Freeze every enemy near you for 1.5 seconds.",
-		stats = { radius = 30, status = "TimeStop", statusDuration = 1.5, range = 0 },
+		id = "Gust",
+		name = "Gust",
+		aliases = { "gust", "wind" },
+		element = "Air",
+		slot = 1,
+		role = "basic",
+		glyph = ROLE.basic,
+		sfx = { cast = "gustCast", impact = "gustHit" },
+		archetype = "Projectile",
+		cooldown = 3,
+		description = "A fast gust of air. 15 damage.",
+		stats = { damage = 15, speed = 140, range = 140, radius = 4.6, knockback = 12 },
 		visual = {
 			shape = "Ball",
-			size = Vector3.new(60, 60, 60),
-			color = rgb(255, 213, 79),
+			size = Vector3.new(5, 5, 5),
+			color = rgb(220, 240, 255),
 			material = M.ForceField,
-			transparency = 0.6,
+			transparency = 0.4,
+			model = "Gust",
 		},
 	},
 	{
-		id = "Kraken",
-		name = "Kraken",
-		aliases = { "kraken", "octopus", "squid" },
-		rarity = "Legendary",
-		unlockLevel = 10,
-		archetype = "Summon",
-		cooldown = 12,
-		description = "A giant kraken tentacle that slams enemies around it.",
-		stats = { health = 220, lifetime = 10, damage = 14, radius = 16, range = 60 },
+		id = "Whirlwind",
+		name = "Whirlwind",
+		aliases = { "whirlwind", "whirl" },
+		element = "Air",
+		slot = 2,
+		role = "heavy",
+		glyph = ROLE.heavy,
+		sfx = { cast = "whirlCast", impact = "whirlHit" },
+		archetype = "Projectile",
+		cooldown = 5,
+		description = "A wide gust that blows everyone it hits far away. 15 damage.",
+		stats = { damage = 15, speed = 75, range = 90, radius = 10, knockback = 95 },
 		visual = {
-			shape = "Cylinder",
-			size = Vector3.new(14, 3, 3),
-			color = rgb(123, 31, 162),
-			material = M.SmoothPlastic,
+			shape = "Ball",
+			size = Vector3.new(12.5, 12.5, 12.5),
+			color = rgb(220, 240, 255),
+			material = M.ForceField,
+			transparency = 0.4,
+			model = "Gust",
 		},
 	},
 	{
-		id = "WizardHat",
-		name = "Wizard Hat",
-		aliases = { "wizard hat", "wizard", "hat", "magic" },
-		rarity = "Epic",
-		unlockLevel = 10,
+		id = "AirBoost",
+		name = "Air Boost",
+		aliases = { "air boost", "airboost" },
+		element = "Air",
+		slot = 3,
+		role = "boost",
+		glyph = ROLE.boost,
+		sfx = { cast = "airBoostCast" },
 		archetype = "Buff",
-		cooldown = 15,
-		description = "All your spell cooldowns are cut in half for 6 seconds.",
-		stats = { cooldownCut = 0.5, duration = 6 },
+		cooldown = 16,
+		description = "Ride the wind: much faster and a higher jump for 6 seconds.",
+		stats = { haste = true, duration = 6 },
 		visual = {
-			shape = "Wedge",
-			size = Vector3.new(2, 3, 2),
-			color = rgb(63, 81, 181),
-			material = M.Fabric,
+			shape = "Ball",
+			size = Vector3.new(6, 6, 6),
+			color = rgb(190, 240, 225),
+			material = M.ForceField,
+			transparency = 0.5,
+			model = "AirBoost",
+		},
+	},
+	{
+		id = "AirShield",
+		name = "Air Shield",
+		aliases = { "air shield", "airshield", "shield" },
+		element = "Air",
+		slot = 4,
+		role = "defense",
+		glyph = ROLE.defense,
+		sfx = { cast = "shieldCast" },
+		archetype = "Buff",
+		cooldown = 14,
+		description = "A swirling shield for 4 seconds that blocks the next spell or damage that hits you.",
+		stats = { barrier = true, duration = 4 },
+		visual = {
+			shape = "Ball",
+			size = Vector3.new(7, 7, 7),
+			color = rgb(190, 240, 235),
+			material = M.ForceField,
+			transparency = 0.45,
+			model = "AirShield",
+		},
+	},
+	{
+		id = "Tornado",
+		name = "Tornado",
+		aliases = { "tornado", "twister" },
+		element = "Air",
+		slot = 5,
+		role = "ultimate",
+		ultimate = true,
+		glyph = ROLE.ultimate,
+		sfx = { cast = "tornadoCast", impact = "tornadoHit" },
+		archetype = "Projectile",
+		cooldown = 18,
+		description = "ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage.",
+		stats = {
+			damage = 30,
+			speed = 55,
+			range = 120,
+			radius = 8.5,
+			knockback = 105,
+			pierce = true,
+		},
+		visual = {
+			shape = "Block",
+			size = Vector3.new(9.5, 17, 9.5),
+			color = rgb(205, 235, 230),
+			material = M.ForceField,
+			transparency = 0.35,
+			model = "Tornado",
 		},
 	},
 }
@@ -832,40 +567,32 @@ for _, def in DEFINITIONS do
 end
 SpellDefinitions.byId = byId
 
+-- Every element's spell list in Elements must match the rows above.
+for _, element in Elements.LIST do
+	for slot, id in element.spells do
+		local def = byId[id]
+		assert(def, `{element.id} lists unknown spell {id}`)
+		assert(
+			def.element == element.id and def.slot == slot,
+			`{id} is in the wrong element or slot`
+		)
+	end
+end
+
 function SpellDefinitions.get(id: string): SpellDef?
 	return byId[id]
 end
 
-function SpellDefinitions.starters(): { string }
-	local ids = {}
-	for _, def in DEFINITIONS do
-		if def.starter then
-			table.insert(ids, def.id)
+-- The five spells of an element, by slot.
+function SpellDefinitions.ofElement(elementId: string): { SpellDef }
+	local list: { SpellDef } = {}
+	local element = Elements.get(elementId)
+	if element then
+		for _, id in element.spells do
+			table.insert(list, byId[id])
 		end
 	end
-	return ids
-end
-
--- Spells that unlock exactly at `level`.
-function SpellDefinitions.unlockedAt(level: number): { string }
-	local ids = {}
-	for _, def in DEFINITIONS do
-		if def.unlockLevel == level then
-			table.insert(ids, def.id)
-		end
-	end
-	return ids
-end
-
--- All spell ids with the given rarity.
-function SpellDefinitions.ofRarity(rarity: Types.Rarity): { string }
-	local ids = {}
-	for _, def in DEFINITIONS do
-		if def.rarity == rarity then
-			table.insert(ids, def.id)
-		end
-	end
-	return ids
+	return list
 end
 
 return SpellDefinitions

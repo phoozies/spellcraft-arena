@@ -17,12 +17,17 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
-local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 
 type Profile = Types.Profile
 
 local STORE_NAME = "PlayerProfiles_v1"
-local SCHEMA = 1
+-- 2: levels/XP removed; coins added (crates unlock spells).
+-- 3: spells come from elements: ownedSpells is gone, profile.elements and
+--    profile.element replace it (players pick their first element again).
+-- 4: settings.music (background music on/off) and rewards.likeFav (the
+--    one-time Like & Favourite gift); both just get their defaults.
+local SCHEMA = 4
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -39,13 +44,14 @@ local store: DataStore? = nil
 local function defaultProfile(): Profile
 	return {
 		schema = SCHEMA,
-		xp = 0,
-		level = 1,
-		ownedSpells = SpellDefinitions.starters(),
+		coins = Config.COINS.STARTING,
+		elements = {},
+		element = "",
 		cosmetics = {},
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
-		settings = { typeKey = Config.DEFAULT_TYPE_KEY },
+		settings = { drawKey = Config.DEFAULT_DRAW_KEY, music = true },
+		rewards = { likeFav = false },
 	}
 end
 
@@ -55,6 +61,16 @@ local function reconcile(data: any): Profile
 	local base = defaultProfile()
 	if typeof(data) ~= "table" then
 		return base
+	end
+	if (data.schema or 1) < 2 then
+		-- Schema 1 had levels: XP/level are gone, quests rewarded XP (re-roll
+		-- them), and unlocked spells that no longer exist are dropped below.
+		data.xp = nil
+		data.level = nil
+		if typeof(data.daily) == "table" then
+			data.daily.questDay = 0
+			data.daily.quests = {}
+		end
 	end
 	for key, value in base :: any do
 		if data[key] == nil then
@@ -75,6 +91,28 @@ local function reconcile(data: any): Profile
 		if data.settings[key] == nil then
 			data.settings[key] = value
 		end
+	end
+	if typeof(data.rewards) ~= "table" then
+		data.rewards = table.clone(base.rewards)
+	end
+	for key, value in base.rewards :: any do
+		if data.rewards[key] == nil then
+			data.rewards[key] = value
+		end
+	end
+	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
+	data.settings.typeKey = nil
+	-- Elements: keep real, unique ones; the equipped element must be owned.
+	data.ownedSpells = nil -- schema 2's spell list
+	local owned = {}
+	for _, id in data.elements do
+		if typeof(id) == "string" and Elements.get(id) and not table.find(owned, id) then
+			table.insert(owned, id)
+		end
+	end
+	data.elements = owned
+	if typeof(data.element) ~= "string" or not table.find(owned, data.element) then
+		data.element = owned[1] or ""
 	end
 	data.schema = SCHEMA
 	return data :: Profile

@@ -1,6 +1,6 @@
 --!strict
 -- Sky Islands — floating islands over the void with jump pads between
--- them. Knockback spells shine here (ring-outs). Best for FFA.
+-- them. Knockback spells shine here (ring-outs). Great for 4v4.
 
 local MapKit = require(script.Parent.MapKit)
 
@@ -114,10 +114,6 @@ return function(makeProp: Registrar): Model
 		local offset = Vector3.new((i - 2.5) * 4, 3, 0)
 		MapKit.spawn(spawns, `Team1_{i}`, satellites[1] + offset)
 		MapKit.spawn(spawns, `Team2_{i}`, satellites[3] + offset)
-	end
-	for i = 1, 8 do
-		local s = satellites[((i - 1) % 4) + 1]
-		MapKit.spawn(spawns, `FFA_{i}`, s + Vector3.new(if i > 4 then 5 else -5, 3, 0))
 	end
 
 	local small = MapKit.folder(model, "SmallModeWalls")

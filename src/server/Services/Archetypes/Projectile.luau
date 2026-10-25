@@ -3,7 +3,7 @@
 -- the target and hits the first player/structure/wall in its path.
 --
 -- Reads stats: damage, speed, range, radius, knockback, status,
--- statusDuration, chain, comboStatus, comboMultiplier.
+-- statusDuration, chain, pierce, comboStatus, comboMultiplier.
 -- Also used by Control (status projectiles) and by turrets/summons via
 -- Projectile.launch().
 --
@@ -81,20 +81,17 @@ local function applyHit(opts: LaunchOptions, hitInstance: Instance, direction: V
 	if dealt <= 0 and damage > 0 then
 		return -- not allowed to hit (ally/self)
 	end
+	-- Status effects (Water Lock's stun, ...) work on players and on hostile NPCs.
+	local affected = StatusService.targetOf(target)
+	if affected and stats.status then
+		local applied = StatusService.apply(affected, stats.status, stats.statusDuration or 1)
+		-- Water Lock wraps its victim in the imported bubble model.
+		if applied and stats.model then
+			TrapBubble.show(affected, stats.statusDuration or 1, opts.visual.color, stats.model)
+		end
+	end
 	if isCharacter then
 		local character = target :: Model
-		if stats.status then
-			local applied = StatusService.apply(character, stats.status, stats.statusDuration or 1)
-			-- Water Lock wraps its victim in the imported bubble model.
-			if applied and stats.model then
-				TrapBubble.show(
-					character,
-					stats.statusDuration or 1,
-					opts.visual.color,
-					stats.model
-				)
-			end
-		end
 		if stats.knockback and stats.knockback ~= 0 then
 			local flat = Vector3.new(direction.X, 0, direction.Z)
 			local push = if flat.Magnitude > 0 then flat.Unit else Vector3.zero
@@ -232,6 +229,14 @@ local function step(p: Live, dt: number): boolean
 		applyHit(opts, result.Instance, p.direction)
 		if opts.stats.chain and hitTarget then
 			chainFrom(opts, p.position, { [hitTarget] = true }, opts.stats.chain)
+		end
+		-- Piercing bolts (Water Wave, Tornado) keep flying after they hit a
+		-- player, and hit each player only once.
+		if opts.stats.pierce and isCharacter and hitTarget then
+			table.insert(p.ignore, hitTarget)
+			p.params.FilterDescendantsInstances = p.ignore
+			p.travelled += result.Distance
+			return p.travelled >= p.range
 		end
 	end
 	return true

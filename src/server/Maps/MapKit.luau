@@ -4,7 +4,7 @@
 --
 -- Arena contract (ArenaService relies on these children):
 --   Bounds          invisible Part: build/teleport region; below it = void
---   Spawns/Team1_*  Team2_*  FFA_*  spawn Parts (invisible, CanCollide off)
+--   Spawns/Team1_*  Team2_*  spawn Parts (invisible, CanCollide off)
 --   SmallModeWalls  Folder of walls enabled only for 1v1 / 2v2
 --   Structures      Folder (created by ArenaService) for placed objects
 
@@ -70,18 +70,6 @@ function MapKit.bounds(model: Instance, size: Vector3, center: Vector3)
 	})
 	b.CanQuery = false
 	b.CanTouch = false
-end
-
--- Ring of spawns for FFA around a center.
-function MapKit.ffaSpawns(spawns: Instance, center: Vector3, radius: number, count: number)
-	for i = 1, count do
-		local a = (i / count) * math.pi * 2
-		MapKit.spawn(
-			spawns,
-			`FFA_{i}`,
-			center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
-		)
-	end
 end
 
 -- Line of 4 spawns per team on opposite ends (Z axis).

@@ -4,6 +4,133 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (training-ground hub)
+- **The Training Grove lets you draw and cast again.** It is now a big 100 x 110 stud yard (was 64 x 76) with a fence, corner torches, 11 dummies in two rows, archery targets, and hay bales. Standing inside it (tag `PracticeZone`, `shared/Util/PracticeZone`) is the one place in the hub where drawing works; the server (`MatchService.canDraw`) and client (`ClientState.canDraw`) both check it.
+- **No stone walls in the hub.** The concourse walls, arched bays, windows, banners, buttresses, overhead ribs, entrance pylons, end wall, and the stone ring around the hub are gone, as are the glass walls around the duel pads. The 1v1/2v2/3v3/4v4 pads are now open training mats with hay bales; wooden fences, archery targets, hay bales, and torches line the carpet; invisible barriers still keep players on the grass. The hub reads as a training-ground map ("Spellcraft Arena, Training Grounds").
+
+### Changed (pacing, one copy per spell, fights only)
+- **Cooldowns:** basic spells (Fireball, Rock Throw, Gust) now wait **3 seconds** between casts; slash moves (Fire Slash, Water Slice) wait **2 seconds** (they were 0.9-1.1s and 0.55s). `tests/Balance.spec.luau` keeps it that way.
+- **Earthquake's wind-up is shorter and harder to punish:** 1.2 seconds (was 2s), still rooted while it charges.
+- **One copy of each spell.** Drawing a spell you already hold is refused ("You already hold Fireball. Cast it first!"); the hotbar holds at most one of each of your element's five spells.
+- **Drawing only works in fights:** the rounds of a match (every duel and team map, including the Sparring Arena) and the Battleground. Not in the hub, and not during a match's intro, countdown, draft, or results. The server enforces it (`MatchService.canDraw`, installed into `SpellInputService`); the Draw button and spell cards hide where drawing isn't allowed. The hub's Spell Practice sign became "Training Grove".
+- **Phones and tablets get a clean screen in fights:** the menu buttons, wallet, party button and panel, kill feed, and boost icons are hidden in matches and the Battleground (the hotbar, spell cards, Draw and Dash buttons, health, the match bar, and Return to Hub stay).
+- **The ice map is gone:** Frostbite Fortress was removed from the map list, the map vote, and the docs.
+- **More team boxes:** the hub now has **two 1v1 boxes and two 2v2 boxes** (plus one 3v3 and one 4v4). Boxes now have ids (`Box` attribute), so a mode can have several, each with its own countdown.
+- **The hub's centerpiece is the wizard statue**, standing on the inkwell where the golden quill was (the quill returns only if the model is missing).
+
+### Added (dash, spectate)
+- **Dash:** press **Q** (gamepad **B**) or the new **Dash** button to burst about 24 studs the way you're moving, with a dash pose, a dust puff, and a whoosh for everyone; 4 second cooldown shown on the button (`Config.DASH`, `DashService`, `DashController`, remotes `Dash` / `DashStarted`, Fx `dash`). Q can no longer be the draw key.
+- **Spectate:** a **Watch** side button lists the other players and where they are; pick one to follow them with the camera, with Previous / Next / Stop controls at the top (`SpectateController`). It ends when the target leaves or you join a fight.
+### Added (studded GUI, music, like gift, block models, spell registry)
+- **Studded Roblox GUI.** `UI/Theme` now draws every panel and button in the classic studded style: bright blue with a stud grid (`assets/ui/studs.png`, made by `tools/make-stud-texture.py`), a bevel, small corners, navy outlines, and outlined white text, with orange for primary, green for go, and red for close. Studs hide on small, see-through, or dark frames (health bars, overlays). The loading screen matches. `Theme.button` shows its text in a child label above the studs, so existing code is unchanged.
+- **Block models** (`tools/blender/block_models.py`, one spec): 24 chunky classic-Roblox models, exported as FBX (`assets/models/blocks`) and a Blender scene, and generated as plain data (`src/shared/Models/BlockModels.luau`) that `ModelKit` builds into Parts, so they work in every place with no import. New spell models for Fire Slash, Fire Boost, Fire Pillar, Water Slice, Water Body, Water Wave, Water Nebula, Rock Throw, Earth Punch, Earth Pillar, Earthquake, Air Boost, Air Shield, and Tornado (every spell now has a model), plus **trees** (oak, pine, birch, cactus; used in the Battleground and the hub), the **training dummy**, the **Element Crate** (closed and open), the **Daily Quests chest** (closed and open), and the **wizard statue** at the center of the Sparring Arena.
+- **Spell registry.** `Spells/SpellRegistry` lists, for every spell, its model, particle style, cast pose, Fx events, and sounds; `docs/semantic/spell_registry.yaml` and a table in `docs/SPELLS.md` mirror it (`python tools/gen-spell-registry.py`), and `tests/Registry.spec.luau` fails if a spell is missing or names something that doesn't exist.
+- **Cast animations.** Each kind of move has its own arm and body pose (Throw, Slash, Flex, Guard, Point, Smash, Sweep, Ascend, Stomp) in `Spells/CastPoses`, played on the caster for everyone by `Fx/CastAnimations` as runtime KeyframeSequences (Motor6D `C0` is read-only at runtime, so the old arm-raise never moved). Earthquake holds its pose for the whole channel.
+- **Spell VFX and SFX gaps filled.** Buffs (Fire Boost, Water Body, Air Boost, Air Shield) now have an aura on the caster (embers, shimmer, wind streaks, orbiting blades, an outline); every spell has a particle style (`Spells/VfxStyles`); Gust, Whirlwind, Tornado, and Earth Wall got impact sounds (Tornado no longer uses the water sound).
+- **Background music** with a mute: a hub playlist and a fight playlist (`Audio/Music`) loop and fade between each other; the new **Background music** switch in Settings saves to the profile (`settings.music`, schema 4). Volume and fades are in `Config.MUSIC`.
+- **Like & Favourite gift.** A "👍 Like!" menu button opens a panel with the steps and a Claim button for a one-time **250 coins** (`Config.SUPPORT`). Roblox can't verify likes or favourites, so it is honor-based: the server opens it after 90 seconds in the server and pays once per account (`EconomyService.claimLikeReward`, remote `ClaimLikeReward`, `profile.rewards.likeFav`). Check Roblox's policy on rewarding likes before launch.
+- The hub crate throws its lid open (and the chest opens on a quest claim) while the reward plays (`Fx/PropSwap`).
+- Debug commands `likefav <bool>` and `takecoins <n>` for QA.
+
+### Fixed (effects that never showed)
+- **Fire Pillar, Water Nebula, Earth Punch, Earth Pillar, Earthquake, and the drawn-glyph pop-up had no visuals:** `FxController` received their `pillar`, `rise`, `quake`, and `glyph` events but never handled them. They are wired up, and now draw their block models.
+- `tests/Quality.spec.luau` allowed 10% power at average quality; an average drawing is now about +17% (perfect is +50%), so it allows 20%.
+- Zone spells with a `visual.model` and a column, boulder, or channel no longer also drop that model from the sky as a strike.
+
+### Changed (arena size, open Battleground)
+- **The Return to Hub button now shows** whenever you are in the Battleground (it was built but never made visible). The green gates still work too.
+- **Bigger Sparring Arena** (the 1v1/2v2 map): the floor is 4x larger than the original model (about 184 studs), with spawns and the invisible wall ring scaled to match.
+- **One open Battleground.** The mountain ring is now distant scenery you can't collide with; thicker invisible walls at the edge keep everyone on the map, and a once-a-second safety net puts anyone who still ends up below the world or outside the walls back at a random spot.
+
+### Changed (precision, passive regen)
+- **Perfect drawings hit harder:** the top of the quality range is now +50% power (was +20%); the pop-up and docs say so. (`Config.QUALITY.POWER = { 0.85, 1.5 }`)
+- **Passive health regen** in matches and the Battleground: 1 HP/s, starting 5 seconds after you last took damage (`Config.PASSIVE_REGEN_PER_SECOND` / `PASSIVE_REGEN_DELAY`). The hub still heals 5 HP/s.
+
+### Fixed (crowd control on NPCs)
+- **Water Lock (and every status spell) now works on Battleground NPCs.** The stun was only applied to player characters, so NPCs took the damage and kept fighting. Single-target shots and area control spells (Vine Snare, Time Stop, ...) now apply their status to hostile NPCs too, with the bubble. A stunned, rooted, or time-stopped NPC stops moving, swinging and shooting, and a wind-up already in progress is cancelled. NPCs keep their own speed and size after the effect ends (`BaseWalkSpeed` / `BaseScale` attributes read by `StatusService`). Players were already stunned correctly.
+
+### Added (duel map vote, name change)
+- **Vote for the map in duels.** After a 1v1 is found, both players see a vote screen with every map and a countdown (`Config.MAP_VOTE`); the most votes wins, ties and no votes are random. New `MapVoteService`, `MapVoteController`, and remotes `MapVote` / `MapVoteState`.
+- **Renamed to Spellcraft Arena** everywhere (docs, project name, debug bindable `ServerStorage.SpellcraftDebug`, GUI names).
+
+### Fixed (Battleground walls)
+- **The walls that split the Battleground are gone.** Each edge wall and mountain row was laid along the wrong axis, so they cut across the middle of the map and left the real edges open. They now run along the four edges: invisible walls at the border keep players on the map, and the mountains are distant scenery.
+
+### Added (NPC aggro, parties)
+- **NPCs stay on whoever hit them.** Hitting an NPC locks it onto you at any distance until you are knocked out or leave the Battleground, so you can't snipe from out of range. NPCs that only noticed you can still be outrun. A **red "!"** shows over any NPC that is hunting someone.
+- **Parties** (`PartyService`, `PartyController`): a Party button under the wallet opens a panel to invite players, accept or decline invites, kick (leader), and leave. Up to 4 per party (`Config.PARTY`). In the Battleground party mates can't hurt each other, their heals and buffs reach each other, their health bars are blue, and you drop in beside a party mate who is already inside. New remotes `PartyAction` and `PartyState`.
+
+### Added (trace-to-cast quality, mobile layout)
+- **Tap a spell card to see its shape.** The cards above the hotbar are now buttons: tapping one opens the drawing canvas with that spell's shape as a faint guide and a dot tracing how to draw it. The F key / Draw button still open a blank canvas.
+- **Drawing quality.** The closer your stroke follows the shape, the stronger the spell: a Rough to Perfect tier (1 to 4 stars on the hotbar copy, and a "Perfect! +20% power" pop-up) scales damage/healing/shields/health, hit radius, and durations (`Spells/Quality`, `Config.QUALITY`). A straighter slash scores higher. With a card selected the server only accepts that spell's shape (`DrawSpell` now carries the spell id; `GlyphResult` and `HandUpdated` carry quality).
+- **Mobile on every screen size.** One scaling rule for the HUD and the Draw button (`UI/Responsive`): phones use a smaller design size so text stays readable, and the scale is capped so menu panels always fit, in portrait too. The drawing canvas banner now fits narrow screens.
+
+### Added (Battleground open world and NPCs)
+- **The Battleground is now an open world, not an arena.** A 600 x 600 stud land of four biomes ringed by mountains, with Raider camps, ruined circles, and the Warlord's Keep. You drop in at a **random open spot** (away from camps and other fighters) and leave through one of four gates or the new **Return to Hub** button (`LeaveBattleground` remote).
+- **Hostile NPCs** (`NpcService`): Sand Raiders, Ember Mages (ranged), Stone Brutes, and the Dune Warlord. They chase, swing, and shoot back with telegraphed windups, give up and heal when you run, and respawn. Every spell hurts them.
+- **NPC knockouts pay coins** (3 / 5 / 12 / 40), capped at 120 per player per 5 minutes (`Config.BATTLEGROUND.NPC`).
+
+### Changed (Battleground, no more swirls)
+- **The FFA arena is now the Battleground.** The pink FFA queue pad is a blue portal that teleports you to a big open sand arena (`BattlegroundService`, `Maps/Battleground`): drop in any time, everyone inside is an enemy, you respawn 3 seconds after being knocked out, and green exit pads take you back to the hub. FFA as a queued match mode is removed (the Play menu, `Config.MODES`, the match code, and the FFA spawns).
+- **No more swirly shapes.** Fire Boost, Water Body, and Air Boost are drawn as a **square**; Earth Wall and Air Shield as a **triangle**. The swirl, squiggle, and infinity shapes are gone from the library, and so is the movement role. A circle and a square are told apart by how much of its bounding box the stroke fills.
+
+### Changed (arena hub, swirl for boosts)
+- **Boost and defense spells are drawn as a swirl** (the spiral): Fire Boost, Water Body, Earth Wall, and Air Shield. The V (chevron) moves to the area attacks (Fire Pillar, Earth Pillar). A swirl is accepted with 1 to 3 turns, drawn in or out, so it is forgiving to draw.
+- **The hub is an arena, not a dark Halloween scene.** Sunny warm light, a sand plaza with gold-and-stone rings, a three-tier grandstand with blue and red pennants, sandstone and marble walls with sky-glass windows, team flag poles, and green trees. The pumpkins, purple trees, glowing orange windows, and night lighting are gone, and the hub's ambience is a quiet arena crowd instead of crickets. The hall is now the Champions' Concourse.
+
+### Changed (shapes by kind of move, bigger hitboxes)
+- **Every spell's shape now says what kind of move it is, and no element repeats a shape:** a circle is a basic attack (Fireball, Rock Throw, Gust), a diagonal slash a fast attack (Fire Slash, Water Slice), a squiggly line movement (Air Boost), a triangle a stun (Water Lock), a V a boost or defense, a lightning bolt a heavy attack, a spiral an area attack, and a star an ultimate. New `slash` shape (any straight stroke, recognized by straightness), `Glyphs.ROLE`, and a `role` on every spell. Only the equipped element's five shapes are recognized.
+- **Bigger hitboxes on every move** (about 40% wider, with the visuals scaled to match): Fireball 3.5 to 5, Fire Slash and Water Slice 3 to 4.5, Fire Bomb 7 to 10, Water Wave 8 to 11, Rock Throw 4.2 to 6, Gust 3.2 to 4.6, Whirlwind 7 to 10, Tornado 6 to 8.5, Water Lock 2.5 to 4, Fire Pillar 9 to 12, Water Nebula 10 to 13, Earth Punch 5 to 7, Earth Pillar 4.5 to 6.5 (pillars 9 studs apart), Earthquake 22 to 25. The bonus against players (`HITBOX_BONUS`) goes from 1.5 to 2.
+
+### Changed (elements replace the 8 spells)
+- **Four elements, 20 spells.** Fire, Water, Earth, and Air have five spells each: a basic attack, a second move, a utility or boost, a heavy move, and an ultimate. Each slot uses the same shape in every element (circle, wave, triangle, lightning bolt, star), and recognition only considers those five shapes.
+  - **Fire:** Fireball (15), Fire Slash (10, fast), Fire Boost (+25% damage, 8s), Fire Pillar (30, large area, point and click), Fire Bomb (ultimate, 35).
+  - **Water:** Water Slice (10, fast), Water Body (invincible 7s), Water Lock (5 + stun), Water Wave (25, piercing), Water Nebula (ultimate, 35 pillar).
+  - **Earth:** Rock Throw (15, large rock), Earth Wall (35 HP), Earth Punch (20, boulder under the aim point), Earth Pillar (30, a line of pillars), Earthquake (ultimate, 40, 2s cast).
+  - **Air:** Gust (15, fast), Whirlwind (15, wide, blows enemies away), Air Boost (faster, higher jump), Air Shield (blocks the next hit, 4s), Tornado (ultimate, 30, piercing).
+- **Elements are chosen and unlocked.** Pick your first element free in the Spellbook; the others unlock from **Element Crates** (`ElementService`, one crate for 250 coins that always lands on an element you don't own). Equip any owned element in the hub; it is locked in during a match. Hub **shrines** list each element's spells and shapes.
+- **Duels give boosts, not spells.** After each round you pick 1 of 3 match boosts (Power, Vitality, Swiftness, Focus, Health Potion), which stack up to 3 times (`Match/Boosts`, `BoostService`). Your spellbook is always your element's five spells.
+- New mechanics: `Stun` (no moving or casting), `Invincible`, `Barrier`, `Haste`, `Channel` statuses; the `Line` archetype; piercing projectiles; `channel`, `rise`, and `pillar` zone bursts; a damage multiplier in `DestructibleService.damage`.
+- New effects and sounds: element pillars, rising boulders and stone pillars, an earthquake wind-up, new bolt styles, and 18 more audio cues (`Audio/Cues`).
+- **Classes are planned, not built.** `docs/CLASSES.md` records what's decided and the open questions.
+- Profile schema **3** (`elements`, `element`; `ownedSpells` removed): existing players pick their first element again.
+- Tests: `tests/Economy.spec` (elements, crate, boosts), updated `Balance`, `Glyphs`, `WordMatcher`, and `Audio` specs (204 pass).
+
+### Removed (elements)
+- The old 8 spells' unique ones: Zap, Heal, Black Hole, and Turret (their models stay in the repo but nothing uses them), Rarity tiers (Common to Legendary), the spell draft, and the five-crate shop with duplicate refunds.
+
+### Added (drawing, a new hub, audio and VFX)
+- **Draw spells.** Press **F** (or tap ✏ Draw, or **X** on a gamepad) and trace a shape: circle = Fireball, wave = Water Lock, triangle = Rock Wall, chevron = Gust, lightning = Zap, infinity = Heal, spiral = Black Hole, star = Turret. The server recognizes the stroke (`Glyphs`, `GlyphRecognizer`, a $1 unistroke recognizer that ignores size, rotation, direction, and start point) and readies the spell. The line turns gold or red with the verdict, and everyone sees the glyph pop over the caster's head. New `DrawController`, `GlyphView`, `DrawSpell` and `GlyphResult` remotes, `tests/Glyphs.spec`.
+- **Glyph cards** above the hotbar show what to draw (with cooldowns); the Spellbook shows each spell's glyph.
+- **New hub: the Great Hall of Glyphs.** A moonlit round plaza (inkwell fountain, eight glyph stones) opens into a long stone hall with pointed arches, glowing rune windows, glyph banners, a red carpet, the team boxes, the FFA portal, and a red Arena Gate at the far end. The Spell Practice pavilion is west, the Crate Shop east, the podium and Most Wins board at the hall entrance. Pumpkins and torches throughout.
+- **Night mood** (`LightingController`): the hub fades to a purple night with bloom; matches keep the bright arena lighting.
+- **Audio** (`Audio/Cues`, `AudioController`): a cast and an impact sound per spell, hit sounds, shattering rock, drawing success and failure chimes, the crate reveal, and a quiet night ambience in the hub. Spells name their cues with `sfx = { cast, impact }`. `tests/Audio.spec`.
+- **Spell VFX:** the glyph you drew is imprinted in the magic circle under the caster, Heal sparkles and a ring, Black Hole streams motes inward with a pulsing glow.
+
+### Removed (drawing)
+- Typing, chat casting, the spell box, and voice casting (`VoiceService`, `VoiceListen`, `VoiceHeard`, `SubmitWord`). Chat still carries admin `;` commands, and spell names still work in them.
+- The "type a spell" key setting is now the **draw key** setting (default F).
+
+### Added (coins, crates, wins podium)
+- **Coins.** Winning a match pays 100 coins (+50 for the first win of the day); the daily login chest and daily quests pay coins too. New players start with 150. The HUD's top-left wallet shows coins and wins, and the Victory screen counts up the coins you won.
+- **Crates** (`Economy/Crates`, `CrateService`, `CrateController`): a Common, Uncommon, Rare, Epic, and Legendary crate (100 / 250 / 500 / 1000 / 2000 coins). Each spin is decided on the server and unlocks a spell of the crate's rarity (with a 15–20% chance of one tier up); a spell you already own refunds half the price. Open them from the new 🎁 Crates menu or the Crate Shop stage in the hub; a reel of spell cards spins and lands on your prize.
+- **Five new spells**, one per crate: **Gust** (Common: low damage, huge hitbox, big shove), **Zap** (Uncommon: point-and-click thunder strike with a hover hitbox and a 60-stud range limit), **Heal** (Rare: +10 HP), **Black Hole** (Epic: sucks enemies in, traps them for 3 seconds, 10 damage over time), **Turret** (Legendary: a 30-HP turret that shoots the nearest enemy player).
+- **Wins leaderboard** (`LeaderboardService`): Wins and Coins in the player list, a Most Wins board, and a gold/silver/bronze podium in the hub where the server's top 3 players stand as their avatars.
+- **Spellbook kiosk uses the Grimoire model**, open on a lectern (plain-shape fallback without it).
+- **Semantic layer for AI agents:** `CLAUDE.md`, `docs/semantic/features.yaml` (every feature's files, remotes, data, invariants), and `docs/ECONOMY.md`.
+- Admin `;coins`, `;wins`, `;crate`; Studio debug through `ServerStorage.WordcraftDebug:Invoke(...)` (`coins`, `wins`, `crate`, `state`).
+- New rarity tier **Uncommon** (▲, green). The Legendary glyph is now 👑 (✦ didn't render in Roblox's font); the coin icon is 💰.
+
+### Removed (coins, crates, wins podium)
+- **Levels and XP** (`LevelCurve`, `ProgressionService`): no level bar, level-up banner, or XP rewards. Profiles migrate to schema 2 (XP and level dropped, quests re-rolled).
+- **35 spells.** Only Fireball, Water Lock, and Rock Wall remain from the old dictionary; the Movement and Summon archetypes stay in code for future spells.
+- The session knockouts board (replaced by the wins board).
+
+### Changed (coins, crates, wins podium)
+- `ProgressionService` is now `EconomyService`, the only writer of coins and wins.
+- Draft rarity weights are 50 / 25 / 15 / 8 / 2, and a draft card falls back to a higher tier when every spell of its tier is already in your spellbook.
+- Bolts, placeables, zones, and buffs can name an imported model in `visual.model` (Turret's body, Black Hole's swirl, Zap's strike, Heal's pop-up, Gust's bolt).
+
 ### Added (team boxes, 3v3, Sparring Arena map)
 - **Team boxes in the hub** for 1v1, 2v2, 3v3 and 4v4. Each has a Blue side and a Red side with one spot per teammate. Standing on a side picks your team, and the labels show how full it is (`BLUE 1/2`). When both sides are full, a 5-second countdown runs (it restarts if anyone steps off or swaps), then the match starts with exactly those teams (`MatchService.startMatch(..., { teams })`).
 - **3v3 mode**, with the Play menu and the admin `;startmatch` updated.

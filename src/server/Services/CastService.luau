@@ -13,11 +13,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Types = require(ReplicatedStorage.Shared.Types)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local ProgressionService = require(script.Parent.ProgressionService)
+local EconomyService = require(script.Parent.EconomyService)
+local BoostService = require(script.Parent.BoostService)
 local StatusService = require(script.Parent.StatusService)
 
 export type Target = { character: Model?, instance: Instance, player: Player?, position: Vector3 }
@@ -26,7 +28,9 @@ export type CastContext = {
 	player: Player,
 	character: Model,
 	root: BasePart,
+	-- The spell, already scaled by the drawing's quality (Spells/Quality).
 	def: Types.SpellDef,
+	quality: number,
 	target: Vector3,
 	rotationY: number,
 	team: string?,
@@ -146,11 +150,16 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if StatusService.has(character, "TimeStop") or character:GetAttribute("Frozen") then
 		return
 	end
-	-- Must be holding a copy of the readied spell (typing grants copies).
+	-- Stunned (Water Lock) or mid-channel (Earthquake): no casting.
+	if StatusService.has(character, "Stun") or StatusService.has(character, "Channel") then
+		toastRemote:FireClient(player, "You can't cast right now!", "fizzle")
+		return
+	end
+	-- Must be holding a copy of the readied spell (drawing grants copies).
 	local spellId = HandService.getReadied(player)
 	local def = spellId and SpellDefinitions.get(spellId)
 	if not spellId or not def then
-		toastRemote:FireClient(player, "Type a spell word first!", "fizzle")
+		toastRemote:FireClient(player, "Draw a spell first!", "fizzle")
 		return
 	end
 	-- Copies of the same spell share one cast cooldown.
@@ -182,12 +191,15 @@ local function onCast(player: Player, target: any, rotationY: any)
 		return
 	end
 
+	-- A well-drawn copy hits harder, wider, and lasts longer.
+	local quality = HandService.getReadiedQuality(player)
 	local activeHooks = hooks :: WorldHooks
 	local ctx: CastContext = {
 		player = player,
 		character = character,
 		root = root,
-		def = def,
+		def = Quality.apply(def, quality),
+		quality = quality,
 		target = target,
 		rotationY = rotation,
 		team = activeHooks.teamOf(player),
@@ -212,7 +224,8 @@ local function onCast(player: Player, target: any, rotationY: any)
 	end
 
 	-- The copy is used up and every copy of this spell shares the cooldown.
-	local cooldown = def.cooldown
+	-- The Focus match boost shortens every spell's cooldown.
+	local cooldown = def.cooldown * BoostService.cooldownFactor(player)
 	if StatusService.has(character, "CooldownCut") then
 		cooldown *= 0.5
 	end
@@ -225,9 +238,9 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if profile then
 		profile.stats.casts += 1
 	end
-	ProgressionService.track(player, "cast")
+	EconomyService.track(player, "cast")
 	if def.archetype == "Placeable" then
-		ProgressionService.track(player, "place")
+		EconomyService.track(player, "place")
 	end
 end
 
@@ -245,7 +258,7 @@ function CastService.start()
 	Remotes.get("CastSpell").OnServerEvent:Connect(onCast)
 	DestructibleService.Destroyed:Connect(function(_, destroyer)
 		if destroyer then
-			ProgressionService.track(destroyer, "destroy")
+			EconomyService.track(destroyer, "destroy")
 		end
 	end)
 end

@@ -1,5 +1,5 @@
 --!strict
--- Wordcraft Arena server entry point. Two-phase bootstrap: init() every
+-- Spellcraft Arena server entry point. Two-phase bootstrap: init() every
 -- service (wire up state, no cross-service calls that yield), then start()
 -- every service. Services are plain ModuleScripts under ./Services.
 
@@ -17,16 +17,24 @@ Remotes.setup()
 -- Order matters only for init(); start() runs in the same order.
 local ORDER = {
 	"PlayerDataService",
-	"ProgressionService",
+	"EconomyService",
+	"ElementService",
 	"StatusService",
 	"DestructibleService",
+	"BoostService",
 	"HandService",
 	"CastService",
+	"DashService",
 	"SpellInputService",
-	"VoiceService",
 	"ArenaService",
+	"PartyService",
+	"MapVoteService",
 	"MatchService",
 	"HubService",
+	"BattlegroundService",
+	"NpcService",
+	"CrateService",
+	"LeaderboardService",
 	"AdminService",
 	"DebugService",
 }
@@ -51,4 +59,4 @@ for _, service in loaded do
 	end
 end
 
-print("[WordcraftArena] server started")
+print("[SpellcraftArena] server started")

@@ -1,8 +1,9 @@
 --!strict
--- Settings panel. Currently: rebind the key that focuses the "type a spell"
--- box. Click "Change", press any key, done — the choice is saved to the
--- player's profile (server validates it and refuses reserved keys like WASD,
--- Space, the hotbar numbers, and "/" which Roblox chat uses).
+-- Settings panel: rebind the key that opens the drawing canvas (click
+-- "Change", press any key, done) and switch the background music on or off.
+-- Both choices are saved to the player's profile; the server validates them
+-- (and refuses reserved keys like WASD, Space, the hotbar numbers, and "/"
+-- which Roblox chat uses).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -19,12 +20,25 @@ local SettingsController = {}
 local keyLabel: TextLabel
 local changeButton: TextButton
 local hint: TextLabel
+local musicButton: TextButton
+
+local function musicOn(): boolean
+	local profile = ClientState.profile
+	return not (profile and profile.settings and profile.settings.music == false)
+end
+
+local function refreshMusic()
+	local on = musicOn()
+	musicButton.Text = if on then "🔊 On" else "🔇 Off"
+	musicButton.BackgroundColor3 = if on then Theme.COLORS.good else Theme.COLORS.bad
+end
 
 local function refresh()
+	refreshMusic()
 	if ClientState.capturingKey then
 		return
 	end
-	keyLabel.Text = ClientState.typeKeyName()
+	keyLabel.Text = ClientState.drawKeyName()
 	changeButton.Text = "Change"
 end
 
@@ -54,11 +68,11 @@ local function startCapture()
 			stopCapture()
 			return
 		end
-		Remotes.get("SaveSettings"):FireServer("typeKey", name)
+		Remotes.get("SaveSettings"):FireServer("drawKey", name)
 		-- Show it immediately; the server confirms via ProfileUpdated.
 		keyLabel.Text = name
-		HudController.toast(`"Type a spell" key set to {name}`, "ready")
-		-- Let this key press finish before it can open the spell box.
+		HudController.toast(`"Draw a spell" key set to {name}`, "ready")
+		-- Let this key press finish before it can open the canvas.
 		task.delay(0.2, stopCapture)
 	end)
 end
@@ -71,7 +85,7 @@ function SettingsController.init()
 		BackgroundColor3 = Theme.COLORS.panelLight,
 	})
 	Theme.corner(row)
-	Theme.label(row, "Type-a-spell key", {
+	Theme.label(row, "Draw-a-spell key", {
 		Size = UDim2.new(0.42, 0, 1, -16),
 		Position = UDim2.fromOffset(12, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -83,7 +97,7 @@ function SettingsController.init()
 	})
 	Theme.corner(keyBox, 8)
 	Theme.stroke(keyBox, Theme.COLORS.accent, 2)
-	keyLabel = Theme.label(keyBox, Config.DEFAULT_TYPE_KEY, {
+	keyLabel = Theme.label(keyBox, Config.DEFAULT_DRAW_KEY, {
 		Size = UDim2.new(1, -8, 1, -8),
 		Position = UDim2.fromOffset(4, 4),
 		TextColor3 = Theme.COLORS.accent,
@@ -98,28 +112,61 @@ function SettingsController.init()
 			startCapture()
 		end
 	end)
-	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_TYPE_KEY}`, {
+	-- Background music: one big switch.
+	local musicRow = Theme.frame(panel, {
 		Position = UDim2.fromOffset(16, 152),
+		Size = UDim2.new(1, -32, 0, 64),
+		BackgroundColor3 = Theme.COLORS.panelLight,
+	})
+	Theme.corner(musicRow)
+	Theme.label(musicRow, "Background music", {
+		Size = UDim2.new(0.5, 0, 1, -16),
+		Position = UDim2.fromOffset(12, 8),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	musicButton = Theme.button(musicRow, "🔊 On", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(170, Theme.TOUCH - 8),
+	})
+	musicButton.Activated:Connect(function()
+		local on = not musicOn()
+		Remotes.get("SaveSettings"):FireServer("music", on)
+		-- Switch right away; the server confirms via ProfileUpdated.
+		local profile = ClientState.profile
+		if profile and profile.settings then
+			profile.settings.music = on
+			ClientState.ProfileChanged:Fire()
+		end
+		refreshMusic()
+	end)
+
+	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_DRAW_KEY}`, {
+		Position = UDim2.fromOffset(16, 228),
 		Size = UDim2.fromOffset(180, Theme.TOUCH - 8),
 	})
 	reset.Activated:Connect(function()
-		Remotes.get("SaveSettings"):FireServer("typeKey", Config.DEFAULT_TYPE_KEY)
-		keyLabel.Text = Config.DEFAULT_TYPE_KEY
+		Remotes.get("SaveSettings"):FireServer("drawKey", Config.DEFAULT_DRAW_KEY)
+		keyLabel.Text = Config.DEFAULT_DRAW_KEY
 	end)
 	hint = Theme.label(panel, "Click Change, then press the key you want.", {
-		Position = UDim2.fromOffset(16, 210),
+		Position = UDim2.fromOffset(16, 292),
 		Size = UDim2.new(1, -32, 0, 24),
 		Font = Theme.BODY_FONT,
 		TextColor3 = Theme.COLORS.subtext,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
-	Theme.label(panel, "Gamepad: Y opens the spell box. Touch: tap the box.", {
-		Position = UDim2.fromOffset(16, 240),
-		Size = UDim2.new(1, -32, 0, 24),
-		Font = Theme.BODY_FONT,
-		TextColor3 = Theme.COLORS.subtext,
-		TextXAlignment = Enum.TextXAlignment.Left,
-	})
+	Theme.label(
+		panel,
+		"Gamepad: X, then draw with the right stick. Touch: tap ✏ Draw, then drag.",
+		{
+			Position = UDim2.fromOffset(16, 322),
+			Size = UDim2.new(1, -32, 0, 24),
+			Font = Theme.BODY_FONT,
+			TextColor3 = Theme.COLORS.subtext,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}
+	)
 end
 
 function SettingsController.start()
