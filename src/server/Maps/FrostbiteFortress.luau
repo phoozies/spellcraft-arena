@@ -148,7 +148,6 @@ return function(makeProp: Registrar): Model
 
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 64)
-	MapKit.ffaSpawns(spawns, Vector3.new(0, 3, 0), 45, 8)
 
 	local small = MapKit.folder(model, "SmallModeWalls")
 	MapKit.ring(small, Vector3.zero, 48, 14, Color3.fromRGB(129, 212, 250))

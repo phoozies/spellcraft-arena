@@ -172,6 +172,7 @@ end
 local function updateOverheads()
 	local state = ClientState.match
 	local inMatch = state.phase ~= "Idle"
+	local inBattle = player:GetAttribute("InBattleground") == true
 	for _, other in Players:GetPlayers() do
 		local character = other.Character
 		local humanoid = humanoidOf(character)
@@ -181,12 +182,14 @@ local function updateOverheads()
 				local ratio = math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1)
 				entry.fill.Size = UDim2.fromScale(ratio, 1)
 				local team = character:GetAttribute("Team")
-				entry.fill.BackgroundColor3 = if not inMatch
+				-- In the Battleground every other fighter is an enemy.
+				local fighter = inBattle and other:GetAttribute("InBattleground") == true
+				entry.fill.BackgroundColor3 = if fighter then Theme.COLORS.red elseif not inMatch
 					then Color3.fromRGB(176, 190, 197)
 					elseif team == state.myTeamId then Theme.COLORS.blue
 					else Theme.COLORS.red
 				-- In the hub only show bars on hurt players to keep it calm.
-				entry.gui.Enabled = humanoid.Health > 0 and (inMatch or ratio < 1)
+				entry.gui.Enabled = humanoid.Health > 0 and (inMatch or fighter or ratio < 1)
 			end
 		end
 	end

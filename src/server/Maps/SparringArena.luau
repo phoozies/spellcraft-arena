@@ -2,7 +2,7 @@
 -- Sparring Arena — a colosseum map built from the imported "Arena" model
 -- (marble pillars, sandstone seating, a slate floor with a neon rune ring).
 -- A compact 46-stud fighting floor: great for 1v1 and 2v2, still fine for 3v3
--- and FFA. If the model isn't in the place, a plain round platform with
+-- and 4v4. If the model isn't in the place, a plain round platform with
 -- pillars stands in.
 --
 -- The fighting floor is 46 studs wide; the seating and the gaps in it have no
@@ -77,7 +77,6 @@ return function(_makeProp: (Instance, number) -> ()): Model
 
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.zero, 16, 0.5)
-	MapKit.ffaSpawns(spawns, Vector3.new(0, 0.5, 0), 14, 8)
 
 	-- Already compact, so there's nothing to close off for the small modes.
 	MapKit.folder(model, "SmallModeWalls")

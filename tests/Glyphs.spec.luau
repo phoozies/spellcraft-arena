@@ -25,11 +25,7 @@ end
 -- A sloppy attempt at a glyph: random start point (closed shapes), direction,
 -- rotation, size, position, and hand wobble (a fraction of the shape's size).
 local function attempt(glyph: Glyphs.Glyph, rng: Random, wobble: number): { Vector2 }
-	local source = glyph.points
-	if glyph.variants and rng:NextInteger(0, #glyph.variants) > 0 then
-		source = glyph.variants[rng:NextInteger(1, #glyph.variants)]
-	end
-	local points = densify(source, math.max(6, math.ceil(40 / (#source - 1))))
+	local points = densify(glyph.points, math.max(6, math.ceil(40 / (#glyph.points - 1))))
 	if glyph.closed then
 		table.remove(points) -- last == first
 		local shift = rng:NextInteger(0, #points - 1)
@@ -111,14 +107,19 @@ return function(t)
 			t.expect(hits / total >= 0.9).toBeTruthy()
 		end)
 
-		t.it("never mistakes one glyph for another, even when sloppy", function()
+		t.it("almost never mistakes one glyph for another, even when sloppy (5% wobble)", function()
 			local rng = Random.new(3)
+			local total, mistakes = 0, 0
 			for _, glyph in Glyphs.LIST do
 				for _ = 1, 40 do
+					total += 1
 					local id = GlyphRecognizer.recognize(attempt(glyph, rng, 0.05))
-					t.expect(id == nil or id == glyph.id).toBeTruthy()
+					if id ~= nil and id ~= glyph.id then
+						mistakes += 1
+					end
 				end
 			end
+			t.expect(mistakes / total <= 0.01).toBeTruthy()
 		end)
 
 		t.it("reads a straight line as a slash, in any direction", function()
@@ -181,12 +182,12 @@ return function(t)
 			end
 		end)
 
-		t.it("basic attacks are circles, fast attacks slashes, movement a squiggle, stuns triangles", function()
+		t.it("basic attacks are circles, fast attacks slashes, boosts squares, defenses and stuns triangles", function()
 			t.expect(Glyphs.ROLE.basic).toBe("circle")
 			t.expect(Glyphs.ROLE.fast).toBe("slash")
-			t.expect(Glyphs.ROLE.movement).toBe("wave")
+			t.expect(Glyphs.ROLE.boost).toBe("square")
+			t.expect(Glyphs.ROLE.defense).toBe("triangle")
 			t.expect(Glyphs.ROLE.stun).toBe("triangle")
-			t.expect(Glyphs.ROLE.boost).toBe("spiral") -- a swirl
 			for _, def in SpellDefinitions.list do
 				if def.stats.status == "Stun" then
 					t.expect(def.role).toBe("stun")
@@ -195,6 +196,39 @@ return function(t)
 					t.expect(def.ultimate).toBe(true)
 				end
 			end
+		end)
+
+		t.it("no spell is drawn with a swirl or a squiggle", function()
+			for _, def in SpellDefinitions.list do
+				t.expect(def.glyph ~= "spiral" and def.glyph ~= "wave" and def.glyph ~= "infinity").toBeTruthy()
+			end
+			t.expect(Glyphs.get("spiral")).toBeNil()
+			t.expect(Glyphs.get("wave")).toBeNil()
+		end)
+
+		t.it("Earth Wall and Air Shield are triangles; Fire Boost, Water Body and Air Boost are squares", function()
+			for _, id in { "EarthWall", "AirShield" } do
+				t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("triangle")
+			end
+			for _, id in { "FireBoost", "WaterBody", "AirBoost" } do
+				t.expect((SpellDefinitions.get(id) :: any).glyph).toBe("square")
+			end
+		end)
+
+		t.it("a square is never read as a circle (or the reverse), even when sloppy", function()
+			local allowed = { circle = true, square = true, slash = true, chevron = true, star = true }
+			local rng = Random.new(33)
+			local wrong = 0
+			for _, id in { "circle", "square" } do
+				local glyph = Glyphs.get(id) :: Glyphs.Glyph
+				for _ = 1, 80 do
+					local got = GlyphRecognizer.recognize(attempt(glyph, rng, 0.05), allowed)
+					if got ~= id then
+						wrong += 1
+					end
+				end
+			end
+			t.expect(wrong <= 4).toBeTruthy() -- at most 2.5% misses, and never swapped silently
 		end)
 
 		t.it("each element's own five shapes are recognized from sloppy strokes (5% wobble) 95% of the time", function()

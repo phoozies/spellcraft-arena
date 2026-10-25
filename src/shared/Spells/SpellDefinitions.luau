@@ -5,7 +5,7 @@
 --
 -- Elements: every spell belongs to one of four elements (shared/Spells/
 -- Elements) and fills one of its five slots (slot 5 is the ultimate). Its
--- `role` (basic, fast, movement, stun, boost, heavy, area, ultimate) decides
+-- `role` (basic, fast, boost, defense, stun, heavy, area, ultimate) decides
 -- the shape the player draws (Glyphs.ROLE), the same in every element, and an
 -- element never repeats a shape.
 --
@@ -312,8 +312,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "earth wall", "earthwall", "wall", "rock wall", "rockwall" },
 		element = "Earth",
 		slot = 2,
-		role = "boost",
-		glyph = ROLE.boost,
+		role = "defense",
+		glyph = ROLE.defense,
 		sfx = { cast = "rockRaise" },
 		archetype = "Placeable",
 		cooldown = 4,
@@ -473,8 +473,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "air boost", "airboost" },
 		element = "Air",
 		slot = 3,
-		role = "movement",
-		glyph = ROLE.movement,
+		role = "boost",
+		glyph = ROLE.boost,
 		sfx = { cast = "airBoostCast" },
 		archetype = "Buff",
 		cooldown = 16,
@@ -494,8 +494,8 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "air shield", "airshield", "shield" },
 		element = "Air",
 		slot = 4,
-		role = "boost",
-		glyph = ROLE.boost,
+		role = "defense",
+		glyph = ROLE.defense,
 		sfx = { cast = "shieldCast" },
 		archetype = "Buff",
 		cooldown = 14,

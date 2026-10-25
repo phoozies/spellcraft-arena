@@ -1,21 +1,22 @@
 --!strict
 -- Inkwell Plaza — the central hub, a sunlit sandstone arena: a round sand
--- plaza with a grandstand behind it that opens into the Champions' Concourse. Everything is on one axis so players always know
--- where to go (north is -Z):
+-- plaza with a grandstand behind it that opens into the Champions' Concourse.
+-- Everything is on one axis so players always know where to go (north is -Z):
 --
 --   Spawn plaza (round, inkwell fountain, 4 element shrines that list what to
 --   draw for each spell) ── kiosks on the south arc (Spellbook, Daily Quests)
 --   ├─ west: Spell Practice pavilion (dummies, build anything)
 --   ├─ east: Crate Shop stage
---   └─ north: the Great Hall — pointed-arch bays with glowing rune windows
+--   └─ north: the Concourse — pointed-arch bays with sky-glass windows
 --        and glyph banners, a red carpet, the team boxes (1v1..4v4), the
---        FFA portal, and the red Arena Gate at the far end. The winners'
+--        Battleground portal, and the red Arena Gate at the far end. The winners'
 --        podium and the Most Wins board stand at its entrance.
 --
 -- Tags/attributes HubService relies on:
 --   TeamPad   (Mode, Team, Slots)   one side of a team box: players stand on
 --                                   a side to pick their team (1v1..4v4)
---   QueuePad  (Mode attribute)      step on to join that queue (FFA)
+--   BattlegroundPortal              step on to be teleported to the Battleground
+--                                   (BattlegroundService)
 --   BuildZone                       placing objects allowed here
 --   DummySpot                       training dummies respawn here
 --   HubSpawn                        where players appear
@@ -716,24 +717,28 @@ return function(): Model
 		60
 	)
 
-	-- Free-for-all: a blue portal pad on the right of the hall.
-	local ffaX, ffaZ = 24, -112
+	-- The Battleground portal: a blue gateway on the right of the concourse.
+	-- Stepping into it teleports you to the drop-in free-for-all arena
+	-- (BattlegroundService).
+	local portalX, portalZ = 24, -112
 	for _, side in { -1, 1 } do
-		column(model, Vector3.new(ffaX + side * 9, 0, ffaZ), 14, 2.4, BLUE)
+		column(model, Vector3.new(portalX + side * 9, 0, portalZ), 14, 2.4, BLUE)
 	end
-	pointedArch(model, CFrame.new(ffaX, 0, ffaZ), 18, 14, 1.2, BLUE)
-	local ffa = MapKit.part(model, {
-		name = "Queue_FFA",
+	pointedArch(model, CFrame.new(portalX, 0, portalZ), 18, 14, 1.2, BLUE)
+	local portal = MapKit.part(model, {
+		name = "BattlegroundPortal",
 		shape = Enum.PartType.Cylinder,
-		size = Vector3.new(1, 12, 12),
-		cframe = CFrame.new(ffaX, 0.9, ffaZ) * CFrame.Angles(0, 0, math.pi / 2),
-		color = Color3.fromRGB(236, 64, 122),
+		size = Vector3.new(0.8, 12, 12),
+		cframe = CFrame.new(portalX, 0.9, portalZ) * CFrame.Angles(0, 0, math.pi / 2),
+		color = Color3.fromRGB(80, 160, 255),
 		material = Enum.Material.Neon,
+		transparency = 0.2,
+		canCollide = false,
 	})
-	ffa:SetAttribute("Mode", "FFA")
-	ffa:AddTag("QueuePad")
-	label(ffa, "FFA\n0 waiting", 6, 60)
-	label(signAnchor(model, "FFASign", Vector3.new(ffaX, 27, ffaZ)), "FFA ARENA", 0, 120)
+	portal:AddTag("BattlegroundPortal")
+	glow(portal, BLUE, 24, 1.2)
+	label(portal, "BATTLEGROUND\nStep in to fight!", 6, 70)
+	label(signAnchor(model, "BattlegroundSign", Vector3.new(portalX, 27, portalZ)), "BATTLEGROUND", 0, 140)
 
 	----------------------------------------------------------------------
 	-- Spell Practice pavilion (west): build anything, smash dummies

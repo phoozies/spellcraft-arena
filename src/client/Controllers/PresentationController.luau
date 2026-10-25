@@ -225,23 +225,19 @@ local function showIntro(state: Types.MatchState)
 	layout.Parent = row
 
 	local order = 0
-	local ffa = state.mode == "FFA"
 	for index, team in teams do
 		if index > 1 then
 			order += 1
 			local vs = Theme.label(row, "VS", {
-				Size = UDim2.fromOffset(if ffa then 30 else 90, 90),
+				Size = UDim2.fromOffset(90, 90),
 				LayoutOrder = order,
 				TextColor3 = GOLD,
 				TextStrokeTransparency = 0,
 			})
-			if ffa then
-				vs.Text = "·"
-			end
 		end
 		for _, entry in byTeam[team] do
 			order += 1
-			avatarCard(row, entry, order, if ffa then GOLD else teamColor(team))
+			avatarCard(row, entry, order, teamColor(team))
 		end
 	end
 

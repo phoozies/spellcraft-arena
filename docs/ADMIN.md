@@ -41,7 +41,7 @@ Leaving the target out means `me` where that makes sense.
 | `;tp <player> <destination>` | Teleports players to another player |
 | `;bring <player>` | Teleports players to you |
 | `;hub <player>` | Pulls players out of their match and back to the hub |
-| `;startmatch <1v1\|2v2\|3v3\|4v4\|FFA> [players...]` | Starts a match right away, with everyone in the hub if no players are listed. Short-handed matches end on the round timer. |
+| `;startmatch <1v1\|2v2\|3v3\|4v4> [players...]` | Starts a match right away, with everyone in the hub if no players are listed. Short-handed matches end on the round timer. |
 | `;endmatch <player>` | Ends that player's match with no winner |
 | `;clear` | Removes every placed object and summon in the hub |
 | `;knockback <player>` | Launches the player with a server-side push, for testing |

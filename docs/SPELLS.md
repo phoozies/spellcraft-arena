@@ -13,12 +13,14 @@ Every spell has a **role**, and the role decides the shape you draw. A shape mea
 |---|---|---|
 | Basic attack | Circle | Fireball, Rock Throw, Gust |
 | Fast attack | Diagonal slash (a straight line) | Fire Slash, Water Slice |
-| Movement | Squiggly line | Air Boost |
+| Boost | Square | Fire Boost, Water Body, Air Boost |
+| Defense | Triangle | Earth Wall, Air Shield |
 | Stun | Triangle | Water Lock |
-| Boost / defense | Swirl (a spiral) | Fire Boost, Water Body, Earth Wall, Air Shield |
 | Heavy attack | Lightning bolt | Water Wave, Earth Punch, Whirlwind |
 | Area attack | V (chevron) | Fire Pillar, Earth Pillar |
 | Ultimate | Star | Fire Bomb, Water Nebula, Earthquake, Tornado |
+
+No spell uses a swirl or a squiggle.
 
 The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; `tests/Glyphs.spec.luau` checks that the two agree.
 
@@ -42,7 +44,7 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 The client records your stroke and sends it (`DrawSpell`); the server runs `GlyphRecognizer` on it:
 
-1. A **straight stroke** (no point strays far from the line between its ends) is a slash, in any direction. Anything else is resampled to 64 points, rotated and scaled to a square, then compared with your element's other four shapes (the **$1 unistroke recognizer**; a swirl is accepted with 1 to 3 turns, drawn in or out).
+1. A **straight stroke** (no point strays far from the line between its ends) is a slash, in any direction. Anything else is resampled to 64 points, rotated and scaled to a square, then compared with your element's other four shapes (the **$1 unistroke recognizer**). A circle and a square look alike to it, so when they are the finalists it checks how much of its tightest bounding box the stroke fills (a square fills nearly all of it, a circle about 78%).
 2. Size, position, rotation, and drawing direction don't matter, and closed shapes can start anywhere. Only the shape does.
 3. The best shape wins if its score is at least `MIN_SCORE` (0.8) **and** clearly ahead of the runner-up (`MIN_MARGIN`). Otherwise the drawing fizzles. Straight lines, dots, and scribbles are rejected.
 4. The spell your element draws with that shape is readied by `HandService.grant`.
@@ -61,7 +63,7 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 |---|---|---|---|---|---|
 | 1 | **Fireball** | circle | Projectile | 0.9s | Hurl a ball of fire with a medium hitbox. 15 damage. |
 | 2 | **Fire Slash** | slash | Projectile | 0.55s | A fast crescent of fire with a medium hitbox. 10 damage, recharges quickly. |
-| 3 | **Fire Boost** | swirl | Buff | 14s | Your fire burns hotter: +25% damage for 8 seconds. |
+| 3 | **Fire Boost** | square | Buff | 14s | Your fire burns hotter: +25% damage for 8 seconds. |
 | 4 | **Fire Pillar** | V | Zone | 7s | Point and click: a huge pillar of fire erupts where you aim after a short warning. 30 damage in a large area. Range 70. |
 | 5 | **Fire Bomb** ★ | star | Projectile | 16s | ULTIMATE: a huge fireball with a very large hitbox. 35 damage. |
 
@@ -70,7 +72,7 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 | Slot | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
 | 1 | **Water Slice** | slash | Projectile | 0.55s | A fast slice of water with a medium hitbox. 10 damage. |
-| 2 | **Water Body** | swirl | Buff | 22s | Turn to flowing water: you can't be hurt or affected by spells for 7 seconds. |
+| 2 | **Water Body** | square | Buff | 22s | Turn to flowing water: you can't be hurt or affected by spells for 7 seconds. |
 | 3 | **Water Lock** | triangle | Control | 4s | Trap an enemy in a bubble: 5 damage and a 1.5 second stun (no moving or casting). |
 | 4 | **Water Wave** | lightning bolt | Projectile | 8s | Send a large wave rolling forward through everything in its path. 25 damage. |
 | 5 | **Water Nebula** ★ | star | Zone | 18s | ULTIMATE: point and click: a towering water pillar crashes down in a large area. 35 damage. Range 70. |
@@ -80,7 +82,7 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 | Slot | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
 | 1 | **Rock Throw** | circle | Projectile | 1.1s | Hurl a large boulder. 15 damage and a solid shove. |
-| 2 | **Earth Wall** | swirl | Placeable | 4s | Raise a rocky wall with 35 health that blocks spells. It breaks apart piece by piece. |
+| 2 | **Earth Wall** | triangle | Placeable | 4s | Raise a rocky wall with 35 health that blocks spells. It breaks apart piece by piece. |
 | 3 | **Earth Punch** | lightning bolt | Zone | 5s | Point and click: a boulder bursts out of the ground beneath your target. 20 damage. Range 60. |
 | 4 | **Earth Pillar** | V | Line | 9s | A wave of stone pillars erupts in a line in front of you. 30 damage to anyone it catches. |
 | 5 | **Earthquake** ★ | star | Zone | 22s | ULTIMATE: the ground shakes around you, then bursts. A long 2 second cast leaves you rooted, but it deals 40 damage in a huge area. |
@@ -91,8 +93,8 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 |---|---|---|---|---|---|
 | 1 | **Gust** | circle | Projectile | 0.9s | A fast gust of air. 15 damage. |
 | 2 | **Whirlwind** | lightning bolt | Projectile | 5s | A wide gust that blows everyone it hits far away. 15 damage. |
-| 3 | **Air Boost** | squiggle | Buff | 16s | Ride the wind: much faster and a higher jump for 6 seconds. |
-| 4 | **Air Shield** | swirl | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
+| 3 | **Air Boost** | square | Buff | 16s | Ride the wind: much faster and a higher jump for 6 seconds. |
+| 4 | **Air Shield** | triangle | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
 | 5 | **Tornado** ★ | star | Projectile | 18s | ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage. |
 
 ### Notes on the spells

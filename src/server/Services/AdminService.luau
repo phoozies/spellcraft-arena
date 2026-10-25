@@ -392,15 +392,12 @@ COMMANDS.hub = {
 }
 
 COMMANDS.startmatch = {
-	usage = "startmatch <1v1|2v2|3v3|4v4|FFA> [players...]",
+	usage = "startmatch <1v1|2v2|3v3|4v4> [players...]",
 	help = "Start a match now with the listed players (default: everyone in the hub).",
 	run = function(admin, args)
-		local mode = args[1] and string.upper(args[1])
-		if mode ~= "FFA" then
-			mode = args[1] and string.lower(args[1])
-		end
+		local mode = args[1] and string.lower(args[1])
 		if not mode or not (Config.MODES :: any)[mode] then
-			return "Usage: startmatch <1v1|2v2|3v3|4v4|FFA> [players...]"
+			return "Usage: startmatch <1v1|2v2|3v3|4v4> [players...]"
 		end
 		local chosen: { Player } = {}
 		if #args >= 2 then
@@ -427,7 +424,7 @@ COMMANDS.startmatch = {
 		end
 		-- Short-handed matches end on the round timer like solo tests.
 		local info = (Config.MODES :: any)[mode]
-		local needed = if mode == "FFA" then 2 else info.teams * info.perTeam
+		local needed = info.teams * info.perTeam
 		MatchService.startMatch(mode :: any, free, { solo = #free < needed })
 		return `Started {mode} with {names(free)}.`
 	end,

@@ -4,7 +4,7 @@
 
 ## Pillars
 
-1. **Shapes are power.** Tracing a wave puts a wall of earth (or a body of water, or a gust of wind) in your hands. Drawing is quick to learn, and the glyphs are all over the hub.
+1. **Shapes are power.** Tracing a triangle raises a wall of earth (or a shield of wind) in your hands. Drawing is quick to learn, and the glyphs are all over the hub.
 2. **Short, social, repeatable.** Rounds are quick, matches are best of 3, and you can be in a queue within 10 seconds of joining.
 3. **Fair and kind.** Nothing is pay-to-win, there's no gore (knockouts "poof" into ink), and the visuals are bright and readable for all ages.
 4. **Play anywhere.** PC, mobile, console, and VR each get first-class controls. Typing is never required: you can also tap or speak.
@@ -78,19 +78,22 @@ The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones,
 | 2v2 | 4 | Blue / Red | Small-mode walls shrink the map; the Sparring Arena is weighted ×2 |
 | 3v3 | 6 | Blue / Red | Full map |
 | 4v4 | 8 | Blue / Red | Full map; Frostbite Fortress is weighted ×2; never the Sparring Arena (too small) |
-| FFA | 2–8 | everyone alone | Starts at 8 players, or 15s after reaching 2; Sky Islands is weighted ×2 |
 
 ### Picking your team: the team boxes
 
 The hub has a **box for each team mode** (1v1, 2v2, 3v3, 4v4). Every box has a **Blue side and a Red side**, with one spot per teammate. **Stand on a side to pick your team**, so friends can line up together before the match, and the sides show how many spots are filled (for example `BLUE 1/2`). When **both sides are full**, a 5-second countdown starts. It restarts if anyone steps off or swaps sides, and then the match starts with exactly those teams. A full side turns newcomers away with a hint to try the other side.
 
-The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically. **FFA** has its own pink pad: step on it to join the queue.
+The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically.
+
+### The Battleground (drop-in free-for-all)
+
+A blue **Battleground portal** in the concourse teleports you to a big open sand arena far from the hub, with a raised center platform, ruined walls, pillars, and boulders for cover. There is no queue and no match: you drop in any time, **everyone inside is an enemy**, and anyone you knock out is out for 3 seconds, then respawns at a random edge spawn with spawn protection. You fight with your equipped element's spells (and can raise Earth Walls); there are no coins, wins, or boosts, and no health regen. A banner reminds you where you are, and either **green exit pad** returns you to the hub. You can't join a match queue while you're inside.
 
 ## Maps (designed for 8 players; the Sparring Arena suits smaller matches)
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell with a three-tier grandstand behind it, opening into the Champions' Concourse (arched bays with sky-glass windows and glyph banners, a red carpet to the Arena Gate) | Four element shrines around the fountain, team boxes (1v1–4v4) and the FFA portal in the concourse, Spell Practice pavilion (build anything, smash dummies), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
+| **Inkwell Plaza** (hub) | A sunlit sandstone arena: a round sand plaza around a giant inkwell with a three-tier grandstand behind it, opening into the Champions' Concourse (arched bays with sky-glass windows and glyph banners, a red carpet to the Arena Gate) | Four element shrines around the fountain, team boxes (1v1–4v4) and the Battleground portal in the concourse, Spell Practice pavilion (build anything, smash dummies), Spellbook kiosk (the Grimoire model), Daily Quest chest, Crate Shop, wins podium + Most Wins board at the concourse entrance |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Frostbite Fortress** | Snowy castle courtyard | Corner towers, central keep, slippery ice patches, breakable ice gates |
 | **Sky Islands** | Floating islands over the void | Jump pads, ring-outs, breakable cloud blocks |

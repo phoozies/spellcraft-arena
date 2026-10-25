@@ -6,8 +6,7 @@
 -- * Best of 3 rounds (Config.ROUNDS_TO_WIN). Each player's spellbook is the
 --   five spells of their equipped element. The draft after each round
 --   offers match boosts (Power, Vitality, ...), not spells (BoostService).
--- * Teams: "Blue" / "Red" for 1v1, 2v2, 4v4; FFA puts every player on their
---   own team (their name).
+-- * Teams: "Blue" / "Red".
 -- * Owns the PvP relation rules used by DestructibleService and the world
 --   hooks used by CastService.
 
@@ -61,7 +60,7 @@ local MatchService = {}
 MatchService.QueueChanged = Signal.new()
 
 local queues: { [string]: { Player } } =
-	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {}, ["FFA"] = {} }
+	{ ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
 local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
 local matchCounter = 0
@@ -131,6 +130,22 @@ local function spawnAt(player: Player, cframe: CFrame, frozen: boolean)
 	end
 end
 
+-- Moves a living character somewhere (a Battleground drop-in) with a short
+-- spawn shield, without reloading it.
+function MatchService.teleport(player: Player, cframe: CFrame)
+	local character = player.Character
+	if character then
+		character:PivotTo(cframe)
+		protect(character)
+		character:SetAttribute("Team", nil)
+	end
+end
+
+-- Reloads a player's character at `cframe` (a Battleground respawn).
+function MatchService.respawnAt(player: Player, cframe: CFrame)
+	spawnAt(player, cframe, false)
+end
+
 function MatchService.spawnInHub(player: Player)
 	spawnAt(player, hubSpawnCFrame(), false)
 	local character = player.Character
@@ -139,7 +154,7 @@ function MatchService.spawnInHub(player: Player)
 	end
 end
 
--- Team ids: "Blue"/"Red", or a player's UserId in FFA (display names aren't unique).
+-- Team ids: "Blue" / "Red".
 local function teamDisplay(match: Match, team: string): string
 	return match.teamNames[team] or team
 end
@@ -255,6 +270,10 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 	if attacker == nil then
 		return true
 	end
+	-- Everyone inside the Battleground may hurt everyone else inside it.
+	if attacker:GetAttribute("InBattleground") and victimOwner:GetAttribute("InBattleground") then
+		return true
+	end
 	local a, b = playerMatch[attacker], playerMatch[victimOwner]
 	if a or b then
 		return a == b
@@ -262,7 +281,7 @@ local function relation(attacker: Player?, victimOwner: Player?, target: Instanc
 			and a.phase == "Round"
 			and a.teams[attacker] ~= a.teams[victimOwner]
 	end
-	-- No PvP in the hub; players fight in matches (the sparring arena is a map).
+	-- No PvP in the hub; players fight in matches and in the Battleground.
 	return false
 end
 
@@ -291,7 +310,7 @@ local function spawnRound(match: Match)
 	local indexByGroup: { [string]: number } = {}
 	for _, player in connected(match) do
 		local team = match.teams[player]
-		local group = if match.mode == "FFA" then "FFA" else TEAM_SPAWN_GROUP[team]
+		local group = TEAM_SPAWN_GROUP[team]
 		indexByGroup[group] = (indexByGroup[group] or 0) + 1
 		spawnAt(player, ArenaService.spawnCFrame(match.arena, group, indexByGroup[group]), true)
 		BoostService.applyToCharacter(player)
@@ -542,26 +561,18 @@ function MatchService.startMatch(
 		offers = {},
 		ended = false,
 	}
-	if mode == "FFA" then
-		for _, player in players do
-			local id = tostring(player.UserId)
-			match.teams[player] = id
-			match.teamNames[id] = player.DisplayName
-			table.insert(match.teamOrder, id)
-		end
-	else
-		match.teamOrder = { "Blue", "Red" }
-		local chosen = options and options.teams
-		for i, player in shuffle(players) do
-			local team = chosen and chosen[player]
-			match.teams[player] = if team == "Blue" or team == "Red"
-				then team
-				else if i % 2 == 1 then "Blue" else "Red"
-		end
+	match.teamOrder = { "Blue", "Red" }
+	local chosen = options and options.teams
+	for i, player in shuffle(players) do
+		local team = chosen and chosen[player]
+		match.teams[player] = if team == "Blue" or team == "Red"
+			then team
+			else if i % 2 == 1 then "Blue" else "Red"
 	end
 
 	for _, player in players do
 		MatchService.leaveQueue(player)
+		player:SetAttribute("InBattleground", nil) -- a match pulls you out of the Battleground
 		playerMatch[player] = match
 		-- Everyone fights with their equipped element; anyone who never picked
 		-- one gets a random element for now.
@@ -639,6 +650,10 @@ function MatchService.joinQueue(player: Player, mode: string): boolean
 	if not queues[mode] or playerMatch[player] then
 		return false
 	end
+	if player:GetAttribute("InBattleground") then
+		toastRemote:FireClient(player, "Leave the Battleground first (step on a green pad).", "fizzle")
+		return false
+	end
 	if MatchService.queuedMode(player) == mode then
 		return true
 	end
@@ -703,32 +718,13 @@ local function processQueues()
 			end
 		end
 		local info = (Config.MODES :: any)[mode]
-		if mode == "FFA" then
-			if #list >= info.minPlayers then
-				ffaReadySince = ffaReadySince or os.clock()
-				if
-					#list >= info.maxPlayers
-					or os.clock() - (ffaReadySince :: number) >= Config.FFA_FILL_WAIT
-				then
-					local group = {}
-					for i = 1, math.min(#list, info.maxPlayers) do
-						table.insert(group, list[i])
-					end
-					ffaReadySince = nil
-					MatchService.startMatch("FFA", group)
-				end
-			else
-				ffaReadySince = nil
+		local needed = info.teams * info.perTeam
+		while #list >= needed do
+			local group = {}
+			for i = 1, needed do
+				table.insert(group, list[i])
 			end
-		else
-			local needed = info.teams * info.perTeam
-			while #list >= needed do
-				local group = {}
-				for i = 1, needed do
-					table.insert(group, list[i])
-				end
-				MatchService.startMatch(mode :: Types.MatchMode, group)
-			end
+			MatchService.startMatch(mode :: Types.MatchMode, group)
 		end
 	end
 	broadcastCounts()

@@ -1,6 +1,6 @@
 --!strict
 -- The central hub (Inkwell Plaza): builds it, spawns players there, and runs
--- the team boxes, the FFA queue pad, and training dummies. (The wins board
+-- the team boxes, and training dummies. (The wins board
 -- and podium are LeaderboardService; the crate shop is CrateService.)
 
 local CollectionService = game:GetService("CollectionService")
@@ -30,7 +30,7 @@ local toastRemote: RemoteEvent
 -- (The default Roblox regen script is replaced by StarterCharacterScripts.Health.)
 local function regenTick(dt: number)
 	for _, player in Players:GetPlayers() do
-		if not MatchService.isInMatch(player) then
+		if not MatchService.isInMatch(player) and not player:GetAttribute("InBattleground") then
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
 				humanoid.Health =
@@ -113,38 +113,6 @@ local function spawnDummy(spot: BasePart)
 			end
 		end)
 	end)
-end
-
-local function wireQueuePad(pad: BasePart)
-	local mode = pad:GetAttribute("Mode")
-	if typeof(mode) ~= "string" then
-		return
-	end
-	local debounce: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-	pad.Touched:Connect(function(hit)
-		local character = hit.Parent
-		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player then
-			return
-		end
-		local now = os.clock()
-		if (debounce[player] or 0) > now then
-			return
-		end
-		debounce[player] = now + 2
-		MatchService.joinQueue(player, mode)
-	end)
-end
-
-local function refreshPadLabels()
-	local counts = MatchService.queueCounts()
-	for _, pad in CollectionService:GetTagged("QueuePad") do
-		local mode = pad:GetAttribute("Mode")
-		local label = pad:FindFirstChild("Text", true)
-		if typeof(mode) == "string" and label and label:IsA("TextLabel") then
-			label.Text = `{mode}\n{counts[mode] or 0} waiting`
-		end
-	end
 end
 
 ----------------------------------------------------------------------
@@ -346,17 +314,11 @@ function HubService.init()
 end
 
 function HubService.start()
-	for _, pad in CollectionService:GetTagged("QueuePad") do
-		if pad:IsA("BasePart") then
-			wireQueuePad(pad)
-		end
-	end
 	for _, spot in CollectionService:GetTagged("DummySpot") do
 		if spot:IsA("BasePart") then
 			spawnDummy(spot)
 		end
 	end
-	MatchService.QueueChanged:Connect(refreshPadLabels)
 	collectBoxes()
 
 	PlayerDataService.ProfileLoaded:Connect(function(player)
@@ -364,9 +326,14 @@ function HubService.start()
 	end)
 
 	DestructibleService.Knockout:Connect(function(victim)
-		if not MatchService.isInMatch(victim) then
+		-- (The Battleground respawns its own fighters.)
+		if not MatchService.isInMatch(victim) and not victim:GetAttribute("InBattleground") then
 			task.delay(HUB_RESPAWN_DELAY, function()
-				if victim.Parent and not MatchService.isInMatch(victim) then
+				if
+					victim.Parent
+					and not MatchService.isInMatch(victim)
+					and not victim:GetAttribute("InBattleground")
+				then
 					MatchService.spawnInHub(victim)
 				end
 			end)

@@ -37,7 +37,8 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     AdminService        ";" admin commands (chat), server-side admin check
     ArenaService        builds map templates, instanced arenas, jump pads
     MatchService        queues, round state machine, boost drafts, teams, PvP rules
-    HubService          builds the hub, spawning, team boxes, FFA pad, dummies, hub regen
+    HubService          builds the hub, spawning, team boxes, dummies, hub regen
+    BattlegroundService the drop-in Battleground: portal/exit pads, teleports, respawns, no queue while inside
     ElementService      owns profile.elements/element: first free pick, equip, grant (from crates)
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
     CrateService        OpenCrate: validate, spend coins, roll an unowned element, grant it
@@ -95,7 +96,7 @@ Both entry points use the same two phases, in a fixed order:
 1. `init()`: create state and look up remotes. No yielding cross-service calls.
 2. `start()`: connect events and start loops (each runs in `task.spawn`).
 
-`Players.CharacterAutoLoads = false`. Spawning is explicit: `MatchService.spawnInHub`, or `spawnRound` for arenas. Dead players therefore stay out until the next round instead of popping back into the hub.
+`Players.CharacterAutoLoads = false`. Spawning is explicit: `MatchService.spawnInHub`, `spawnRound` for arenas, or `MatchService.teleport`/`respawnAt` for the Battleground. Dead players therefore stay out until the next round instead of popping back into the hub.
 
 Some dependencies would form a cycle, so they're injected instead of required:
 
@@ -152,7 +153,7 @@ client: aim  ──CastSpell───► CastService
 ## Matches and arenas
 
 - **One place, instanced arenas.** Templates are built once into `ServerStorage.MapTemplates`. Each match clones one to `x = slot × 2000, y = 400`, so several matches run at once. Each round, `ArenaService.rebuild` swaps in a fresh copy, which restores broken props.
-- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `FFA_*`, `SmallModeWalls`). Maps are registered in `ArenaService.MAP_NAMES`, with per-mode weights in `pickMap`.
+- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `SmallModeWalls`). Maps are registered in `ArenaService.MAP_NAMES`, with per-mode weights in `pickMap`.
 - **Team boxes** (`HubService.updateBoxes`, every 0.25s): the hub builder tags each side of a box `TeamPad` (`Mode`, `Team`, `Slots` attributes). The service collects who stands on each pad (sticky arrival order, capped at `Slots`), updates the labels, and, once both sides are full, runs a `Config.TEAM_BOX_COUNTDOWN` that restarts if anyone steps off or swaps. It then calls `MatchService.startMatch(mode, players, { teams = {...} })`, where `teams` maps each player to "Blue" or "Red". `Slots` is re-read every tick, so a pad can be resized live.
 - **To move matches to reserved servers later:** keep MatchService's state machine and replace `ArenaService.create` / `spawnAt` with `TeleportService:ReserveServer` and a match place that reads its mode from `TeleportData`.
 

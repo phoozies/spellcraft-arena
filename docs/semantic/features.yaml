@@ -29,7 +29,7 @@ glossary:
   spellbook (match): the 5 spells of the player's equipped element, locked in when the match starts
   elements owned: profile.elements; the first is a free pick, the rest come from Element Crates; profile.element is the equipped one
   slot: 1-5 within an element (display order; slot 5 is the ultimate)
-  role: the kind of move (basic, fast, movement, stun, boost, heavy, area, ultimate); decides the glyph
+  role: the kind of move (basic, fast, boost, defense, stun, heavy, area, ultimate); decides the glyph
   ultimate: slot 5; 30-40 damage (or a game-changing effect) on a cooldown of 15s or more
   boost: a match power-up picked between rounds (shared/Match/Boosts.luau); lasts the rest of the match and stacks
   class: PLANNED, NOT BUILT (docs/CLASSES.md); a second layer on top of elements
@@ -37,12 +37,12 @@ glossary:
   coins: the only currency; earned by winning; spent on Element Crates
   wins: profile.stats.wins; the leaderboard stat
   hub: Inkwell Plaza, a sunlit sandstone arena (round plaza, grandstand, Champions' Concourse), where players spawn, pick elements, open crates, and pick teams (no PvP)
-  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, movement squiggle, stun triangle, boost swirl (spiral), heavy bolt, area V (chevron), ultimate star"
+  glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), ultimate star"
   arena: an instanced match map cloned at x = slot * 2000, y = 400
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
-  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, MatchService, HubService, CrateService, LeaderboardService, AdminService, DebugService]
+  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, SpellInputService, ArenaService, MatchService, HubService, BattlegroundService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
   client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, PresentationController]
   rules:
@@ -61,29 +61,29 @@ features:
       Fire:
         - { id: Fireball,   role: basic,    glyph: circle,   archetype: Projectile, model: Fireball, what: "medium hitbox r5, 15 dmg, cd 0.9" }
         - { id: FireSlash,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
-        - { id: FireBoost,  role: boost,    glyph: spiral,  archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
+        - { id: FireBoost,  role: boost,    glyph: square,  archetype: Buff,       what: "+25% damage for 8s, cd 14 (stats.damageMult)" }
         - { id: FirePillar, role: area,     glyph: chevron,   archetype: Zone,       what: "point-and-click, r12, 30 dmg, delay 0.7, range 70, cd 7 (reticle, pillar)" }
         - { id: FireBomb,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
       Water:
         - { id: WaterSlice,  role: fast,     glyph: slash,    archetype: Projectile, what: "fast, r4.5, 10 dmg, cd 0.55" }
-        - { id: WaterBody,   role: boost,    glyph: spiral,  archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
+        - { id: WaterBody,   role: boost,    glyph: square,  archetype: Buff,       what: "invincible 7s, cd 22 (stats.invincible)" }
         - { id: WaterLock,   role: stun,     glyph: triangle, archetype: Control,    model: WaterBubble, what: "r4, 5 dmg + Stun 1.5s, cd 4" }
         - { id: WaterWave,   role: heavy,    glyph: bolt,     archetype: Projectile, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
         - { id: WaterNebula, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
       Earth:
         - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, what: "large rock, r6, 15 dmg, cd 1.1" }
-        - { id: EarthWall,  role: boost,    glyph: spiral,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
+        - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, hitByAll, cd 4" }
         - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
         - { id: EarthPillar, role: area,    glyph: chevron,   archetype: Line,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
         - { id: Earthquake, role: ultimate, glyph: star,     archetype: Zone,       what: "ultimate: centered on the caster, r25, 40 dmg, 2s cast with the caster rooted, cd 22 (channel, pillar)" }
       Air:
         - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 0.9" }
         - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
-        - { id: AirBoost,  role: movement, glyph: wave,     archetype: Buff,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
-        - { id: AirShield, role: boost,    glyph: spiral,  archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
+        - { id: AirBoost,  role: boost, glyph: square,     archetype: Buff,       what: "speed x1.5 and jump x1.35 for 6s, cd 16 (stats.haste)" }
+        - { id: AirShield, role: defense,    glyph: triangle,  archetype: Buff,       what: "blocks the next hit of any kind, 4s, cd 14 (stats.barrier)" }
         - { id: Tornado,   role: ultimate, glyph: star,     archetype: Projectile, what: "ultimate: piercing, r8.5, 30 dmg, knockback 105, cd 18" }
     stat_flags_added_for_these_spells:
-      visual.model: imported model that replaces the primitive look (bolt / placeable skin / zone swirl); the primitive stays the hitbox and the fallback
+      visual.model: imported model that replaces the primitive look (bolt / placeable skin); the primitive stays the hitbox and the fallback
       stats.reticle: client shows the ground hit circle at the clamped aim point (ReticleController)
       stats.pierce: Projectile keeps flying after hitting a player (each is hit once)
       stats.pillar / stats.rise / stats.channel: Zone burst extras - element column Fx, boulder Fx, root the caster for the delay
@@ -199,6 +199,21 @@ features:
       - the result is decided and saved before the reel spins; the reveal waits SPIN_TIME
     tests: tests/Economy.spec.luau
 
+  - id: battleground
+    summary: A drop-in free-for-all arena far from the hub, reached through a hub portal; replaces the FFA queue mode.
+    server: "src/server/Services/BattlegroundService.luau (enter, leave, isIn; respawns; touch wiring)"
+    map: "src/server/Maps/Battleground.luau (floor, rim, cover, 16 BattlegroundSpawn parts, BattlegroundExit pads, a BuildZone)"
+    hub: "a pad tagged BattlegroundPortal in src/server/Maps/InkwellPlaza.luau"
+    config: "Config.BATTLEGROUND: CENTER (900,0,0), RADIUS 110, RESPAWN_DELAY 3"
+    state: player attribute InBattleground (server logic and HUD), character attribute Battleground
+    rules:
+      - MatchService.relation lets any two players who are both InBattleground harm each other; nobody else can
+      - knocked-out fighters respawn at a spawn away from other fighters after RESPAWN_DELAY, with spawn protection (MatchService.respawnAt)
+      - HubService neither regenerates health nor respawns them; MatchService.joinQueue refuses while inside, and starting a match pulls you out
+      - no coins, wins, or boosts; you must have an element equipped to enter
+    client: "HudController banner, HealthController (every other fighter's bar is red)"
+    tests: tests/Battleground.spec.luau
+
   - id: leaderboard
     summary: Wins leaderboard - leaderstats, the hub's Most Wins board, and the top-3 podium with avatars.
     owner: src/server/Services/LeaderboardService.luau
@@ -214,7 +229,7 @@ features:
     summary: Team boxes / queues -> Intro -> (Countdown -> Round -> Draft)* -> Results -> hub; best of 3.
     owner: src/server/Services/MatchService.luau
     related:
-      - "src/server/Services/HubService.luau (team boxes, FFA pad)"
+      - "src/server/Services/HubService.luau (team boxes)"
       - "src/server/Services/ArenaService.luau (instanced maps)"
       - src/shared/Match/Boosts.luau
       - src/server/Services/BoostService.luau
@@ -251,7 +266,7 @@ features:
       - Champions' Concourse - arched sandstone bays with sky-glass windows and glyph banners, red carpet, Arena Gate
       - grandstand (3 tiers) and team flag poles
       - team boxes 1v1-4v4 in the hall
-      - FFA portal pad in the hall
+      - Battleground portal (BattlegroundPortal tag) in the concourse
       - Spell Practice pavilion (BuildZone + dummies)
       - Spellbook kiosk (Grimoire model)
       - Daily Quests chest
@@ -262,7 +277,7 @@ features:
   - id: drawing
     summary: Players trace a glyph; the server recognizes it and readies the spell. Replaced typing, chat casting, and voice.
     owners: [src/shared/Spells/Glyphs.luau, src/shared/Spells/GlyphRecognizer.luau, src/server/Services/SpellInputService.luau, src/client/Controllers/DrawController.luau]
-    glyphs: { circle: basic, slash: fast, wave: movement, triangle: stun, spiral: boost, bolt: heavy, chevron: area, star: ultimate }  # by role; the equipped element decides which spell
+    glyphs: { circle: basic, slash: fast, square: boost, triangle: defense and stun, bolt: heavy, chevron: area, star: ultimate }  # by role; the equipped element decides which spell
     straight_strokes: "a stroke whose points all stay within 22% of the line between its ends (and whose ends are far apart) is a slash, in any direction"
     remotes:
       c2s: [DrawSpell]
@@ -271,7 +286,9 @@ features:
     client_ui: HudController glyph cards (equipped element), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
     invariants:
       - the server recognizes the stroke itself; GlyphResult is feedback only
-      - only the equipped element's five shapes are ever recognized; infinity is an unused library shape
+      - only the equipped element's five shapes are ever recognized
+      - circle vs square is decided by how much of its bounding box the stroke fills (GlyphRecognizer.boxFill)
+      - no spell uses a swirl or squiggle (tests/Glyphs.spec.luau)
       - recognition ignores size, position, rotation, direction, and the start point of closed shapes
       - admin commands still use chat (";") and WordMatcher names
 

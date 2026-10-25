@@ -44,6 +44,7 @@ local scoreText: TextLabel
 local toastHolder: Frame
 local feedHolder: Frame
 local boostsLabel: TextLabel
+local battleLabel: TextLabel
 
 local TOAST_COLORS: { [string]: Color3 } = {
 	fizzle = Color3.fromRGB(120, 144, 156),
@@ -433,6 +434,18 @@ local function refreshMatch()
 	end
 end
 
+local function buildBattleBanner(root: Frame)
+	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: everyone is an enemy! Step on a green pad to leave.", {
+		Name = "BattleBanner",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(560, 36),
+		TextColor3 = Theme.COLORS.accent,
+		TextStrokeTransparency = 0.3,
+		Visible = false,
+	})
+end
+
 local function buildBoosts(root: Frame)
 	boostsLabel = Theme.label(root, "", {
 		Name = "Boosts",
@@ -506,6 +519,7 @@ function HudController.init()
 	buildWallet(root)
 	buildMatchBar(root)
 	buildBoosts(root)
+	buildBattleBanner(root)
 	buildFeed(root)
 
 	toastHolder = Theme.frame(root, {
@@ -536,6 +550,9 @@ function HudController.start()
 	ClientState.ProfileChanged:Connect(refreshWords)
 	ClientState.MatchChanged:Connect(refreshMatch)
 	player:GetAttributeChangedSignal("Boosts"):Connect(refreshBoosts)
+	player:GetAttributeChangedSignal("InBattleground"):Connect(function()
+		battleLabel.Visible = player:GetAttribute("InBattleground") == true
+	end)
 	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)

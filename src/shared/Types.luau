@@ -143,7 +143,7 @@ export type SpellDef = {
 	visual: Visual,
 }
 
-export type MatchMode = "1v1" | "2v2" | "3v3" | "4v4" | "FFA"
+export type MatchMode = "1v1" | "2v2" | "3v3" | "4v4"
 
 export type MatchPhase = "Idle" | "Intro" | "Countdown" | "Round" | "Draft" | "Results"
 

@@ -85,17 +85,23 @@ local Config = {
 	PLACE_RANGE = 40,
 	AIM_RANGE = 200,
 
-	-- Players needed for each mode, as {teamCount, playersPerTeam}.
-	-- FFA is 2..8 players, each on their own "team".
+	-- Players needed for each queued mode, as {teamCount, playersPerTeam}.
 	MODES = {
 		["1v1"] = { teams = 2, perTeam = 1 },
 		["2v2"] = { teams = 2, perTeam = 2 },
 		["3v3"] = { teams = 2, perTeam = 3 },
 		["4v4"] = { teams = 2, perTeam = 4 },
-		["FFA"] = { teams = 0, perTeam = 1, minPlayers = 2, maxPlayers = 8 },
 	},
-	-- FFA waits this long after reaching the minimum before starting.
-	FFA_FILL_WAIT = 15,
+
+	-- The Battleground: a drop-in free-for-all arena (Maps/Battleground,
+	-- BattlegroundService) built far from the hub. `CENTER` is the middle of
+	-- its floor, `RADIUS` the floor's radius; knocked-out players respawn
+	-- there after `RESPAWN_DELAY` seconds.
+	BATTLEGROUND = {
+		CENTER = Vector3.new(900, 0, 0),
+		RADIUS = 110,
+		RESPAWN_DELAY = 3,
+	},
 
 	-- Distance between instanced arenas so concurrent matches never overlap.
 	ARENA_SPACING = 2000,

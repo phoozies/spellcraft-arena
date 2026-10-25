@@ -178,6 +178,35 @@ local function isStraight(points: { Vector2 }): boolean
 	return worst / chordLength <= STRAIGHT_DEVIATION
 end
 
+-- A circle and a square look alike to template matching (squash a square and
+-- it is nearly round), so when those two are the finalists we ask how much of
+-- its tightest bounding box the stroke fills: a square fills 90-100% of it,
+-- a circle about 78%.
+local SQUARE_FILL = 0.84
+
+local function boxFill(points: { Vector2 }): number
+	local area = 0
+	for i = 1, #points do
+		local a, b = points[i], points[i % #points + 1]
+		area += a.X * b.Y - b.X * a.Y
+	end
+	area = math.abs(area) / 2
+	local smallest = math.huge
+	for degrees = 0, 85, 5 do
+		local angle = math.rad(degrees)
+		local cosA, sinA = math.cos(angle), math.sin(angle)
+		local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
+		for _, p in points do
+			local x = p.X * cosA + p.Y * sinA
+			local y = -p.X * sinA + p.Y * cosA
+			minX, maxX = math.min(minX, x), math.max(maxX, x)
+			minY, maxY = math.min(minY, y), math.max(maxY, y)
+		end
+		smallest = math.min(smallest, (maxX - minX) * (maxY - minY))
+	end
+	return if smallest > 0 then area / smallest else 0
+end
+
 type Template = { glyphId: string, points: { Vector2 } }
 
 local function reversed(points: { Vector2 }): { Vector2 }
@@ -194,31 +223,25 @@ for _, glyph in Glyphs.LIST do
 	if glyph.line then
 		continue -- a straight line has no shape to match; see isStraight
 	end
-	local sources = { glyph.points }
-	for _, variant in glyph.variants or {} do
-		table.insert(sources, variant)
-	end
-	for _, source in sources do
-		local base = resample(source, SAMPLES)
-		local shapes = { base }
-		if glyph.closed then
-			-- Every start point around the outline (the shape's last point repeats
-			-- its first, so rotate through the first SAMPLES - 1).
-			shapes = {}
-			for k = 0, START_VARIANTS - 1 do
-				local shift = math.floor(k * (SAMPLES - 1) / START_VARIANTS)
-				local shifted = {}
-				for i = 1, SAMPLES - 1 do
-					shifted[i] = base[((i - 1 + shift) % (SAMPLES - 1)) + 1]
-				end
-				table.insert(shifted, shifted[1])
-				table.insert(shapes, shifted)
+	local base = resample(glyph.points, SAMPLES)
+	local shapes = { base }
+	if glyph.closed then
+		-- Every start point around the outline (the shape's last point repeats
+		-- its first, so rotate through the first SAMPLES - 1).
+		shapes = {}
+		for k = 0, START_VARIANTS - 1 do
+			local shift = math.floor(k * (SAMPLES - 1) / START_VARIANTS)
+			local shifted = {}
+			for i = 1, SAMPLES - 1 do
+				shifted[i] = base[((i - 1 + shift) % (SAMPLES - 1)) + 1]
 			end
+			table.insert(shifted, shifted[1])
+			table.insert(shapes, shifted)
 		end
-		for _, shape in shapes do
-			table.insert(templates, { glyphId = glyph.id, points = prepare(shape) })
-			table.insert(templates, { glyphId = glyph.id, points = prepare(reversed(shape)) })
-		end
+	end
+	for _, shape in shapes do
+		table.insert(templates, { glyphId = glyph.id, points = prepare(shape) })
+		table.insert(templates, { glyphId = glyph.id, points = prepare(reversed(shape)) })
 	end
 end
 
@@ -263,25 +286,37 @@ function GlyphRecognizer.recognize(
 			best[template.glyphId] = d
 		end
 	end
-	local bestId: string? = nil
-	local bestScore, secondScore = 0, 0
+	local ranked: { { id: string, score: number } } = {}
 	for id, d in best do
-		local score = 1 - d / HALF_DIAGONAL
-		if score > bestScore then
-			secondScore = bestScore
-			bestId, bestScore = id, score
-		elseif score > secondScore then
-			secondScore = score
-		end
+		table.insert(ranked, { id = id, score = 1 - d / HALF_DIAGONAL })
 	end
-	if
-		bestId == nil
-		or bestScore < GlyphRecognizer.MIN_SCORE
-		or bestScore - secondScore < GlyphRecognizer.MIN_MARGIN
-	then
+	table.sort(ranked, function(a, b)
+		return a.score > b.score
+	end)
+	local top, runnerUp = ranked[1], ranked[2]
+	if top == nil then
+		return nil, 0, 0
+	end
+	local bestScore = top.score
+	local secondScore = if runnerUp then runnerUp.score else 0
+	if bestScore < GlyphRecognizer.MIN_SCORE then
 		return nil, bestScore, secondScore
 	end
-	return bestId, bestScore, secondScore
+	-- Circle or square? Decide by how much of its box the stroke fills.
+	if
+		runnerUp
+		and bestScore - secondScore < 0.12
+		and (
+			(top.id == "circle" and runnerUp.id == "square")
+			or (top.id == "square" and runnerUp.id == "circle")
+		)
+	then
+		return if boxFill(points) >= SQUARE_FILL then "square" else "circle", bestScore, secondScore
+	end
+	if bestScore - secondScore < GlyphRecognizer.MIN_MARGIN then
+		return nil, bestScore, secondScore
+	end
+	return top.id, bestScore, secondScore
 end
 
 return GlyphRecognizer

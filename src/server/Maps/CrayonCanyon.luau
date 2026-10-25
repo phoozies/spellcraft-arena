@@ -120,7 +120,6 @@ return function(makeProp: Registrar): Model
 
 	local spawns = MapKit.folder(model, "Spawns")
 	MapKit.teamSpawns(spawns, Vector3.new(0, 3, 0), 78)
-	MapKit.ffaSpawns(spawns, Vector3.new(0, 3, 0), 40, 8)
 
 	local small = MapKit.folder(model, "SmallModeWalls")
 	for _, z in { -55, 55 } do

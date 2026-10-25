@@ -68,12 +68,12 @@ local function wireJumpPad(pad: Instance)
 	end)
 end
 
--- Picks a map suited to the mode (Fortress favors teams, Sky Islands FFA).
+-- Picks a map suited to the mode (Fortress favors big teams).
 function ArenaService.pickMap(mode: string): string
 	local weights: { [string]: number } = {
 		CrayonCanyon = 1,
 		FrostbiteFortress = if mode == "4v4" then 2 else 1,
-		SkyIslands = if mode == "FFA" then 2 else 1,
+		SkyIslands = 1,
 		-- A compact 46-stud floor: favored for small duels, skipped for 4v4.
 		SparringArena = if mode == "1v1" or mode == "2v2" then 2 elseif mode == "4v4" then 0 else 1,
 	}
@@ -120,7 +120,7 @@ function ArenaService.create(mapName: string, mode: string): Arena
 	structures.Name = "Structures"
 	structures.Parent = model
 
-	local spawns: { [string]: { BasePart } } = { Team1 = {}, Team2 = {}, FFA = {} }
+	local spawns: { [string]: { BasePart } } = { Team1 = {}, Team2 = {} }
 	local spawnFolder = model:FindFirstChild("Spawns")
 	if spawnFolder then
 		for _, part in spawnFolder:GetChildren() do
