@@ -126,8 +126,8 @@ Won from the Spell Crate (100 coins a spin). A spin rolls a rarity by weight, th
 |---|---|---|---|
 | Common | 55% | 20 | Heal, Air Shield |
 | Uncommon | 25% | 35 | Fire Pillar, Earth Pillar |
-| Rare | 12% | 55 | Lightning, Water Wave, Turret |
-| Epic | 6% | 75 | Fire Bomb, Tornado |
+| Rare | 12% | 55 | Lightning, Water Wave |
+| Epic | 6% | 75 | Fire Bomb, Tornado, Turret |
 | Legendary | 2% | 90 | Black Hole, Water Nebula, Earthquake |
 
 ### ✨ Arcane
@@ -137,9 +137,9 @@ Neutral crate spells that belong to no element.
 | Rarity | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
 | Rare | **Lightning** | zigzag (M) | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
-| Common | **Heal** | heart | Buff | 60s | A warm light mends you: restore 25 health. It takes a full minute to recharge. |
-| Legendary | **Black Hole** | spiral | Zone | 10s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70. |
-| Rare | **Turret** | hook (J) | Placeable | 12s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
+| Common | **Heal** | heart | Buff | 60s | A warm light mends you: restore 20 health. It takes a full minute to recharge. |
+| Legendary | **Black Hole** | spiral | Zone | 20s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70. |
+| Epic | **Turret** | hook (J) | Placeable | 20s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
 
 ### Notes on the spells
 
@@ -215,7 +215,7 @@ Every spell has a **model**, a **particle style**, a **cast animation**, and **s
 | **Lightning** | Arcane | Rare | `Zap` | `Zap` | Call | `zapCharge` | `zapStrike` |
 | **Heal** | Arcane | Common | `Heal` | `Heal` | Offer | `healChime` | n/a |
 | **Black Hole** | Arcane | Legendary | `BlackHole` | `BlackHole` | Conjure | `blackHoleOpen` | `blackHoleCollapse` |
-| **Turret** | Arcane | Rare | `Turret` | `Turret` | Deploy | `turretDeploy` | `turretShot` |
+| **Turret** | Arcane | Epic | `Turret` | `Turret` | Deploy | `turretDeploy` | `turretShot` |
 <!-- REGISTRY:end -->
 
 Regenerate the YAML and this table after changing the registry: `python tools/gen-spell-registry.py`.

@@ -16,6 +16,7 @@ local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local SpellStats = require(ReplicatedStorage.Shared.Spells.SpellStats)
 local Types = require(ReplicatedStorage.Shared.Types)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -104,6 +105,10 @@ local function reveal(result: Types.CrateResult)
 			result.equipped
 		then `NEW {string.upper(result.rarity)}: {name}! Equipped in your loadout.`
 		else `NEW {string.upper(result.rarity)}: {name}! Equip it in the Spellbook.`
+	if def then
+		-- The spell's numbers (damage, cooldown, duration, ...) under the headline.
+		resultLabel.Text ..= `\n{SpellStats.text(def)}`
+	end
 	AudioController.play(
 		if result.rarity == "Legendary"
 			then "crateLegendary"

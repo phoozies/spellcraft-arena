@@ -547,15 +547,15 @@ local DEFINITIONS: { SpellDef } = {
 		description = "ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage.",
 		stats = {
 			damage = 30,
-			speed = 55,
+			speed = 110,
 			range = 120,
-			radius = 8.5,
+			radius = 12.75,
 			knockback = 105,
 			pierce = true,
 		},
 		visual = {
 			shape = "Block",
-			size = Vector3.new(9.5, 17, 9.5),
+			size = Vector3.new(14.25, 25.5, 14.25),
 			color = rgb(205, 235, 230),
 			material = M.ForceField,
 			transparency = 0.35,
@@ -607,8 +607,8 @@ local DEFINITIONS: { SpellDef } = {
 		sfx = { cast = "healChime" },
 		archetype = "Buff",
 		cooldown = 60,
-		description = "A warm light mends you: restore 25 health. It takes a full minute to recharge.",
-		stats = { heal = 25, duration = 1.5 }, -- `duration` is just how long the green glow lasts
+		description = "A warm light mends you: restore 20 health. It takes a full minute to recharge.",
+		stats = { heal = 20, duration = 1.5 }, -- `duration` is just how long the green glow lasts
 		visual = {
 			shape = "Ball",
 			size = Vector3.new(1.5, 1.5, 1.5),
@@ -628,7 +628,7 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.vortex,
 		sfx = { cast = "blackHoleOpen", impact = "blackHoleCollapse" },
 		archetype = "Zone",
-		cooldown = 10,
+		cooldown = 20,
 		description = "Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Training dummies and Battleground NPCs get sucked in and hurt too. Range 70.",
 		-- `hold`: enemies pulled into the core are Rooted (trapped) at the
 		-- center until the hole closes. 10 damage over its 3 seconds.
@@ -656,12 +656,12 @@ local DEFINITIONS: { SpellDef } = {
 		aliases = { "turret", "sentry", "gun" },
 		element = "Arcane",
 		slot = 4,
-		rarity = "Rare",
+		rarity = "Epic",
 		role = "summon",
 		glyph = ROLE.summon,
 		sfx = { cast = "turretDeploy", impact = "turretShot" },
 		archetype = "Placeable",
-		cooldown = 12,
+		cooldown = 20,
 		description = "Summon a 30-health turret that shoots bullets at the nearest enemy, training dummy, or Battleground NPC for 20 seconds.",
 		stats = {
 			health = 30,

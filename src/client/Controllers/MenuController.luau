@@ -16,6 +16,7 @@ local Loadout = require(ReplicatedStorage.Shared.Spells.Loadout)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local SpellStats = require(ReplicatedStorage.Shared.Spells.SpellStats)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Types = require(ReplicatedStorage.Shared.Types)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
@@ -395,7 +396,9 @@ local function showSpell(def: Types.SpellDef)
 	local tag = if def.ultimate then "  <b>ULTIMATE</b>" else ""
 	local rarity = if def.rarity then `  <b>{string.upper(def.rarity)}</b>` else ""
 	detailLabel.Text = `<b>{def.name}</b>{tag}{rarity}\n{def.description}\n\n`
-		.. `<b>Draw:</b> {if shape then shape.name else def.glyph}   <b>Cooldown:</b> {def.cooldown}s`
+		.. `<b>Draw:</b> {if shape then shape.name else def.glyph}   {if def.rarity
+			then SpellStats.text(def)
+			else `<b>Cooldown:</b> {def.cooldown}s`}`
 		.. `\n<b>School:</b> {if school then school.name else def.element}`
 end
 
