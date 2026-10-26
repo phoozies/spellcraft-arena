@@ -229,7 +229,7 @@ local function showIntro(state: Types.MatchState)
 	for index, team in teams do
 		if index > 1 then
 			order += 1
-			local vs = Theme.label(row, "VS", {
+			Theme.label(row, "VS", {
 				Size = UDim2.fromOffset(90, 90),
 				LayoutOrder = order,
 				TextColor3 = GOLD,

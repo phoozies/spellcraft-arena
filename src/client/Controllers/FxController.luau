@@ -196,7 +196,7 @@ local function onProjectileEnd(id: number, position: Vector3)
 	end
 end
 
-local function onCast(character: Model, spellId: string, target: Vector3)
+local function onCast(character: Model, spellId: string, _target: Vector3)
 	if typeof(character) ~= "Instance" or not character.Parent then
 		return
 	end

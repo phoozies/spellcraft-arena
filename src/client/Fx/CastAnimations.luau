@@ -55,6 +55,7 @@ end
 
 -- A leg's offset. Hips swing like shoulders (forward about X on R15, about Z on
 -- R6), `side` opens the leg outward, and the knee bends the shin backward.
+-- selene: allow(unused_variable)
 local function legOffset(leg: CastPoses.Leg?, r15: boolean, mirror: number): CFrame
 	if not leg then
 		return CFrame.identity
@@ -66,12 +67,13 @@ local function legOffset(leg: CastPoses.Leg?, r15: boolean, mirror: number): CFr
 	return CFrame.Angles(forward, 0, math.rad(leg.side or 0) * mirror)
 end
 
+-- selene: allow(unused_variable)
 local function kneeOffset(leg: CastPoses.Leg?): CFrame
 	return CFrame.Angles(-math.rad(if leg then leg.knee or 0 else 0), 0, 0)
 end
 
 -- One keyframe: the whole joint tree with this key's angles (nil = at rest).
-local function keyframe(time: number, key: CastPoses.Key?, r15: boolean, legs: boolean): Keyframe
+local function keyframe(time: number, key: CastPoses.Key?, r15: boolean, _legs: boolean): Keyframe
 	local frame = Instance.new("Keyframe")
 	frame.Time = time
 	local root = pose("HumanoidRootPart", CFrame.identity, 0)

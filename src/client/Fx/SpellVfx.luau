@@ -1090,7 +1090,7 @@ function BEATS.orb(parent, character, beat, color)
 end
 
 -- Slashes: the hand leaves a glowing streak as it cuts across.
-function BEATS.trail(parent, character, beat, color)
+function BEATS.trail(_parent, character, beat, color)
 	local hand = handOf(character, "Right")
 	if not hand then
 		return

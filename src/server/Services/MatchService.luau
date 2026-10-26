@@ -68,7 +68,6 @@ local MatchService = {}
 MatchService.QueueChanged = Signal.new()
 
 local queues: { [string]: { Player } } = { ["1v1"] = {}, ["2v2"] = {}, ["3v3"] = {}, ["4v4"] = {} }
-local ffaReadySince: number? = nil
 local playerMatch: { [Player]: Match } = {}
 -- Players waiting on a map vote before their match is created.
 local votingPlayers: { [Player]: boolean } = {}
