@@ -37,6 +37,9 @@ local slots: {
 		name: TextLabel,
 		stars: TextLabel,
 		stroke: UIStroke,
+		bubble: Frame,
+		scale: UIScale,
+		readied: boolean,
 	}
 } =
 	{}
@@ -189,6 +192,14 @@ local function tickWords()
 	end
 end
 
+local SLOT_WIDTH, SLOT_GAP = 70, 6
+local READIED_SCALE = 1.22 -- the equipped slot swells to this size
+
+-- The width the slots span on screen (the health bar matches it).
+function HudController.hotbarWidth(): number
+	return Config.MAX_HAND * SLOT_WIDTH + (Config.MAX_HAND - 1) * SLOT_GAP
+end
+
 local function buildHotbar(root: Frame)
 	local bar = Theme.frame(root, {
 		Name = "Hotbar",
@@ -200,17 +211,41 @@ local function buildHotbar(root: Frame)
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.Padding = UDim.new(0, 6)
+	layout.Padding = UDim.new(0, SLOT_GAP)
 	layout.Parent = bar
 
 	for i = 1, Config.MAX_HAND do
-		local button = Theme.button(bar, "", {
-			Name = `Slot{i}`,
-			Size = UDim2.fromOffset(70, 80),
+		-- A fixed cell for the list layout; the button inside is anchored at its
+		-- bottom middle, so the equipped slot swells upward without moving its
+		-- neighbours.
+		local cell = Theme.frame(bar, {
+			Name = `Cell{i}`,
+			Size = UDim2.fromOffset(SLOT_WIDTH, 80),
+			BackgroundTransparency = 1,
 			LayoutOrder = i,
+		})
+		local button = Theme.button(cell, "", {
+			Name = `Slot{i}`,
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.fromScale(0.5, 1),
+			Size = UDim2.fromScale(1, 1),
 		})
 		local stroke = button:FindFirstChildOfClass("UIStroke") :: UIStroke
 		stroke.Thickness = 4
+		local scale = Instance.new("UIScale")
+		scale.Parent = button
+		-- A soft round "bubble" of the spell's colour behind the icon, shown on
+		-- the equipped slot.
+		local bubble = Theme.frame(button, {
+			Name = "Bubble",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.36),
+			Size = UDim2.fromScale(0.86, 0.86),
+			BackgroundTransparency = 1,
+		})
+		Theme.corner(bubble, 100)
+		local aspect = Instance.new("UIAspectRatioConstraint")
+		aspect.Parent = bubble
 		local icon = Theme.label(button, "", {
 			Name = "Glyph",
 			Size = UDim2.new(1, 0, 0.45, 0),
@@ -262,8 +297,25 @@ local function buildHotbar(root: Frame)
 			name = name,
 			stars = stars,
 			stroke = stroke,
+			bubble = bubble,
+			scale = scale,
+			readied = false,
 		}
 	end
+end
+
+-- Pops the slot up (it overshoots, then settles) with a bubble behind its
+-- icon when it becomes the equipped spell, and shrinks it back when it isn't.
+local function setReadied(slot: typeof(slots[1]), on: boolean)
+	if slot.readied == on then
+		return
+	end
+	slot.readied = on
+	local grow = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	TweenService:Create(slot.scale, grow, { Scale = if on then READIED_SCALE else 1 }):Play()
+	TweenService:Create(slot.bubble, TweenInfo.new(0.3), {
+		BackgroundTransparency = if on then 0.55 else 1,
+	}):Play()
 end
 
 local function refreshHotbar()
@@ -295,6 +347,8 @@ local function refreshHotbar()
 			slot.button.BackgroundColor3 = if isReadied
 				then Theme.COLORS.purple
 				else Theme.COLORS.panelLight
+			slot.bubble.BackgroundColor3 = color
+			setReadied(slot, isReadied)
 		else
 			-- Empty slot: hint that drawing a glyph fills it. All 5 slots
 			-- show, since you can stockpile up to 5 copies.
@@ -306,6 +360,7 @@ local function refreshHotbar()
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
 			slot.stroke.Thickness = 4
 			slot.button.BackgroundColor3 = Theme.COLORS.panel
+			setReadied(slot, false)
 		end
 	end
 	refreshWords()
@@ -348,7 +403,7 @@ local function buildGlyphRow(root: Frame)
 	glyphRow = Theme.frame(root, {
 		Name = "Glyphs",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -110),
+		Position = UDim2.new(0.5, 0, 1, -118),
 		Size = UDim2.fromOffset(560, 74),
 		BackgroundTransparency = 1,
 	})

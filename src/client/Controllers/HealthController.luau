@@ -31,8 +31,8 @@ local function humanoidOf(character: Model?): Humanoid?
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
 
-local HOTBAR_LIFT = -114 -- bottom edge: clear of the hotbar and its cooldown bar
-local GLYPH_LIFT = -192 -- bottom edge when the spell-card row is showing
+local HOTBAR_LIFT = -122 -- bottom edge: clear of the hotbar and its cooldown bar
+local GLYPH_LIFT = -200 -- bottom edge when the spell-card row is showing
 
 -- Sits right above the hotbar, or above the spell cards when they are up
 -- (fights, the Battleground, the Training Groves).
@@ -48,7 +48,7 @@ local function buildHud()
 		-- Just above the hotbar; layoutOwn() lifts it over the spell cards.
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, HOTBAR_LIFT),
-		Size = UDim2.fromOffset(260, 30),
+		Size = UDim2.fromOffset(HudController.hotbarWidth(), 30), -- as wide as the hotbar
 		BackgroundTransparency = 0.15,
 	})
 	Theme.corner(holder, 10)

@@ -223,7 +223,7 @@ features:
     summary: A drop-in open world far from the hub, reached through a hub portal; you land at a random spot, fight other players, and hunt hostile NPCs for coins. Replaces the FFA queue mode.
     server: "src/server/Services/BattlegroundService.luau (enter, leave, isIn; random spawn sampling; respawns; touch wiring; LeaveBattleground remote)"
     map: "src/server/Maps/Battleground.luau (600x600 land in 4 biomes, mountain ring and invisible walls, 6 Raider camps, 2 ruins, the Warlord's Keep, NpcSpot parts, 4 BattlegroundExit gate pads, a BuildZone; no spawn points)"
-    hub: "a big stone portal (BattlegroundPortal block model) with an invisible trigger tagged BattlegroundPortal over its opening, in src/server/Maps/InkwellPlaza.luau"
+    hub: "two big stone portals in src/server/Maps/InkwellPlaza.luau: the blue BattlegroundPortal block model (south) and the red ArenaPortal block model (the Arena Gate, north); each has an invisible trigger tagged BattlegroundPortal over its opening"
     config: "Config.BATTLEGROUND: CENTER (15000,0,0), far enough that the Battleground cannot be seen from the hub, HALF_SIZE 300, RESPAWN_DELAY 3, NPC { RESPAWN 45, COIN_CAP 120, COIN_WINDOW 300 }"
     state: player attribute InBattleground (server logic and HUD), character attribute Battleground
     rules:

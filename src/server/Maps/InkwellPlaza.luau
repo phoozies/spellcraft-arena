@@ -893,44 +893,51 @@ return function(): Model
 	end
 
 	----------------------------------------------------------------------
-	-- The Arena Gate (north, behind the team boxes): a red portal frame. Duels
-	-- start from the boxes and are fought on the arenas summoned below the island.
+	-- The Arena Gate (north, behind the team boxes): the same stone portal as the
+	-- Battleground's, in red (the ArenaPortal block model). It also leads to the
+	-- Battleground. Duels start from the team boxes and are fought on the arenas
+	-- summoned below the island. Without the model, a plain red frame stands in.
 	----------------------------------------------------------------------
-	for _, side in { -1, 1 } do
-		column(model, Vector3.new(side * 15, 0, gateZ), 36, 5, STONE_LIGHT)
-		torch(model, Vector3.new(side * 21, 0, gateZ + 2))
-	end
-	MapKit.part(model, {
-		name = "GateLintel",
-		size = Vector3.new(38, 4, 5),
-		cframe = CFrame.new(0, 38, gateZ),
-		color = STONE_LIGHT,
-		material = Enum.Material.Limestone,
-	})
-	local gate = MapKit.part(model, {
-		name = "ArenaGate",
-		size = Vector3.new(26, 36, 1),
-		cframe = CFrame.new(0, 18, gateZ - 0.5),
-		color = Color3.fromRGB(230, 40, 60),
-		material = Enum.Material.Neon,
-		transparency = 0.25,
-	})
-	glow(gate, Color3.fromRGB(255, 70, 90), 60, 1.6)
-	for i = 1, 3 do
-		MapKit.part(model, {
-			name = "GateRing",
-			shape = Enum.PartType.Cylinder,
-			size = Vector3.new(0.4, 6 + i * 6, 6 + i * 6),
-			cframe = CFrame.new(0, 18, gateZ + 0.4 + i * 0.05) * CFrame.Angles(0, math.pi / 2, 0),
-			color = Color3.fromRGB(255, 120, 130),
-			material = Enum.Material.Neon,
-			transparency = 0.4 + i * 0.1,
+	local gateModel = ModelKit.clone("ArenaPortal", "solid")
+	local gate: BasePart
+	if gateModel then
+		gateModel:PivotTo(CFrame.new(0, 0, gateZ))
+		gateModel.Parent = model
+		gate = MapKit.part(model, {
+			name = "ArenaGate",
+			size = Vector3.new(22, 24, 3),
+			cframe = CFrame.new(0, 13.5, gateZ),
+			transparency = 1,
 			canCollide = false,
 		})
+		gate.CanQuery = false -- spells pass through, but walking in must still trigger it
+		gate.CanTouch = true
+	else
+		for _, side in { -1, 1 } do
+			column(model, Vector3.new(side * 15, 0, gateZ), 36, 5, STONE_LIGHT)
+			torch(model, Vector3.new(side * 21, 0, gateZ + 2))
+		end
+		MapKit.part(model, {
+			name = "GateLintel",
+			size = Vector3.new(38, 4, 5),
+			cframe = CFrame.new(0, 38, gateZ),
+			color = STONE_LIGHT,
+			material = Enum.Material.Limestone,
+		})
+		gate = MapKit.part(model, {
+			name = "ArenaGate",
+			size = Vector3.new(26, 36, 1),
+			cframe = CFrame.new(0, 18, gateZ - 0.5),
+			color = Color3.fromRGB(230, 40, 60),
+			material = Enum.Material.Neon,
+			transparency = 0.25,
+		})
 	end
+	glow(gate, Color3.fromRGB(255, 70, 90), 60, 1.6)
+	gate:AddTag("BattlegroundPortal")
 	label(
 		signAnchor(model, "GateSign", Vector3.new(0, 44, gateZ + 4)),
-		"THE ARENA GATE\nDuels play out on the arenas below!",
+		"THE ARENA GATE\nStep through to the Battleground!\n(Duels start from the team boxes)",
 		0,
 		300
 	)
