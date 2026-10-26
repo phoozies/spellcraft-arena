@@ -302,9 +302,12 @@ local function showRoundBanner(state: Types.MatchState)
 		then GOLD
 		elseif state.roundWinner then teamColor(state.roundWinner)
 		else Theme.COLORS.subtext
+	-- On a phone the banner rides high, level with the Settings button.
+	local camera = workspace.CurrentCamera
+	local bannerY = if camera and Responsive.isCompact(camera.ViewportSize) then 0.17 else 0.28
 	local banner = Theme.frame(stage, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(-0.5, 0.28),
+		Position = UDim2.fromScale(-0.5, bannerY),
 		Size = UDim2.new(1, 0, 0, 90),
 		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
 		BackgroundTransparency = 0.2,
