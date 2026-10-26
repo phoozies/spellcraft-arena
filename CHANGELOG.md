@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed (admin panel outlines)
+- **Button outlines are no longer clipped** at the edges of the Admin panel's scrolling lists (targets, tabs content, log): they are inset with padding. The Economy tab's Reset group now also has stats, gift claim and tutorial buttons.
+
 ### Added (crate pity, admin reset)
 - **Spell Crate pity.** Every spin that is not Epic or better adds one to `profile.pity`; the 10th spin in a row is guaranteed Epic or Legendary (`Crates.PITY`), preferring a spell you do not own yet. A hit resets the counter. The crate panel shows how many spins are left. Profile schema 5 to 6 (`pity`, default 0).
 - **`;reset <player> <coins|wins|stats|elements|spells|pity|rewards|tutorial|all>`** (also a "Reset (saved data)" group in the Admin panel's Economy tab). Players in a match are skipped. New `EconomyService.setWins/reset`, `ElementService.reset`, `CrateService.resetPity`.

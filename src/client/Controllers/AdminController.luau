@@ -73,6 +73,12 @@ local function list(parent: Instance, padding: number): UIListLayout
 	return layout
 end
 
+-- A scrolling frame clips its children, and buttons draw their outline outside
+-- their bounds, so the content is inset: STROKE_ROOM on the left, top and
+-- bottom, and room on the right for the scroll bar as well.
+local STROKE_ROOM = 5
+local BAR_ROOM = 5 + 6
+
 local function scroller(parent: Instance, props: { [string]: any }): ScrollingFrame
 	local s = Instance.new("ScrollingFrame")
 	s.BackgroundTransparency = 1
@@ -84,6 +90,12 @@ local function scroller(parent: Instance, props: { [string]: any }): ScrollingFr
 	for key, value in props do
 		(s :: any)[key] = value
 	end
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, STROKE_ROOM)
+	pad.PaddingTop = UDim.new(0, STROKE_ROOM)
+	pad.PaddingBottom = UDim.new(0, STROKE_ROOM)
+	pad.PaddingRight = UDim.new(0, BAR_ROOM)
+	pad.Parent = s
 	s.Parent = parent
 	return s
 end
@@ -121,7 +133,7 @@ local function addLog(message: string, color: Color3?)
 	line.Name = tostring(logCount)
 	line.LayoutOrder = logCount
 	line.BackgroundTransparency = 1
-	line.Size = UDim2.new(1, -6, 0, 0)
+	line.Size = UDim2.new(1, 0, 0, 0)
 	line.AutomaticSize = Enum.AutomaticSize.Y
 	line.Font = Theme.BODY_FONT
 	line.TextSize = 14
@@ -193,7 +205,7 @@ local function refreshTargets()
 		local button = Theme.button(targetList, entry.text, {
 			Name = entry.word,
 			LayoutOrder = order,
-			Size = UDim2.new(1, -8, 0, 32),
+			Size = UDim2.new(1, 0, 0, 32),
 			BackgroundColor3 = if entry.word == target
 				then Theme.COLORS.accent
 				else Theme.COLORS.panelLight,
@@ -245,12 +257,12 @@ local function inputRow(parent: Instance, entry: Catalog.Entry): Frame
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	local box = textBox(row, entry.placeholder or "", entry.default)
-	box.Position = UDim2.fromOffset(126, 2)
-	box.Size = UDim2.new(1, -126 - 96, 1, -4)
+	box.Position = UDim2.fromOffset(126, 3)
+	box.Size = UDim2.new(1, -126 - 100, 1, -6)
 	local go = Theme.button(row, entry.button or "Run", {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 2),
-		Size = UDim2.fromOffset(88, 32),
+		Position = UDim2.new(1, 0, 0, 3),
+		Size = UDim2.fromOffset(88, 30),
 		BackgroundColor3 = Theme.COLORS.good,
 	})
 	local function submit()
@@ -290,7 +302,7 @@ local function renderTab(id: string)
 		for index, group in tab.groups do
 			local box = holder(content, {
 				LayoutOrder = index,
-				Size = UDim2.new(1, -8, 0, 0),
+				Size = UDim2.new(1, 0, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
 			})
 			list(box, 6)
