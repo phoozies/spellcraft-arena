@@ -12,7 +12,7 @@ Two kinds of model live here:
 | `blocks/FireSlash.fbx`, `WaterSlice.fbx`, `RockThrow.fbx`, `WaterWave.fbx`, `Tornado.fbx` | spell bolts |
 | `blocks/FireBoost.fbx`, `WaterBody.fbx`, `AirBoost.fbx`, `AirShield.fbx` | buff emblems |
 | `blocks/FirePillar.fbx`, `WaterNebula.fbx`, `EarthPunch.fbx`, `EarthPillar.fbx`, `Earthquake.fbx` | zone and line effects |
-| `blocks/EarthWall.fbx` | the Earth Wall spell: a wide rectangular wall of staggered rubble (24 stones, each breaks off on its own) |
+| `blocks/EarthWall.fbx` | the Earth Wall spell: a wide rectangular wall of staggered rubble (33 stones, each breaks off on its own) |
 | `blocks/TreeOak.fbx`, `TreePine.fbx`, `TreeBirch.fbx`, `Cactus.fbx` | scenery |
 | `blocks/TrainingDummy.fbx` | Spell Practice dummy |
 | `blocks/ElementCrate.fbx`, `ElementCrateOpen.fbx` | Element Crate (closed, open) |
