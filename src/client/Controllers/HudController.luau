@@ -159,14 +159,6 @@ local function refreshWords()
 			Theme.stroke(card, color, 4)
 			Theme.rim(card, 4, 10)
 			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
-			-- The number key that draws or readies this spell.
-			Theme.label(card, tostring(order), {
-				Name = "Key",
-				Size = UDim2.fromOffset(16, 16),
-				Position = UDim2.fromOffset(4, 2),
-				TextColor3 = Theme.COLORS.subtext,
-				ZIndex = 3,
-			})
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
 				Position = UDim2.new(0, 2, 1, -18),
@@ -261,6 +253,12 @@ local function buildHotbar(root: Frame)
 		Theme.corner(bubble, 100)
 		local aspect = Instance.new("UIAspectRatioConstraint")
 		aspect.Parent = bubble
+		Theme.label(button, tostring(i), {
+			Name = "Key",
+			Size = UDim2.fromOffset(16, 16),
+			Position = UDim2.fromOffset(4, 2),
+			TextColor3 = Theme.COLORS.subtext,
+		})
 		local icon = Theme.label(button, "", {
 			Name = "Glyph",
 			Size = UDim2.new(1, 0, 0.45, 0),
@@ -359,12 +357,12 @@ local function refreshHotbar()
 			slot.bubble.BackgroundColor3 = color
 			setReadied(slot, isReadied)
 		else
-			-- Empty slot: hint that drawing a glyph fills it. All 5 slots
-			-- show, since you can stockpile up to 5 copies.
+			-- Empty slot: shows (dimmed) which spell drawing fills it with.
+			local waiting = SpellDefinitions.get(ClientState.drawableSpells()[i] or "")
 			slot.button.Visible = true
 			slot.icon.Text = ""
 			slot.stars.Text = ""
-			slot.name.Text = if i == #ClientState.hand + 1 then "draw!" else ""
+			slot.name.Text = if waiting then waiting.name else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
 			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
 			slot.stroke.Thickness = 4

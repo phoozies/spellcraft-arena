@@ -121,20 +121,23 @@ end
 
 local function cycleSlot(direction: number)
 	local hand = ClientState.hand
-	if #hand == 0 then
-		return
+	local index = ClientState.readiedSlot or 0
+	-- The next held copy in that direction (empty slots are skipped).
+	for _ = 1, #hand do
+		index = ((index - 1 + direction) % #hand) + 1
+		if hand[index] ~= "" then
+			Remotes.get("SelectSlot"):FireServer(index)
+			return
+		end
 	end
-	local index = ClientState.readiedSlot or 1
-	index = ((index - 1 + direction) % #hand) + 1
-	Remotes.get("SelectSlot"):FireServer(index)
 end
 
 local SLOT_KEYS =
 	{ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five }
 
--- Key N is the Nth spell of the loadout (the glyph cards above the hotbar).
--- Holding a copy of it readies that copy; otherwise the canvas opens with the
--- spell's shape to trace.
+-- Key N is hotbar slot N, which belongs to the Nth spell of the loadout (the
+-- glyph cards above the hotbar). Holding a copy of it readies that copy;
+-- otherwise the canvas opens with the spell's shape to trace.
 local function pressSpellKey(number: number)
 	if UserInputService:GetFocusedTextBox() or MenuController.isOpen() then
 		return
@@ -143,12 +146,10 @@ local function pressSpellKey(number: number)
 	if not spellId then
 		return
 	end
-	local slot = table.find(ClientState.hand, spellId)
-	if slot then
-		if DrawController.isActive() then
-			return
+	if (ClientState.hand[number] or "") ~= "" then
+		if not DrawController.isActive() then
+			Remotes.get("SelectSlot"):FireServer(number)
 		end
-		Remotes.get("SelectSlot"):FireServer(slot)
 	else
 		ClientState.DrawRequested:Fire(spellId)
 	end

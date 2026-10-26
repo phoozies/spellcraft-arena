@@ -3,8 +3,11 @@
 -- per-spell cast cooldowns.
 --
 -- Copy model:
--- * Drawing a spell's glyph adds ONE copy of that spell to the hotbar. A
---   player holds at most ONE copy of each spell (never more than MAX_HAND).
+-- * The hotbar has MAX_HAND fixed slots; slot N belongs to the Nth spell of
+--   the loadout (the number keys 1-5). Drawing a spell's glyph puts ONE copy
+--   of it in its own slot, even if the slots before it are empty. A player
+--   holds at most ONE copy of each spell. Empty slots are "" (so the array
+--   survives the trip to the client).
 -- * Casting uses the copy up; draw it again to get another.
 -- * SpellInputService adds a 1s cooldown between drawings.
 -- * Every copy remembers how well it was drawn (quality 0..1, see
@@ -25,8 +28,8 @@ local ElementService = require(script.Parent.ElementService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 type State = {
-	copies: { string }, -- hotbar slots, one per spell
-	qualities: { number }, -- drawing quality of each copy (parallel to copies)
+	copies: { string }, -- hotbar slots (MAX_HAND long, "" = empty)
+	qualities: { number }, -- drawing quality of each copy (parallel to copies, 0 = empty)
 	spellbook: { string }?,
 	readiedSlot: number?,
 	cooldowns: { [string]: number }, -- spellId -> os.clock() when it can be cast again
@@ -40,12 +43,20 @@ local states: { [Player]: State } = {}
 local handRemote: RemoteEvent
 local cooldownRemote: RemoteEvent
 
+local function emptySlots(fill: any): any
+	local slots = {}
+	for i = 1, Config.MAX_HAND do
+		slots[i] = fill
+	end
+	return slots
+end
+
 local function stateOf(player: Player): State
 	local state = states[player]
 	if not state then
 		state = {
-			copies = {},
-			qualities = {},
+			copies = emptySlots(""),
+			qualities = emptySlots(0),
 			spellbook = nil,
 			readiedSlot = nil,
 			cooldowns = {},
@@ -68,9 +79,29 @@ local function owns(player: Player, spellId: string): boolean
 	return table.find(ElementService.loadout(player), spellId) ~= nil
 end
 
--- Spell copies the player is holding (hotbar order).
+-- The spells the hotbar slots follow: this match's spellbook, or the loadout.
+local function slotOrder(player: Player, state: State): { string }
+	return state.spellbook or ElementService.loadout(player)
+end
+
+local function firstHeld(state: State): number?
+	for i, id in state.copies do
+		if id ~= "" then
+			return i
+		end
+	end
+	return nil
+end
+
+-- Spell copies the player is holding (hotbar order, no empty slots).
 function HandService.getCopies(player: Player): { string }
-	return stateOf(player).copies
+	local held = {}
+	for _, id in stateOf(player).copies do
+		if id ~= "" then
+			table.insert(held, id)
+		end
+	end
+	return held
 end
 
 -- Words allowed this match, or nil in the hub (any owned spell).
@@ -85,8 +116,8 @@ end
 function HandService.setSpellbook(player: Player, spellbook: { string })
 	local state = stateOf(player)
 	state.spellbook = table.clone(spellbook)
-	state.copies = {}
-	state.qualities = {}
+	state.copies = emptySlots("")
+	state.qualities = emptySlots(0)
 	state.readiedSlot = nil
 	state.cooldowns = {}
 	push(player)
@@ -95,8 +126,8 @@ end
 function HandService.clearMatch(player: Player)
 	local state = stateOf(player)
 	state.spellbook = nil
-	state.copies = {}
-	state.qualities = {}
+	state.copies = emptySlots("")
+	state.qualities = emptySlots(0)
 	state.readiedSlot = nil
 	state.cooldowns = {}
 	push(player)
@@ -141,49 +172,47 @@ function HandService.grant(
 	if table.find(state.copies, spellId) then
 		return false, `You already hold {def.name}. Cast it first!`
 	end
-	if #state.copies >= Config.MAX_HAND then
+	-- The copy goes in its spell's own slot (a spell outside the loadout, from
+	-- an admin give, takes the first free one).
+	local slot = table.find(slotOrder(player, state), spellId)
+	if not slot or slot > Config.MAX_HAND or state.copies[slot] ~= "" then
+		slot = table.find(state.copies, "")
+	end
+	if not slot then
 		return false, `Your hands are full ({Config.MAX_HAND} spells). Cast one first!`
 	end
-	table.insert(state.copies, spellId)
-	table.insert(state.qualities, math.clamp(quality or Config.QUALITY.DEFAULT, 0, 1))
-	state.readiedSlot = #state.copies
+	state.copies[slot] = spellId
+	state.qualities[slot] = math.clamp(quality or Config.QUALITY.DEFAULT, 0, 1)
+	state.readiedSlot = slot
 	push(player)
 	return true, nil
 end
 
--- Uses up the readied copy after a successful cast. Readies another copy
--- of the same spell if there is one (so you can keep firing), otherwise
--- the slot that slid into place.
+-- Uses up the readied copy after a successful cast. The slot stays where it
+-- is (now empty) and the next held copy is readied.
 function HandService.consume(player: Player)
 	local state = stateOf(player)
 	local slot = state.readiedSlot
-	if not slot or not state.copies[slot] then
+	if not slot or (state.copies[slot] or "") == "" then
 		return
 	end
-	local spellId = table.remove(state.copies, slot)
-	table.remove(state.qualities, slot)
-	local nextSame = table.find(state.copies, spellId)
-	if nextSame then
-		state.readiedSlot = nextSame
-	elseif #state.copies > 0 then
-		state.readiedSlot = math.min(slot, #state.copies)
-	else
-		state.readiedSlot = nil
-	end
+	state.copies[slot] = ""
+	state.qualities[slot] = 0
+	state.readiedSlot = firstHeld(state)
 	push(player)
 end
 
 function HandService.clearCopies(player: Player)
 	local state = stateOf(player)
-	state.copies = {}
-	state.qualities = {}
+	state.copies = emptySlots("")
+	state.qualities = emptySlots(0)
 	state.readiedSlot = nil
 	push(player)
 end
 
 function HandService.selectSlot(player: Player, slot: number)
 	local state = stateOf(player)
-	if state.copies[slot] then
+	if (state.copies[slot] or "") ~= "" then
 		state.readiedSlot = slot
 		push(player)
 	end
@@ -193,7 +222,8 @@ end
 function HandService.getReadied(player: Player): string?
 	local state = stateOf(player)
 	local slot = state.readiedSlot
-	return if slot then state.copies[slot] else nil
+	local id = if slot then state.copies[slot] else nil
+	return if id and id ~= "" then id else nil
 end
 
 -- How well the readied copy was drawn (0..1).
@@ -269,17 +299,23 @@ function HandService.start()
 		if state.spellbook then
 			return
 		end
+		-- Re-seat the copies still in the loadout in their new slots.
 		local loadout = ElementService.loadout(player)
+		local copies, qualities = emptySlots(""), emptySlots(0)
 		local changed = false
-		for index = #state.copies, 1, -1 do
-			if not table.find(loadout, state.copies[index]) then
-				table.remove(state.copies, index)
-				table.remove(state.qualities, index)
-				changed = true
+		for index, id in state.copies do
+			if id ~= "" then
+				local slot = table.find(loadout, id)
+				if slot and slot <= Config.MAX_HAND then
+					copies[slot] = id
+					qualities[slot] = state.qualities[index]
+				end
+				changed = changed or slot ~= index
 			end
 		end
 		if changed then
-			state.readiedSlot = if #state.copies > 0 then 1 else nil
+			state.copies, state.qualities = copies, qualities
+			state.readiedSlot = firstHeld(state)
 			push(player)
 		end
 	end)

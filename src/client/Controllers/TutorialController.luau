@@ -283,7 +283,7 @@ local STEPS: { Step } = {
 			}
 		end,
 		done = function()
-			return #ClientState.hand > 0
+			return ClientState.heldCount() > 0
 		end,
 		praise = function()
 			return "You drew a spell! It's ready to cast."
@@ -308,7 +308,7 @@ local STEPS: { Step } = {
 			}
 		end,
 		done = function()
-			if #ClientState.hand < startHandCount then
+			if ClientState.heldCount() < startHandCount then
 				return true
 			end
 			for id in ClientState.cooldowns do
@@ -623,7 +623,7 @@ local function enterStep(index: number)
 		return
 	end
 	stepStartedAt = os.clock()
-	startHandCount = #ClientState.hand
+	startHandCount = ClientState.heldCount()
 	titleLabel.Text = `{index}. {step.title}`
 	bodyLabel.Text = step.text()
 	gotItButton.Visible = step.manual == true
