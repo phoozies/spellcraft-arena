@@ -25,18 +25,29 @@ local trail: Frame
 local shieldFill: Frame
 local hpText: TextLabel
 local lastHealth = 100
+local holder: Frame
 
 local function humanoidOf(character: Model?): Humanoid?
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
 
+local HOTBAR_LIFT = -114 -- bottom edge: clear of the hotbar and its cooldown bar
+local GLYPH_LIFT = -192 -- bottom edge when the spell-card row is showing
+
+-- Sits right above the hotbar, or above the spell cards when they are up
+-- (fights, the Battleground, the Training Groves).
+local function layoutOwn()
+	local cards = HudController.getGlyphRow()
+	holder.Position = UDim2.new(0.5, 0, 1, if cards.Visible then GLYPH_LIFT else HOTBAR_LIFT)
+end
+
 local function buildHud()
 	local root = HudController.getGui():WaitForChild("Root")
-	local holder = Theme.frame(root, {
+	holder = Theme.frame(root, {
 		Name = "Health",
-		-- Top-right corner; the kill feed sits just below it.
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 12),
+		-- Just above the hotbar; layoutOwn() lifts it over the spell cards.
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, HOTBAR_LIFT),
 		Size = UDim2.fromOffset(260, 30),
 		BackgroundTransparency = 0.15,
 	})
@@ -74,6 +85,8 @@ local function buildHud()
 		TextStrokeTransparency = 0.3,
 		ZIndex = 5,
 	})
+	HudController.getGlyphRow():GetPropertyChangedSignal("Visible"):Connect(layoutOwn)
+	layoutOwn()
 end
 
 local function colorFor(ratio: number): Color3

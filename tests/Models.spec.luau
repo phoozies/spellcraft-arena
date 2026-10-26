@@ -61,6 +61,8 @@ return function(t: any)
 		t.it("every block model builds into well-formed, game-sized parts", function()
 			local names = ModelKit.blockNames()
 			t.expect(#names >= 24).toBeTruthy()
+			-- Big set pieces may exceed the usual 30 studs.
+			local biggest: { [string]: number } = { BattlegroundPortal = 55 }
 			for _, name in names do
 				local model = ModelKit.get(name)
 				t.expect(model ~= nil).toBeTruthy()
@@ -75,7 +77,7 @@ return function(t: any)
 					end
 					t.expect(parts >= 2).toBeTruthy()
 					local _, size = model:GetBoundingBox()
-					t.expect(math.max(size.X, size.Y, size.Z) <= 30).toBeTruthy()
+					t.expect(math.max(size.X, size.Y, size.Z) <= (biggest[name] or 30)).toBeTruthy()
 					-- Effect models carry a Root for particles and trails.
 					if model:FindFirstChild("Root") then
 						t.expect(model.PrimaryPart ~= nil).toBeTruthy()
@@ -97,6 +99,7 @@ return function(t: any)
 					"QuestChest",
 					"QuestChestOpen",
 					"WizardStatue",
+					"BattlegroundPortal",
 				}
 			do
 				t.expect(ModelKit.isBlock(name)).toBeTruthy()

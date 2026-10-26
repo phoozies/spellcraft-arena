@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (Battleground portal, health bar position)
+- **The Battleground is a real portal.** A new `BattlegroundPortal` block model (made in `tools/blender/block_models.py`, exported to `assets/models/blocks/BattlegroundPortal.fbx`): a ~30-stud octagonal stone gateway with glowing runes, two pylons with floating crystals, and layered blue swirl discs. It stands at the end of the south road; walk into the opening to enter. A plain arch and disc remain as the fallback if the model is missing.
+- **The Battleground is out of sight.** `Config.BATTLEGROUND.CENTER` moved from x = 900 to x = 15000, so it can no longer be seen from the hub.
+- **Your health bar sits above the hotbar,** and lifts above the spell-guide cards when they are showing (fights, the Battleground, the Training Groves).
+
 ### Changed (HUD layout pass)
 - **No more overlapping buttons.** The health bar moved to the top-right corner (the kill feed sits under it). Coins and wins are centered at the top, with the match bar, Battleground banner, and boost icons stacked under them (they slide up when a phone hides the wallet in a fight). On the left, Admin sits on top, then Party, and the Party panel opens beside the side menu instead of on top of it (it used to cover the Party button, the health bar, and the menu). The spectate bar sits under the wallet.
 

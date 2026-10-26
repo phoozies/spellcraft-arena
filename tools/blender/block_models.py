@@ -376,6 +376,63 @@ model("WizardStatue", [
 ], solid=True, base=True, note="Stone wizard statue for the center of the arena (staff orb glows)")
 
 
+# ---------------------------------------------------------------- portals
+def battleground_portal():
+    """A big octagonal stone gateway with a swirling blue portal in it. The model faces -Z,
+    stands on y = 0, and the opening (about 24 studs wide) is open at the bottom to walk
+    through. The hub tags an invisible trigger over the opening (see Maps/InkwellPlaza)."""
+    ring_stone = rgb(88, 92, 122)
+    ring_trim = rgb(62, 66, 94)
+    glow = rgb(90, 180, 255)
+    gold = rgb(216, 166, 52)
+    cy, a, t, depth = 15.5, 12.0, 3.0, 4.0  # ring centre height, inner apothem, thickness, depth
+    mid = a + t / 2
+    length = 2 * mid * math.tan(math.radians(22.5)) + 0.8
+    parts = [
+        P("Base", (0, 0.6, 0), (50, 1.2, 18), ring_trim, "Slate", collide=True),
+        P("Base", (0, 1.4, 0), (42, 0.5, 14), ring_stone, "Slate", collide=True),
+        P("Base_Rune", (0, 1.7, -4.5), (0.15, 9, 9), glow, "Neon", rot=(0, 0, 90), shape="Cylinder",
+          collide=False),
+    ]
+    # Seven of the eight ring segments; the bottom one is left out so you can walk through.
+    for k in (0, 1, 2, 3, 5, 6, 7):
+        phi = k * 45.0
+        x = mid * math.sin(math.radians(phi))
+        y = cy + mid * math.cos(math.radians(phi))
+        parts.append(P("Ring", (round(x, 3), round(y, 3), 0), (round(length, 3), t, depth), ring_stone,
+                       "Slate", rot=(0, 0, -phi), collide=True))
+        for z in (-(depth / 2 + 0.05), depth / 2 + 0.05):
+            parts.append(P("Ring_Rune", (round(x, 3), round(y, 3), z),
+                           (round(length * 0.55, 3), round(t * 0.3, 3), 0.15), glow, "Neon",
+                           rot=(0, 0, -phi), collide=False))
+    # Keystone and gold trim over the top.
+    parts += [
+        P("Keystone", (0, cy + a + t + 0.8, 0), (5.0, 2.2, depth + 1), gold, "Metal", collide=True),
+        P("Keystone_Gem", (0, cy + a + t + 0.8, -(depth / 2 + 0.7)), (1.6, 1.6, 0.3), glow, "Neon",
+          rot=(0, 0, 45), collide=False),
+    ]
+    # A tall pylon with a floating crystal on each side.
+    for side in (-1, 1):
+        px = side * (a + t + 5.5)
+        parts += [
+            P("Pylon", (px, 5.5, 0), (5.0, 9.0, 5.0), ring_stone, "Slate", collide=True),
+            P("Pylon", (px, 11.5, 0), (3.6, 3.0, 3.6), ring_trim, "Slate", collide=True),
+            P("Pylon_Band", (px, 8.0, 0), (5.2, 0.6, 5.2), gold, "Metal", collide=False),
+            P("Pylon_Crystal", (px, 16.5, 0), (2.4, 4.4, 2.4), glow, "Neon", rot=(0, 45, 0), collide=False),
+        ]
+    # The portal itself: stacked, glowing discs, brighter toward the middle.
+    layers = [(23, rgb(40, 110, 255), 0.5), (19, rgb(70, 150, 255), 0.45), (15, rgb(120, 200, 255), 0.4),
+              (11, rgb(190, 235, 255), 0.35), (6, rgb(255, 255, 255), 0.3)]
+    for index, (diameter, color, transparency) in enumerate(layers):
+        parts.append(P("Portal_Swirl", (0, cy, round(index * 0.12, 2)), (0.25, diameter, diameter), color,
+                       "Neon", t=transparency, rot=(0, 90, 0), shape="Cylinder", collide=False))
+    return parts
+
+
+model("BattlegroundPortal", battleground_portal(), solid=True, base=True,
+      note="Big stone portal gateway with a swirling blue portal: the hub's way into the Battleground")
+
+
 # ---------------------------------------------------------------- outputs
 MATERIAL_ENUMS = {
     "SmoothPlastic", "Neon", "Glass", "Slate", "Wood", "WoodPlanks", "Grass", "Metal", "Fabric",

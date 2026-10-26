@@ -223,8 +223,8 @@ features:
     summary: A drop-in open world far from the hub, reached through a hub portal; you land at a random spot, fight other players, and hunt hostile NPCs for coins. Replaces the FFA queue mode.
     server: "src/server/Services/BattlegroundService.luau (enter, leave, isIn; random spawn sampling; respawns; touch wiring; LeaveBattleground remote)"
     map: "src/server/Maps/Battleground.luau (600x600 land in 4 biomes, mountain ring and invisible walls, 6 Raider camps, 2 ruins, the Warlord's Keep, NpcSpot parts, 4 BattlegroundExit gate pads, a BuildZone; no spawn points)"
-    hub: "a pad tagged BattlegroundPortal in src/server/Maps/InkwellPlaza.luau"
-    config: "Config.BATTLEGROUND: CENTER (900,0,0), HALF_SIZE 300, RESPAWN_DELAY 3, NPC { RESPAWN 45, COIN_CAP 120, COIN_WINDOW 300 }"
+    hub: "a big stone portal (BattlegroundPortal block model) with an invisible trigger tagged BattlegroundPortal over its opening, in src/server/Maps/InkwellPlaza.luau"
+    config: "Config.BATTLEGROUND: CENTER (15000,0,0), far enough that the Battleground cannot be seen from the hub, HALF_SIZE 300, RESPAWN_DELAY 3, NPC { RESPAWN 45, COIN_CAP 120, COIN_WINDOW 300 }"
     state: player attribute InBattleground (server logic and HUD), character attribute Battleground
     rules:
       - MatchService.relation lets any two players who are both InBattleground harm each other, and any Battleground player harm NPCs (Hostile attribute); nobody else can
@@ -335,7 +335,7 @@ features:
       - four SPECTATE overlooks on the rim: duels are fought on arenas summoned below the island (ArenaService.slotOrigin)
       - rock cone, stalactites and crystals underneath; an ocean tile grid at Config.HUB.OCEAN_Y
       - wizard statue on the inkwell (the hub centerpiece)
-      - Battleground portal (BattlegroundPortal tag) in the concourse
+      - Battleground portal: the BattlegroundPortal block model (octagonal stone gateway, ~30 studs tall, swirling blue discs) at the end of the south road, trigger tagged BattlegroundPortal
       - Training Grove (BuildZone + PracticeZone + dummies)
       - Spellbook kiosk (Grimoire model)
       - Like & Favourite gift box on the plaza's west edge (tag LikeGift, prompt claims the one-time gift)
