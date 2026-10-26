@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
+local JuiceController = require(script.Parent.JuiceController)
 
 local player = Players.LocalPlayer
 
@@ -120,6 +121,10 @@ local function refreshOwn()
 	end
 	lastHealth = hp
 	regenNote.Visible = ClientState.match.phase ~= "Idle"
+	-- The screen edges pulse red when you are nearly out, but only in a fight.
+	local fighting = ClientState.match.phase ~= "Idle"
+		or player:GetAttribute("InBattleground") == true
+	JuiceController.setLowHealth(if fighting and hp > 0 then ratio else 1)
 end
 
 local function watchOwn(character: Model)

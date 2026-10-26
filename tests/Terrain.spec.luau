@@ -50,20 +50,22 @@ return function(t: any)
 				return
 			end
 			-- The Sparring Arena's imported colosseum and statue are single meshes.
-			for _, name in {
-				"CrayonCanyon",
-				"FrostHollow",
-				"EmberForge",
-				"MossRuins",
-				"TidalTemple",
-				"SkyBridge",
-			} do
+			for _, name in
+				{
+					"CrayonCanyon",
+					"FrostHollow",
+					"EmberForge",
+					"MossRuins",
+					"TidalTemple",
+					"SkyBridge",
+				}
+			do
 				local props: { [Instance]: boolean } = {}
-				local model = (require(maps:FindFirstChild(name) :: ModuleScript) :: any)(
-					function(instance: Instance)
+				local model = (
+						require(maps:FindFirstChild(name) :: ModuleScript) :: any
+					)(function(instance: Instance)
 						props[instance] = true
-					end
-				) :: Model
+					end) :: Model
 				for _, part in model:GetDescendants() do
 					if
 						part:IsA("BasePart")
@@ -176,24 +178,26 @@ return function(t: any)
 			if not maps then
 				return
 			end
-			for _, name in {
-				"CrayonCanyon",
-				"SparringArena",
-				"FrostHollow",
-				"EmberForge",
-				"MossRuins",
-				"TidalTemple",
-				"SkyBridge",
-			} do
+			for _, name in
+				{
+					"CrayonCanyon",
+					"SparringArena",
+					"FrostHollow",
+					"EmberForge",
+					"MossRuins",
+					"TidalTemple",
+					"SkyBridge",
+				}
+			do
 				local props = 0
-				local model = (require(maps:FindFirstChild(name) :: ModuleScript) :: any)(
-					function(instance: Instance, health: number)
+				local model = (
+						require(maps:FindFirstChild(name) :: ModuleScript) :: any
+					)(function(instance: Instance, health: number)
 						if instance:GetAttribute("Terrain") then
 							props += 1
 							t.expect(health > 0).toBeTruthy()
 						end
-					end
-				) :: Model
+					end) :: Model
 				t.expect(props >= 4).toBeTruthy()
 				model:Destroy()
 			end

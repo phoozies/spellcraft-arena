@@ -24,6 +24,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local ElementService = require(script.Parent.ElementService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local CrateService = {}
 
@@ -60,9 +61,10 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 	if not roll then
 		return nil, "You already own every spell!"
 	end
-	if not EconomyService.spend(player, crate.price) then
+	if not EconomyService.spend(player, crate.price, crate.id) then
 		return nil, "Not enough coins."
 	end
+	TelemetryService.onboarding(player, "FirstCrateSpin")
 	busyUntil[player] = now + Crates.SPIN_TIME
 	local _, equipped = ElementService.grantSpell(player, roll.spell)
 	local result: Types.CrateResult = {

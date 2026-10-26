@@ -145,6 +145,13 @@ local Cues: { [string]: Cue } = {
 
 	-- Fights
 	hit = sound(HIT, 0.45, true, 1.3, 0.4),
+	-- Game feel (heard in your ears; client Fx/Juice)
+	hitMarker = sound(HIT, 0.4, false, 2, 0.12),
+	heavyHit = layered(sound(HIT, 0.65, false, 1, 0.3), "thump"),
+	hurt = layered(sound(HIT, 0.5, false, 0.8, 0.3), "thump"),
+	knockoutSting = layered(sound(CHIME, 0.8, false, 0.9, 1.5), "thump"),
+	-- The arena's water catching a fallen player (heard from where it splashes).
+	waterSplash = layered(sound(SPLASH, 0.8, true, 0.9, 1.2), "dripSplash"),
 
 	-- Drawing and crates (heard in your ears)
 	glyphGood = sound(TWINKLE, 0.6, false, 1, 1),

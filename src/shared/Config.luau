@@ -92,8 +92,53 @@ local Config = {
 
 	PLAYER_MAX_HEALTH = 100,
 	SPAWN_PROTECTION = 3,
-	-- Characters below this Y inside an arena are knocked out (ring-outs).
+	-- Characters below this Y inside an arena are knocked out (ring-outs). Only
+	-- a fallback for a player with no spawn pad: everyone else is caught by the
+	-- arena's water (RESCUE.WATER_SURFACE), however far past it they have fallen.
 	ARENA_VOID_DEPTH = -60,
+
+	-- Never stuck, never lost (server/Services/Rescue). Y values are studs from
+	-- the arena's floor (its origin).
+	--   WATER_SURFACE  the water under every arena; fall into it and it launches
+	--                  you back onto your team's spawn pad
+	--   WATER_DAMAGE   what the splash costs (it can still finish a weak player,
+	--                  and the last enemy who hit you gets the credit)
+	--   WATER_STUN     seconds you cannot cast after the splash
+	--   WATER_APEX     studs the arc peaks above the pad
+	--   WATER_REPEAT   a second splash within this many seconds skips the arc and
+	--                  just puts you on the pad
+	--   PIT_*          a player standing at the bottom of a hole that is walled in
+	--                  on every side by terrain cells taller than PIT_CLIMB (a jump
+	--                  clears about 7.7 studs) is thrown out over the nearest rim
+	--                  after PIT_SECONDS, looking out PIT_REACH studs; the arc
+	--                  peaks PIT_APEX over the rim, and a rim higher than
+	--                  PIT_MAX_RIM puts the player back on the spawn pad instead
+	RESCUE = {
+		WATER_SURFACE = -50,
+		WATER_DAMAGE = 30,
+		WATER_STUN = 1.2,
+		WATER_APEX = 40,
+		WATER_REPEAT = 4,
+		PIT_CLIMB = 9,
+		PIT_REACH = 36,
+		PIT_SECONDS = 1.5,
+		PIT_APEX = 6,
+		PIT_MAX_RIM = 45,
+	},
+
+	-- Juice (client Fx/Juice): screen shake, field-of-view kicks, hit markers and
+	-- the damage vignette. Every effect scales with the hit; the Screen shake
+	-- setting turns the camera movement off.
+	--   SHAKE_MAX      most the camera can be offset, in studs
+	--   FOV_MAX        most the field of view can be kicked, in degrees
+	--   BIG_HIT        damage that counts as a heavy hit (bigger marker and kick)
+	--   LOW_HEALTH     health fraction below which the screen edges pulse red
+	JUICE = {
+		SHAKE_MAX = 1.1,
+		FOV_MAX = 9,
+		BIG_HIT = 25,
+		LOW_HEALTH = 0.3,
+	},
 
 	COUNTDOWN_TIME = 5,
 	ROUND_TIME = 120,

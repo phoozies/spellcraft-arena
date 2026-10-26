@@ -125,6 +125,29 @@ local function addSpectatorSign(model: Model, mapName: string, mode: string)
 	text.Parent = gui
 end
 
+-- The water under an arena (Config.RESCUE.WATER_SURFACE): anyone who falls into
+-- it is splashed and thrown back onto their spawn pad (Rescue.water). It only
+-- needs to look like water; MatchService checks the height.
+local function addWater(model: Model, origin: CFrame)
+	local bounds = model:FindFirstChild("Bounds")
+	local width = if bounds and bounds:IsA("BasePart")
+		then math.max(bounds.Size.X, bounds.Size.Z) * 1.6
+		else 600
+	local water = Instance.new("Part")
+	water.Name = "Water"
+	water.Anchored = true
+	water.CanCollide = false
+	water.CanQuery = false
+	water.CanTouch = false
+	water.CastShadow = false
+	water.Material = Enum.Material.Glass
+	water.Color = Color3.fromRGB(64, 156, 230)
+	water.Transparency = 0.35
+	water.Size = Vector3.new(width, 2, width)
+	water.Position = Vector3.new(origin.X, origin.Y + Config.RESCUE.WATER_SURFACE - 1, origin.Z)
+	water.Parent = model
+end
+
 -- Picks a map suited to the mode.
 function ArenaService.pickMap(mode: string): string
 	local weights: { [string]: number } = {
@@ -203,6 +226,7 @@ function ArenaService.create(mapName: string, mode: string): Arena
 
 	model.Name = `Arena{nextId}_{mapName}`
 	addSpectatorSign(model, mapName, mode)
+	addWater(model, origin)
 	model.Parent = workspace
 	for _, pad in model:GetDescendants() do
 		if CollectionService:HasTag(pad, "JumpPad") then
@@ -249,6 +273,11 @@ function ArenaService.spawnCFrame(arena: Arena, group: string, index: number): C
 		return CFrame.new(position)
 	end
 	return CFrame.lookAt(position, look)
+end
+
+-- True once a character has fallen into the water under the arena.
+function ArenaService.isInWater(arena: Arena, position: Vector3): boolean
+	return position.Y < arena.origin.Position.Y + Config.RESCUE.WATER_SURFACE
 end
 
 function ArenaService.isBelowVoid(arena: Arena, position: Vector3): boolean

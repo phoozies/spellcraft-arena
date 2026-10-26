@@ -279,7 +279,9 @@ local function renderTab(id: string)
 		end
 	end
 	for tabId, button in tabButtons do
-		button.BackgroundColor3 = if tabId == id then Theme.COLORS.accent else Theme.COLORS.panelLight
+		button.BackgroundColor3 = if tabId == id
+			then Theme.COLORS.accent
+			else Theme.COLORS.panelLight
 	end
 	for _, tab in tabs do
 		if tab.id ~= id then

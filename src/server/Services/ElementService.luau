@@ -24,6 +24,7 @@ local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local EconomyService = require(script.Parent.EconomyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local ElementService = {}
 
@@ -120,10 +121,11 @@ function ElementService.buy(player: Player, elementId: string): (boolean, string
 	if profile.coins < element.price then
 		return false, `You need {element.price - profile.coins} more coins for {elementId}.`
 	end
-	if not EconomyService.spend(player, element.price) then
+	if not EconomyService.spend(player, element.price, `element:{elementId}`) then
 		return false, "Not enough coins."
 	end
 	ElementService.grant(player, elementId)
+	TelemetryService.onboarding(player, "FirstElementBought")
 	return true, nil
 end
 
@@ -253,6 +255,7 @@ function ElementService.start()
 		end
 		if #profile.elements == 0 then
 			ElementService.grant(player, elementId)
+			TelemetryService.onboarding(player, "ElementPicked")
 			toastRemote:FireClient(
 				player,
 				`You chose {elementId}! Draw its shapes to cast.`,

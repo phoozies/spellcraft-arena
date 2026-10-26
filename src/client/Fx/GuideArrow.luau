@@ -86,18 +86,6 @@ local function arrowLabel(parent: Instance, text: string, size: number, color: C
 	return label
 end
 
-local function positionOf(thing: Instance?): Vector3?
-	if not thing then
-		return nil
-	end
-	if thing:IsA("BasePart") then
-		return thing.Position
-	elseif thing:IsA("Model") then
-		return thing:GetPivot().Position
-	end
-	return nil
-end
-
 local function groundAt(point: Vector3, ignore: { Instance }): Vector3
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude

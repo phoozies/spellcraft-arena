@@ -1,7 +1,7 @@
 --!strict
 -- Settings panel: rebind the key that opens the drawing canvas (click
--- "Change", press any key, done) and switch the background music and the sound
--- effects on or off.
+-- "Change", press any key, done) and switch the background music, the sound
+-- effects and the screen shake on or off.
 -- Both choices are saved to the player's profile; the server validates them
 -- (and refuses reserved keys like WASD, Space, the hotbar numbers, and "/"
 -- which Roblox chat uses).
@@ -23,6 +23,7 @@ local changeButton: TextButton
 local hint: TextLabel
 local musicButton: TextButton
 local sfxButton: TextButton
+local shakeButton: TextButton
 
 local function musicOn(): boolean
 	local profile = ClientState.profile
@@ -34,14 +35,20 @@ local function sfxOn(): boolean
 	return not (profile and profile.settings and profile.settings.sfx == false)
 end
 
-local function styleSwitch(button: TextButton, on: boolean)
-	button.Text = if on then "🔊 On" else "🔇 Off"
+local function shakeOn(): boolean
+	local profile = ClientState.profile
+	return not (profile and profile.settings and profile.settings.shake == false)
+end
+
+local function styleSwitch(button: TextButton, on: boolean, onText: string?, offText: string?)
+	button.Text = if on then onText or "🔊 On" else offText or "🔇 Off"
 	button.BackgroundColor3 = if on then Theme.COLORS.good else Theme.COLORS.bad
 end
 
 local function refreshSwitches()
 	styleSwitch(musicButton, musicOn())
 	styleSwitch(sfxButton, sfxOn())
+	styleSwitch(shakeButton, shakeOn(), "📳 On", "Off")
 end
 
 local function refresh()
@@ -90,6 +97,7 @@ end
 
 function SettingsController.init()
 	local panel = MenuController.createPanel("Settings", "Settings")
+	panel.Size = UDim2.fromOffset(560, 470)
 	local row = Theme.frame(panel, {
 		Position = UDim2.fromOffset(16, 76),
 		Size = UDim2.new(1, -32, 0, 64),
@@ -127,7 +135,7 @@ function SettingsController.init()
 	local function addSwitch(
 		title: string,
 		y: number,
-		key: "music" | "sfx",
+		key: "music" | "sfx" | "shake",
 		isOn: () -> boolean
 	): TextButton
 		local switchRow = Theme.frame(panel, {
@@ -161,9 +169,10 @@ function SettingsController.init()
 	end
 	musicButton = addSwitch("Background music", 146, "music", musicOn)
 	sfxButton = addSwitch("Sound effects", 216, "sfx", sfxOn)
+	shakeButton = addSwitch("Screen shake", 286, "shake", shakeOn)
 
 	local reset = Theme.button(panel, `Reset to {Config.DEFAULT_DRAW_KEY}`, {
-		Position = UDim2.fromOffset(16, 290),
+		Position = UDim2.fromOffset(16, 360),
 		Size = UDim2.fromOffset(180, Theme.TOUCH - 8),
 	})
 	reset.Activated:Connect(function()
@@ -171,7 +180,7 @@ function SettingsController.init()
 		keyLabel.Text = Config.DEFAULT_DRAW_KEY
 	end)
 	hint = Theme.label(panel, "Click Change, then press the key you want.", {
-		Position = UDim2.fromOffset(16, 340),
+		Position = UDim2.fromOffset(16, 410),
 		Size = UDim2.new(1, -32, 0, 24),
 		Font = Theme.BODY_FONT,
 		TextColor3 = Theme.COLORS.subtext,
@@ -181,7 +190,7 @@ function SettingsController.init()
 		panel,
 		"Gamepad: X, then draw with the right stick. Touch: tap ✏ Draw, then drag.",
 		{
-			Position = UDim2.fromOffset(16, 366),
+			Position = UDim2.fromOffset(16, 436),
 			Size = UDim2.new(1, -32, 0, 24),
 			Font = Theme.BODY_FONT,
 			TextColor3 = Theme.COLORS.subtext,

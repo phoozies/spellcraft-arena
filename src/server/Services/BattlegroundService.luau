@@ -25,6 +25,8 @@ local ElementService = require(script.Parent.ElementService)
 local MatchService = require(script.Parent.MatchService)
 local PartyService = require(script.Parent.PartyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local TelemetryService = require(script.Parent.TelemetryService)
+local Funnels = require(ReplicatedStorage.Shared.Analytics.Funnels)
 
 local buildBattleground =
 	require(script.Parent.Parent:WaitForChild("Maps"):WaitForChild("Battleground")) :: any
@@ -143,6 +145,7 @@ function BattlegroundService.enter(player: Player): (boolean, string?)
 	player:SetAttribute("InBattleground", true)
 	MatchService.teleport(player, spawnCFrame(player))
 	markCharacter(player)
+	TelemetryService.event(player, Funnels.EVENTS.BattlegroundJoined, 1)
 	toastRemote:FireClient(player, "Battleground! Everyone here is an enemy. Good luck!", "round")
 	return true, nil
 end
