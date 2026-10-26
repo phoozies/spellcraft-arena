@@ -112,14 +112,14 @@ function SpellInputService.submitStroke(
 	if drawGate then
 		local allowed, reason = drawGate(player)
 		if not allowed then
-			toastRemote:FireClient(player, reason or "You can't draw right now.", "fizzle")
+			toastRemote:FireClient(player, reason or "You can't draw right now.", "error")
 			resultRemote:FireClient(player, nil, nil)
 			return nil
 		end
 	end
 	local left = SpellInputService.drawCooldownLeft(player)
 	if left > 0 then
-		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "cooldown")
+		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "error")
 		return nil
 	end
 	lastDraw[player] = os.clock()
@@ -128,7 +128,7 @@ function SpellInputService.submitStroke(
 	-- never repeats a shape), so look-alike shapes can't be confused with them.
 	local loadout = ElementService.loadout(player)
 	if #loadout == 0 then
-		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "fizzle")
+		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "error")
 		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
@@ -149,38 +149,25 @@ function SpellInputService.submitStroke(
 	local spellId = if glyphId then spellByGlyph[glyphId] else nil
 	if spellId and target and spellId ~= target.id then
 		-- Drew a different shape than the one on the card.
-		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "fizzle")
+		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "error")
 		resultRemote:FireClient(player, nil, glyphId)
 		return nil
 	end
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
-		toastRemote:FireClient(player, hints[math.random(1, #hints)], "fizzle")
+		toastRemote:FireClient(player, hints[math.random(1, #hints)], "error")
 		resultRemote:FireClient(player, nil, nil)
 		return nil
 	end
 	local quality = Quality.fromScore(score)
 	local ok, message = HandService.grant(player, spellId, nil, quality)
 	if not ok then
-		toastRemote:FireClient(player, message or "Fizzle!", "fizzle")
+		toastRemote:FireClient(player, message or "Fizzle!", "error")
 		resultRemote:FireClient(player, nil, glyphId)
 		return nil
 	end
 	TelemetryService.onboarding(player, "FirstSpellDrawn")
 	local def = SpellDefinitions.get(spellId)
-	if def then
-		local held = 0
-		for _, id in HandService.getCopies(player) do
-			if id == spellId then
-				held += 1
-			end
-		end
-		toastRemote:FireClient(
-			player,
-			`+1 {def.name}! {Quality.tier(quality).name}` .. (if held > 1 then ` (x{held})` else ""),
-			"ready"
-		)
-	end
 	resultRemote:FireClient(player, spellId, glyphId, quality)
 	-- Everyone nearby sees the glyph pop up over the caster's head.
 	local character = player.Character

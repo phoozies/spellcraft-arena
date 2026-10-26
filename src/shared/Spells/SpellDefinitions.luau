@@ -201,8 +201,8 @@ local DEFINITIONS: { SpellDef } = {
 		sfx = { cast = "bodyCast" },
 		archetype = "Buff",
 		cooldown = 22,
-		description = "Turn to flowing water: you can't be hurt or affected by spells for 7 seconds.",
-		stats = { invincible = true, duration = 7 },
+		description = "Turn to flowing water: you can't be hurt or affected by spells for 3 seconds.",
+		stats = { invincible = true, duration = 3 },
 		visual = {
 			shape = "Ball",
 			size = Vector3.new(7, 7, 7),
@@ -392,9 +392,9 @@ local DEFINITIONS: { SpellDef } = {
 		description = "A wave of stone pillars erupts in a line in front of you. 30 damage to anyone it catches.",
 		stats = {
 			damage = 30,
-			radius = 6.5,
+			radius = 13,
 			count = 6,
-			spacing = 9,
+			spacing = 18,
 			step = 0.12,
 			delay = 0.35,
 			knockback = 24,
@@ -424,7 +424,7 @@ local DEFINITIONS: { SpellDef } = {
 		stats = {
 			delay = 1.2,
 			damage = 40,
-			radius = 25,
+			radius = 50,
 			range = 0, -- centered on the caster
 			knockback = 40,
 			channel = true,
@@ -606,8 +606,8 @@ local DEFINITIONS: { SpellDef } = {
 		glyph = ROLE.support,
 		sfx = { cast = "healChime" },
 		archetype = "Buff",
-		cooldown = 30,
-		description = "A warm light mends you: restore 25 health.",
+		cooldown = 60,
+		description = "A warm light mends you: restore 25 health. It takes a full minute to recharge.",
 		stats = { heal = 25, duration = 1.5 }, -- `duration` is just how long the green glow lasts
 		visual = {
 			shape = "Ball",

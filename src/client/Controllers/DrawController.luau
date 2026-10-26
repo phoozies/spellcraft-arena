@@ -178,7 +178,7 @@ local function setActive(on: boolean, spellId: string?)
 			if ClientState.fighting()
 				then "Hold on, you can draw when the round starts!"
 				else "You can only draw in the Training Grove, duels, and the Battleground.",
-			"fizzle"
+			"error"
 		)
 		return
 	end
@@ -246,7 +246,7 @@ local function finishStroke()
 
 	local extent = math.max(high.X - low.X, high.Y - low.Y)
 	if #points < GlyphRecognizer.MIN_POINTS or extent < GlyphRecognizer.MIN_EXTENT then
-		HudController.toast("Draw a bigger shape!", "fizzle")
+		HudController.toast("Draw a bigger shape!", "error")
 		ink:ClearAllChildren()
 		return -- stay on the canvas for another try
 	end
@@ -254,7 +254,7 @@ local function finishStroke()
 	if now < ClientState.drawReadyAt then
 		HudController.toast(
 			`Draw again in {math.ceil((ClientState.drawReadyAt - now) * 10) / 10}s`,
-			"cooldown"
+			"error"
 		)
 		setActive(false)
 		return

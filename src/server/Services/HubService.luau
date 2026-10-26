@@ -27,38 +27,21 @@ local HubService = {}
 local hub: Model
 local toastRemote: RemoteEvent
 
--- Health regenerates fast in the hub, and slowly everywhere else once you
--- have gone Config.PASSIVE_REGEN_DELAY seconds without taking damage.
--- (The default Roblox regen script is replaced by StarterCharacterScripts.Health.)
-local lastHealth: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-local lastDamaged: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-
+-- Health regenerates fast in the hub and not at all in matches or the
+-- Battleground. (The default Roblox regen script is replaced by
+-- StarterCharacterScripts.Health.)
 local function regenTick(dt: number)
-	local now = os.clock()
 	for _, player in Players:GetPlayers() do
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.Health > 0 then
-			-- Any drop in health (from anything) restarts the out-of-combat timer.
-			if humanoid.Health < (lastHealth[player] or humanoid.Health) then
-				lastDamaged[player] = now
-			end
-			if humanoid.Health < humanoid.MaxHealth then
-				local perSecond = 0
-				if
-					not MatchService.isInMatch(player)
-					and not player:GetAttribute("InBattleground")
-				then
-					perSecond = Config.HUB_REGEN_PER_SECOND
-				elseif now - (lastDamaged[player] or 0) >= Config.PASSIVE_REGEN_DELAY then
-					perSecond = Config.PASSIVE_REGEN_PER_SECOND
-				end
-				if perSecond > 0 then
-					humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + perSecond * dt)
-				end
-			end
-			lastHealth[player] = humanoid.Health
-		else
-			lastHealth[player] = nil
+		if
+			humanoid
+			and humanoid.Health > 0
+			and humanoid.Health < humanoid.MaxHealth
+			and not MatchService.isInMatch(player)
+			and not player:GetAttribute("InBattleground")
+		then
+			humanoid.Health =
+				math.min(humanoid.MaxHealth, humanoid.Health + Config.HUB_REGEN_PER_SECOND * dt)
 		end
 	end
 end

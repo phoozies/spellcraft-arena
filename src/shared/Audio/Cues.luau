@@ -161,6 +161,8 @@ local Cues: { [string]: Cue } = {
 	reelTick = sound(HIT, 0.25, false, 2, 0.15),
 	crateEpic = sound(CHIME, 0.85, false, 1, 3),
 	crateLegendary = sound(CHIME, 1, false, 0.75, 3.5),
+	-- The low buzz for a spell that can't be drawn or cast (replaces text popups).
+	uiError = sound(HIT, 0.5, false, 0.5, 0.3),
 	uiStep = sound(TWINKLE, 0.5, false, 1.4, 0.8),
 	uiEquip = sound(HIT, 0.45, false, 1.6, 0.3),
 }

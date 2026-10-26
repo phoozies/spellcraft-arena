@@ -153,14 +153,14 @@ local function onCast(player: Player, target: any, rotationY: any)
 	end
 	-- Stunned (Water Lock) or mid-channel (Earthquake): no casting.
 	if StatusService.has(character, "Stun") or StatusService.has(character, "Channel") then
-		toastRemote:FireClient(player, "You can't cast right now!", "fizzle")
+		toastRemote:FireClient(player, "You can't cast right now!", "error")
 		return
 	end
 	-- Must be holding a copy of the readied spell (drawing grants copies).
 	local spellId = HandService.getReadied(player)
 	local def = spellId and SpellDefinitions.get(spellId)
 	if not spellId or not def then
-		toastRemote:FireClient(player, "Draw a spell first!", "fizzle")
+		toastRemote:FireClient(player, "Draw a spell first!", "error")
 		return
 	end
 	-- Copies of the same spell share one cast cooldown.
@@ -170,7 +170,7 @@ local function onCast(player: Player, target: any, rotationY: any)
 			toastRemote:FireClient(
 				player,
 				`{def.name} cooling down ({math.ceil(left * 10) / 10}s)`,
-				"cooldown"
+				"error"
 			)
 		end
 		return
