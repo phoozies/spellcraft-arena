@@ -1019,32 +1019,53 @@ return function(): Model
 	)
 
 	----------------------------------------------------------------------
-	-- The Battleground portal (south, past the amphitheatre): a blue gateway.
-	-- Stepping into it teleports you to the drop-in free-for-all arena
-	-- (BattlegroundService).
+	-- The Battleground portal (south, at the end of the south road): a big stone
+	-- gateway (the BattlegroundPortal block model) with a swirling blue portal in
+	-- it. Walking into the invisible trigger over the opening teleports you to
+	-- the drop-in free-for-all (BattlegroundService). Without the model, a plain
+	-- blue arch and glowing disc stand in.
 	----------------------------------------------------------------------
-	for _, side in { -1, 1 } do
-		column(model, portalAt + Vector3.new(side * 9, 0, 0), 14, 2.4, BLUE)
+	local portalModel = ModelKit.clone("BattlegroundPortal", "solid")
+	local portal: BasePart
+	if portalModel then
+		portalModel:PivotTo(CFrame.new(portalAt))
+		portalModel.Parent = model
+		-- The opening is about 24 studs wide and 26 tall.
+		portal = MapKit.part(model, {
+			name = "BattlegroundPortal",
+			size = Vector3.new(22, 24, 3),
+			cframe = CFrame.new(portalAt + Vector3.new(0, 13.5, 0)),
+			transparency = 1,
+			canCollide = false,
+		})
+		portal.CanQuery = false -- spells pass through, but walking in must still trigger it
+		portal.CanTouch = true
+		glow(portal, BLUE, 60, 1.6)
+	else
+		for _, side in { -1, 1 } do
+			column(model, portalAt + Vector3.new(side * 9, 0, 0), 14, 2.4, BLUE)
+		end
+		pointedArch(model, CFrame.new(portalAt), 18, 14, 1.2, BLUE)
+		portal = MapKit.part(model, {
+			name = "BattlegroundPortal",
+			shape = Enum.PartType.Cylinder,
+			size = Vector3.new(0.8, 12, 12),
+			cframe = CFrame.new(portalAt + Vector3.new(0, 0.9, 0))
+				* CFrame.Angles(0, 0, math.pi / 2),
+			color = Color3.fromRGB(80, 160, 255),
+			material = Enum.Material.Neon,
+			transparency = 0.2,
+			canCollide = false,
+		})
+		glow(portal, BLUE, 24, 1.2)
 	end
-	pointedArch(model, CFrame.new(portalAt), 18, 14, 1.2, BLUE)
-	local portal = MapKit.part(model, {
-		name = "BattlegroundPortal",
-		shape = Enum.PartType.Cylinder,
-		size = Vector3.new(0.8, 12, 12),
-		cframe = CFrame.new(portalAt + Vector3.new(0, 0.9, 0)) * CFrame.Angles(0, 0, math.pi / 2),
-		color = Color3.fromRGB(80, 160, 255),
-		material = Enum.Material.Neon,
-		transparency = 0.2,
-		canCollide = false,
-	})
 	portal:AddTag("BattlegroundPortal")
-	glow(portal, BLUE, 24, 1.2)
-	label(portal, "BATTLEGROUND\nStep in to fight!", 6, 70)
+	label(portal, "BATTLEGROUND\nStep in to fight!", if portalModel then 17 else 6, 70)
 	label(
-		signAnchor(model, "BattlegroundSign", portalAt + Vector3.new(0, 27, 0)),
+		signAnchor(model, "BattlegroundSign", portalAt + Vector3.new(0, 40, 0)),
 		"BATTLEGROUND",
 		0,
-		140
+		200
 	)
 
 	----------------------------------------------------------------------

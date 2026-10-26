@@ -169,7 +169,9 @@ local Config = {
 	--              NPCs in any COIN_WINDOW seconds, so farming them can't
 	--              outpay winning matches.
 	BATTLEGROUND = {
-		CENTER = Vector3.new(900, 0, 0),
+		-- Far enough from the hub (and beyond its haze) that you cannot see the
+		-- Battleground from the island: the portal is the only way there.
+		CENTER = Vector3.new(15000, 0, 0),
 		HALF_SIZE = 300,
 		RESPAWN_DELAY = 3,
 		NPC = {
