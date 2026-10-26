@@ -35,7 +35,7 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 - **Casting uses up the copy.** Draw the shape again to get another.
 - **Each spell has its own cast cooldown** (the **Cooldown** column below). Basic attacks wait **3 seconds**, fast slashes **2 seconds**.
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
-- **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's two **Training Groves** (58 x 64 stud yards in the west and east with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
+- **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's two **Training Groves** (100 x 112 stud yards in the west and east with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
 - **Which shapes work:** only the spells of your loadout (the others are never even considered). A shape from a spell you don't have equipped fizzles.
 - **Your ready spell shows on your cursor:** while a spell is readied, the mouse becomes a pulsing crosshair in the spell's colour with its name and "Click to cast" (red with the seconds left while it recharges).
 
