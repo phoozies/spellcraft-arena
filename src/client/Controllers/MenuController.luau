@@ -210,7 +210,7 @@ local function buildSpellbook(root: Instance)
 	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	listLayout.Parent = elementList
 	for index, element in Elements.LIST do
-		local button = Theme.button(elementList, `{element.icon} {element.name}`, {
+		local button = Theme.button(elementList, element.name, {
 			Name = element.id,
 			LayoutOrder = index,
 			Size = UDim2.new(1, 0, 0, 84),
@@ -425,12 +425,12 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 		local element = Elements.get(id)
 		local owned = table.find(ownedList, id) ~= nil
 		local mark = if id == equipped
-			then "✓ Equipped"
+			then "Equipped"
 			elseif owned then "Owned"
 			elseif firstPick then "Free pick!"
-			elseif element then `💰 {element.price}`
+			elseif element then `{element.price} coins`
 			else ""
-		button.Text = `{if element then element.icon else ""} {id}\n{mark}`
+		button.Text = `{id}\n{mark}`
 		button.BackgroundColor3 = if id == selectedElement
 			then Theme.COLORS.purple
 			else Theme.COLORS.panelLight
@@ -449,7 +449,7 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 	end
 	local owned = table.find(ownedList, selectedElement) ~= nil
 	local color = `#{element.color:Lerp(Color3.new(0, 0, 0), 0.45):ToHex()}`
-	headerLabel.Text = `<b><font color="{color}">{element.icon} {element.name}</font></b>  {element.tagline}\n`
+	headerLabel.Text = `<b><font color="{color}">{element.name}</font></b>  {element.tagline}\n`
 		.. (
 			if firstPick
 				then "Choose your FIRST element for free! Buy more with coins later."
@@ -461,7 +461,7 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 		equipButton.Text = `Choose {element.name}!`
 		equipButton.BackgroundColor3 = Theme.COLORS.good
 	elseif selectedElement == equipped then
-		equipButton.Text = "✓ Equipped"
+		equipButton.Text = "Equipped"
 		equipButton.BackgroundColor3 = Theme.COLORS.panel
 	elseif owned then
 		equipButton.Text = "Equip"
@@ -469,8 +469,8 @@ local function refreshElementsTab(profile: ClientState.ProfileSummary?)
 	else
 		local coins = if profile then profile.coins else 0
 		equipButton.Text = if coins >= element.price
-			then `Buy  💰 {element.price}`
-			else `💰 {element.price} (need {element.price - coins} more)`
+			then `Buy  {element.price} coins`
+			else `{element.price} coins (need {element.price - coins} more)`
 		equipButton.BackgroundColor3 = if coins >= element.price
 			then Theme.COLORS.accent
 			else Theme.COLORS.panel
@@ -522,7 +522,7 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 		return
 	end
 	loadoutHeader.Text =
-		`<b>{element.icon} {element.name}</b> base spells + 2 crate spells. Each spell needs its own shape!`
+		`<b>{element.name}</b> base spells + 2 crate spells. Each spell needs its own shape!`
 	-- Base spells (fixed) then the two extra slots.
 	for slot, def in SpellDefinitions.ofElement(profile.element) do
 		local card = SpellCard.create(loadoutRow, def.id, { size = UDim2.fromOffset(128, 104) })
@@ -763,7 +763,7 @@ local function refreshQuests()
 	if not profile then
 		return
 	end
-	Theme.label(questList, `🔥 Login streak: {profile.streak} day(s)`, {
+	Theme.label(questList, `Login streak: {profile.streak} day(s)`, {
 		Size = UDim2.new(1, 0, 0, 30),
 		TextColor3 = Theme.COLORS.heading,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -822,11 +822,11 @@ local function buildSideButtons(root: Instance)
 	for _, entry in
 		{
 			{ "Play", "▶ Play" },
-			{ "Spellbook", "📖 Spells" },
-			{ "Crates", "🎁 Crates" },
-			{ "Quests", "⭐ Quests" },
-			{ "Spectate", "👁 Watch" },
-			{ "Settings", "⚙ Settings" },
+			{ "Spellbook", "Spells" },
+			{ "Crates", "Crates" },
+			{ "Quests", "Quests" },
+			{ "Spectate", "Watch" },
+			{ "Settings", "Settings" },
 		}
 	do
 		local button = Theme.button(holder, entry[2], { Size = UDim2.new(1, 0, 0, Theme.TOUCH) })

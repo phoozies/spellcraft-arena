@@ -25,6 +25,7 @@ export type ProfileSummary = {
 	settings: { drawKey: string, music: boolean, sfx: boolean, shake: boolean },
 	-- likeReadyAt: server time (workspace:GetServerTimeNow) the gift can be claimed.
 	rewards: { likeFav: boolean, likeReadyAt: number },
+	pity: number, -- crate spins since the last Epic or better
 }
 
 local ClientState = {

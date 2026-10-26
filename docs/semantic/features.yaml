@@ -207,7 +207,7 @@ features:
 
   - id: crates
     summary: A Spell Crate gacha bought with coins; a server-decided spin wins one crate spell, picked by rarity.
-    shared: "src/shared/Economy/Crates.luau (LIST: Spell, price 100; pool, ofRarity, odds, ownsAll, roll(owned, rng) -> {spell, rarity, duplicate, refund}; SPIN_TIME 4); src/shared/Spells/Rarity.luau (weights 55/25/12/6/2, duplicate refunds 20/35/55/75/90)"
+    shared: "src/shared/Economy/Crates.luau (LIST: Spell, price 100; pool, ofRarity, odds, ownsAll, roll(owned, rng, pity) -> {spell, rarity, duplicate, refund, guaranteed}; PITY {SPINS 10, RARITY Epic}, spinsToPity, nextPity; SPIN_TIME 4); src/shared/Spells/Rarity.luau (weights 55/25/12/6/2, duplicate refunds 20/35/55/75/90)"
     server: src/server/Services/CrateService.luau (open(player, crateId) -> (CrateResult?, reason?))
     client: src/client/Controllers/CrateController.luau (shop panel with the odds, a reel of spell cards in rarity colours with a tick per card, rarity reveal sound and flash, the won spell's numbers from Spells/SpellStats)
     hub: Spell Crate stage in src/server/Maps/InkwellPlaza.luau (prompt named "Crates", five rarity orbs)

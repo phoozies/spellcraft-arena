@@ -331,9 +331,8 @@ local function refreshHotbar()
 		local def = id and SpellDefinitions.get(id)
 		if def then
 			local color = Elements.color(def.element)
-			local element = Elements.school(def.element)
 			slot.button.Visible = true
-			slot.icon.Text = if element then element.icon else ""
+			slot.icon.Text = ""
 			slot.icon.TextColor3 = color
 			slot.icon.TextStrokeTransparency = 0
 			slot.name.Text = def.name
@@ -447,13 +446,13 @@ local function buildWallet(root: Frame)
 	})
 	Theme.corner(holder)
 	walletFrame = holder
-	coinsLabel = Theme.label(holder, "💰 0", {
+	coinsLabel = Theme.label(holder, "Coins 0", {
 		Size = UDim2.new(0.55, -8, 1, -8),
 		Position = UDim2.fromOffset(8, 4),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.heading,
 	})
-	winsLabel = Theme.label(holder, "🏆 0", {
+	winsLabel = Theme.label(holder, "Wins 0", {
 		Size = UDim2.new(0.45, -8, 1, -8),
 		Position = UDim2.new(0.55, 0, 0, 4),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -466,7 +465,7 @@ local function refreshWallet()
 	if not profile then
 		return
 	end
-	winsLabel.Text = `🏆 {profile.stats.wins}`
+	winsLabel.Text = `Wins {profile.stats.wins}`
 	-- Count up/down to the new balance so earning and spending are felt.
 	local from, to = shownCoins, profile.coins
 	shownCoins = to
@@ -474,7 +473,7 @@ local function refreshWallet()
 	task.spawn(function()
 		while coinsLabel.Parent and shownCoins == to do
 			local t = math.min((os.clock() - start) / 0.5, 1)
-			coinsLabel.Text = `💰 {math.floor(from + (to - from) * t + 0.5)}`
+			coinsLabel.Text = `Coins {math.floor(from + (to - from) * t + 0.5)}`
 			if t >= 1 then
 				break
 			end
@@ -551,7 +550,7 @@ local function layoutTop()
 end
 
 local function buildBattleBanner(root: Frame)
-	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: beat raiders for coins!", {
+	battleLabel = Theme.label(root, "BATTLEGROUND: beat raiders for coins!", {
 		Name = "BattleBanner",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 58),
@@ -600,7 +599,7 @@ local function buildFeed(root: Frame)
 end
 
 local function addFeed(killer: string?, victim: string, spell: string?)
-	local text = if killer then `{killer} ★ {victim}` else `{victim} was knocked out`
+	local text = if killer then `{killer} defeated {victim}` else `{victim} was knocked out`
 	if killer and spell then
 		text = `{killer} [{spell}] {victim}`
 	end

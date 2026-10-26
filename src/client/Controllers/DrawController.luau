@@ -198,7 +198,7 @@ local function setActive(on: boolean, spellId: string?)
 		if def then
 			banner.Text = `Trace the {def.name}! Closer = stronger.`
 		else
-			banner.Text = `✏ Draw a spell!  [{ClientState.drawKeyName()}] to cancel`
+			banner.Text = `Draw a spell!  [{ClientState.drawKeyName()}] to cancel`
 		end
 	end
 	drawButton.BackgroundColor3 = if on then Theme.COLORS.accent else Theme.COLORS.panelLight
@@ -423,7 +423,7 @@ local function buildButton()
 	local buttonScale = Instance.new("UIScale")
 	buttonScale.Parent = buttonGui
 	Responsive.bind(buttonScale)
-	drawButton = Theme.button(buttonGui, "✏ Draw", {
+	drawButton = Theme.button(buttonGui, "Draw", {
 		Name = "Draw",
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -16, 1, -150),

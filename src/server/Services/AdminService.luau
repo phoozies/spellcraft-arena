@@ -252,21 +252,56 @@ COMMANDS.wins = {
 			return "Usage: wins <player> <amount>"
 		end
 		for _, target in targets do
-			local profile = PlayerDataService.get(target)
-			if profile then
-				local wanted = math.floor(math.min(amount, 1000000))
-				-- recordWin is the only writer that notifies the leaderboard;
-				-- set one below the target, then record the last win.
-				profile.stats.wins = math.max(0, wanted - 1)
-				if wanted > 0 then
-					EconomyService.recordWin(target)
-				else
-					EconomyService.sendSummary(target)
-					EconomyService.Changed:Fire(target)
-				end
-			end
+			EconomyService.setWins(target, math.min(amount, 1000000))
 		end
 		return `Set {names(targets)} to {amount} wins.`
+	end,
+}
+
+local RESET_SCOPES = {
+	"coins",
+	"wins",
+	"stats",
+	"elements",
+	"spells",
+	"pity",
+	"rewards",
+	"tutorial",
+}
+
+COMMANDS.reset = {
+	usage = "reset <player> <coins|wins|stats|elements|spells|pity|rewards|tutorial|all>",
+	help = "Reset part of a player's saved profile (`all` = every one of those). Players in a match are skipped.",
+	run = function(admin, args)
+		local targets = findPlayers(admin, args[1])
+		local scope = string.lower(args[2] or "")
+		local scopes = if scope == "all" then RESET_SCOPES else { scope }
+		if #targets == 0 or (scope ~= "all" and not table.find(RESET_SCOPES, scope)) then
+			return `Usage: reset <player> <{table.concat(RESET_SCOPES, "|")}|all>`
+		end
+		local done: { Player } = {}
+		for _, target in targets do
+			if not PlayerDataService.get(target) then
+				reply(admin, `{target.Name}: profile still loading.`)
+			elseif MatchService.isInMatch(target) then
+				reply(admin, `{target.Name}: in a match, skipped.`)
+			else
+				for _, one in scopes do
+					if one == "elements" or one == "spells" then
+						ElementService.reset(target, one)
+					elseif one == "pity" then
+						CrateService.resetPity(target)
+					else
+						EconomyService.reset(target, one)
+					end
+				end
+				table.insert(done, target)
+			end
+		end
+		if #done == 0 then
+			return "Nobody was reset."
+		end
+		return `Reset {scope} for {names(done)}.`
 	end,
 }
 
@@ -531,7 +566,7 @@ COMMANDS.announce = {
 			return "Couldn't filter that message; try again."
 		end
 		for _, p in Players:GetPlayers() do
-			toastRemote:FireClient(p, `📢 {filtered}`, "round")
+			toastRemote:FireClient(p, `{filtered}`, "round")
 		end
 		return nil
 	end,
@@ -681,7 +716,7 @@ function AdminService.start()
 				if player.Parent then
 					reply(
 						player,
-						"You're an admin. Open the Admin panel with the 🛡 button or the ` key, or type "
+						"You're an admin. Open the Admin panel with the button or the ` key, or type "
 							.. Config.ADMIN_PREFIX
 							.. "help."
 					)

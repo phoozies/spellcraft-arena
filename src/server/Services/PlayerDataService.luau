@@ -32,7 +32,8 @@ local STORE_NAME = "PlayerProfiles_v1"
 -- 5: elements are bought with coins and crates win SPELLS: profile.spells
 --    (crate spells owned), profile.loadout (up to 2 equipped), and
 --    profile.tutorial.done (players who already picked an element skip it).
-local SCHEMA = 5
+-- 6: profile.pity (crate spins since the last Epic or better).
+local SCHEMA = 6
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -65,6 +66,7 @@ local function defaultProfile(): Profile
 			shake = true,
 		},
 		rewards = { likeFav = false },
+		pity = 0,
 	}
 end
 
@@ -115,6 +117,10 @@ local function reconcile(data: any): Profile
 			data.rewards[key] = value
 		end
 	end
+	if typeof(data.pity) ~= "number" or data.pity ~= data.pity or data.pity < 0 then
+		data.pity = 0
+	end
+	data.pity = math.floor(data.pity)
 	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
 	data.settings.typeKey = nil
 	-- Elements: keep real, unique ones; the equipped element must be owned.

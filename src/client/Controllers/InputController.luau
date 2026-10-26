@@ -6,7 +6,7 @@
 --   Spell 1-5     1-5 (loadout     D-pad ←/→        Tap hotbar            D-pad / hotbar
 --                 order; draws it
 --                 if you hold none)
---   Draw a spell  F (rebindable)   X (right stick)  ✏ Draw button, drag   F / X
+--   Draw a spell  F (rebindable)   X (right stick)  Draw button, drag   F / X
 --   Rotate        R                L1 / R1          ⟳ button              L1 / R1
 --
 -- Aim: mouse cursor (PC), screen center (gamepad), tap point (touch), or

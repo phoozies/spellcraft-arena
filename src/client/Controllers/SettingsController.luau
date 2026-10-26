@@ -41,14 +41,14 @@ local function shakeOn(): boolean
 end
 
 local function styleSwitch(button: TextButton, on: boolean, onText: string?, offText: string?)
-	button.Text = if on then onText or "🔊 On" else offText or "🔇 Off"
+	button.Text = if on then onText or "On" else offText or "Off"
 	button.BackgroundColor3 = if on then Theme.COLORS.good else Theme.COLORS.bad
 end
 
 local function refreshSwitches()
 	styleSwitch(musicButton, musicOn())
 	styleSwitch(sfxButton, sfxOn())
-	styleSwitch(shakeButton, shakeOn(), "📳 On", "Off")
+	styleSwitch(shakeButton, shakeOn(), "On", "Off")
 end
 
 local function refresh()
@@ -149,7 +149,7 @@ function SettingsController.init()
 			Position = UDim2.fromOffset(12, 8),
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
-		local button = Theme.button(switchRow, "🔊 On", {
+		local button = Theme.button(switchRow, "On", {
 			AnchorPoint = Vector2.new(1, 0.5),
 			Position = UDim2.new(1, -10, 0.5, 0),
 			Size = UDim2.fromOffset(170, Theme.TOUCH - 8),
@@ -186,17 +186,13 @@ function SettingsController.init()
 		TextColor3 = Theme.COLORS.subtext,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
-	Theme.label(
-		panel,
-		"Gamepad: X, then draw with the right stick. Touch: tap ✏ Draw, then drag.",
-		{
-			Position = UDim2.fromOffset(16, 436),
-			Size = UDim2.new(1, -32, 0, 24),
-			Font = Theme.BODY_FONT,
-			TextColor3 = Theme.COLORS.subtext,
-			TextXAlignment = Enum.TextXAlignment.Left,
-		}
-	)
+	Theme.label(panel, "Gamepad: X, then draw with the right stick. Touch: tap Draw, then drag.", {
+		Position = UDim2.fromOffset(16, 436),
+		Size = UDim2.new(1, -32, 0, 24),
+		Font = Theme.BODY_FONT,
+		TextColor3 = Theme.COLORS.subtext,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
 end
 
 function SettingsController.start()

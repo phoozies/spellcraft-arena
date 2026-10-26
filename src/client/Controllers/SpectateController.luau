@@ -1,5 +1,5 @@
 --!strict
--- Spectate: watch any other player. The "👁 Watch" menu button opens a list of
+-- Spectate: watch any other player. The "Watch" menu button opens a list of
 -- the players in the server (with where each one is: the hub, a match, or the
 -- Battleground); picking one points the camera at them, and a bar at the top
 -- shows who you are watching with Previous / Next / Stop buttons.
@@ -34,13 +34,13 @@ end
 -- Where a player is, for the list.
 local function whereIs(p: Player): string
 	if p:GetAttribute("InBattleground") then
-		return "⚔ Battleground"
+		return "Battleground"
 	end
 	local character = p.Character
 	if character and typeof(character:GetAttribute("Team")) == "string" then
-		return "🏟 In a match"
+		return "In a match"
 	end
-	return "🏛 Hub"
+	return "Hub"
 end
 
 local function others(): { Player }
@@ -83,7 +83,7 @@ function SpectateController.watch(p: Player)
 	end
 	target = p
 	bar.Visible = true
-	barLabel.Text = `👁 Watching {p.DisplayName}`
+	barLabel.Text = `Watching {p.DisplayName}`
 	pointCamera()
 	MenuController.close()
 end

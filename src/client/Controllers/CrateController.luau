@@ -71,14 +71,17 @@ local function refresh()
 		return
 	end
 	local crate = Crates.LIST[1]
-	coinsLabel.Text = `💰 {profile.coins} coins`
-	infoLabel.Text = `Spells you have: {#profile.spells}/{#Crates.pool()}`
+	coinsLabel.Text = `{profile.coins} coins`
+	local untilPity = Crates.spinsToPity(profile.pity)
+	infoLabel.Text = `Spells you have: {#profile.spells}/{#Crates.pool()}\n{if untilPity <= 1
+		then `Your next spin is guaranteed {Crates.PITY.RARITY} or better!`
+		else `Guaranteed {Crates.PITY.RARITY} or better within {untilPity} spins`}`
 	if #profile.elements == 0 then
 		openButton.Text = "Pick an element first"
 	elseif Crates.ownsAll(profile.spells) then
 		openButton.Text = "You own every spell!"
 	elseif profile.coins >= crate.price then
-		openButton.Text = `Spin!  (💰 {crate.price})`
+		openButton.Text = `Spin!  ({crate.price})`
 	else
 		openButton.Text = `Need {crate.price - profile.coins} more coins`
 	end
@@ -206,7 +209,7 @@ local function build()
 	panelStroke = panel:FindFirstChildOfClass("UIStroke")
 	local crate = Crates.LIST[1]
 
-	coinsLabel = Theme.label(panel, "💰 0 coins", {
+	coinsLabel = Theme.label(panel, "0 coins", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -76, 0, 14),
 		Size = UDim2.fromOffset(200, 34),
@@ -222,7 +225,7 @@ local function build()
 	})
 	Theme.corner(card, 12)
 	Theme.stroke(card, Theme.COLORS.accent, 3)
-	Theme.label(card, `🎁 {crate.name}`, {
+	Theme.label(card, `{crate.name}`, {
 		Size = UDim2.new(1, -16, 0, 34),
 		Position = UDim2.fromOffset(8, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -253,7 +256,8 @@ local function build()
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 	infoLabel = Theme.label(card, "", {
-		Size = UDim2.new(1, -16, 0, 24),
+		TextWrapped = true,
+		Size = UDim2.new(1, -16, 0, 40),
 		Position = UDim2.fromOffset(8, 138),
 		Font = Theme.BODY_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,

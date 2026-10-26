@@ -165,7 +165,7 @@ local STEPS: { Step } = {
 			if panelOpen("Spellbook") then
 				return "Tap an element you like, then press <b>Choose</b>. Your first one is <b>free</b>!"
 			end
-			return "Open your <b>📖 Spellbook</b>: use the glowing button or walk to the book on the plaza."
+			return "Open your <b>Spellbook</b>: use the glowing button or walk to the book on the plaza."
 		end,
 		guide = function()
 			return {
@@ -212,7 +212,7 @@ local STEPS: { Step } = {
 			if panelOpen("Crates") then
 				return "Press <b>Spin!</b> to win a random spell. The rarer, the stronger!"
 			end
-			return "Spells come from the <b>🎁 Spell Crate</b>. You have coins for a spin: go to the crate!"
+			return "Spells come from the <b>Spell Crate</b>. You have coins for a spin: go to the crate!"
 		end,
 		guide = function()
 			return {
@@ -262,9 +262,9 @@ local STEPS: { Step } = {
 		title = "Draw a spell",
 		text = function()
 			if ClientState.inPractice then
-				return `Press <b>{ClientState.drawKeyName()}</b> (or tap <b>✏ Draw</b>) and trace a shape. Tap a spell card to see its shape. The closer you trace, the stronger it is!`
+				return `Press <b>{ClientState.drawKeyName()}</b> (or tap <b>Draw</b>) and trace a shape. Tap a spell card to see its shape. The closer you trace, the stronger it is!`
 			end
-			return "You draw spells in fights and in the <b>🌳 Training Grove</b>. Follow the arrows and step inside!"
+			return "You draw spells in fights and in the <b>Training Grove</b>. Follow the arrows and step inside!"
 		end,
 		guide = function()
 			return {
@@ -326,7 +326,7 @@ local STEPS: { Step } = {
 		id = "earn",
 		title = "Earn coins!",
 		text = function()
-			return "Win a <b>⚔ Duel</b> (stand on a pad in the Concourse) or enter the <b>🌍 Battleground</b> and defeat enemies. Coins buy new elements and spells!"
+			return "Win a <b>Duel</b> (stand on a pad in the Concourse) or enter the <b>Battleground</b> and defeat enemies. Coins buy new elements and spells!"
 		end,
 		guide = function()
 			return {
@@ -644,7 +644,7 @@ local function advance()
 	if step and not last then
 		-- A moment of praise: the card turns green with a check.
 		clearGuides()
-		titleLabel.Text = `✓ {step.title}`
+		titleLabel.Text = `{step.title}`
 		bodyLabel.Text = step.praise()
 		cardStroke.Color = GREEN
 		gotItButton.Visible = false
@@ -686,7 +686,7 @@ function TutorialController.finish(celebrate: boolean)
 	hideWelcome()
 	if celebrate then
 		local step = STEPS[#STEPS]
-		titleLabel.Text = "✓ You're ready!"
+		titleLabel.Text = "You're ready!"
 		bodyLabel.Text = step.praise()
 		cardStroke.Color = GREEN
 		gotItButton.Visible = false

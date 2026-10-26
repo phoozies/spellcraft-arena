@@ -190,6 +190,7 @@ export type Profile = {
 	rewards: {
 		likeFav: boolean, -- the one-time Like & Favourite coin gift was claimed
 	},
+	pity: number, -- crate spins since the last Epic or better (CrateService; see Economy/Crates PITY)
 }
 
 export type DailyQuest = {
@@ -235,6 +236,7 @@ export type CrateResult = {
 	duplicate: boolean, -- already owned: paid back as `refund` coins instead
 	refund: number,
 	equipped: boolean, -- the spell went straight into an empty loadout slot
+	pity: number, -- the pity counter after this spin
 	coins: number, -- balance after the spin (the refund is added when the reel stops)
 }
 

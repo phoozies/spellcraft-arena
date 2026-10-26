@@ -89,7 +89,7 @@ local function updateBoard(rows: { Types.LeaderRow })
 	for _, board in CollectionService:GetTagged("WinsBoard") do
 		local label = board:FindFirstChild("Text", true)
 		if label and label:IsA("TextLabel") then
-			local lines = { "🏆 Most Wins" }
+			local lines = { "Most Wins" }
 			for i = 1, math.min(Config.LEADERBOARD_ROWS, #rows) do
 				table.insert(lines, `{i}. {rows[i].name}: {rows[i].wins}`)
 			end

@@ -19,7 +19,6 @@ export type Element = {
 	id: Types.ElementId,
 	name: string,
 	color: Color3,
-	icon: string,
 	tagline: string,
 	-- Coins to buy it (the first element a player picks is free).
 	price: number,
@@ -33,7 +32,6 @@ export type School = {
 	id: string,
 	name: string,
 	color: Color3,
-	icon: string,
 }
 
 local Elements = {}
@@ -44,7 +42,6 @@ Elements.ARCANE = table.freeze({
 	id = "Arcane",
 	name = "Arcane",
 	color = Color3.fromRGB(190, 130, 255),
-	icon = "✨",
 }) :: School
 
 Elements.LIST = {
@@ -52,7 +49,6 @@ Elements.LIST = {
 		id = "Fire",
 		name = "Fire",
 		color = Color3.fromRGB(255, 112, 40),
-		icon = "🔥",
 		tagline = "Hit hard and burn bright.",
 		price = 400,
 		base = { "Fireball", "FireSlash", "FireBoost" },
@@ -61,7 +57,6 @@ Elements.LIST = {
 		id = "Water",
 		name = "Water",
 		color = Color3.fromRGB(64, 164, 255),
-		icon = "💧",
 		tagline = "Flow around attacks and trap your foes.",
 		price = 400,
 		base = { "WaterSlice", "WaterBody", "WaterLock" },
@@ -70,7 +65,6 @@ Elements.LIST = {
 		id = "Earth",
 		name = "Earth",
 		color = Color3.fromRGB(176, 128, 80),
-		icon = "⛰",
 		tagline = "Walls, boulders, and ground-shaking power.",
 		price = 400,
 		base = { "RockThrow", "EarthWall", "EarthPunch" },
@@ -79,7 +73,6 @@ Elements.LIST = {
 		id = "Air",
 		name = "Air",
 		color = Color3.fromRGB(176, 232, 220),
-		icon = "🌪",
 		tagline = "Fast, slippery, and full of wind.",
 		price = 400,
 		base = { "Gust", "Whirlwind", "AirBoost" },
@@ -100,8 +93,8 @@ function Elements.get(id: string): Element?
 	return byId[id]
 end
 
--- The element or the Arcane school, for anything that shows a spell's colour
--- and icon; nil for an unknown id.
+-- The element or the Arcane school, for anything that shows a spell's colour;
+-- nil for an unknown id.
 function Elements.school(id: string): School?
 	if id == Elements.ARCANE.id then
 		return Elements.ARCANE

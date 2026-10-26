@@ -96,7 +96,7 @@ local function go(direction: Vector3)
 	end)
 end
 
-local LABEL = "💨 Dash"
+local LABEL = "Dash"
 
 -- On cooldown the button shows only the countdown (its own word is hidden).
 local function refresh()
