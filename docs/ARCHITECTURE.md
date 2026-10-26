@@ -115,7 +115,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 |---|---|
 | Fireball | `FxController` bolt (Fireball); particles and trail attach to its invisible `Root` part |
 | WaterBubble | `FxController` bolt (Water Lock) and `TrapBubble`, welded around a trapped player and scaled to 1.5× their height |
-| RockWall | `Placeable.buildModelWall`: each mesh part is its own chunk, all sharing one 35-damage budget (`WallHealth` on the wall; chunks break at `BreakAt` thresholds, low pieces first; `DestructibleService.damageWall`). Chunks carry `HitByAll`, which makes `canHarm`/`damage` skip the owner and team rules, so every spell hits the wall. The placement ghost shows the model |
+| EarthWall (block model; the old imported `RockWall` mesh still works as an override placed in the place) | `Placeable.buildModelWall`: each mesh part is its own chunk, all sharing one 35-damage budget (`WallHealth` on the wall; chunks break at `BreakAt` thresholds, low pieces first; `DestructibleService.damageWall`). Chunks carry `HitByAll`, which makes `canHarm`/`damage` skip the owner and team rules, so every spell hits the wall. The placement ghost shows the model |
 | Grimoire | The hub's Spellbook kiosk (`Maps/InkwellPlaza.luau`), open on a lectern |
 | Gust | `FxController` bolt (Gust, Whirlwind) |
 | Crate | The hub's Crate Shop (the Element Crate, trim and gem tinted gold) |
