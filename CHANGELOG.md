@@ -4,6 +4,10 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (crate spell tuning)
+- **Black Hole** cooldown 10s to 20s. **Heal** restores 20 (was 25). **Turret** is now Epic (was Rare) with a 20s cooldown (was 12s). **Tornado** flies 2x as fast (55 to 110) and its hitbox and model are 1.5x bigger (radius 8.5 to 12.75).
+- **Crate spells show their numbers.** The Spell Crate reveal and the Spellbook detail panel list a crate spell's damage (or heal / health), cooldown, duration, and range (new `Spells/SpellStats`).
+
 ### Changed (rubble Earth Wall)
 - **Earth Wall is a rectangular wall of rubble.** New `EarthWall` block model (`tools/blender/block_models.py`, `assets/models/blocks/EarthWall.fbx`): five staggered rows of uneven stones with a broken top edge and loose rubble along both faces. It fills the same 23 x 12.4 x 9.7 box as the old `RockWall` mesh, so placement, health (35) and the chunk-by-chunk breaking are unchanged; the spell now uses it with no imported mesh needed.
 
