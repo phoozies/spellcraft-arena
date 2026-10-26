@@ -13,7 +13,7 @@ Every command you run sends you a short confirmation toast and is printed to the
 - **Tabs (right):**
   - **Player:** heal, god mode, free cast, knockback, kill, bring / go to / send to hub, walk speed, status effects, kick, ban.
   - **Spells:** give any spell (grouped by element, crate spells under Arcane) or all of them.
-  - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, spin a Spell Crate, unlock elements.
+  - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, a Reset group (coins, wins, stats, elements, crate spells, crate pity, gift claim, tutorial, everything), spin a Spell Crate, unlock elements.
   - **Match:** start 1v1 to 4v4 now, end a match, send everyone to the hub, clear hub objects.
   - **Server:** announce a message, unban a UserId, list commands.
 - **Danger buttons** (kill, kick, ban, end match, everyone to hub) change to **Sure?** and need a second click within 2 seconds.
