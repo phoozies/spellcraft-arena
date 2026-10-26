@@ -1,8 +1,7 @@
 --!strict
 -- Health display:
 --   * a big HUD bar for your own HP (with a blue shield overlay and a
---     trailing "recent damage" bar that drains after a hit), and a
---     "No regen in the arena" note during matches;
+--     trailing "recent damage" bar that drains after a hit);
 --   * overhead bars above other players: red for enemies, blue for allies,
 --     grey in the hub (shown when damaged or during matches).
 -- Replaces Roblox's default top-bar health.
@@ -25,7 +24,6 @@ local fill: Frame
 local trail: Frame
 local shieldFill: Frame
 local hpText: TextLabel
-local regenNote: TextLabel
 local lastHealth = 100
 
 local function humanoidOf(character: Model?): Humanoid?
@@ -36,7 +34,8 @@ local function buildHud()
 	local root = HudController.getGui():WaitForChild("Root")
 	local holder = Theme.frame(root, {
 		Name = "Health",
-		Position = UDim2.fromOffset(12, 64),
+		-- Below the Admin button (also at y 64, 36 tall) so it is never hidden.
+		Position = UDim2.fromOffset(12, 106),
 		Size = UDim2.fromOffset(260, 30),
 		BackgroundTransparency = 0.15,
 	})
@@ -74,17 +73,6 @@ local function buildHud()
 		TextStrokeTransparency = 0.3,
 		ZIndex = 5,
 	})
-	regenNote = Theme.label(
-		holder,
-		"Health regenerates slowly after 5s without damage. Health Potion boosts heal more!",
-		{
-			Position = UDim2.new(0, 0, 1, 2),
-			Size = UDim2.new(1, 0, 0, 16),
-			TextColor3 = Theme.COLORS.onDark,
-			TextStrokeTransparency = 0.2,
-			Visible = false,
-		}
-	)
 end
 
 local function colorFor(ratio: number): Color3
@@ -120,7 +108,6 @@ local function refreshOwn()
 		trail.Size = fill.Size
 	end
 	lastHealth = hp
-	regenNote.Visible = ClientState.match.phase ~= "Idle"
 	-- The screen edges pulse red when you are nearly out, but only in a fight.
 	local fighting = ClientState.match.phase ~= "Idle"
 		or player:GetAttribute("InBattleground") == true

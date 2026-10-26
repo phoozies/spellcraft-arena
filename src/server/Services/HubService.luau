@@ -81,7 +81,7 @@ local function setupLighting()
 end
 
 -- A plain straw-coloured dummy for when the TrainingDummy block model is missing.
-local function buildFallbackDummy(spot: BasePart): (Model, BasePart)
+local function buildFallbackDummy(spot: BasePart, yaw: number): (Model, BasePart)
 	local model = Instance.new("Model")
 	local body = Instance.new("Part")
 	body.Name = "Body"
@@ -89,8 +89,7 @@ local function buildFallbackDummy(spot: BasePart): (Model, BasePart)
 	body.Color = Color3.fromRGB(255, 204, 128)
 	body.Material = Enum.Material.Fabric
 	body.Anchored = true
-	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0))
-		* CFrame.Angles(0, -math.pi / 2, 0)
+	body.CFrame = CFrame.new(spot.Position + Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, yaw, 0)
 	body.Parent = model
 	local head = Instance.new("Part")
 	head.Name = "Head"
@@ -109,16 +108,16 @@ local function buildFallbackDummy(spot: BasePart): (Model, BasePart)
 end
 
 local function spawnDummy(spot: BasePart)
-	-- The block-model dummy (a straw man on a post), facing east into the grove.
+	-- The block-model dummy (a straw man on a post), facing the way its spot says
+	-- (toward the plaza, whichever grove it stands in; east by default).
+	local yaw = spot:GetAttribute("FaceYaw") :: number? or -math.pi / 2
 	local model = ModelKit.clone("TrainingDummy", "solid")
 	local body: BasePart
 	if model then
-		model:PivotTo(
-			CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, -math.pi / 2, 0)
-		)
+		model:PivotTo(CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, yaw, 0))
 		body = model:FindFirstChild("Body") :: BasePart
 	else
-		model, body = buildFallbackDummy(spot)
+		model, body = buildFallbackDummy(spot, yaw)
 	end
 	model.Name = "TrainingDummy"
 	model.PrimaryPart = body
