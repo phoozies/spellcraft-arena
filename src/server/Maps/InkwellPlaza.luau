@@ -83,8 +83,8 @@ local RING_ROAD_OUTER = 92 -- the grey ring road's outer edge
 -- The two Training Groves, mirrored west and east. X is how deep they are
 -- (outward from the plaza), Z how wide. Their plaza-side edge stays well
 -- clear of the ring road.
-local GROVE_X, GROVE_Z = 58, 64
-local GROVE_CENTER_X = 131
+local GROVE_X, GROVE_Z = 100, 112
+local GROVE_CENTER_X = 152
 local RIM_RADIUS = RADIUS - 10 -- the rail
 -- The wizard statue on the inkwell (the model is about 21 studs tall at scale 1).
 local STATUE_SCALE = 1.5
@@ -1132,7 +1132,7 @@ return function(): Model
 			0,
 			140
 		)
-		-- Dummies in two staggered rows, all facing the plaza, with archery
+		-- Dummies in a single row, all facing the plaza, with archery
 		-- targets behind them and hay bales along the fences.
 		local faceYaw = if dir > 0 then -math.pi / 2 else math.pi / 2
 		local function dummySpot(u: number, z: number)
@@ -1146,16 +1146,13 @@ return function(): Model
 			spot:SetAttribute("FaceYaw", faceYaw)
 			spot:AddTag("DummySpot")
 		end
-		for i = 1, 4 do
-			dummySpot(12, north + 8 + (i - 1) * 16)
+		for i = 1, 7 do
+			dummySpot(40, north + 8 + (i - 1) * 16)
 		end
-		for i = 1, 3 do
-			dummySpot(32, north + 16 + (i - 1) * 16)
+		for i = 1, 5 do
+			targetStand(model, at(3, north + 12 + (i - 1) * 22), dir)
 		end
-		for i = 1, 3 do
-			targetStand(model, at(3, north + 12 + (i - 1) * 20), dir)
-		end
-		for i = 1, 3 do
+		for i = 1, 5 do
 			hayBale(model, at(GROVE_X - 14 - (i - 1) * 16, north + 4), i * 17)
 			hayBale(model, at(GROVE_X - 14 - (i - 1) * 16, south - 4), i * 31)
 		end
@@ -1381,8 +1378,8 @@ return function(): Model
 	-- Block-model trees (oak, birch, pine) scattered on the outer meadow, kept
 	-- clear of the buildings (grove, shop, gate, portal) and the duel ring.
 	local keepClear: { { center: Vector3, radius: number } } = {
-		{ center = Vector3.new(-GROVE_CENTER_X, 0, 0), radius = 52 },
-		{ center = Vector3.new(GROVE_CENTER_X, 0, 0), radius = 52 },
+		{ center = Vector3.new(-GROVE_CENTER_X, 0, 0), radius = 80 },
+		{ center = Vector3.new(GROVE_CENTER_X, 0, 0), radius = 80 },
 		{ center = SHOP, radius = 32 },
 		{ center = polar(225, 122), radius = 32 },
 		{ center = polar(180, 130), radius = 24 },

@@ -209,7 +209,7 @@ local Config = {
 	-- OCEAN_Y. Match arenas are summoned BELOW it (ArenaService) so hub players
 	-- can look over the rim and watch duels.
 	HUB = {
-		RADIUS = 180,
+		RADIUS = 240,
 		OCEAN_Y = -450,
 	},
 

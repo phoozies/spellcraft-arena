@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (bigger Training Grove)
+- **Each Training Grove is about three times the area** (58 x 64 to 100 x 112 studs) with a single row of 7 training dummies instead of two staggered rows; more archery targets and hay bales fill the extra room. The hub island grew to match (`Config.HUB.RADIUS` 180 to 240), and the meadow trees keep clear of the larger groves.
+
 ### Changed (hotbar slots follow the loadout)
 - **A drawn spell goes in its own hotbar slot.** Slot N holds the Nth spell of your loadout (the same order as the spell cards and the 1-5 keys), so with two spells drawn you can still press 5 and have the fifth spell land in slot 5. Slots stay put after a cast (the slot just empties) instead of sliding together, and an empty slot shows the name of the spell that fills it. The number labels moved back from the spell cards to the hotbar slots.
 - `HandService` keeps a fixed `MAX_HAND`-long hand with `""` for empty slots; changing element or loadout re-seats held copies in their new slots.

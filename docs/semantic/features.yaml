@@ -325,13 +325,13 @@ features:
   - id: hub
     summary: Inkwell Plaza, a round floating island built at runtime (grass top, sand beach, rock cone underneath, ocean far below at Config.HUB.OCEAN_Y); the client warms the light and thins the haze for the hub (LightingController).
     builder: src/server/Maps/InkwellPlaza.luau
-    layout: centred on the origin, top at y = 0, radius Config.HUB.RADIUS (180); bearings are degrees clockwise from north (-Z). Sand plaza r 46 at the centre; marble roads (14 wide) run north to the Arena Gate, south to the Battleground portal and west/east to the Training Groves, across the grey ring road (r 84-92); team-box arc at r 112 to the north (road through the gap in the middle); Battleground portal at bearing 180 r 130; Training Groves west and east (58 x 64, x 102-160 from the axis); amphitheatre (3 marble tiers, two half-arcs at bearing 120-150 and 210-240) on the south diagonals; Crate Shop south-east (bearing 135, r 122) and a mirror pavilion south-west; rim rail at r 170
+    layout: centred on the origin, top at y = 0, radius Config.HUB.RADIUS (240); bearings are degrees clockwise from north (-Z). Sand plaza r 46 at the centre; marble roads (14 wide) run north to the Arena Gate, south to the Battleground portal and west/east to the Training Groves, across the grey ring road (r 84-92); team-box arc at r 112 to the north (road through the gap in the middle); Battleground portal at bearing 180 r 130; Training Groves west and east (100 x 112, x 102-202 from the axis); amphitheatre (3 marble tiers, two half-arcs at bearing 120-150 and 210-240) on the south diagonals; Crate Shop south-east (bearing 135, r 122) and a mirror pavilion south-west; rim rail at r 230
     contents:
       - spawn (HubSpawn, on the plaza's south side)
       - inkwell fountain + 4 element shrines (each lists its 3 base spells, shapes, and price; prompt opens the Spellbook), Spellbook kiosk, Daily Quests chest, Like & Favourite gift box
       - team boxes in an arc facing the centre: two 1v1, two 2v2, one 3v3, one 4v4 (pads carry Box, Mode, Team, Slots); the red Arena Gate behind them
       - amphitheatre, leaning marble pillars, ruined arch, bare and block-model trees, flag poles
-      - two Training Groves (west and east, 58 x 64 each, tag PracticeZone + BuildZone: the only hub places to draw and cast; 7 dummies each facing the plaza (DummySpot FaceYaw), archery targets, fence, hay)
+      - two Training Groves (west and east, 100 x 112 each, tag PracticeZone + BuildZone: the only hub places to draw and cast; one row of 7 dummies each facing the plaza (DummySpot FaceYaw), archery targets, fence, hay)
       - winners' podium (tag PodiumSpot) and Most Wins board (tag WinsBoard), both facing the centre
       - four SPECTATE overlooks on the rim: duels are fought on arenas summoned below the island (ArenaService.slotOrigin)
       - rock cone, stalactites and crystals underneath; an ocean tile grid at Config.HUB.OCEAN_Y
@@ -469,7 +469,7 @@ features:
     summary: Seven duel maps, each summoned as an instanced arena below the floating hub so hub players can watch the fight.
     server: src/server/Services/ArenaService.luau (MAP_NAMES, DISPLAY_NAMES, pickMap weights, slotOrigin(slot), create/destroy/rebuild, the SpectatorSign billboard); MapVoteService lists every map
     maps: src/server/Maps/{CrayonCanyon,SparringArena,FrostHollow,EmberForge,MossRuins,TidalTemple,SkyBridge}.luau; shared builders in Maps/MapKit.luau (disc, pillar, barrierRing, underside, tree, blockWall)
-    config: Config.ARENA { Y -300, RADIUS 560, RING_STEP 600, PER_RING 8 }; Config.HUB { RADIUS 180, OCEAN_Y -450 }
+    config: Config.ARENA { Y -300, RADIUS 560, RING_STEP 600, PER_RING 8 }; Config.HUB { RADIUS 240, OCEAN_Y -450 }
     client: MapVoteController (4-wide card grid); FxController.DRAW_DISTANCE 900 so the hub's far rim still sees the fights; LightingController thins the hub haze
     invariants: [every map has Bounds, Spawns/Team1_1-4 and Team2_1-4, SmallModeWalls, floor top at y = 0, every model has a fallback, the ocean stays above FallenPartsDestroyHeight, arenas stay outside the island's footprint and 400+ studs apart (maps are scaled by Config.ARENA_SCALE)]
     tests: tests/Maps.spec.luau
