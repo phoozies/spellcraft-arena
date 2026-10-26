@@ -277,35 +277,13 @@ local function finishStroke()
 	end)
 end
 
--- A short "Perfect! +50% power" note over the canvas.
-local function showQuality(quality: number)
-	local tier = Quality.tier(quality)
-	JuiceController.drawn(tier.stars)
-	local text = `{string.rep("★", tier.stars)} {tier.name}! {Quality.describe(quality)}`
-	local note = Theme.label(inkLayer, text, {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.4),
-		Size = UDim2.new(0.9, 0, 0, 52),
-		TextColor3 = tier.color,
-		TextStrokeTransparency = 0.2,
-		ZIndex = 8,
-	})
-	local fade = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-	TweenService:Create(note, fade, {
-		Position = UDim2.fromScale(0.5, 0.3),
-		TextTransparency = 1,
-		TextStrokeTransparency = 1,
-	}):Play()
-	task.delay(1.3, function()
-		note:Destroy()
-	end)
-end
-
 local function onVerdict(spellId: string?, _glyphId: string?, quality: number?)
 	local line = pendingInk
 	pendingInk = nil
+	-- No text popup: it covers too much of a phone screen. The ink line's
+	-- colour (and the screen juice) shows how well it was drawn.
 	if spellId and quality then
-		showQuality(quality)
+		JuiceController.drawn(Quality.tier(quality).stars)
 	end
 	if not line or not line.Parent then
 		return

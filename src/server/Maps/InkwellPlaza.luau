@@ -10,13 +10,18 @@
 --   centre   the sand plaza (r 46): the inkwell and wizard statue, the 4 element
 --            shrines (they list what to draw for each spell), the Spellbook and
 --            Daily Quests kiosks, the Like & Favourite gift box, and the spawn
---   south    a three-tier marble amphitheatre (r 54-75, bearing 125-235), and
---            beyond it the Battleground portal (r 130)
+--   roads    four marble roads leave the plaza due north, east, south and west
+--            and cross the grey ring road (r 84-92); every destination sits on one
 --   north    the duel ring: the six team boxes (two 1v1, two 2v2, 3v3, 4v4) in an
---            arc at r 105 facing the centre, the Arena Gate behind them, and the
---            winners' podium and the Most Wins board at r 64
---   west     the Training Grove (the only place in the hub to draw and cast)
---   east     the Crate Shop stage
+--            arc at r 112 facing the centre with the road running through the gap
+--            in the middle to the Arena Gate; the winners' podium and the Most
+--            Wins board flank the road at r 64
+--   south    opposite the duels: the Battleground portal (r 130)
+--   west     a Training Grove, and east its mirror twin (both past the ring road,
+--            the only places in the hub to draw and cast)
+--   diagonals  a half-amphitheatre of stands on each south diagonal (inside the
+--            ring, clear of every road); the Crate Shop out on the south-east and
+--            a matching pavilion on the south-west
 --   rim      a wooden rail, a beach, and four SPECTATE overlooks. Duels are not
 --            fought here: ArenaService summons each arena BELOW the island (see
 --            Config.ARENA), so players on the rim can look down and watch.
@@ -27,8 +32,8 @@
 --   BattlegroundPortal              step on to be teleported to the Battleground
 --                                   (BattlegroundService)
 --   BuildZone                       placing objects allowed here
---   PracticeZone                    drawing and casting allowed here (the Training Grove)
---   DummySpot                       training dummies respawn here
+--   PracticeZone                    drawing and casting allowed here (both Training Groves)
+--   DummySpot (FaceYaw)             training dummies respawn here, facing FaceYaw
 --   HubSpawn                        where players appear
 --   WinsBoard                       LeaderboardService writes the top wins
 --   PodiumSpot (Rank 1-3)           LeaderboardService stands the top-3
@@ -70,8 +75,16 @@ local GOLD_GLOW = Color3.fromRGB(255, 210, 90)
 -- clockwise from north (-Z).
 local RADIUS = Config.HUB.RADIUS
 local PLAZA_RADIUS = 46
-local BOX_RADIUS = 105 -- the team boxes' arc
-local BOX_GAP = 6 -- studs between neighbouring boxes
+local BOX_RADIUS = 112 -- the team boxes' arc
+local BOX_GAP = 5 -- studs between neighbouring boxes
+local BOX_CENTER_GAP = 14 -- extra room in the middle of the arc for the north road
+local ROAD_WIDTH = 14
+local RING_ROAD_OUTER = 92 -- the grey ring road's outer edge
+-- The two Training Groves, mirrored west and east. X is how deep they are
+-- (outward from the plaza), Z how wide. Their plaza-side edge stays well
+-- clear of the ring road.
+local GROVE_X, GROVE_Z = 58, 64
+local GROVE_CENTER_X = 131
 local RIM_RADIUS = RADIUS - 10 -- the rail
 -- The wizard statue on the inkwell (the model is about 21 studs tall at scale 1).
 local STATUE_SCALE = 1.5
@@ -79,17 +92,19 @@ local ROCK = Color3.fromRGB(78, 72, 86)
 local MARBLE = Color3.fromRGB(214, 224, 244) -- cool white, like the video's stonework
 
 -- Team boxes, in the order they stand along the arc (left to right as you face
--- north): {id, mode, players per team}. Each box is two side-by-side pads, Blue
+-- north, with the road to the Arena Gate between the third and fourth): {id,
+-- mode, players per team}. The two halves are about the same width. Each box is two side-by-side pads, Blue
 -- then Red, one spot per teammate, open to the centre. `id` names the box
 -- (HubService keeps one countdown per id), so a mode can have more than one box.
 local BOXES = {
-	{ id = "1v1_A", mode = "1v1", perTeam = 1 },
-	{ id = "2v2_A", mode = "2v2", perTeam = 2 },
 	{ id = "4v4_A", mode = "4v4", perTeam = 4 },
-	{ id = "3v3_A", mode = "3v3", perTeam = 3 },
-	{ id = "2v2_B", mode = "2v2", perTeam = 2 },
+	{ id = "2v2_A", mode = "2v2", perTeam = 2 },
+	{ id = "1v1_A", mode = "1v1", perTeam = 1 },
 	{ id = "1v1_B", mode = "1v1", perTeam = 1 },
+	{ id = "2v2_B", mode = "2v2", perTeam = 2 },
+	{ id = "3v3_A", mode = "3v3", perTeam = 3 },
 }
+local BOX_LEFT_COUNT = 3 -- boxes left of the north road
 local PAD_DEPTH = 8
 local PAD_GAP = 2
 
@@ -267,8 +282,8 @@ local function hayBale(parent: Instance, position: Vector3, yaw: number)
 	})
 end
 
--- An archery-style target on two posts, facing east (+X).
-local function targetStand(parent: Instance, position: Vector3)
+-- An archery-style target on two posts, facing +X (`dir` = 1) or -X (`dir` = -1).
+local function targetStand(parent: Instance, position: Vector3, dir: number)
 	for _, dz in { -2.2, 2.2 } do
 		MapKit.part(parent, {
 			name = "TargetPost",
@@ -291,7 +306,7 @@ local function targetStand(parent: Instance, position: Vector3)
 			name = "TargetRing",
 			shape = Enum.PartType.Cylinder,
 			size = Vector3.new(0.3 + index * 0.05, ring[1], ring[1]),
-			cframe = CFrame.new(position + Vector3.new(0.3 + index * 0.05, 5.2, 0)),
+			cframe = CFrame.new(position + Vector3.new(dir * (0.3 + index * 0.05), 5.2, 0)),
 			color = ring[2],
 			material = Enum.Material.SmoothPlastic,
 			canCollide = index == 1,
@@ -549,6 +564,36 @@ return function(): Model
 		Enum.Material.Grass,
 		"RingRoadInner"
 	)
+	-- Marble roads (same stone as the ring road) from the plaza to each
+	-- destination. Trees keep clear of them.
+	local roadSegments: { { Vector3 } } = {}
+	local function road(from: Vector3, to: Vector3)
+		local lift = Vector3.new(0, 0.1, 0)
+		MapKit.part(model, {
+			name = "Road",
+			size = Vector3.new(ROAD_WIDTH, 0.2, (to - from).Magnitude),
+			cframe = CFrame.lookAt((from + to) / 2 + lift, to + lift),
+			color = Color3.fromRGB(226, 232, 244),
+			material = Enum.Material.Marble,
+			canCollide = false,
+		})
+		table.insert(roadSegments, { from, to })
+	end
+	local ROAD_START = PLAZA_RADIUS - 2
+	local gateZ = -152
+	local portalAt = polar(180, 130)
+	road(polar(0, ROAD_START), Vector3.new(0, 0, gateZ + 8)) -- north: the Arena Gate
+	road(polar(180, ROAD_START), portalAt - Vector3.new(0, 0, 6)) -- south: the Battleground
+	for _, side in { -1, 1 } do
+		-- west and east: the Training Groves
+		road(
+			Vector3.new(side * ROAD_START, 0, 0),
+			Vector3.new(side * (GROVE_CENTER_X - GROVE_X / 2), 0, 0)
+		)
+	end
+	road(polar(135, RING_ROAD_OUTER - 4), polar(135, 114)) -- to the Crate Shop
+	road(polar(225, RING_ROAD_OUTER - 4), polar(225, 114)) -- to the pavilion
+
 	MapKit.disc(
 		model,
 		Vector3.new(0, 0.4, 0),
@@ -828,13 +873,14 @@ return function(): Model
 	giftPrompt.MaxActivationDistance = 10
 
 	----------------------------------------------------------------------
-	-- The amphitheatre (south): three tiers of white marble steps in concentric
-	-- arcs around the plaza, each a step up from the last.
+	-- The amphitheatre: two mirrored half-arcs of stands on the south diagonals,
+	-- three tiers of white marble steps each a step up from the last. They sit
+	-- between the roads, so nothing is blocked.
 	----------------------------------------------------------------------
 	for tier = 1, 3 do
 		local radius = PLAZA_RADIUS + 1 + tier * 7
 		local height = tier * 1.5
-		for bearing = 125, 235, 10 do
+		for _, bearing in { 120, 130, 140, 150, 210, 220, 230, 240 } do
 			local position = polar(bearing, radius) + Vector3.new(0, height / 2, 0)
 			MapKit.part(model, {
 				name = "AmphitheatreStep",
@@ -850,7 +896,6 @@ return function(): Model
 	-- The Arena Gate (north, behind the team boxes): a red portal frame. Duels
 	-- start from the boxes and are fought on the arenas summoned below the island.
 	----------------------------------------------------------------------
-	local gateZ = -152
 	for _, side in { -1, 1 } do
 		column(model, Vector3.new(side * 15, 0, gateZ), 36, 5, STONE_LIGHT)
 		torch(model, Vector3.new(side * 21, 0, gateZ + 2))
@@ -893,20 +938,30 @@ return function(): Model
 	----------------------------------------------------------------------
 	-- Team boxes: stand on the Blue or Red side to pick your team. The match
 	-- starts when both sides are full. The boxes sit side by side along an arc
-	-- facing the centre, centered on north.
+	-- facing the centre, with the north road running between the two halves.
 	----------------------------------------------------------------------
 	local widths: { number } = {}
-	local totalAngle = 0
 	for index, box in BOXES do
 		local width = math.max(8, box.perTeam * 5.5)
 		widths[index] = width * 2 + PAD_GAP + 6 -- the training mat under both sides
-		totalAngle += math.deg((widths[index] + BOX_GAP) / BOX_RADIUS)
 	end
-	local cursor = -totalAngle / 2
-	for index, box in BOXES do
+	-- Walk outward from the road in the middle, so the arc is centered on it.
+	local centers: { number } = {}
+	local gapAngle = math.deg(BOX_CENTER_GAP / 2 / BOX_RADIUS)
+	local edge = -gapAngle
+	for index = BOX_LEFT_COUNT, 1, -1 do
 		local step = math.deg((widths[index] + BOX_GAP) / BOX_RADIUS)
-		local center = cursor + step / 2
-		cursor += step
+		centers[index] = edge - step / 2
+		edge -= step
+	end
+	edge = gapAngle
+	for index = BOX_LEFT_COUNT + 1, #BOXES do
+		local step = math.deg((widths[index] + BOX_GAP) / BOX_RADIUS)
+		centers[index] = edge + step / 2
+		edge += step
+	end
+	for index, box in BOXES do
+		local center = centers[index]
 		local frame = facingCenter(polar(center, BOX_RADIUS))
 		local width = math.max(8, box.perTeam * 5.5)
 		for side, team in { "Blue", "Red" } do
@@ -968,7 +1023,6 @@ return function(): Model
 	-- Stepping into it teleports you to the drop-in free-for-all arena
 	-- (BattlegroundService).
 	----------------------------------------------------------------------
-	local portalAt = polar(180, 130)
 	for _, side in { -1, 1 } do
 		column(model, portalAt + Vector3.new(side * 9, 0, 0), 14, 2.4, BLUE)
 	end
@@ -994,101 +1048,110 @@ return function(): Model
 	)
 
 	----------------------------------------------------------------------
-	-- Spell Practice grove (west): build anything, smash dummies
+	-- Training Groves (west and east, mirrored): build anything, smash dummies.
+	-- `side` is -1 for the west grove and 1 for the east. Positions inside are
+	-- (u, z): u studs in from the grove's outer edge toward the plaza.
 	----------------------------------------------------------------------
-	local PRACTICE = Vector3.new(-105, 0, 40)
-	local GROVE_X, GROVE_Z = 76, 84 -- the grove's size in studs (x, z)
-	local grove = MapKit.part(model, {
-		name = "PracticeGrove",
-		size = Vector3.new(GROVE_X, 40, GROVE_Z),
-		cframe = CFrame.new(PRACTICE.X, 18, PRACTICE.Z),
-		transparency = 1,
-		canCollide = false,
-	})
-	grove.CanQuery = false
-	grove.CanTouch = false
-	grove:AddTag("BuildZone")
-	-- Drawing and casting work here (shared/Util/PracticeZone).
-	grove:AddTag("PracticeZone")
-	MapKit.part(model, {
-		name = "GroveFloor",
-		size = Vector3.new(GROVE_X, 0.4, GROVE_Z),
-		cframe = CFrame.new(PRACTICE.X, 0.2, PRACTICE.Z),
-		color = Color3.fromRGB(196, 170, 122),
-		material = Enum.Material.Sand,
-	})
-	local west, east = PRACTICE.X - GROVE_X / 2, PRACTICE.X + GROVE_X / 2
-	local north, south = PRACTICE.Z - GROVE_Z / 2, PRACTICE.Z + GROVE_Z / 2
-	-- Corner columns with torches.
-	for _, corner in
-		{
-			Vector3.new(-1, 0, -1),
-			Vector3.new(1, 0, -1),
-			Vector3.new(-1, 0, 1),
-			Vector3.new(1, 0, 1),
-		}
-	do
-		local base = PRACTICE
-			+ Vector3.new(corner.X * (GROVE_X / 2 - 2), 0, corner.Z * (GROVE_Z / 2 - 2))
-		column(model, base, 12, 2.6, STONE_LIGHT)
-		torch(model, base + Vector3.new(-corner.X * 3, 0, -corner.Z * 3))
-	end
-	-- A wooden training fence on the west, north, and south sides (the east side,
-	-- facing the plaza, stays open).
-	fenceLine(model, Vector3.new(west, 0, north), Vector3.new(west, 0, south))
-	fenceLine(model, Vector3.new(west, 0, north), Vector3.new(east - 6, 0, north))
-	fenceLine(model, Vector3.new(west, 0, south), Vector3.new(east - 6, 0, south))
-	label(
-		signAnchor(model, "GroveSign", Vector3.new(east - 3, 11, PRACTICE.Z)),
-		"TRAINING GROVE\nDraw and cast spells here!",
-		0,
-		140
-	)
-	-- Dummies in two staggered rows, all facing east toward the players, with
-	-- archery targets behind them and hay bales along the fences.
-	for i = 1, 4 do
-		local spot = MapKit.part(model, {
-			name = "DummySpot",
-			size = Vector3.new(2, 0.2, 2),
-			cframe = CFrame.new(west + 12, 0.1, north + 10 + (i - 1) * 21),
+	local function buildGrove(side: number)
+		local dir = -side -- X direction pointing from the outer edge to the plaza
+		local center = Vector3.new(side * GROVE_CENTER_X, 0, 0)
+		local outerX = center.X + side * GROVE_X / 2
+		local function at(u: number, z: number): Vector3
+			return Vector3.new(outerX + dir * u, 0, z)
+		end
+		local grove = MapKit.part(model, {
+			name = "PracticeGrove",
+			size = Vector3.new(GROVE_X, 40, GROVE_Z),
+			cframe = CFrame.new(center.X, 18, center.Z),
 			transparency = 1,
 			canCollide = false,
 		})
-		spot:AddTag("DummySpot")
-	end
-	for i = 1, 3 do
-		local spot = MapKit.part(model, {
-			name = "DummySpot",
-			size = Vector3.new(2, 0.2, 2),
-			cframe = CFrame.new(west + 32, 0.1, north + 20 + (i - 1) * 21),
-			transparency = 1,
-			canCollide = false,
+		grove.CanQuery = false
+		grove.CanTouch = false
+		grove:AddTag("BuildZone")
+		-- Drawing and casting work here (shared/Util/PracticeZone).
+		grove:AddTag("PracticeZone")
+		MapKit.part(model, {
+			name = "GroveFloor",
+			size = Vector3.new(GROVE_X, 0.4, GROVE_Z),
+			cframe = CFrame.new(center.X, 0.2, center.Z),
+			color = Color3.fromRGB(196, 170, 122),
+			material = Enum.Material.Sand,
 		})
-		spot:AddTag("DummySpot")
+		local north, south = -GROVE_Z / 2, GROVE_Z / 2
+		-- Corner columns with torches.
+		for _, corner in
+			{
+				Vector3.new(-1, 0, -1),
+				Vector3.new(1, 0, -1),
+				Vector3.new(-1, 0, 1),
+				Vector3.new(1, 0, 1),
+			}
+		do
+			local base = center
+				+ Vector3.new(corner.X * (GROVE_X / 2 - 2), 0, corner.Z * (GROVE_Z / 2 - 2))
+			column(model, base, 12, 2.6, STONE_LIGHT)
+			torch(model, base + Vector3.new(-corner.X * 3, 0, -corner.Z * 3))
+		end
+		-- A wooden training fence on the outer, north, and south sides (the side
+		-- facing the plaza stays open).
+		fenceLine(model, at(0, north), at(0, south))
+		fenceLine(model, at(0, north), at(GROVE_X - 6, north))
+		fenceLine(model, at(0, south), at(GROVE_X - 6, south))
+		label(
+			signAnchor(model, "GroveSign", at(GROVE_X - 3, 0) + Vector3.new(0, 11, 0)),
+			"TRAINING GROVE\nDraw and cast spells here!",
+			0,
+			140
+		)
+		-- Dummies in two staggered rows, all facing the plaza, with archery
+		-- targets behind them and hay bales along the fences.
+		local faceYaw = if dir > 0 then -math.pi / 2 else math.pi / 2
+		local function dummySpot(u: number, z: number)
+			local spot = MapKit.part(model, {
+				name = "DummySpot",
+				size = Vector3.new(2, 0.2, 2),
+				cframe = CFrame.new(at(u, z) + Vector3.new(0, 0.1, 0)),
+				transparency = 1,
+				canCollide = false,
+			})
+			spot:SetAttribute("FaceYaw", faceYaw)
+			spot:AddTag("DummySpot")
+		end
+		for i = 1, 4 do
+			dummySpot(12, north + 8 + (i - 1) * 16)
+		end
+		for i = 1, 3 do
+			dummySpot(32, north + 16 + (i - 1) * 16)
+		end
+		for i = 1, 3 do
+			targetStand(model, at(3, north + 12 + (i - 1) * 20), dir)
+		end
+		for i = 1, 3 do
+			hayBale(model, at(GROVE_X - 14 - (i - 1) * 16, north + 4), i * 17)
+			hayBale(model, at(GROVE_X - 14 - (i - 1) * 16, south - 4), i * 31)
+		end
 	end
-	for i = 1, 3 do
-		targetStand(model, Vector3.new(west + 3, 0, north + 16 + (i - 1) * 26))
-	end
-	for i = 1, 3 do
-		hayBale(model, Vector3.new(east - 14 - (i - 1) * 16, 0, north + 4), i * 17)
-		hayBale(model, Vector3.new(east - 14 - (i - 1) * 16, 0, south - 4), i * 31)
-	end
+	buildGrove(-1)
+	buildGrove(1)
 
 	----------------------------------------------------------------------
-	-- Crate shop (east): one Spell Crate on a stage with a glowing orb for each
-	-- rarity beside it. The crate's prompt opens the shop panel.
+	-- Crate shop (south-east, outside the ring road): one Spell Crate on a stage
+	-- with a glowing orb for each rarity beside it, facing the plaza. The
+	-- crate's prompt opens the shop panel.
 	----------------------------------------------------------------------
-	local SHOP = Vector3.new(100, 0, 45)
+	local SHOP = polar(135, 122)
+	local shopFrame = facingCenter(SHOP)
 	MapKit.part(model, {
 		name = "CrateStage",
 		size = Vector3.new(34, 1, 10),
-		cframe = CFrame.new(SHOP + Vector3.new(0, 0.5, 0)),
+		cframe = shopFrame * CFrame.new(0, 0.5, 0),
 		color = Color3.fromRGB(69, 39, 160),
 		material = Enum.Material.SmoothPlastic,
 	})
-	pointedArch(model, CFrame.new(SHOP + Vector3.new(0, 1, -6)), 36, 12, 1.4, STONE_LIGHT)
+	pointedArch(model, shopFrame * CFrame.new(0, 1, 6), 36, 12, 1.4, STONE_LIGHT)
 	label(
-		signAnchor(model, "CrateShopSign", SHOP + Vector3.new(0, 15, -3)),
+		signAnchor(model, "CrateShopSign", shopFrame:PointToWorldSpace(Vector3.new(0, 15, 3))),
 		"Spell Crate\nSpin for new spells!",
 		0,
 		90
@@ -1097,7 +1160,7 @@ return function(): Model
 	local holder = MapKit.part(model, {
 		name = `Crate_{crate.id}`,
 		size = Vector3.new(5, 5, 5),
-		cframe = CFrame.new(SHOP + Vector3.new(0, 3.5, 0)),
+		cframe = shopFrame * CFrame.new(0, 3.5, 0),
 		color = GOLD,
 		material = Enum.Material.WoodPlanks,
 	})
@@ -1108,10 +1171,8 @@ return function(): Model
 		holder.Transparency = 1
 		local _, size = crateModel:GetBoundingBox()
 		crateModel:ScaleTo(5.5 / math.max(size.X, 0.01))
-		-- Facing west, toward the plaza the shoppers come from.
-		crateModel:PivotTo(
-			CFrame.new(SHOP + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, math.rad(100), 0)
-		)
+		-- Facing the plaza the shoppers come from.
+		crateModel:PivotTo(shopFrame * CFrame.new(0, 3.5, 0))
 		for _, part in crateModel:GetDescendants() do
 			if
 				crateModel.Name == "Crate"
@@ -1133,13 +1194,30 @@ return function(): Model
 			name = `RarityOrb_{rarity.id}`,
 			shape = Enum.PartType.Ball,
 			size = Vector3.new(2.6, 2.6, 2.6),
-			cframe = CFrame.new(SHOP + Vector3.new((index - 3) * 7, 3, 1)),
+			cframe = shopFrame * CFrame.new((index - 3) * 7, 3, 1),
 			color = rarity.color,
 			material = Enum.Material.Neon,
 			canCollide = false,
 		})
 		glow(orb, rarity.color, 12, 1)
 		label(orb, rarity.name, 3, 50).TextColor3 = rarity.color
+	end
+
+	----------------------------------------------------------------------
+	-- Pavilion (south-west): the Crate Shop's mirror twin, so the hub balances.
+	-- A quiet dais under a marble arch, lit by torches.
+	----------------------------------------------------------------------
+	local pavilionFrame = facingCenter(polar(225, 122))
+	MapKit.part(model, {
+		name = "PavilionDais",
+		size = Vector3.new(34, 1, 10),
+		cframe = pavilionFrame * CFrame.new(0, 0.5, 0),
+		color = STONE,
+		material = Enum.Material.Limestone,
+	})
+	pointedArch(model, pavilionFrame * CFrame.new(0, 1, 6), 36, 12, 1.4, STONE_LIGHT)
+	for _, side in { -1, 1 } do
+		torch(model, pavilionFrame:PointToWorldSpace(Vector3.new(side * 14, 1, -3)))
 	end
 
 	----------------------------------------------------------------------
@@ -1246,15 +1324,15 @@ return function(): Model
 	end
 
 	-- Leaning marble pillars, a ruined arch, a few crates and bare trees.
-	leaningPillar(model, polar(70, 140), 34, 11, 20)
+	leaningPillar(model, polar(50, 150), 34, 11, 20)
 	leaningPillar(model, polar(300, 150), 38, -9, 60)
 	leaningPillar(model, polar(160, 120), 30, 8, 100)
-	ruinedArch(model, polar(215, 150), 215)
+	ruinedArch(model, polar(200, 152), 200)
 	for index, offset in { Vector3.new(0, 0, 0), Vector3.new(5, 0, 1), Vector3.new(2, 4, 0) } do
 		MapKit.part(model, {
 			name = "Crate",
 			size = Vector3.new(5, 4, 5),
-			cframe = CFrame.new(polar(110, 140) + offset + Vector3.new(0, 2, 0))
+			cframe = CFrame.new(polar(118, 150) + offset + Vector3.new(0, 2, 0))
 				* CFrame.Angles(0, index * 0.5, 0),
 			color = Color3.fromRGB(70, 56, 56),
 			material = Enum.Material.WoodPlanks,
@@ -1262,7 +1340,7 @@ return function(): Model
 	end
 	for index, spec in
 		{
-			{ 95, 150 },
+			{ 62, 152 },
 			{ 250, 140 },
 			{ 330, 135 },
 			{ 20, 130 },
@@ -1275,8 +1353,10 @@ return function(): Model
 	-- Block-model trees (oak, birch, pine) scattered on the outer meadow, kept
 	-- clear of the buildings (grove, shop, gate, portal) and the duel ring.
 	local keepClear: { { center: Vector3, radius: number } } = {
-		{ center = PRACTICE, radius = 72 },
-		{ center = SHOP, radius = 40 },
+		{ center = Vector3.new(-GROVE_CENTER_X, 0, 0), radius = 52 },
+		{ center = Vector3.new(GROVE_CENTER_X, 0, 0), radius = 52 },
+		{ center = SHOP, radius = 32 },
+		{ center = polar(225, 122), radius = 32 },
 		{ center = polar(180, 130), radius = 24 },
 		{ center = polar(0, 150), radius = 34 },
 	}
@@ -1294,9 +1374,18 @@ return function(): Model
 				blocked = true
 			end
 		end
-		-- The duel ring's arc occupies the north out to about r = 122.
-		if (bearing < 75 or bearing > 285) and radius < 125 then
+		-- The duel ring's arc occupies the north out to about r = 130.
+		if (bearing < 75 or bearing > 285) and radius < 132 then
 			blocked = true
+		end
+		-- ...and the roads stay clear.
+		for _, segment in roadSegments do
+			local from, to = segment[1], segment[2]
+			local along = to - from
+			local t = math.clamp((pos - from):Dot(along) / along:Dot(along), 0, 1)
+			if (pos - (from + along * t)).Magnitude < ROAD_WIDTH then
+				blocked = true
+			end
 		end
 		if not blocked then
 			placed += 1

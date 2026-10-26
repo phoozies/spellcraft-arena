@@ -146,12 +146,22 @@ return function(t: any)
 			end
 			t.expect(counts.HubSpawn).toBe(1)
 			t.expect(counts.TeamPad).toBe(12) -- six boxes, two sides each
-			t.expect(counts.PracticeZone).toBe(1)
+			t.expect(counts.PracticeZone).toBe(2) -- the west and east Training Groves
 			t.expect(counts.BattlegroundPortal).toBe(1)
+			-- The groves mirror each other and stay clear of the grey ring road (r 92).
+			local groveX: { number } = {}
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") and part:HasTag("PracticeZone") then
+					table.insert(groveX, part.Position.X)
+					local nearest = math.max(math.abs(part.Position.X) - part.Size.X / 2, 0)
+					t.expect(nearest > 92).toBeTruthy()
+				end
+			end
+			t.expect(#groveX == 2 and math.abs(groveX[1] + groveX[2]) < 0.01).toBeTruthy()
 			t.expect(counts.WinsBoard).toBe(1)
 			t.expect(counts.PodiumSpot).toBe(3)
 			t.expect(counts.LikeGift).toBe(1)
-			t.expect(counts.DummySpot >= 6).toBeTruthy()
+			t.expect(counts.DummySpot >= 12).toBeTruthy()
 			-- Nothing sticks out past the island's rim.
 			t.expect(outermost <= Config.HUB.RADIUS).toBeTruthy()
 			for _, name in { "SpellbookKiosk", "DailyChest", "Crate_Spell" } do

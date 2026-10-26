@@ -116,9 +116,12 @@ local function named(name: string): Instance?
 	return workspace:FindFirstChild(name, true)
 end
 
+-- The middle of the Training Grove nearest the player (there is one on each side).
 local function groveCenter(): Vector3?
-	local zone = CollectionService:GetTagged("PracticeZone")[1]
-	if zone and zone:IsA("BasePart") then
+	local zone = nearestTagged("PracticeZone", function(thing)
+		return thing:IsA("BasePart")
+	end) :: BasePart?
+	if zone then
 		return zone.Position - Vector3.new(0, zone.Size.Y / 2, 0)
 	end
 	return nil

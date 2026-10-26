@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local Responsive = require(script.Parent.Parent.UI.Responsive)
 local ClientState = require(script.Parent.ClientState)
 local JuiceController = require(script.Parent.JuiceController)
 
@@ -301,9 +302,12 @@ local function showRoundBanner(state: Types.MatchState)
 		then GOLD
 		elseif state.roundWinner then teamColor(state.roundWinner)
 		else Theme.COLORS.subtext
+	-- On a phone the banner rides high, level with the Settings button.
+	local camera = workspace.CurrentCamera
+	local bannerY = if camera and Responsive.isCompact(camera.ViewportSize) then 0.17 else 0.28
 	local banner = Theme.frame(stage, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(-0.5, 0.28),
+		Position = UDim2.fromScale(-0.5, bannerY),
 		Size = UDim2.new(1, 0, 0, 90),
 		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
 		BackgroundTransparency = 0.2,
@@ -315,13 +319,13 @@ local function showRoundBanner(state: Types.MatchState)
 	)
 	TweenService
 		:Create(banner, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Position = UDim2.fromScale(0.5, 0.28),
+			Position = UDim2.fromScale(0.5, bannerY),
 		})
 		:Play()
 	task.delay(2.2, function()
 		if banner.Parent then
 			TweenService
-				:Create(banner, TweenInfo.new(0.3), { Position = UDim2.fromScale(1.5, 0.28) })
+				:Create(banner, TweenInfo.new(0.3), { Position = UDim2.fromScale(1.5, bannerY) })
 				:Play()
 			task.wait(0.3)
 			banner:Destroy()
