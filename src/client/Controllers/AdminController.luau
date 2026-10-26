@@ -399,7 +399,7 @@ local function build()
 
 	openButton = Theme.button(gui, "🛡 Admin", {
 		Name = "OpenAdmin",
-		Position = UDim2.fromOffset(12, 64),
+		Position = UDim2.fromOffset(12, 12),
 		Size = UDim2.fromOffset(120, 36),
 		BackgroundColor3 = Theme.COLORS.purple,
 		Visible = false,

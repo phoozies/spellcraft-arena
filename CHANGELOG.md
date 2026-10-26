@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (HUD layout pass)
+- **No more overlapping buttons.** The health bar moved to the top-right corner (the kill feed sits under it). Coins and wins are centered at the top, with the match bar, Battleground banner, and boost icons stacked under them (they slide up when a phone hides the wallet in a fight). On the left, Admin sits on top, then Party, and the Party panel opens beside the side menu instead of on top of it (it used to cover the Party button, the health bar, and the menu). The spectate bar sits under the wallet.
+
 ### Changed (symmetric hub, mobile HUD)
 - **The hub is symmetric, with roads to every destination.** Four marble roads leave the plaza due north (to the Arena Gate, through a gap in the middle of the team boxes), south (to the Battleground portal), west and east (to the Training Groves), crossing the grey ring road. The duels (north) and the Battleground (south) are opposite each other, and there are now **two mirrored Training Groves** (west and east, 58 x 64 studs, clear of the ring road, dummies face the plaza from both). The amphitheatre stands moved off the Battleground path to two mirrored half-arcs on the south diagonals, the Crate Shop moved to the south-east (a matching pavilion sits south-west), and the team boxes were reordered so both halves of the arc are about the same width. All tags, names, and box ids are unchanged.
 - **Less clutter on phones.** The "Great! +50% power" popup after drawing a shape is gone (the ink line still changes colour and the screen still reacts). The health bar sits below the Admin button instead of under it, the "Health regenerates slowly" note under it is removed, and the round-won banner rides high (level with the Settings button) on phone-sized screens.

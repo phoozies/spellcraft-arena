@@ -182,13 +182,15 @@ function PartyController.init()
 
 	toggle = Theme.button(root, "👥 Party", {
 		Name = "PartyToggle",
-		Position = UDim2.fromOffset(12, 62),
+		-- Under the Admin button (12, 12, 36 tall), so neither covers the other.
+		Position = UDim2.fromOffset(12, 54),
 		Size = UDim2.fromOffset(150, 34),
 	})
 
 	panel = Theme.frame(root, {
 		Name = "PartyPanel",
-		Position = UDim2.fromOffset(12, 102),
+		-- Beside the side menu (12-132 wide), not on top of it.
+		Position = UDim2.fromOffset(140, 54),
 		Size = UDim2.fromOffset(300, 330),
 		BackgroundTransparency = 0.1,
 		Visible = false,
