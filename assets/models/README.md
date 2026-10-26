@@ -17,6 +17,7 @@ Two kinds of model live here:
 | `blocks/ElementCrate.fbx`, `ElementCrateOpen.fbx` | Element Crate (closed, open) |
 | `blocks/QuestChest.fbx`, `QuestChestOpen.fbx` | Daily Quests chest (closed, open) |
 | `blocks/WizardStatue.fbx` | arena centerpiece |
+| `blocks/ArenaPortal.fbx` | the same portal in red: the hub's Arena Gate (also leads to the Battleground) |
 | `blocks/BattlegroundPortal.fbx` | the hub's big stone portal into the Battleground (octagonal ring, pylons, swirl discs) |
 
 Rebuild: `python tools/blender/block_models.py --luau .` for the game data, and `blender --background --python tools/blender/block_models.py -- .` (Blender 4.2+) for the FBX files and the `.blend`. Model style: chunky blocks, flat colours, Roblox materials (Neon for glowing parts, Slate for stone, Wood/WoodPlanks, Grass for leaves); keep a model under about 30 studs and give every part a unique role name (parts named `Root` are reserved for effect pivots).

@@ -377,13 +377,10 @@ model("WizardStatue", [
 
 
 # ---------------------------------------------------------------- portals
-def battleground_portal():
-    """A big octagonal stone gateway with a swirling blue portal in it. The model faces -Z,
+def portal(ring_stone, ring_trim, glow, layers):
+    """A big octagonal stone gateway with a swirling portal in it, in the given palette. The model faces -Z,
     stands on y = 0, and the opening (about 24 studs wide) is open at the bottom to walk
     through. The hub tags an invisible trigger over the opening (see Maps/InkwellPlaza)."""
-    ring_stone = rgb(88, 92, 122)
-    ring_trim = rgb(62, 66, 94)
-    glow = rgb(90, 180, 255)
     gold = rgb(216, 166, 52)
     cy, a, t, depth = 15.5, 12.0, 3.0, 4.0  # ring centre height, inner apothem, thickness, depth
     mid = a + t / 2
@@ -421,16 +418,24 @@ def battleground_portal():
             P("Pylon_Crystal", (px, 16.5, 0), (2.4, 4.4, 2.4), glow, "Neon", rot=(0, 45, 0), collide=False),
         ]
     # The portal itself: stacked, glowing discs, brighter toward the middle.
-    layers = [(23, rgb(40, 110, 255), 0.5), (19, rgb(70, 150, 255), 0.45), (15, rgb(120, 200, 255), 0.4),
-              (11, rgb(190, 235, 255), 0.35), (6, rgb(255, 255, 255), 0.3)]
     for index, (diameter, color, transparency) in enumerate(layers):
         parts.append(P("Portal_Swirl", (0, cy, round(index * 0.12, 2)), (0.25, diameter, diameter), color,
                        "Neon", t=transparency, rot=(0, 90, 0), shape="Cylinder", collide=False))
     return parts
 
 
-model("BattlegroundPortal", battleground_portal(), solid=True, base=True,
+model("BattlegroundPortal",
+      portal(rgb(88, 92, 122), rgb(62, 66, 94), rgb(90, 180, 255),
+             [(23, rgb(40, 110, 255), 0.5), (19, rgb(70, 150, 255), 0.45), (15, rgb(120, 200, 255), 0.4),
+              (11, rgb(190, 235, 255), 0.35), (6, rgb(255, 255, 255), 0.3)]),
+      solid=True, base=True,
       note="Big stone portal gateway with a swirling blue portal: the hub's way into the Battleground")
+model("ArenaPortal",
+      portal(rgb(122, 80, 88), rgb(94, 58, 66), rgb(255, 96, 96),
+             [(23, rgb(210, 30, 50), 0.5), (19, rgb(235, 60, 70), 0.45), (15, rgb(255, 110, 100), 0.4),
+              (11, rgb(255, 190, 170), 0.35), (6, rgb(255, 245, 235), 0.3)]),
+      solid=True, base=True,
+      note="The Arena Gate: the same stone portal in red, at the north end of the hub")
 
 
 # ---------------------------------------------------------------- outputs

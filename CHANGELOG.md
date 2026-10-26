@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (Arena Gate portal, wider health bar, equipped-slot bubble)
+- **The Arena Gate is a red portal** (new `ArenaPortal` block model, the Battleground portal's palette swapped to red). Walking into it also sends you to the Battleground; duels still start from the team boxes. Both portals' triggers carry the `BattlegroundPortal` tag.
+- **The health bar is as wide as the hotbar** (`HudController.hotbarWidth()`).
+- **The equipped spell pops out of the hotbar.** The readied slot swells to 122% with a springy overshoot and a soft bubble of the spell's colour behind its icon; it shrinks back when you pick another. The spell-card row and health bar moved up slightly to clear the swelling slot.
+
 ### Changed (Battleground portal, health bar position)
 - **The Battleground is a real portal.** A new `BattlegroundPortal` block model (made in `tools/blender/block_models.py`, exported to `assets/models/blocks/BattlegroundPortal.fbx`): a ~30-stud octagonal stone gateway with glowing runes, two pylons with floating crystals, and layered blue swirl discs. It stands at the end of the south road; walk into the opening to enter. A plain arch and disc remain as the fallback if the model is missing.
 - **The Battleground is out of sight.** `Config.BATTLEGROUND.CENTER` moved from x = 900 to x = 15000, so it can no longer be seen from the hub.

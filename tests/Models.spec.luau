@@ -62,7 +62,7 @@ return function(t: any)
 			local names = ModelKit.blockNames()
 			t.expect(#names >= 24).toBeTruthy()
 			-- Big set pieces may exceed the usual 30 studs.
-			local biggest: { [string]: number } = { BattlegroundPortal = 55 }
+			local biggest: { [string]: number } = { BattlegroundPortal = 55, ArenaPortal = 55 }
 			for _, name in names do
 				local model = ModelKit.get(name)
 				t.expect(model ~= nil).toBeTruthy()
@@ -100,6 +100,7 @@ return function(t: any)
 					"QuestChestOpen",
 					"WizardStatue",
 					"BattlegroundPortal",
+					"ArenaPortal",
 				}
 			do
 				t.expect(ModelKit.isBlock(name)).toBeTruthy()

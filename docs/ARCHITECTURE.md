@@ -104,6 +104,7 @@ Everything that isn't an imported mesh is a **block model**: a handful of plain,
 | `ElementCrate`, `ElementCrateOpen` | The Crate Shop crate (closed); the open one is for reveals |
 | `QuestChest`, `QuestChestOpen` | The Daily Quests chest on the plaza (closed); open for rewards |
 | `WizardStatue` | The center of the Sparring Arena (`Maps/SparringArena.luau`) |
+| `ArenaPortal` | The hub's red Arena Gate (the same portal, also into the Battleground) |
 | `BattlegroundPortal` | The hub's stone portal into the Battleground (`Maps/InkwellPlaza.luau`) |
 
 ## Imported 3D models

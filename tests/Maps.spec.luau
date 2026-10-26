@@ -147,7 +147,7 @@ return function(t: any)
 			t.expect(counts.HubSpawn).toBe(1)
 			t.expect(counts.TeamPad).toBe(12) -- six boxes, two sides each
 			t.expect(counts.PracticeZone).toBe(2) -- the west and east Training Groves
-			t.expect(counts.BattlegroundPortal).toBe(1)
+			t.expect(counts.BattlegroundPortal).toBe(2) -- the blue portal and the red Arena Gate
 			-- The groves mirror each other and stay clear of the grey ring road (r 92).
 			local groveX: { number } = {}
 			for _, part in model:GetDescendants() do
