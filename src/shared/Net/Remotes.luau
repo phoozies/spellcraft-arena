@@ -33,7 +33,7 @@ local DEFINITIONS: { [string]: string } = {
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
-	HandUpdated = "(hand: {string}, readiedSlot: number?, spellbook: {string}?, qualities: {number}) your spell copies, which slot is readied, and how well each was drawn",
+	HandUpdated = "(hand: {string} (MAX_HAND slots, slot N = the Nth loadout spell, empty is a blank string), readiedSlot: number?, spellbook: {string}?, qualities: {number}) your spell copies, which slot is readied, and how well each was drawn",
 	CooldownStarted = "(spellId: string, endsAt: number)",
 	DashStarted = "(endsAt: number, direction: Vector3) the dash was allowed: go that way now; the dash can be used again at endsAt (server time)",
 	MapVoteState = "(state: {mode, maps: {{id, name, votes}}, myPick: string?, endsAt: number}?) the open map vote and its tally; nil closes it",

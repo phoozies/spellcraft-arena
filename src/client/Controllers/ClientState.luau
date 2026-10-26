@@ -28,7 +28,7 @@ export type ProfileSummary = {
 }
 
 local ClientState = {
-	hand = {} :: { string }, -- spell copies held (hotbar slots, duplicates allowed)
+	hand = {} :: { string }, -- the hotbar: slot N holds a copy of the Nth loadout spell, "" = empty
 	qualities = {} :: { number }, -- how well each copy was drawn (0..1), parallel to hand
 	readiedSlot = nil :: number?,
 	readied = nil :: string?, -- spell id in the readied slot
@@ -64,6 +64,17 @@ function ClientState.drawableSpells(): { string }
 		return Loadout.spells(profile.element, profile.loadout)
 	end
 	return {}
+end
+
+-- How many spell copies are held (the hotbar can have empty slots between them).
+function ClientState.heldCount(): number
+	local count = 0
+	for _, id in ClientState.hand do
+		if id ~= "" then
+			count += 1
+		end
+	end
+	return count
 end
 
 -- The key that opens the drawing canvas (player setting).
@@ -119,7 +130,8 @@ function ClientState.start()
 			ClientState.hand = hand
 			ClientState.qualities = qualities or {}
 			ClientState.readiedSlot = readiedSlot
-			ClientState.readied = if readiedSlot then hand[readiedSlot] else nil
+			local readied = if readiedSlot then hand[readiedSlot] else nil
+			ClientState.readied = if readied ~= "" then readied else nil
 			ClientState.spellbook = spellbook
 			ClientState.HandChanged:Fire()
 		end)

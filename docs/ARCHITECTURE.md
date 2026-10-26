@@ -38,7 +38,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     EconomyService      coins, wins, daily login/quests, first win, settings (only writer of coins/wins)
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
-    HandService         held spell copies (one per spell, up to 5), match spellbook, readied slot, per-spell cast cooldowns
+    HandService         held spell copies (one per spell; hotbar slot N = Nth loadout spell), match spellbook, readied slot, per-spell cast cooldowns
     DashService         the dash: validates the cooldown and state, tells the client which way to go, fires the dash Fx
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon
@@ -154,8 +154,8 @@ client: stroke ──DrawSpell──► SpellInputService
                                ├ 1s draw cooldown (per player)
                                └ GlyphRecognizer → glyph → spell → HandService.grant
                                     ├ match: in spellbook? hub: owned?
-                                    ├ hotbar full (5)? → refuse
-                                    └ add ONE copy (refused if you already hold that spell) and ready it
+                                    ├ its slot taken and no free slot? → refuse
+                                    └ add ONE copy in the spell's own slot (refused if you already hold that spell) and ready it
 client: aim  ──CastSpell───► CastService
                                ├ alive? not frozen/time-stopped?
                                ├ readied slot holds a copy; global lockout 0.35s;
@@ -163,7 +163,7 @@ client: aim  ──CastSpell───► CastService
                                ├ clamp target to range (placeables: 40 studs)
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
                                ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, copy kept
-                               ├ HandService.consume (that copy used up; next copy of the same spell readied)
+                               ├ HandService.consume (that copy used up, its slot left empty; next held copy readied)
                                ├ HandService.startCooldown(def.cooldown) — shared by every copy
                                └ Fx("cast") → every client plays the arm raise + magic circle
 ```
