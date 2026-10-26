@@ -22,7 +22,7 @@ export type ProfileSummary = {
 	quests: { Types.DailyQuest },
 	streak: number,
 	stats: { matches: number, wins: number, knockouts: number, casts: number },
-	settings: { drawKey: string, music: boolean, sfx: boolean },
+	settings: { drawKey: string, music: boolean, sfx: boolean, shake: boolean },
 	-- likeReadyAt: server time (workspace:GetServerTimeNow) the gift can be claimed.
 	rewards: { likeFav: boolean, likeReadyAt: number },
 }

@@ -18,6 +18,7 @@ local ORDER = {
 	"DrawController",
 	"InputController",
 	"EffectsController",
+	"JuiceController",
 	"FxController",
 	"HealthController",
 	"SettingsController",

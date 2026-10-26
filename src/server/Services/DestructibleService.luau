@@ -138,16 +138,35 @@ end
 -- them (the attacker and the player who owns the target), which keeps
 -- busy fights readable and network traffic small. Zone ticks below 1 point
 -- are skipped.
-local function showNumber(position: Vector3, amount: number, kind: string, a: Player?, b: Player?)
+--
+-- `hit` says what was hit, for the client's game feel (JuiceController): "player"
+-- (the attacker feels a hit, the victim feels hurt) or "thing" (a prop, summon
+-- or NPC: only the attacker feels a hit). Terrain and wall chunks pass nothing,
+-- so carving the ground doesn't flood the screen with hit markers.
+local function showNumber(
+	position: Vector3,
+	amount: number,
+	kind: string,
+	a: Player?,
+	b: Player?,
+	hit: string?
+)
 	if amount < 1 then
 		return
 	end
 	local rounded = math.floor(amount + 0.5)
 	if a then
-		fxRemote:FireClient(a, "number", position, rounded, kind)
+		fxRemote:FireClient(a, "number", position, rounded, kind, if hit then "dealt" else nil)
 	end
 	if b and b ~= a then
-		fxRemote:FireClient(b, "number", position, rounded, kind)
+		fxRemote:FireClient(
+			b,
+			"number",
+			position,
+			rounded,
+			kind,
+			if hit == "player" then "taken" else nil
+		)
 	end
 end
 
@@ -354,7 +373,7 @@ function DestructibleService.damage(
 				"Shield",
 				if shield - absorbed > 0 then shield - absorbed else nil
 			)
-			showNumber(position, absorbed, "shield", attacker, owner)
+			showNumber(position, absorbed, "shield", attacker, owner, "player")
 		end
 		if attacker then
 			lastHit[owner] = { by = attacker, at = os.clock(), spell = spellName }
@@ -362,7 +381,7 @@ function DestructibleService.damage(
 		if amount <= 0 then
 			return 0
 		end
-		showNumber(position, amount, "damage", attacker, owner)
+		showNumber(position, amount, "damage", attacker, owner, "player")
 		if amount >= humanoid.Health and StatusService.has(character, "Revive") then
 			StatusService.clear(character, "Revive")
 			humanoid.Health = humanoid.MaxHealth / 2
@@ -396,7 +415,7 @@ function DestructibleService.damage(
 		elseif resolved:IsA("BasePart") then resolved.Position
 		else nil
 	if propPosition then
-		showNumber(propPosition, amount, "damage", attacker, owner)
+		showNumber(propPosition, amount, "damage", attacker, owner, "thing")
 		-- A few chips fly off on every hit (skip tiny zone ticks).
 		local part = partsOf(resolved)[1]
 		if part and amount >= 3 and health > 0 then
@@ -518,10 +537,11 @@ end
 -- Movement that only helps its owner (dash, balloon, jump/bounce pads) is
 -- applied by the owning client for responsiveness: skipping it only hurts
 -- the cheater, so it doesn't need to be authoritative.
-function DestructibleService.boost(character: Model, velocity: Vector3)
+-- `hold` (seconds) makes it an arc the client follows exactly (rescue arcs).
+function DestructibleService.boost(character: Model, velocity: Vector3, hold: number?)
 	local owner = Players:GetPlayerFromCharacter(character)
 	if owner then
-		impulseRemote:FireClient(owner, velocity)
+		impulseRemote:FireClient(owner, velocity, hold)
 	end
 end
 

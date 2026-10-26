@@ -18,6 +18,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
+local JuiceController = require(script.Parent.JuiceController)
 
 local player = Players.LocalPlayer
 
@@ -428,9 +429,11 @@ end
 
 local function onKnockout(killer: string?, victim: string, _spell: string?)
 	if killer == player.DisplayName and victim ~= player.DisplayName then
+		JuiceController.knockout(true)
 		local label = popText("KNOCKOUT!", GOLD, 0.8, 80, 0.22)
 		label.Rotation = -6
 	elseif victim == player.DisplayName then
+		JuiceController.knockout(false)
 		popText("KNOCKED OUT", Theme.COLORS.bad, 1.4, 80, 0.3)
 		if killer then
 			popText(`by {killer}`, Theme.COLORS.subtext, 1.4, 40, 0.4)

@@ -21,6 +21,7 @@ local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
 local BoostService = require(script.Parent.BoostService)
 local StatusService = require(script.Parent.StatusService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 export type Target = { character: Model?, instance: Instance, player: Player?, position: Vector3 }
 
@@ -239,6 +240,7 @@ local function onCast(player: Player, target: any, rotationY: any)
 		profile.stats.casts += 1
 	end
 	EconomyService.track(player, "cast")
+	TelemetryService.onboarding(player, "FirstCast")
 	if def.archetype == "Placeable" then
 		EconomyService.track(player, "place")
 	end

@@ -35,6 +35,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local ElementService = require(script.Parent.ElementService)
 local HandService = require(script.Parent.HandService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local SpellInputService = {}
 
@@ -165,6 +166,7 @@ function SpellInputService.submitStroke(
 		resultRemote:FireClient(player, nil, glyphId)
 		return nil
 	end
+	TelemetryService.onboarding(player, "FirstSpellDrawn")
 	local def = SpellDefinitions.get(spellId)
 	if def then
 		local held = 0

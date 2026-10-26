@@ -36,6 +36,7 @@ local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
+local JuiceController = require(script.Parent.JuiceController)
 
 local player = Players.LocalPlayer
 
@@ -279,6 +280,7 @@ end
 -- A short "Perfect! +50% power" note over the canvas.
 local function showQuality(quality: number)
 	local tier = Quality.tier(quality)
+	JuiceController.drawn(tier.stars)
 	local text = `{string.rep("★", tier.stars)} {tier.name}! {Quality.describe(quality)}`
 	local note = Theme.label(inkLayer, text, {
 		AnchorPoint = Vector2.new(0.5, 0.5),

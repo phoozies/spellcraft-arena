@@ -29,6 +29,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -44,6 +45,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
 local AudioController = require(script.Parent.AudioController)
+local JuiceController = require(script.Parent.JuiceController)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local NUMBER_COLORS: { [string]: Color3 } = {
@@ -51,6 +53,8 @@ local NUMBER_COLORS: { [string]: Color3 } = {
 	heal = Color3.fromRGB(129, 199, 132),
 	shield = Color3.fromRGB(129, 212, 250),
 }
+
+local player = Players.LocalPlayer
 
 local FxController = {}
 
@@ -210,6 +214,9 @@ local function onCast(character: Model, spellId: string, target: Vector3)
 			channel
 		)
 		AudioController.playSpell(spellId, "cast", root.Position)
+		if character == player.Character then
+			JuiceController.cast(def.cooldown)
+		end
 		-- The sound of the pose's beat (a stomp's thud lands when the foot does).
 		local beat = CastPoses.BEATS[SpellRegistry.animationFor(spellId) or ""]
 		if beat and beat.cue then
@@ -410,7 +417,15 @@ local function onBeam(from: Vector3, to: Vector3, color: Color3)
 end
 
 -- Floating number: pops up with a little random spread, rises, and fades.
-local function onNumber(position: Vector3, amount: number, kind: string)
+local function onNumber(position: Vector3, amount: number, kind: string, role: string?)
+	-- Game feel: "dealt" = our spell landed, "taken" = we were hit (damage only).
+	if kind == "damage" then
+		if role == "dealt" then
+			JuiceController.hit(amount)
+		elseif role == "taken" then
+			JuiceController.hurt(amount)
+		end
+	end
 	local anchor = Instance.new("Part")
 	anchor.Anchored = true
 	anchor.CanCollide = false
@@ -442,8 +457,15 @@ local function onNumber(position: Vector3, amount: number, kind: string)
 	label.Parent = gui
 	-- Bigger hits get bigger numbers.
 	local scale = Instance.new("UIScale")
-	scale.Scale = math.clamp(0.8 + amount / 40, 0.8, 1.6)
+	local size = math.clamp(0.8 + amount / 40, 0.8, 1.6)
+	-- Pops in big and settles, so a hit lands with a bit of punch.
+	scale.Scale = size * 1.5
 	scale.Parent = label
+	TweenService:Create(
+		scale,
+		TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Scale = size }
+	):Play()
 
 	local info = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	TweenService:Create(anchor, info, { CFrame = anchor.CFrame + Vector3.new(0, 3, 0) }):Play()

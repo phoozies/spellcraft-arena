@@ -16,6 +16,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Types = require(ReplicatedStorage.Shared.Types)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local EconomyService = {}
 
@@ -83,25 +84,33 @@ EconomyService.sendSummary = sendSummary
 
 -- Adds coins (amount > 0). `reason` is for logs/analytics only. `quiet`
 -- skips the client summary (crate refunds are revealed after the spin).
-function EconomyService.addCoins(player: Player, amount: number, _reason: string, quiet: boolean?)
+function EconomyService.addCoins(player: Player, amount: number, reason: string, quiet: boolean?)
 	local profile = PlayerDataService.get(player)
 	if not profile or amount <= 0 or amount ~= amount then
 		return
 	end
 	profile.coins += math.floor(amount)
+	-- Admin and debug grants are test money, not part of the real economy.
+	if reason ~= "admin" and reason ~= "debug" then
+		TelemetryService.coinsEarned(player, math.floor(amount), profile.coins, reason)
+	end
 	if not quiet then
 		sendSummary(player)
 	end
 	EconomyService.Changed:Fire(player)
 end
 
--- Spends coins if the player has enough. Returns true when spent.
-function EconomyService.spend(player: Player, amount: number): boolean
+-- Spends coins if the player has enough. Returns true when spent. `item` is
+-- what they bought (for the analytics economy flow).
+function EconomyService.spend(player: Player, amount: number, item: string?): boolean
 	local profile = PlayerDataService.get(player)
 	if not profile or amount < 0 or profile.coins < amount then
 		return false
 	end
 	profile.coins -= amount
+	if item and amount > 0 then
+		TelemetryService.coinsSpent(player, amount, profile.coins, item)
+	end
 	sendSummary(player)
 	EconomyService.Changed:Fire(player)
 	return true
@@ -259,7 +268,7 @@ function EconomyService.start()
 		if not profile or typeof(key) ~= "string" then
 			return
 		end
-		if key == "music" or key == "sfx" then
+		if key == "music" or key == "sfx" or key == "shake" then
 			if typeof(value) == "boolean" then
 				profile.settings[key] = value
 				sendSummary(player)
@@ -287,6 +296,7 @@ function EconomyService.start()
 		local profile = PlayerDataService.get(player)
 		if profile and not profile.tutorial.done then
 			profile.tutorial.done = true
+			TelemetryService.onboarding(player, "TutorialDone")
 			sendSummary(player)
 		end
 	end)
@@ -325,6 +335,7 @@ function EconomyService.start()
 		for _, quest in profile.daily.quests do
 			if quest.id == questId and quest.progress >= quest.goal and not quest.claimed then
 				quest.claimed = true
+				TelemetryService.event(player, "QuestClaimed", quest.rewardCoins)
 				EconomyService.addCoins(player, quest.rewardCoins, "quest")
 				return
 			end

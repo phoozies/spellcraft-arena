@@ -34,9 +34,13 @@ local PracticeZone = require(ReplicatedStorage.Shared.Util.PracticeZone)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
 local StatusService = require(script.Parent.StatusService)
+local Rescue = require(script.Parent.Rescue)
+local TelemetryService = require(script.Parent.TelemetryService)
+local Funnels = require(ReplicatedStorage.Shared.Analytics.Funnels)
 
 type Match = {
 	id: number,
+	sessionId: string, -- the analytics funnel's id for this match
 	mode: Types.MatchMode,
 	solo: boolean,
 	arena: ArenaService.Arena,
@@ -49,6 +53,7 @@ type Match = {
 	endsAt: number,
 	roundWins: { [string]: number },
 	alive: { [Player]: boolean },
+	pads: { [Player]: Vector3 }, -- where each player spawned this round (water and pit rescues land here)
 	knockouts: { [Player]: number },
 	coins: { [Player]: number }, -- coins earned this match (shown on Results)
 	offers: { [Player]: { Types.DraftCard } },
@@ -76,6 +81,8 @@ local knockoutRemote: RemoteEvent
 local countsRemote: RemoteEvent
 
 local TEAM_SPAWN_GROUP = { Blue = "Team1", Red = "Team2" }
+-- Seconds between checks while a round is on (waitPhase's wait).
+local ROUND_TICK = 0.25
 
 ----------------------------------------------------------------------
 -- Helpers
@@ -324,7 +331,9 @@ local function spawnRound(match: Match)
 		local team = match.teams[player]
 		local group = TEAM_SPAWN_GROUP[team]
 		indexByGroup[group] = (indexByGroup[group] or 0) + 1
-		spawnAt(player, ArenaService.spawnCFrame(match.arena, group, indexByGroup[group]), true)
+		local spawn = ArenaService.spawnCFrame(match.arena, group, indexByGroup[group])
+		match.pads[player] = spawn.Position
+		spawnAt(player, spawn, true)
 		BoostService.applyToCharacter(player)
 		match.alive[player] = true
 		local character = player.Character
@@ -351,7 +360,7 @@ local function waitPhase(
 		if stopEarly and stopEarly() then
 			break
 		end
-		task.wait(0.25)
+		task.wait(ROUND_TICK)
 	end
 end
 
@@ -407,18 +416,23 @@ local function playRound(match: Match): string?
 	end
 	local winner: string? = nil
 	waitPhase(match, "Round", Config.ROUND_TIME, function()
-		-- Ring-outs: anyone who fell into the void is knocked out.
 		for _, player in connected(match) do
-			local root = player.Character
-				and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if
-				root
-				and humanoid
-				and humanoid.Health > 0
-				and ArenaService.isBelowVoid(match.arena, root.Position)
-			then
-				humanoid.Health = 0
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local pad = match.pads[player]
+			if character and root and humanoid and humanoid.Health > 0 then
+				if pad and ArenaService.isInWater(match.arena, root.Position) then
+					-- Fell off the edge (however far past the water by now): splash,
+					-- then thrown back onto the spawn pad.
+					Rescue.water(player, character, pad + Vector3.new(0, 3, 0))
+				elseif ArenaService.isBelowVoid(match.arena, root.Position) then
+					-- No pad to return to: a plain ring-out.
+					humanoid.Health = 0
+				elseif pad then
+					-- Stuck at the bottom of a hole in the terrain: thrown out.
+					Rescue.checkPit(player, character, pad + Vector3.new(0, 3, 0), ROUND_TICK)
+				end
 			end
 		end
 		local teams = aliveTeams(match)
@@ -464,6 +478,14 @@ local function finishMatch(match: Match, winner: string?)
 			profile.stats.knockouts += match.knockouts[player] or 0
 		end
 		EconomyService.track(player, "match")
+		Rescue.clear(player)
+		TelemetryService.matchStep(player, match.sessionId, "Finished")
+		if not match.solo then
+			TelemetryService.onboarding(player, "FirstMatchFinished")
+			if won then
+				TelemetryService.onboarding(player, "FirstWin")
+			end
+		end
 		-- Coins are earned by winning (no XP or levels). A solo test match
 		-- (admin/debug) never pays out.
 		if won and not match.solo then
@@ -517,6 +539,12 @@ local function runMatch(match: Match)
 	if match.ended then
 		return
 	end
+	for _, player in connected(match) do
+		TelemetryService.matchStep(player, match.sessionId, "Started")
+		if not match.solo then
+			TelemetryService.onboarding(player, "FirstMatchStarted")
+		end
+	end
 	while not match.ended do
 		match.round += 1
 		if match.round > 1 then
@@ -526,6 +554,11 @@ local function runMatch(match: Match)
 		local roundWinner = playRound(match)
 		if match.ended then
 			return
+		end
+		if match.round == 1 then
+			for _, player in connected(match) do
+				TelemetryService.matchStep(player, match.sessionId, "Round1Done")
+			end
 		end
 		-- Clients show the round banner ("BLUE WINS ROUND 1" / "DRAW") from this.
 		match.lastRoundWinner = roundWinner
@@ -599,6 +632,7 @@ function MatchService.startMatch(
 	local arena = ArenaService.create(mapName, mode)
 	local match: Match = {
 		id = matchCounter,
+		sessionId = TelemetryService.newSessionId(),
 		mode = mode,
 		solo = options ~= nil and options.solo == true,
 		arena = arena,
@@ -611,6 +645,7 @@ function MatchService.startMatch(
 		endsAt = 0,
 		roundWins = {},
 		alive = {},
+		pads = {},
 		knockouts = {},
 		coins = {},
 		offers = {},
@@ -761,6 +796,10 @@ function MatchService.removeFromMatch(player: Player)
 	playerMatch[player] = nil
 	match.alive[player] = false
 	match.offers[player] = nil
+	Rescue.clear(player)
+	if not match.ended and not match.solo then
+		TelemetryService.event(player, Funnels.EVENTS.MatchAbandoned, match.round)
+	end
 	BoostService.reset(player)
 	if player.Parent then
 		HandService.clearMatch(player)

@@ -17,9 +17,17 @@ local player = Players.LocalPlayer
 local EffectsController = {}
 
 local MAX_IMPULSE = 250
+-- Longest an impulse may keep steering, in seconds.
+local MAX_HOLD = 3
 local SLIPPERY = PhysicalProperties.new(0.7, 0, 0, 100, 1)
 
-local function applyImpulse(velocity: Vector3)
+local steering: RBXScriptConnection? = nil
+
+-- `hold` (seconds, optional) makes the impulse an arc: for that long the
+-- character's velocity follows the launch velocity under gravity exactly, so the
+-- humanoid's air control and its fall speed can't bend the flight (rescue arcs).
+-- Without it the impulse is a single push (dash, jump pads).
+local function applyImpulse(velocity: Vector3, hold: number?)
 	if typeof(velocity) ~= "Vector3" or velocity.Magnitude ~= velocity.Magnitude then
 		return
 	end
@@ -34,6 +42,27 @@ local function applyImpulse(velocity: Vector3)
 	end
 	if velocity.Y > 20 then
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	end
+	if steering then
+		steering:Disconnect()
+		steering = nil
+	end
+	if typeof(hold) == "number" and hold > 0 and hold == hold then
+		local start = os.clock()
+		local duration = math.min(hold, MAX_HOLD)
+		root.AssemblyLinearVelocity = velocity
+		steering = RunService.Heartbeat:Connect(function()
+			local elapsed = os.clock() - start
+			if elapsed > duration or not root.Parent or root.Anchored then
+				if steering then
+					steering:Disconnect()
+					steering = nil
+				end
+				return
+			end
+			root.AssemblyLinearVelocity = velocity - Vector3.new(0, workspace.Gravity * elapsed, 0)
+		end)
+		return
 	end
 	root.AssemblyLinearVelocity = root.AssemblyLinearVelocity * 0.25 + velocity
 end

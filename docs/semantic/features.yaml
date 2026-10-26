@@ -312,7 +312,7 @@ features:
       - cosmetics
       - "stats {matches, wins, knockouts, casts}"
       - "daily {lastLoginDay, streak, lastFirstWinDay, questDay, quests}"
-      - "settings {drawKey, music}"
+      - "settings {drawKey, music, sfx, shake}"
       - "rewards {likeFav}"
     migrations:
       "1->2": drop xp/level; re-roll quests; drop unknown spell ids; ensure starters owned
@@ -420,7 +420,7 @@ features:
     summary: Looping background music, a hub playlist and a fight playlist, with a Music on/off setting.
     tracks: src/shared/Audio/Music.luau (4 royalty-free APM tracks from the Roblox audio library)
     player: src/client/Controllers/AudioController.luau (music group volume Config.MUSIC.VOLUME; fades; hub tracks in the hub, fight tracks in matches and the Battleground; skips a track that never loads)
-    setting: profile.settings.music and profile.settings.sfx (default true), saved with SaveSettings("music" | "sfx", boolean) from the Settings panel (SettingsController); sfx mutes the AudioController sound-effects group
+    setting: profile.settings.music, .sfx and .shake (default true), saved with SaveSettings("music" | "sfx" | "shake", boolean) from the Settings panel (SettingsController); sfx mutes the AudioController sound-effects group
     tests: tests/Audio.spec.luau
 
   - id: support_reward
@@ -490,3 +490,50 @@ testing:
   run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
   specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/WordMatcher.spec.luau]
   live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Spell") / ("unlockall") / ("tutorial", false) / ("wins", 3) / ("likefav", false) / ("takecoins", 250)
+
+  - id: telemetry
+    summary: The analytics funnel. Sends how players move through the game to Roblox's AnalyticsService (Creator Hub > Analytics) so drop-off can be seen and fixed.
+    owner: src/server/Services/TelemetryService.luau
+    data: src/shared/Analytics/Funnels.luau (step names and order, pure data)
+    sends:
+      onboarding: "Joined, TutorialDone, ElementPicked, FirstSpellDrawn, FirstCast, FirstMatchStarted, FirstMatchFinished, FirstWin, FirstCrateSpin, FirstElementBought (LogOnboardingFunnelStepEvent, once per player per session; Roblox keeps each step once per player for life)"
+      match_funnel: "Started, Round1Done, Finished per match (LogFunnelStepEvent with a session id per match)"
+      economy: "LogEconomyEvent: coins in (EconomyService.addCoins reason: match, daily, quest, npc, crateRefund, likeFav; admin and debug are skipped) and coins out (EconomyService.spend item: crate id, element:<id>)"
+      events: "SessionEnd (seconds), DailyReturn (streak day >= 2), MatchAbandoned (round), BattlegroundJoined, QuestClaimed, WaterRescue, PitRescue (LogCustomEvent)"
+    rules:
+      - every call is pcall-wrapped; nothing here reads or writes a profile, so analytics can never break a save or a match
+      - solo test matches never count toward the first-match steps
+      - never renumber a shipped onboarding step; add new steps at the end of Funnels.ONBOARDING
+    tests: tests/Telemetry.spec.luau
+    docs: docs/ARCHITECTURE.md
+
+  - id: juice
+    summary: Game feel for casting and fighting - camera shake, field-of-view kicks, hit markers, a red damage vignette, a low-health pulse, and sounds.
+    owner: src/client/Controllers/JuiceController.luau
+    triggers:
+      hit: "Fx number with role 'dealt' (your spell landed on a player, NPC, prop or summon; not terrain or wall chunks) -> hit marker at the aim point, gold X and a kick on a heavy hit (Config.JUICE.BIG_HIT)"
+      hurt: "Fx number with role 'taken' (DestructibleService.showNumber 'player') -> red edge flash and shake scaled by the damage"
+      cast: "FxController.onCast for your own character -> small kick; long-cooldown spells (ultimates) kick harder"
+      drawn: "DrawController.showQuality -> golden flash on a Great or Perfect drawing"
+      knockout: "PresentationController.onKnockout -> big marker, gold flash, zoom and sting when you KO someone; red flash and shake when you are KO'd"
+      low_health: "HealthController.refreshOwn -> pulsing red edges below Config.JUICE.LOW_HEALTH, only in a match or the Battleground"
+    setting: profile.settings.shake (default true) turns off camera shake and field-of-view kicks; flashes and sounds stay
+    cues: hitMarker, heavyHit, hurt, knockoutSting (in Audio/Cues)
+    tunables: Config.JUICE { SHAKE_MAX, FOV_MAX, BIG_HIT, LOW_HEALTH }
+    tests: tests/Telemetry.spec.luau (settings and cues)
+
+  - id: rescue
+    summary: Nobody is lost or stuck in a duel - the water under every arena throws a fallen player back onto their spawn pad, and a player trapped in a hole in the terrain is thrown out.
+    owner: src/server/Services/Rescue.luau (called from MatchService's round loop)
+    water:
+      what: "ArenaService.addWater puts a Water part under every arena at Config.RESCUE.WATER_SURFACE (-50 from the floor). MatchService checks every 0.25s: below the surface -> Rescue.water"
+      effect: "WATER_DAMAGE (30) splash damage set directly on the Humanoid (a spawn shield can't dodge it; the last enemy to hit you still gets the knockout), WATER_STUN (1.2s) Stun, then an arc (Ballistic.velocity) to the player's spawn pad (match.pads) peaking WATER_APEX (40) over it. The arc is checked with spherecasts; if something blocks it or it would be faster than 245 studs/s the player is put on the pad instead. A second splash while still rising is ignored; one within WATER_REPEAT (4s) of a splash skips the arc"
+      fallback: "ArenaService.isBelowVoid (-60) is only used for a player with no pad"
+    pits:
+      what: "Rescue.checkPit, every round tick: a grounded player whose 8 horizontal rays (from PIT_CLIMB = 9 studs above their feet, PIT_REACH = 36 long) all hit terrain cells is counted; after PIT_SECONDS (1.5s) they are thrown over the nearest wall (Pit.enclosure), or put on the pad if that wall is higher than PIT_MAX_RIM (45)"
+      why: "a jump clears only about 7.7 studs, and spells can carve terrain cells (Config.TERRAIN) into walled holes"
+      safe: "open air, a gap, or scenery that is not terrain on any side means the player is NOT rescued"
+    client: "EffectsController.applyImpulse(velocity, hold): with a hold the client's velocity follows the launch under gravity for that long, so the humanoid's air control can't cut the arc short (Impulse remote's second argument)"
+    pure_modules: [src/shared/Util/Ballistic.luau, src/shared/Util/Pit.luau]
+    tunables: Config.RESCUE
+    tests: tests/Rescue.spec.luau
