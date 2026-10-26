@@ -42,6 +42,7 @@ local slots: {
 	{}
 local coinsLabel: TextLabel
 local winsLabel: TextLabel
+local walletFrame: Frame
 local matchBar: Frame
 local matchText: TextLabel
 local scoreText: TextLabel
@@ -377,11 +378,13 @@ end
 local function buildWallet(root: Frame)
 	local holder = Theme.frame(root, {
 		Name = "Wallet",
-		Position = UDim2.fromOffset(12, 12),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 8),
 		Size = UDim2.fromOffset(240, 44),
 		BackgroundTransparency = 0.15,
 	})
 	Theme.corner(holder)
+	walletFrame = holder
 	coinsLabel = Theme.label(holder, "💰 0", {
 		Size = UDim2.new(0.55, -8, 1, -8),
 		Position = UDim2.fromOffset(8, 4),
@@ -422,7 +425,7 @@ local function buildMatchBar(root: Frame)
 	matchBar = Theme.frame(root, {
 		Name = "MatchBar",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
+		Position = UDim2.new(0.5, 0, 0, 58),
 		Size = UDim2.fromOffset(420, 64),
 		BackgroundTransparency = 0.15,
 		Visible = false,
@@ -474,11 +477,22 @@ local function refreshMatch()
 	end
 end
 
+-- The top-centre stack is the wallet, then the match bar (or battleground
+-- banner), then the boost icons. When the wallet is hidden (phones in a
+-- fight) the rest slide up into its place.
+local function layoutTop()
+	local top = if walletFrame.Visible then 58 else 8
+	matchBar.Position = UDim2.new(0.5, 0, 0, top)
+	battleLabel.Position = UDim2.new(0.5, 0, 0, top)
+	battleLeave.Position = UDim2.new(0.5, 0, 0, top + 40)
+	boostsLabel.Position = UDim2.new(0.5, 0, 0, top + 68)
+end
+
 local function buildBattleBanner(root: Frame)
 	battleLabel = Theme.label(root, "⚔ BATTLEGROUND: beat raiders for coins!", {
 		Name = "BattleBanner",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
+		Position = UDim2.new(0.5, 0, 0, 58),
 		Size = UDim2.fromOffset(560, 36),
 		TextColor3 = Theme.COLORS.yellow,
 		TextStrokeTransparency = 0.3,
@@ -487,7 +501,7 @@ local function buildBattleBanner(root: Frame)
 	battleLeave = Theme.button(root, "Return to Hub", {
 		Name = "BattleLeave",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 48),
+		Position = UDim2.new(0.5, 0, 0, 98),
 		Size = UDim2.fromOffset(150, 30),
 		BackgroundColor3 = Theme.COLORS.panel,
 		Visible = false,
@@ -501,7 +515,7 @@ local function buildBoosts(root: Frame)
 	boostsLabel = Theme.label(root, "", {
 		Name = "Boosts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 76),
+		Position = UDim2.new(0.5, 0, 0, 126),
 		Size = UDim2.fromOffset(300, 28),
 		TextColor3 = Theme.COLORS.onDark,
 		TextStrokeTransparency = 0.4,
@@ -559,11 +573,13 @@ function HudController.init()
 	buildBoosts(root)
 	buildBattleBanner(root)
 	buildFeed(root)
+	layoutTop()
+	walletFrame:GetPropertyChangedSignal("Visible"):Connect(layoutTop)
 
 	toastHolder = Theme.frame(root, {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 80),
+		Position = UDim2.new(0.5, 0, 0, 170),
 		Size = UDim2.fromOffset(460, 180),
 		BackgroundTransparency = 1,
 	})

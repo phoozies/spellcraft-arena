@@ -34,8 +34,9 @@ local function buildHud()
 	local root = HudController.getGui():WaitForChild("Root")
 	local holder = Theme.frame(root, {
 		Name = "Health",
-		-- Below the Admin button (also at y 64, 36 tall) so it is never hidden.
-		Position = UDim2.fromOffset(12, 106),
+		-- Top-right corner; the kill feed sits just below it.
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 12),
 		Size = UDim2.fromOffset(260, 30),
 		BackgroundTransparency = 0.15,
 	})
