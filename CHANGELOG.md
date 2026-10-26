@@ -4,6 +4,13 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (spell hotkeys, nerfs, no spell popups)
+- **Keys 1-5 are tied to your loadout.** Key N is the Nth spell card above the hotbar (the number now shows on the card). If you hold a copy it readies it; if not, the drawing canvas opens with that spell's shape to trace. The hotbar slots no longer show numbers (tap them or use the gamepad D-pad).
+- **No spell popups.** "Draw a spell first!", "+1 Spell!", cooldown, fizzle, and can't-draw/cast messages are gone; failures play the new `uiError` buzz instead (Toast kind `error` is a sound only).
+- **Water Body** lasts 3s (was 7s). **Heal** recharges in 60s (was 30s).
+- **No passive health regeneration** in matches or the Battleground (`PASSIVE_REGEN_*` removed); the hub still heals fast.
+- **Earthquake** radius 25 to 50. **Earth Pillar** hitbox 6.5 to 13 and reach doubled (spacing 9 to 18, same 6 pillars).
+
 ### Changed (Arena Gate portal, wider health bar, equipped-slot bubble)
 - **The Arena Gate is a red portal** (new `ArenaPortal` block model, the Battleground portal's palette swapped to red). Walking into it also sends you to the Battleground; duels still start from the team boxes. Both portals' triggers carry the `BattlegroundPortal` tag.
 - **The health bar is as wide as the hotbar** (`HudController.hotbarWidth()`).

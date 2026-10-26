@@ -42,12 +42,9 @@ local Config = {
 	-- area-of-effect checks against players.
 	HITBOX_BONUS = 2,
 
-	-- The hub heals fast. Everywhere else (matches, the Battleground) health
-	-- slowly regenerates, but only after PASSIVE_REGEN_DELAY seconds without
-	-- taking damage, so it never helps in the middle of a fight.
+	-- The hub heals fast. Everywhere else (matches, the Battleground) there is
+	-- no passive regeneration: healing comes from spells and boosts.
 	HUB_REGEN_PER_SECOND = 5,
-	PASSIVE_REGEN_PER_SECOND = 1,
-	PASSIVE_REGEN_DELAY = 5,
 
 	-- Seconds the hub's team boxes wait once both sides are full, so someone
 	-- can still step off before the match starts.

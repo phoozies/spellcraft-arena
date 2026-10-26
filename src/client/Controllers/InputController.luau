@@ -3,7 +3,9 @@
 --
 --   Action        Keyboard/Mouse   Gamepad          Touch                 VR
 --   Cast          Left click       R2               Tap the world         Right trigger
---   Ready slot    1-5              D-pad ←/→        Tap hotbar            D-pad / hotbar
+--   Spell 1-5     1-5 (loadout     D-pad ←/→        Tap hotbar            D-pad / hotbar
+--                 order; draws it
+--                 if you hold none)
 --   Draw a spell  F (rebindable)   X (right stick)  ✏ Draw button, drag   F / X
 --   Rotate        R                L1 / R1          ⟳ button              L1 / R1
 --
@@ -96,13 +98,13 @@ local function cast(screenPoint: Vector2?)
 	local id = ClientState.readied
 	local def = id and SpellDefinitions.get(id)
 	if not def then
-		HudController.toast("Draw a spell first!", "fizzle")
+		HudController.toast("Draw a spell first!", "error")
 		return
 	end
 	if PlacementController.isActive() then
 		local point, rotation, ok = PlacementController.getPlacement()
 		if not point or not ok then
-			HudController.toast("Can't place that there.", "fizzle")
+			HudController.toast("Can't place that there.", "error")
 			return
 		end
 		Remotes.get("CastSpell"):FireServer(point, rotation)
@@ -130,6 +132,28 @@ end
 local SLOT_KEYS =
 	{ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five }
 
+-- Key N is the Nth spell of the loadout (the glyph cards above the hotbar).
+-- Holding a copy of it readies that copy; otherwise the canvas opens with the
+-- spell's shape to trace.
+local function pressSpellKey(number: number)
+	if UserInputService:GetFocusedTextBox() or MenuController.isOpen() then
+		return
+	end
+	local spellId = ClientState.drawableSpells()[number]
+	if not spellId then
+		return
+	end
+	local slot = table.find(ClientState.hand, spellId)
+	if slot then
+		if DrawController.isActive() then
+			return
+		end
+		Remotes.get("SelectSlot"):FireServer(slot)
+	else
+		ClientState.DrawRequested:Fire(spellId)
+	end
+end
+
 function InputController.start()
 	PlacementController.setAimProvider(function()
 		return InputController.aimPoint(nil), nil
@@ -148,9 +172,9 @@ function InputController.start()
 		elseif input.KeyCode == Enum.KeyCode.R then
 			PlacementController.rotate(math.pi / 4)
 		else
-			for slot, key in SLOT_KEYS do
+			for number, key in SLOT_KEYS do
 				if input.KeyCode == key then
-					Remotes.get("SelectSlot"):FireServer(slot)
+					pressSpellKey(number)
 				end
 			end
 		end

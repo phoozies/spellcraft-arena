@@ -72,7 +72,7 @@ Cooldowns, range, and speed never change, and an average drawing (quality 0.5) i
 
 ## Hitboxes
 
-Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS` (2), so a spell reaches that much farther than its radius. Hitboxes are generous on purpose: **medium** 4.5-5, **large** 6-7, **wide** 8.5-11, **huge** 12+ (area attacks and ultimates, up to 25 for Earthquake). The visuals are sized to match.
+Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS` (2), so a spell reaches that much farther than its radius. Hitboxes are generous on purpose: **medium** 4.5-5, **large** 6-7, **wide** 8.5-11, **huge** 12+ (area attacks and ultimates, up to 50 for Earthquake). The visuals are sized to match.
 
 ## The 24 spells
 
@@ -93,7 +93,7 @@ Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all 
 | Slot | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
 | 1 | **Water Slice** | slash | Projectile | 2s | A fast slice of water with a medium hitbox. 10 damage. |
-| 2 | **Water Body** | square | Buff | 22s | Turn to flowing water: you can't be hurt or affected by spells for 7 seconds. |
+| 2 | **Water Body** | square | Buff | 22s | Turn to flowing water: you can't be hurt or affected by spells for 3 seconds. |
 | 3 | **Water Lock** | triangle | Control | 4s | Trap an enemy in a bubble: 5 damage and a 1.5 second stun (no moving or casting). |
 | 4 | **Water Wave** | lightning bolt | Projectile | 8s | Send a large wave rolling forward through everything in its path. 25 damage. |
 | 5 | **Water Nebula** ★ | star | Zone | 18s | ULTIMATE: point and click: a towering water pillar crashes down in a large area. 35 damage. Range 70. |
@@ -137,7 +137,7 @@ Neutral crate spells that belong to no element.
 | Rarity | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
 | Rare | **Lightning** | zigzag (M) | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
-| Common | **Heal** | heart | Buff | 30s | A warm light mends you: restore 25 health. |
+| Common | **Heal** | heart | Buff | 60s | A warm light mends you: restore 25 health. It takes a full minute to recharge. |
 | Legendary | **Black Hole** | spiral | Zone | 10s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70. |
 | Rare | **Turret** | hook (J) | Placeable | 12s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
 

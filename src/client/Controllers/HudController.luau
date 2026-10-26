@@ -21,6 +21,7 @@ local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local AudioController = require(script.Parent.AudioController)
 local ClientState = require(script.Parent.ClientState)
 
 local player = Players.LocalPlayer
@@ -85,7 +86,13 @@ function HudController.boostStacks(boostId: string): number
 	return 0
 end
 
+-- Kind "error" (a spell that can't be drawn or cast right now) is only a
+-- sound: spells never pop up text.
 function HudController.toast(message: string, kind: string?)
+	if kind == "error" then
+		AudioController.play("uiError")
+		return
+	end
 	local frame = Theme.frame(toastHolder, {
 		Size = UDim2.new(1, 0, 0, 40),
 		BackgroundColor3 = TOAST_COLORS[kind or "info"] or Theme.COLORS.panelLight,
@@ -152,6 +159,14 @@ local function refreshWords()
 			Theme.stroke(card, color, 4)
 			Theme.rim(card, 4, 10)
 			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
+			-- The number key that draws or readies this spell.
+			Theme.label(card, tostring(order), {
+				Name = "Key",
+				Size = UDim2.fromOffset(16, 16),
+				Position = UDim2.fromOffset(4, 2),
+				TextColor3 = Theme.COLORS.subtext,
+				ZIndex = 3,
+			})
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
 				Position = UDim2.new(0, 2, 1, -18),
@@ -255,12 +270,6 @@ local function buildHotbar(root: Frame)
 			Name = "SpellName",
 			Size = UDim2.new(1, -6, 0.3, 0),
 			Position = UDim2.new(0, 3, 0.55, 0),
-		})
-		Theme.label(button, tostring(i), {
-			Name = "Key",
-			Size = UDim2.fromOffset(16, 16),
-			Position = UDim2.fromOffset(4, 2),
-			TextColor3 = Theme.COLORS.subtext,
 		})
 		local stars = Theme.label(button, "", {
 			Name = "Quality",

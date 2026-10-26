@@ -122,6 +122,7 @@ features:
     remotes:
       c2s: [DrawSpell, SelectSlot, CastSpell, Dash]
       s2c: [HandUpdated, CooldownStarted, Toast, GlyphResult]
+      # keys 1-5 = the Nth loadout spell (InputController.pressSpellKey): ready a held copy, else open the canvas; Toast kind error plays uiError, no popup
     invariants:
       - the server clamps every target to range; the client reticle/ghost only mirror that
       - archetype returning false keeps the copy (e.g. blocked placement)

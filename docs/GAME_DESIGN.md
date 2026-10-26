@@ -32,7 +32,7 @@ Hub ──► queue (pad or Play menu) ──► Match (best of 3)
 3. A round banner announces the result ("BLUE WINS ROUND 1" or "DRAW"). Then comes the **Draft** (15s): you're offered **3 boosts** and pick one (Power +15% damage, Vitality +20 max health, Swiftness +3 speed, Focus -12% cooldowns, Health Potion). Boosts last for the rest of the match, stack up to 3 times, and a pick is made for you if time runs out. There are no new spells to earn in a duel.
 4. **First to 2 round wins** takes the match. The **VICTORY!** screen (with confetti), **DEFEAT**, or **DRAW** shows the coins you won counting up (winners get 100, +50 for the first win of the day), then everything fades back to the hub.
 
-Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and the Battleground it regenerates 1 HP/s, but only after 5 seconds without taking damage (`Config.PASSIVE_REGEN_*`). The Health Potion boost and healing spells are the way to heal mid-fight.
+Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and the Battleground there is no passive regeneration. The Health Potion boost and healing spells are the way to heal mid-fight.
 
 ### Casting: draw it, stockpile it, spend it
 
