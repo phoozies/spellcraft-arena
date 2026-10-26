@@ -712,7 +712,7 @@ return function(): Model
 		title.Font = Enum.Font.FredokaOne
 		title.TextScaled = true
 		title.TextColor3 = element.color
-		title.Text = `{element.icon} {string.upper(element.name)}`
+		title.Text = string.upper(element.name)
 		title.Parent = gui
 		for slot, id in element.base do
 			local def = SpellDefinitions.get(id)
@@ -744,7 +744,7 @@ return function(): Model
 		hint.Font = Enum.Font.GothamMedium
 		hint.TextScaled = true
 		hint.TextColor3 = Color3.fromRGB(197, 202, 233)
-		hint.Text = `{element.tagline}  (💰 {element.price})`
+		hint.Text = `{element.tagline}  ({element.price} coins)`
 		hint.Parent = gui
 		local light = MapKit.part(model, {
 			name = "ShrineGem",
@@ -867,7 +867,7 @@ return function(): Model
 	bow:AddTag("SpinFx")
 	glow(giftLid, GOLD_GLOW, 16, 1.4)
 	giftBase:AddTag("LikeGift")
-	label(giftBase, "👍 Like & ⭐ Favourite\nthen claim a gift!", 7, 90)
+	label(giftBase, "Like & Favourite\nthen claim a gift!", 7, 90)
 	local giftPrompt = prompt(giftBase, "LikeGift", "Claim gift", "Like & Favourite gift")
 	giftPrompt.HoldDuration = 1.2
 	giftPrompt.MaxActivationDistance = 10
@@ -1211,7 +1211,7 @@ return function(): Model
 		crateModel.Parent = model
 	end
 	glow(holder, GOLD, 16, 1.2)
-	local priceTag = label(holder, `🎁 {crate.name}\n💰 {crate.price}`, 5.5, 60)
+	local priceTag = label(holder, `{crate.name}\n{crate.price} coins`, 5.5, 60)
 	priceTag.TextColor3 = GOLD
 	prompt(holder, "Crates", "Open shop", crate.name)
 	for index, rarity in Rarity.LIST do
@@ -1308,7 +1308,7 @@ return function(): Model
 	boardText.Font = Enum.Font.FredokaOne
 	boardText.TextScaled = true
 	boardText.TextColor3 = Color3.new(1, 1, 1)
-	boardText.Text = "🏆 Most Wins\n(win a match!)"
+	boardText.Text = "Most Wins\n(win a match!)"
 	boardText.Parent = surface
 	for _, side in { -1, 1 } do
 		MapKit.part(model, {
@@ -1337,7 +1337,7 @@ return function(): Model
 		)
 		label(
 			signAnchor(model, `SpectateSign_{index}`, at + Vector3.new(0, 10, 0)),
-			"👁 SPECTATE\nLook down: duels are fought on the arenas below!",
+			"SPECTATE\nLook down: duels are fought on the arenas below!",
 			0,
 			160
 		)

@@ -83,11 +83,23 @@ function Rarity.color(id: string?): Color3
 	return if rarity then rarity.color else Color3.fromRGB(176, 190, 197)
 end
 
--- Picks a rarity by weight.
-function Rarity.roll(rng: Random): Types.RarityId
-	local pick = rng:NextNumber(0, totalWeight)
+-- Picks a rarity by weight. With `minId`, only that rarity or better can be
+-- picked (the weights of the rest are kept, so Epic stays 3x likelier than
+-- Legendary); used by the crate's pity guarantee.
+function Rarity.roll(rng: Random, minId: string?): Types.RarityId
+	local minRank = Rarity.rank(minId)
+	local total = 0
+	for index, rarity in Rarity.LIST do
+		if index >= minRank then
+			total += rarity.weight
+		end
+	end
+	local pick = rng:NextNumber(0, total)
 	local sum = 0
-	for _, rarity in Rarity.LIST do
+	for index, rarity in Rarity.LIST do
+		if index < minRank then
+			continue
+		end
 		sum += rarity.weight
 		if pick < sum then
 			return rarity.id

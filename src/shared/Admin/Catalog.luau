@@ -69,7 +69,7 @@ local function spellGroups(): { Group }
 	for _, element in order do
 		local school = Elements.school(element)
 		table.insert(groups, {
-			title = if school then `{school.icon} {school.name}` else element,
+			title = if school then school.name else element,
 			entries = byElement[element],
 		})
 	end
@@ -161,6 +161,17 @@ function Catalog.tabs(): { Tab }
 					entries = { button("Spin a crate (costs coins)", "crate {t}", "purple") },
 				},
 				unlockGroup(),
+				{
+					title = "Reset (saved data)",
+					entries = {
+						button("Reset coins", "reset {t} coins", "bad", true),
+						button("Reset wins", "reset {t} wins", "bad", true),
+						button("Reset elements", "reset {t} elements", "bad", true),
+						button("Reset crate spells", "reset {t} spells", "bad", true),
+						button("Reset crate pity", "reset {t} pity", "bad", true),
+						button("Reset EVERYTHING", "reset {t} all", "bad", true),
+					},
+				},
 			},
 		},
 		{

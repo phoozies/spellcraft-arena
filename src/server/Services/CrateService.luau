@@ -57,7 +57,7 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 	if profile.coins < crate.price then
 		return nil, `You need {crate.price - profile.coins} more coins. Win matches to earn coins!`
 	end
-	local roll = Crates.roll(profile.spells, rng)
+	local roll = Crates.roll(profile.spells, rng, profile.pity)
 	if not roll then
 		return nil, "You already own every spell!"
 	end
@@ -65,6 +65,7 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 		return nil, "Not enough coins."
 	end
 	TelemetryService.onboarding(player, "FirstCrateSpin")
+	profile.pity = Crates.nextPity(profile.pity, roll.rarity)
 	busyUntil[player] = now + Crates.SPIN_TIME
 	local _, equipped = ElementService.grantSpell(player, roll.spell)
 	local result: Types.CrateResult = {
@@ -74,6 +75,7 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 		duplicate = roll.duplicate,
 		refund = roll.refund,
 		equipped = equipped,
+		pity = profile.pity,
 		coins = profile.coins,
 	}
 	task.delay(Crates.SPIN_TIME, function()
@@ -94,6 +96,15 @@ function CrateService.open(player: Player, crateId: string): (Types.CrateResult?
 		toastRemote:FireClient(player, message, "reward")
 	end)
 	return result, nil
+end
+
+-- Admin reset: the next guaranteed hit is a full PITY.SPINS spins away again.
+function CrateService.resetPity(player: Player)
+	local profile = PlayerDataService.get(player)
+	if profile then
+		profile.pity = 0
+		EconomyService.sendSummary(player)
+	end
 end
 
 function CrateService.init()

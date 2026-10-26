@@ -7,6 +7,13 @@
 -- CrateService is the only caller that spends coins or grants spells, and the
 -- client's CrateController only animates the result the server sends.
 --
+-- Pity: every spin that doesn't land on PITY.RARITY or better adds one to the
+-- player's pity counter (profile.pity, owned by CrateService); when the counter
+-- reaches PITY.SPINS - 1 the next spin is guaranteed to be PITY.RARITY or
+-- better, and a hit resets the counter. The guarantee also prefers a spell the
+-- player doesn't own yet, so it is never wasted on a duplicate while an unowned
+-- one of that rarity exists.
+--
 -- Elements are NOT in the crate: a base element is bought directly with coins
 -- (ElementService.buy, price in Spells/Elements).
 
@@ -21,6 +28,25 @@ local Crates = {}
 -- Seconds the client's reel spins; the server won't accept another open
 -- from the same player until this has passed.
 Crates.SPIN_TIME = 4
+
+Crates.PITY = table.freeze({
+	SPINS = 10, -- a spin of this many without PITY.RARITY or better is guaranteed to hit it
+	RARITY = "Epic" :: Types.RarityId,
+})
+
+-- Spins left until the guaranteed hit, given the player's pity counter
+-- (1 means the very next spin is the guaranteed one).
+function Crates.spinsToPity(pity: number): number
+	return math.max(1, Crates.PITY.SPINS - math.max(0, math.floor(pity)))
+end
+
+-- The counter after a spin that landed on `rarityId`.
+function Crates.nextPity(pity: number, rarityId: string): number
+	if Rarity.rank(rarityId) >= Rarity.rank(Crates.PITY.RARITY) then
+		return 0
+	end
+	return math.max(0, math.floor(pity)) + 1
+end
 
 Crates.LIST = table.freeze({
 	{ id = "Spell", name = "Spell Crate", price = 100 },
@@ -85,16 +111,43 @@ export type Roll = {
 	rarity: Types.RarityId,
 	duplicate: boolean,
 	refund: number,
+	guaranteed: boolean, -- the pity guarantee decided the rarity
 }
 
 -- Decides a spin: a rarity by weight, then a spell of it. nil only when the
 -- player owns every crate spell (the shop refuses to sell the spin then).
-function Crates.roll(owned: { string }, rng: Random): Roll?
+function Crates.roll(owned: { string }, rng: Random, pity: number?): Roll?
 	if Crates.ownsAll(owned) then
 		return nil
 	end
-	local rarityId = Rarity.roll(rng)
+	local guaranteed = Crates.spinsToPity(pity or 0) <= 1
+	local rarityId = Rarity.roll(rng, if guaranteed then Crates.PITY.RARITY else nil)
 	local list = byRarity[rarityId]
+	if guaranteed then
+		-- Prefer a spell the player doesn't own yet, of this rarity or better.
+		local fresh = {}
+		for _, id in Crates.pool() do
+			local def = SpellDefinitions.get(id)
+			if
+				def
+				and Rarity.rank(def.rarity) >= Rarity.rank(Crates.PITY.RARITY)
+				and not table.find(owned, id)
+			then
+				table.insert(fresh, id)
+			end
+		end
+		if #fresh > 0 then
+			local spell = fresh[rng:NextInteger(1, #fresh)]
+			local def = SpellDefinitions.get(spell) :: Types.SpellDef
+			return {
+				spell = spell,
+				rarity = def.rarity :: Types.RarityId,
+				duplicate = false,
+				refund = 0,
+				guaranteed = true,
+			}
+		end
+	end
 	while not list or #list == 0 do
 		-- A rarity with no spells yet: fall back to the next one down.
 		local rank = Rarity.rank(rarityId) - 1
@@ -112,6 +165,7 @@ function Crates.roll(owned: { string }, rng: Random): Roll?
 		rarity = rarityId,
 		duplicate = duplicate,
 		refund = if duplicate then rarity.refund else 0,
+		guaranteed = guaranteed,
 	}
 end
 

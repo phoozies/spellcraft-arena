@@ -149,6 +149,45 @@ return function(t: any)
 			end
 			t.expect(sawDuplicate).toBe(true)
 		end)
+		t.it("guarantees an Epic or better when the pity counter is full", function()
+			local rng = Random.new(5)
+			local pity = Crates.PITY.SPINS - 1
+			t.expect(Crates.spinsToPity(pity)).toBe(1)
+			for _ = 1, 200 do
+				local roll = Crates.roll({}, rng, pity) :: any
+				t.expect(roll.guaranteed).toBe(true)
+				t.expect(Rarity.rank(roll.rarity) >= Rarity.rank(Crates.PITY.RARITY)).toBeTruthy()
+			end
+		end)
+		t.it("does not guarantee anything with a fresh counter", function()
+			local roll = Crates.roll({}, Random.new(5), 0) :: any
+			t.expect(roll.guaranteed).toBe(false)
+			t.expect(Crates.spinsToPity(0)).toBe(Crates.PITY.SPINS)
+		end)
+		t.it("the pity guarantee prefers a spell you do not own yet", function()
+			local owned = {}
+			local fresh = nil
+			for _, id in Crates.pool() do
+				local def = SpellDefinitions.get(id) :: any
+				if Rarity.rank(def.rarity) >= Rarity.rank(Crates.PITY.RARITY) and not fresh then
+					fresh = id
+				else
+					table.insert(owned, id)
+				end
+			end
+			local rng = Random.new(9)
+			for _ = 1, 50 do
+				local roll = Crates.roll(owned, rng, Crates.PITY.SPINS - 1) :: any
+				t.expect(roll.spell).toBe(fresh)
+				t.expect(roll.duplicate).toBe(false)
+			end
+		end)
+		t.it("the pity counter climbs on misses and resets on an Epic or better", function()
+			t.expect(Crates.nextPity(3, "Common")).toBe(4)
+			t.expect(Crates.nextPity(3, "Rare")).toBe(4)
+			t.expect(Crates.nextPity(3, "Epic")).toBe(0)
+			t.expect(Crates.nextPity(9, "Legendary")).toBe(0)
+		end)
 		t.it("has nothing to roll once you own every crate spell", function()
 			t.expect(Crates.roll(Crates.pool(), Random.new(1))).toBeNil()
 			t.expect(Crates.ownsAll(Crates.pool())).toBe(true)

@@ -7,7 +7,7 @@
 --
 -- Shown only to admins (the server sets the player attribute "IsAdmin"); that is
 -- cosmetic: the server checks admin status again on every AdminCommand.
--- Open it with the 🛡 Admin button or the ` (backquote) key.
+-- Open it with the Admin button or the ` (backquote) key.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -174,9 +174,9 @@ local function refreshTargets()
 		end
 	end
 	local entries: { { word: string, text: string } } = {
-		{ word = "me", text = "👤 Me" },
-		{ word = "all", text = "👥 All" },
-		{ word = "others", text = "👥 Others" },
+		{ word = "me", text = "Me" },
+		{ word = "all", text = "All" },
+		{ word = "others", text = "Others" },
 	}
 	local found = target == "me" or target == "all" or target == "others"
 	for _, other in Players:GetPlayers() do
@@ -397,7 +397,7 @@ local function build()
 	scale.Parent = gui
 	Responsive.bind(scale)
 
-	openButton = Theme.button(gui, "🛡 Admin", {
+	openButton = Theme.button(gui, "Admin", {
 		Name = "OpenAdmin",
 		Position = UDim2.fromOffset(12, 12),
 		Size = UDim2.fromOffset(120, 36),
@@ -426,7 +426,7 @@ local function build()
 		BackgroundColor3 = Theme.COLORS.purple,
 	})
 	Theme.corner(titleBar, 14)
-	Theme.label(titleBar, "🛡 Admin Panel", {
+	Theme.label(titleBar, "Admin Panel", {
 		Position = UDim2.fromOffset(12, 4),
 		Size = UDim2.new(1, -70, 1, -8),
 		TextXAlignment = Enum.TextXAlignment.Left,

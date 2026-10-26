@@ -2,7 +2,7 @@
 
 There are two ways to run a command, and both go through the same server code:
 
-- **The Admin panel (click).** Admins see a purple **🛡 Admin** button under the wallet. Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
+- **The Admin panel (click).** Admins see a purple **Admin** button under the wallet. Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
 - **Chat (type).** Use the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
@@ -49,6 +49,7 @@ Leaving the target out means `me` where that makes sense.
 | `;unlock <player> <Fire\|Water\|Earth\|Air\|all>` | Permanently unlocks an element (saved) |
 | `;coins <player> <amount>` | Grants coins (spent on crates) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
+| `;reset <player> <coins\|wins\|stats\|elements\|spells\|pity\|rewards\|tutorial\|all>` | Resets saved data: coins back to the starting amount, wins/stats to 0, owned elements or crate spells forgotten (free first pick again), crate pity to 0, the Like & Favourite gift claimable again, the tutorial shown again. Players in a match are skipped. |
 | `;crate <player>` | Spins a Spell Crate for the player, charging their coins like the shop |
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |

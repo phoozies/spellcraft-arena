@@ -84,7 +84,7 @@ The ranking is per server (players currently here), built from their saved `stat
 
 ## Data
 
-`Types.Profile` schema **5**: `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (crate spells owned), `loadout` (up to 2 equipped crate spells), and `tutorial.done`. Schema 4 to 5 adds the new fields and marks players who already picked an element as done with the tutorial. Schema 3 replaced `ownedSpells` with `elements`/`element`. Migration from schema 2 (`PlayerDataService.reconcile`): drop `ownedSpells`; the player picks their first element again. Schema 1 to 2 dropped `xp`/`level` and re-rolled the quests.
+`Types.Profile` schema **6** (adds `pity`, the crate pity counter; see the Spell Crate pity rule: every 10th spin without an Epic or better is guaranteed one), earlier schema **5**: `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (crate spells owned), `loadout` (up to 2 equipped crate spells), and `tutorial.done`. Schema 4 to 5 adds the new fields and marks players who already picked an element as done with the tutorial. Schema 3 replaced `ownedSpells` with `elements`/`element`. Migration from schema 2 (`PlayerDataService.reconcile`): drop `ownedSpells`; the player picks their first element again. Schema 1 to 2 dropped `xp`/`level` and re-rolled the quests.
 
 ## Ideas (not built)
 

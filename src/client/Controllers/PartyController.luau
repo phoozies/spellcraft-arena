@@ -115,7 +115,7 @@ local function rebuild()
 		heading(`Your party ({#state.members}/{Config.PARTY.MAX_SIZE})`, nextOrder())
 		for _, member in state.members do
 			local frame = row(nextOrder())
-			local crown = if member.userId == state.leaderId then "👑 " else ""
+			local crown = if member.userId == state.leaderId then "(Leader) " else ""
 			nameLabel(frame, crown .. member.name, 76)
 			if iLead and member.userId ~= player.UserId then
 				smallButton(frame, "Kick", 4, Theme.COLORS.bad, function()
@@ -163,9 +163,7 @@ local function rebuild()
 		})
 	end
 
-	toggle.Text = if inParty
-		then `👥 Party {#state.members}/{Config.PARTY.MAX_SIZE}`
-		else "👥 Party"
+	toggle.Text = if inParty then `Party {#state.members}/{Config.PARTY.MAX_SIZE}` else "Party"
 	toggle.BackgroundColor3 = if #state.invites > 0
 		then Theme.COLORS.accent
 		else Theme.COLORS.panelLight
@@ -180,7 +178,7 @@ function PartyController.init()
 	actionRemote = Remotes.get("PartyAction")
 	local root = HudController.getGui():FindFirstChild("Root") :: Frame
 
-	toggle = Theme.button(root, "👥 Party", {
+	toggle = Theme.button(root, "Party", {
 		Name = "PartyToggle",
 		-- Under the Admin button (12, 12, 36 tall), so neither covers the other.
 		Position = UDim2.fromOffset(12, 54),

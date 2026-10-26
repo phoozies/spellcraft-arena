@@ -239,6 +239,28 @@ function ElementService.grantSpell(player: Player, spellId: string): (boolean, b
 	return true, equipped
 end
 
+-- Admin reset: "elements" forgets every owned element (the next pick is free
+-- again), "spells" forgets every crate spell and empties the loadout.
+-- Returns false for an unknown scope.
+function ElementService.reset(player: Player, scope: string): boolean
+	local profile = PlayerDataService.get(player)
+	if not profile then
+		return false
+	end
+	if scope == "elements" then
+		profile.elements = {}
+		profile.element = ""
+	elseif scope == "spells" then
+		profile.spells = {}
+		profile.loadout = {}
+	else
+		return false
+	end
+	ElementService.Changed:Fire(player)
+	EconomyService.sendSummary(player)
+	return true
+end
+
 function ElementService.init()
 	toastRemote = Remotes.get("Toast")
 end

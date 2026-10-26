@@ -73,6 +73,7 @@ local function sendSummary(player: Player)
 		streak = profile.daily.streak,
 		settings = profile.settings,
 		stats = profile.stats,
+		pity = profile.pity,
 		rewards = {
 			likeFav = profile.rewards.likeFav,
 			likeReadyAt = (joinedAt[player] or workspace:GetServerTimeNow())
@@ -136,6 +137,44 @@ function EconomyService.recordWin(player: Player)
 	profile.stats.wins += 1
 	sendSummary(player)
 	EconomyService.Changed:Fire(player)
+end
+
+-- Sets the win count (leaderboard, board, podium follow). Admin tools only.
+function EconomyService.setWins(player: Player, wins: number)
+	local profile = PlayerDataService.get(player)
+	if not profile then
+		return
+	end
+	profile.stats.wins = math.max(0, math.floor(wins))
+	sendSummary(player)
+	EconomyService.Changed:Fire(player)
+end
+
+-- Admin reset of the economy-owned parts of a profile. `scope` is one of
+-- "coins" (back to the starting coins), "wins", "stats" (every counter),
+-- "rewards" (the Like & Favourite gift can be claimed again) or "tutorial"
+-- (shows again). Returns false for an unknown scope.
+function EconomyService.reset(player: Player, scope: string): boolean
+	local profile = PlayerDataService.get(player)
+	if not profile then
+		return false
+	end
+	if scope == "coins" then
+		profile.coins = Config.COINS.STARTING
+	elseif scope == "wins" then
+		profile.stats.wins = 0
+	elseif scope == "stats" then
+		profile.stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 }
+	elseif scope == "rewards" then
+		profile.rewards.likeFav = false
+	elseif scope == "tutorial" then
+		profile.tutorial.done = false
+	else
+		return false
+	end
+	sendSummary(player)
+	EconomyService.Changed:Fire(player)
+	return true
 end
 
 local function refreshDaily(player: Player, profile: Types.Profile)

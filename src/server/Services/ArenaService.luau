@@ -121,7 +121,7 @@ local function addSpectatorSign(model: Model, mapName: string, mode: string)
 	text.TextScaled = true
 	text.TextColor3 = Color3.new(1, 1, 1)
 	text.TextStrokeTransparency = 0.3
-	text.Text = `⚔ {mode} · {ArenaService.DISPLAY_NAMES[mapName] or mapName}`
+	text.Text = `{mode} · {ArenaService.DISPLAY_NAMES[mapName] or mapName}`
 	text.Parent = gui
 end
 

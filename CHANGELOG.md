@@ -4,6 +4,13 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (crate pity, admin reset)
+- **Spell Crate pity.** Every spin that is not Epic or better adds one to `profile.pity`; the 10th spin in a row is guaranteed Epic or Legendary (`Crates.PITY`), preferring a spell you do not own yet. A hit resets the counter. The crate panel shows how many spins are left. Profile schema 5 to 6 (`pity`, default 0).
+- **`;reset <player> <coins|wins|stats|elements|spells|pity|rewards|tutorial|all>`** (also a "Reset (saved data)" group in the Admin panel's Economy tab). Players in a match are skipped. New `EconomyService.setWins/reset`, `ElementService.reset`, `CrateService.resetPity`.
+
+### Changed (no emojis in the GUI)
+- Every emoji is gone from labels, buttons, hub signs, toasts and the tutorial text. Prices now say "coins", the wallet says "Coins"/"Wins", and match boosts use short text tags (PWR, HP, SPD, FOC, POT). The element `icon` field was removed. Plain text glyphs (the quality stars, the guide arrow) stay.
+
 ### Changed (crate spell tuning)
 - **Black Hole** cooldown 10s to 20s. **Heal** restores 20 (was 25). **Turret** is now Epic (was Rare) with a 20s cooldown (was 12s). **Tornado** flies 2x as fast (55 to 110) and its hitbox and model are 1.5x bigger (radius 8.5 to 12.75).
 - **Crate spells show their numbers.** The Spell Crate reveal and the Spellbook detail panel list a crate spell's damage (or heal / health), cooldown, duration, and range (new `Spells/SpellStats`).
