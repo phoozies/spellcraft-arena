@@ -586,7 +586,7 @@ local function step(dt: number)
 		end
 		-- Safety net if the end event is lost: drop it shortly after max range.
 		if travelled >= bolt.range and now - bolt.born > bolt.range / bolt.speed + 0.5 then
-			bolts[id] = nil
+			bolts[id] = nil;
 			(bolt.model or bolt.part):Destroy()
 		end
 	end

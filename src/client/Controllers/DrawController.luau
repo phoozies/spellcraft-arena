@@ -424,9 +424,10 @@ local function buildCanvas()
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and inputKind == "mouse" then
-			finishStroke()
-		elseif input == touchInput then
+		if
+			(input.UserInputType == Enum.UserInputType.MouseButton1 and inputKind == "mouse")
+			or input == touchInput
+		then
 			finishStroke()
 		end
 	end)
