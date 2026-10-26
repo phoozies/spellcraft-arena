@@ -337,12 +337,12 @@ local DEFINITIONS: { SpellDef } = {
 			health = 35, -- total damage the whole wall takes before it's gone
 			lifetime = 20,
 			maxActive = 3,
-			model = "RockWall",
+			model = "EarthWall",
 			segments = { x = 3, y = 2 }, -- fallback when the model isn't in the place
 		},
 		visual = {
 			shape = "Block",
-			-- Matches the RockWall model's size so placement rules fit it.
+			-- Matches the EarthWall model's size so placement rules fit it.
 			size = Vector3.new(23.04, 12.38, 9.72),
 			color = rgb(140, 112, 84),
 			material = M.Ground,

@@ -203,7 +203,7 @@ Every spell has a **model**, a **particle style**, a **cast animation**, and **s
 | **Water Wave** | Water | Rare | `WaterWave` | `WaterWave` | Wave | `waveCast` | `waveCrash` |
 | **Water Nebula** | Water | Legendary | `WaterNebula` | `WaterNebula` | Downpour | `nebulaCast` | `nebulaBoom` |
 | **Rock Throw** | Earth | base | `RockThrow` | `RockThrow` | Heave | `throwCast` | `rockSmash` |
-| **Earth Wall** | Earth | base | `RockWall` | `EarthWall` | Bulwark | `rockRaise` | `wallHit` |
+| **Earth Wall** | Earth | base | `EarthWall` | `EarthWall` | Bulwark | `rockRaise` | `wallHit` |
 | **Earth Punch** | Earth | base | `EarthPunch` | `EarthPunch` | GroundPunch | `punchCast` | `rockBreak` |
 | **Earth Pillar** | Earth | Uncommon | `EarthPillar` | `EarthPillar` | StompRise | `rockRaise` | `rockBreak` |
 | **Earthquake** | Earth | Legendary | `Earthquake` | `Earthquake` | Stomp | `quakeRumble` | `quakeBoom` |

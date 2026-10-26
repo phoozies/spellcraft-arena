@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (rubble Earth Wall)
+- **Earth Wall is a rectangular wall of rubble.** New `EarthWall` block model (`tools/blender/block_models.py`, `assets/models/blocks/EarthWall.fbx`): five staggered rows of uneven stones with a broken top edge and loose rubble along both faces. It fills the same 23 x 12.4 x 9.7 box as the old `RockWall` mesh, so placement, health (35) and the chunk-by-chunk breaking are unchanged; the spell now uses it with no imported mesh needed.
+
 ### Changed (bigger Training Grove)
 - **Each Training Grove is about three times the area** (58 x 64 to 100 x 112 studs) with a single row of 7 training dummies instead of two staggered rows; more archery targets and hay bales fill the extra room. The hub island grew to match (`Config.HUB.RADIUS` 180 to 240), and the meadow trees keep clear of the larger groves.
 

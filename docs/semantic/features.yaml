@@ -78,7 +78,7 @@ features:
         - { id: WaterNebula, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: WaterNebula,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
       Earth:
         - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, model: RockThrow, what: "large rock, r6, 15 dmg, cd 3" }
-        - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: RockWall, what: "35 HP breakable wall, cd 4; your own spells pass through it, enemy spells hit it" }
+        - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: EarthWall, what: "35 HP breakable wall, cd 4; your own spells pass through it, enemy spells hit it" }
         - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone, model: EarthPunch,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
         - { id: EarthPillar, rarity: Uncommon, role: area,    glyph: chevron,   archetype: Line, model: EarthPillar,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
         - { id: Earthquake, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: Earthquake,       what: "ultimate: centered on the caster, r25, 40 dmg, 1.2s cast with the caster rooted, cd 22 (channel, pillar)" }
@@ -405,7 +405,7 @@ features:
     source_of_truth: tools/blender/block_models.py (Python spec of blocks: position, size, colour, material, rotation, shape)
     outputs: [src/shared/Models/BlockModels.luau (generated data; never hand-edit), assets/models/blocks/*.fbx, assets/models/source/BlockModels.blend]
     reader: ModelKit.get/clone (builds Parts on first use; an imported place model of the same name wins)
-    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue]
+    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, EarthWall, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue]
     used_by: "bolts (FxController), buff emblems (Buff -> modelPop), columns/boulders/cracks (SpellVfx), scenery (Maps/Battleground, Maps/InkwellPlaza), dummies (HubService), crate and chest (InkwellPlaza), statue (Maps/SparringArena)"
     conventions: "blocky Parts, flat colours, Roblox materials; effect models carry an invisible Root (PrimaryPart); `base` models stand on y = 0, others are centered; forward = -Z"
     tests: tests/Models.spec.luau

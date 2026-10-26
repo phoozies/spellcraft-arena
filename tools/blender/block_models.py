@@ -22,6 +22,7 @@
 
 import math
 import os
+import random
 import sys
 
 STUD = 28.0  # cm per stud in the Blender scene (1 Blender unit = 1 cm)
@@ -176,6 +177,65 @@ model("EarthPunch", [
     P("Boulder_Spike", (-0.8, 8.7, 0.5), (1.6, 2.2, 1.6), rgb(176, 142, 104), "Slate", rot=(10, 30, 12)),
     P("Boulder_Rubble", (1.2, 0.5, 4.0), (1.3, 1.0, 1.3), rgb(128, 100, 72), "Slate", rot=(0, 25, 0)),
 ], vfx=True, base=True, note="Earth Punch boulder that bursts out of the ground")
+
+def rubble_wall():
+    """A wide, rectangular wall of piled stones, centered on the origin.
+
+    Fills the same 23.04 x 12.38 x 9.72 box as the old RockWall mesh, so placement and the
+    spell's `visual.size` stay valid. Five rows of uneven, staggered stones make the rectangle;
+    the top rows are broken away in places for a ragged skyline, and loose rubble spills along
+    both long faces. Every stone is its own chunk when the wall is hit.
+    """
+    rng = random.Random(5)
+    width, height, depth = 23.04, 12.38, 9.72
+    ground = -height / 2
+    stones = [(150, 118, 86), (138, 108, 80), (160, 126, 92), (128, 100, 72), (168, 134, 98),
+              (120, 96, 72)]
+    rows = 5
+    row_h = height / rows
+    # How many rows are still standing in each fifth of the wall (the broken skyline).
+    standing = [4, 5, 3, 5, 4]
+    parts = []
+    for r in range(rows):
+        x = -width / 2
+        # Offset every other row so the joints don't line up, like a stacked wall.
+        first = rng.uniform(1.6, 2.4) if r % 2 else rng.uniform(3.4, 4.6)
+        edge = x + first
+        while x < width / 2 - 0.05:
+            w = min(edge - x, width / 2 - x)
+            if width / 2 - edge < 2.0:
+                w = width / 2 - x  # no sliver at the end of the row
+            cx = x + w / 2
+            fifth = min(int((cx + width / 2) / width * len(standing)), len(standing) - 1)
+            if r < standing[fifth]:
+                top = r == standing[fifth] - 1 and standing[fifth] < rows
+                h = row_h * rng.uniform(0.9, 1.0) * (rng.uniform(0.55, 0.8) if top else 1.0)
+                d = rng.uniform(5.2, 6.4)
+                parts.append(
+                    P("Wall_Cap" if top else "Wall_Stone",
+                      (round(cx, 2), round(ground + r * row_h + h / 2, 2), round(rng.uniform(-0.5, 0.5), 2)),
+                      (round(w * rng.uniform(0.93, 0.99), 2), round(h, 2), round(d, 2)),
+                      rng.choice(stones), "Slate", rot=(0, round(rng.uniform(-4, 4), 1), 0))
+                )
+            x += w
+            edge = x + rng.uniform(3.2, 6.0)
+    # Fallen rubble along both long faces.
+    for n in range(10):
+        side = 1 if n % 2 == 0 else -1
+        s = rng.uniform(1.1, 2.3)
+        x = -width / 2 + 1.4 + (width - 2.8) * (n + rng.uniform(0.1, 0.9)) / 10
+        z = side * (depth / 2 - s * 0.75 - rng.uniform(0, 0.5))
+        parts.append(
+            P("Wall_Rubble", (round(x, 2), round(ground + s * 0.42, 2), round(z, 2)),
+              (round(s, 2), round(s * rng.uniform(0.7, 0.95), 2), round(s * rng.uniform(0.9, 1.2), 2)),
+              rng.choice(stones), "Slate",
+              rot=(round(rng.uniform(-9, 9), 1), round(rng.uniform(0, 70), 1), round(rng.uniform(-9, 9), 1)))
+        )
+    return parts
+
+
+model("EarthWall", rubble_wall(), solid=True,
+      note="Earth Wall: a wide rectangular wall of piled rubble, each stone breaks off on its own")
 
 model("RockThrow", [
     P("Rock_Main", (0, 0, 0), (4.4, 4.0, 4.4), rgb(150, 118, 86), "Slate", rot=(15, 25, 10)),
