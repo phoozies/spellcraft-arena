@@ -378,7 +378,7 @@ COMMANDS.god = {
 
 COMMANDS.speed = {
 	usage = "speed <player> <walkspeed>",
-	help = "Set walk speed until the next status change or respawn (default 18).",
+	help = `Set walk speed until the next status change or respawn (default {Config.WALK_SPEED}).`,
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local speed = tonumber(args[2])

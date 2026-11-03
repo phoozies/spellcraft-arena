@@ -7,7 +7,7 @@
 1. **Shapes are power.** Tracing a triangle raises a wall of earth (or a shield of wind) in your hands. Drawing is quick to learn, and the glyphs are all over the hub.
 2. **Short, social, repeatable.** Rounds are quick, matches are best of 3, and you can be in a queue within 10 seconds of joining.
 3. **Fair and kind.** Nothing is pay-to-win, there's no gore (knockouts "poof" into ink), and the visuals are bright and readable for all ages.
-4. **Play anywhere.** PC, mobile, console, and VR each get first-class controls. Typing is never required: you can also tap or speak.
+4. **Play anywhere.** PC, mobile, console, and VR each get first-class controls. Typing is never required: every spell is drawn with a mouse, finger, or stick.
 
 ## Why these choices (research summary)
 
@@ -22,7 +22,7 @@
 Hub ──► queue (pad or Play menu) ──► Match (best of 3)
  ▲                                     │
  │   win: coins + 1 win (podium) ◄────┘
- └── Crate Shop (coins → new elements), daily quests, login streak
+ └── Spellbook (coins → new elements), Crate Shop (coins → crate spells), daily quests, login streak
 ```
 
 ### In a match
@@ -36,38 +36,43 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 
 ### Casting: draw it, stockpile it, spend it
 
-- **Draw** a spell's glyph (hold **F** or tap ✏ Draw, then trace it) to add **one copy** of that spell to your hotbar. You hold **at most one copy of each spell**. The new copy is readied automatically. **You can only draw in the hub's Training Grove, the rounds of a match, and the Battleground.**
-- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.**
-- **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, the rest up to 9s, ultimates 16-22s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
-- **Dash:** press **Q** (or the Dash button) to leap forward with three wind streaks behind you; 8 second cooldown.
+- **Draw** a spell's glyph to add **one copy** of that spell to your hotbar: tap its spell card or press its key (**1-5**) to trace its shape over a guide, or press **F** / tap Draw for a blank canvas. You hold **at most one copy of each spell**, and hotbar slot N always holds the Nth spell of your loadout. The new copy is readied automatically. **You can only draw in the hub's two Training Groves, the rounds of a match, and the Battleground.**
+- **Drawing quality:** the closer your stroke follows the shape, the stronger the copy (up to +50% power, +25% size, +30% duration; a sloppy one is a little weaker). It shows as 1-4 stars on the hotbar slot (see SPELLS.md).
+- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** With a mouse, a readied spell turns the pointer into a crosshair in the spell's colour.
+- **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, most others 4-22s, Heal 60s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
+- **Dash:** press **Q** (or the Dash button) for a forward somersault with three wind streaks behind you; 8 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
-- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch) show their hit circle on the ground where you aim, and a ring for their range limit.
+- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground where you aim, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
-- **Which shapes work:** only your loadout's shapes. Others fizzle with a hint. Each round starts empty-handed, so your first move is to draw.
+- **Which shapes work:** only your loadout's shapes. Others fizzle with an error buzz (there are no spell pop-ups). Each round starts empty-handed, so your first move is to draw.
 - **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
-- **Spell VFX and audio:** drawing a glyph pops it over your head; every cast raises the caster's arm and imprints the glyph in a magic circle at their feet. Heal sparkles, Black Hole streams motes inward, and each spell has its own cast and impact sound (`Audio/Cues`). Bolts trail element-themed particles (fire, water, wind), and impacts burst with light and a shockwave ring.
-- **Health bars:** your own HP is shown top-left, with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
+- **Spell VFX and audio:** drawing a glyph pops it over your head. Every spell has its own cast animation (a pose and a "beat": a fireball growing in the hand, a stomp, a gust of wind), swells from a small spark as it is summoned, and imprints the glyph in a magic circle at the caster's feet. Each spell has its own particles, hit effect, and cast and impact sounds (`Audio/Cues`). Buffs wrap the caster in an aura.
+- **Game feel:** hit markers when your spell lands, a red edge flash and shake when you are hit, a kick when you cast, and pulsing red edges at low health. Camera shake can be switched off in Settings.
+- **Health bars:** your own HP bar sits above the hotbar (as wide as it), with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
 
 ### Balancing for fast play
 
-Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+2 studs on top of each spell's own generous radius), while still gliding over floors. Since you can stockpile up to 5 copies, the numbers are budgeted per cast cooldown:
+Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+2 studs on top of each spell's own generous radius), while still gliding over floors. Since you can hold all five loadout spells at once, the numbers are budgeted per cast cooldown:
 - No normal hit takes more than 30 of your 100 HP, and ultimates (slot 5) take 30-40 on cooldowns of 15s or more.
 - Burst damage is capped at 20 per second, which works out to about a 6-second kill.
 - Hard crowd control can't be chained, thanks to 2.5s of immunity after it ends.
 - Timed buffs (Fire Boost, Water Body, Air Boost, Air Shield) are up at most 60% of the time.
-- Zones and summons are limited to one live copy per player per spell.
-- Ultimates have cooldowns of 15s or more.
+- Walls and placeables have a lifetime and at most 3 alive per player; Black Hole and Turret allow one.
 
-`tests/Balance.spec.luau` enforces all of these limits.
+`tests/Balance.spec.luau` enforces all of these limits, and `tests/Quality.spec.luau` checks that even a perfect drawing stays inside them.
 
 ### Breakable cover
 
-The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones, and rubble break separately, so you can punch through it piece by piece. Most arenas also have breakable block walls. Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
+The Earth Wall is a wide wall of staggered rubble stones (35 health in all) that break off one by one, so you can punch through it piece by piece. Your own and your allies' spells fly through it; enemy spells hit it. Most arenas also have breakable block walls, and almost every map's floor and scenery is breakable (see Maps). Blocks darken as they're damaged, chip on each hit, and shatter into tumbling chunks.
+
+### Never stuck, never lost
+
+Every arena floats over water. Fall in and you are splashed (30 damage and a 1.2s stun; the last enemy who hit you gets the knockout if it finishes you) and thrown in an arc back onto your team's spawn pad. Stand for 1.5s in a hole carved too deep to jump out of and you are thrown out over the nearest rim (`Services/Rescue`, `Config.RESCUE`).
 
 ### PvP encouragement
 
 - Coins and a win only for winning the match, plus a "SPELL STREAK!" callout at 3 KOs.
-- Combos (Water Lock stuns an enemy for a Fire Pillar or Earth Punch), knockback ring-outs on the rim-less maps (Whirlwind, Tornado), and destructible cover.
+- Combos (Water Lock stuns an enemy for a Fire Pillar or Earth Punch), knockback into the water on the rim-less maps (Whirlwind, Tornado), and destructible cover and terrain.
 - A wins leaderboard (player list), a Most Wins board, and a podium where the top 3 players in the server stand as their avatars. There's no PvP in the hub; it all happens in matches.
 - Spawn protection lasts 3 seconds and friendly fire is off.
 
@@ -84,16 +89,17 @@ The Earth Wall is a sculpted earth wall (35 health) whose base, standing stones,
 
 The hub has **boxes for every team mode** (two each for 1v1 and 2v2, one each for 3v3 and 4v4). Every box has a **Blue side and a Red side**, with one spot per teammate. **Stand on a side to pick your team**, so friends can line up together before the match, and the sides show how many spots are filled (for example `BLUE 1/2`). When **both sides are full**, a 5-second countdown starts. It restarts if anyone steps off or swaps sides, and then the match starts with exactly those teams. A full side turns newcomers away with a hint to try the other side.
 
-The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically.
+The **Play menu** also queues for any mode, including 3v3, with the teams balanced automatically. Before a **1v1** starts, both players vote on the map (12s; ties and no votes are random).
 
 ### The Battleground (open world)
 
-A blue **Battleground portal** in the concourse teleports you to a big open world far from the hub: four biomes (forest, meadow, desert, rocky highlands) ringed by mountains, with Raider camps, ruined stone circles, and the **Warlord's Keep** in the middle. You land at a **random open spot**, away from camps and other fighters. There is no queue and no match.
+A blue **Battleground portal** at the end of the hub's south road (and the red Arena Gate to the north) teleports you to a big open world far out of sight of the hub: four biomes (forest, meadow, desert, rocky highlands) ringed by mountains, with Raider camps, ruined stone circles, and the **Warlord's Keep** in the middle. You land at a **random open spot**, away from camps and other fighters. There is no queue and no match.
 
 - **Players are enemies.** Anyone you knock out is out for 3 seconds, then respawns at a new random spot with spawn protection.
 - **NPCs fight back.** Sand Raiders (melee) and Ember Mages (ranged) guard the camps, Stone Brutes (heavy hitters with knockback) the ruins, and the Dune Warlord (melee and bolts, very tough) the Keep. They chase when you get close, give up and heal if you run, and respawn after a while.
 - **Knocking out an NPC pays coins** (3 / 5 / 12 / 40), up to 120 coins per 5 minutes so camps can't be farmed endlessly.
-- You fight with your equipped element's spells and can raise Earth Walls anywhere. There are no wins or boosts; health regenerates slowly after 5 seconds without damage. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
+- You fight with your loadout and can raise Earth Walls anywhere. There are no wins, boosts, or passive health regeneration. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
+- **Parties** (up to 4, the Party button) can't hurt each other in the Battleground, share buffs and heals, and drop in beside each other.
 
 ## Maps (7 duel maps plus the hub; the compact ones suit smaller matches)
 
@@ -104,11 +110,11 @@ Every map is built at design size and scaled 2x, and almost everything on them b
 | **Inkwell Plaza** (hub) | A round **floating island** over the ocean: a grass top with a sand beach, a dark rock cone underneath, a wooden rail, and a stepped white-marble amphitheatre, leaning pillars, a ruined arch and bare trees. A sand plaza with a giant inkwell and a stone wizard statue is at the centre | Four element shrines, Spellbook kiosk, Daily Quest chest and gift box on the plaza; the team boxes (1v1–4v4) in an arc to the north with the Arena Gate behind them; the Battleground portal to the south (opposite the duels); two Training Groves (west and east: build, smash dummies, the only hub places to draw and cast); marble roads to each; the Crate Shop (south-east); the wins podium + Most Wins board; four rim overlooks to **spectate the duels fought on arenas below the island** |
 | **Crayon Canyon** | Paper canyon, 3 lanes split by mesas (open in every mode, no dividing gates) | Destructible rope bridges, giant crayon cover, ramps to high ground |
 | **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
-| **Frost Hollow** | A round sheet of ice with frozen spires | No rim wall: ring-outs; breakable ice cubes and spires |
+| **Frost Hollow** | A round sheet of ice with frozen spires | No rim wall: knock enemies into the water; breakable ice cubes and spires |
 | **Ember Forge** | A basalt floor in a lava moat, around a stepped anvil | Obsidian pillars and brick walls as cover; rim wall |
 | **Moss Ruins** | An overgrown courtyard with broken marble arches | Lots of cover: toppled columns, mossy blocks, arches, trees (all breakable); rim wall |
 | **Tidal Temple** | A sandy island around a three-step temple in shallow sea | Coral pillars and giant clams as cover; torches; rim wall |
-| **Sky Bridge** | Two round platforms joined by a plank bridge, with a small island midway | No rim walls: ring-outs; breakable bridge planks |
+| **Sky Bridge** | Two round platforms joined by a plank bridge, with a small island midway | No rim walls: knock enemies into the water; breakable bridge planks |
 
 Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and identical on every server.
 
@@ -116,7 +122,7 @@ Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and
 
 Everyone starts with **150 coins** and picks **one element for free** the first time they open the Spellbook. Winning a match pays **100 coins** (+50 for the first win of the day); the daily login chest (25 × streak, capped at 7) and daily quests (25-60) pay coins too. Losing pays nothing, so wins are what the economy rewards.
 
-Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (100 each, at the hub's crate or the 🎁 Crates menu), which win a crate spell by rarity. Equip owned elements and build your two-spell extra loadout in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
+Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (100 each, at the hub's Crate Shop or the Crates menu), which win a crate spell by rarity; the 10th spin in a row without an Epic or better is guaranteed one. A one-time Like & Favourite gift box on the plaza pays 250 coins (honor system). Equip owned elements and build your two-spell extra loadout in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
 
 **Classes** (a second layer on top of elements) are planned but not built: see [CLASSES.md](CLASSES.md).
 
@@ -131,10 +137,11 @@ Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (1
 
 ## Not yet built (backlog)
 
+- Classes on top of elements ([CLASSES.md](CLASSES.md))
 - Cosmetics shop and spell skins (cosmetic-only monetization)
-- Party queueing (queue with friends as a team), and a friend-invite prompt (`SocialService`)
+- Party queueing (parties exist for the Battleground; queueing a party as a match team does not), and a friend-invite prompt (`SocialService`)
 - Badges for win milestones (needs badge asset IDs)
 - A global all-time wins board (OrderedDataStore)
 - Localization tables (strings are centralized in UI modules, ready to extract)
-- Spectator camera for knocked-out players
+- Spectator camera for knocked-out players (Watch only works from the hub today)
 - Moving matches to reserved servers (TeleportService) if hub servers get crowded

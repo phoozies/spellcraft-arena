@@ -3,10 +3,11 @@
 There are **no levels or XP**. Players win matches to earn **coins**, buy **base elements** with them (your first is free), and spin the **Spell Crate** for **crate spells** of five rarities. **Wins** are the leaderboard stat and put the top 3 players in the server on the hub's **podium**.
 
 ```
-win a match ──► +100 coins (+50 first win of the day) ──► Crate Shop
-     │                                                       │ spin
-     └──► +1 win ──► leaderstats, Most Wins board, podium    ▼
-                                         a new element (you never win one you own)
+win a match ──► +100 coins (+50 first win of the day) ──┬──► Spellbook: buy an element (400)
+     │                                                   └──► Crate Shop: spin (100)
+     └──► +1 win ──► leaderstats, Most Wins board, podium        │
+                                    a crate spell by rarity ◄────┘
+                                    (a duplicate pays coins back; pity every 10th spin)
 ```
 
 ## Coins
@@ -18,10 +19,13 @@ win a match ──► +100 coins (+50 first win of the day) ──► Crate Shop
 | First win of the day | +50 | `Config.COINS.FIRST_WIN_OF_DAY` |
 | Daily login chest | 25 × streak day (max 7) | `Config.COINS.DAILY_LOGIN`, `EconomyService.refreshDaily` |
 | Daily quests | 25–60 each | `QUEST_POOL` in `EconomyService` |
+| Battleground NPC knockouts | 3 / 5 / 12 / 40, capped at 120 per 5 minutes | see "Battleground NPC coins" below |
+| Like & Favourite gift (once) | 250 | `Config.SUPPORT`, see below |
+| Duplicate crate spell | 20–90 by rarity | `Spells/Rarity.luau` `refund` |
 
-Losing, knockouts, and round wins pay nothing. Solo test matches (admin/debug `solo`) never pay. The **Results** screen counts up the coins you earned (`MatchState.coinsGained`).
+Losing, player knockouts, and round wins pay nothing. Solo test matches (admin/debug `solo`) never pay. The **Results** screen counts up the coins you earned (`MatchState.coinsGained`).
 
-`EconomyService` is the **only** code that changes `profile.coins` or `profile.stats.wins` (`addCoins`, `spend`, `recordWin`). It fires `EconomyService.Changed(player)` after every change.
+`EconomyService` is the **only** code that changes `profile.coins` or `profile.stats.wins` (`addCoins`, `spend(player, amount, item?)`, `recordWin`, and the admin-only `setWins` / `reset`). It fires `EconomyService.Changed(player)` after every change, and reports every source and sink to `TelemetryService` as a coin economy flow.
 
 ## Elements and crates
 
@@ -31,22 +35,24 @@ Losing, knockouts, and round wins pay nothing. Solo test matches (admin/debug `s
 
 | Crate | Price | What it does |
 |---|---|---|
-| 🎁 Spell Crate | 100 | Wins one crate spell, picked by rarity |
+| Spell Crate | 100 | Wins one crate spell, picked by rarity |
 
 Rarities are in [`Spells/Rarity.luau`](../src/shared/Spells/Rarity.luau): Common 55%, Uncommon 25%, Rare 12%, Epic 6%, Legendary 2%. There are 12 crate spells (see [SPELLS.md](SPELLS.md)). A spell you already own pays back coins (20 / 35 / 55 / 75 / 90 by rarity, always less than a spin).
+
+**Pity.** Every spin that lands below Epic adds one to `profile.pity`; when it reaches `Crates.PITY.SPINS - 1` (9), the next spin is guaranteed Epic or Legendary (`Crates.PITY`, the Epic:Legendary weights kept at 3:1) and prefers a spell of that rarity or better you don't own yet. An Epic or Legendary spin resets the counter. The crate panel shows how many spins are left. `CrateService` is the only writer of `profile.pity`.
 
 **How a spin is decided (server only, `CrateService.open`):**
 
 1. Validate: known crate id, profile loaded, you've picked your first element, **not in a match**, not mid-spin (`Crates.SPIN_TIME` = 4s per player), enough coins, a crate spell left to win.
-2. `Crates.roll(owned, rng)`: roll a rarity by weight, then a spell of it.
-3. `EconomyService.spend(price)`, then `ElementService.grantSpell`; the new spell is equipped straight into an empty loadout slot when it fits.
-4. Fire `CrateOpened(result)` to the opener. After `SPIN_TIME` the server pays any duplicate refund and sends a toast, so the reveal isn't spoiled.
+2. `Crates.roll(owned, rng, pity)`: roll a rarity by weight (or Epic+ when the pity is due), then a spell of it.
+3. `EconomyService.spend(price, crateId)`, then `ElementService.grantSpell`; the new spell is equipped straight into an empty loadout slot when it fits. The pity counter moves (`Crates.nextPity`).
+4. Fire `CrateOpened(result)` to the opener (`spell`, `rarity`, `duplicate`, `refund`, `equipped`, `pity`, `coins`). After `SPIN_TIME` the server pays any duplicate refund and sends a toast, so the reveal isn't spoiled.
 
-**Client (`CrateController`):** the Spell Crate panel (side menu **🎁 Crates**, or the crate on the hub's stage) shows the price and each rarity's odds and **Spin!**, which only sends `OpenCrate(crateId)`. When `CrateOpened` arrives, a reel of 40 spell cards in rarity colours (the server's result at card 34) eases to a stop, ticking as cards pass, then reveals the prize with a rarity sound and flash.
+**Client (`CrateController`):** the Spell Crate panel (side menu **Crates**, or the crate on the hub's stage) shows the price, each rarity's odds, the spins left until the pity, and **Spin!**, which only sends `OpenCrate(crateId)`. When `CrateOpened` arrives, a reel of 40 spell cards in rarity colours (the server's result at card 34) eases to a stop, ticking as cards pass, then reveals the prize with a rarity sound and flash and lists its numbers (damage or heal, cooldown, duration, range; `Spells/SpellStats`).
 
 **Loadout.** Equip crate spells in the Spellbook's Loadout tab (`SetLoadout`): your element's three base spells plus up to two crate spells you own. Two spells with the same shape can't share a loadout.
 
-**Adding a crate spell:** add a row with a `rarity` to `SpellDefinitions`. **Retuning:** edit `Crates.LIST`, `Rarity.LIST`, or an element's `price` (`tests/Economy.spec.luau` covers the rolls).
+**Adding a crate spell:** add a row with a `rarity` to `SpellDefinitions`. **Retuning:** edit `Crates.LIST`, `Crates.PITY`, `Rarity.LIST`, or an element's `price` (`tests/Economy.spec.luau` covers the rolls and the pity).
 
 ## Like & Favourite gift
 
@@ -76,15 +82,28 @@ The ranking is per server (players currently here), built from their saved `stat
 | Crate Shop stage (the Spell Crate, prompt "Crates", with five rarity orbs) | bearing 135 (south-east), radius 122, facing the plaza | same; the crate uses the imported **Crate** model tinted gold, else a colored block |
 | Podium (3 pedestals) | bearing 335, radius 64, facing the centre | same |
 | Most Wins board | bearing 25, radius 64, facing the centre | same |
+| Team boxes (two 1v1, two 2v2, one 3v3, one 4v4) and the red Arena Gate behind them | arc to the north, radius 112 (gate near bearing 0, radius 150) | same |
+| Battleground portal | bearing 180, radius 130 (end of the south road) | same |
+| Training Groves (west and east, 100 x 112) | x 102 to 202 studs either side of the axis | same |
 
 ## Admin and debug
 
-- `;coins <player> <amount>`, `;wins <player> <amount>`, `;crate <player>`, `;unlock <player> <element|spells|all>` (see [ADMIN.md](ADMIN.md)).
-- Studio playtests: `game.ServerStorage.SpellcraftDebug:Invoke("crate", "Spell")` (also `coins`, `wins`, `state`, `unlockall`, `element`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
+- `;coins <player> <amount>`, `;wins <player> <amount>`, `;crate <player>`, `;unlock <player> <element|spells|all>`, `;reset <player> <coins|wins|stats|elements|spells|pity|rewards|tutorial|all>` (see [ADMIN.md](ADMIN.md)).
+- Studio playtests: `game.ServerStorage.SpellcraftDebug:Invoke("crate", "Spell")` (also `coins`, `takecoins`, `wins`, `state`, `unlockall`, `element`, `likefav`). The MCP and command bar don't share module caches or `_G` with the running game, which is why this is a BindableFunction.
 
 ## Data
 
-`Types.Profile` schema **6** (adds `pity`, the crate pity counter; see the Spell Crate pity rule: every 10th spin without an Epic or better is guaranteed one), earlier schema **5**: `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (crate spells owned), `loadout` (up to 2 equipped crate spells), and `tutorial.done`. Schema 4 to 5 adds the new fields and marks players who already picked an element as done with the tutorial. Schema 3 replaced `ownedSpells` with `elements`/`element`. Migration from schema 2 (`PlayerDataService.reconcile`): drop `ownedSpells`; the player picks their first element again. Schema 1 to 2 dropped `xp`/`level` and re-rolled the quests.
+`Types.Profile` schema **6**. The economy fields: `coins`, `stats.wins`, `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (crate spells owned), `loadout` (up to 2 equipped crate spells), `pity` (crate spins since the last Epic or better), `rewards.likeFav`, and `daily` (login streak, first win, quests). Migrations (`PlayerDataService.reconcile`):
+
+| Step | Change |
+|---|---|
+| 1 → 2 | dropped `xp`/`level` and re-rolled the quests |
+| 2 → 3 | `ownedSpells` replaced by `elements`/`element`; the player picks their first element again |
+| 3 → 4 | added `settings.music` and `rewards.likeFav` |
+| 4 → 5 | added `spells`, `loadout`, `tutorial.done` (done for players who already picked an element) |
+| 5 → 6 | added `pity` (0) |
+
+Settings added later (`settings.sfx`, `settings.shake`) come from the defaults with no schema bump.
 
 ## Ideas (not built)
 

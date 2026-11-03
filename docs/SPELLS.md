@@ -31,7 +31,8 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 ## Getting spells: the copy model
 
-- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You hold **at most one copy of each spell**. Drawing a spell you already hold is refused ("You already hold Fireball"); cast it first.
+- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You hold **at most one copy of each spell**, and hotbar slot N always holds the Nth spell of your loadout (the same order as the spell cards and the **1-5** keys); a slot stays empty after a cast. Drawing a spell you already hold is refused with an error buzz; cast it first.
+- **Three ways to draw:** tap a spell card (or press its key, 1-5, when you don't hold it) to trace its shape over a faint guide (the server then accepts only that shape), or press **F** / tap Draw for a blank canvas.
 - **Casting uses up the copy.** Draw the shape again to get another.
 - **Each spell has its own cast cooldown** (the **Cooldown** column below). Basic attacks wait **3 seconds**, fast slashes **2 seconds**.
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
@@ -51,10 +52,10 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 The client records your stroke and sends it (`DrawSpell`); the server runs `GlyphRecognizer` on it:
 
-1. A **straight stroke** (no point strays far from the line between its ends) is a slash, in any direction. Anything else is resampled to 64 points, rotated and scaled to a square, then compared with your element's other four shapes (the **$1 unistroke recognizer**). A circle and a square look alike to it, so when they are the finalists it checks how much of its tightest bounding box the stroke fills (a square fills nearly all of it, a circle about 78%).
+1. A **straight stroke** (no point strays far from the line between its ends) is a slash, in any direction. Anything else is resampled to 64 points, rotated and scaled to a square, then compared with the other shapes in your loadout (the **$1 unistroke recognizer**). A circle and a square look alike to it, so when they are the finalists it checks how much of its tightest bounding box the stroke fills (a square fills nearly all of it, a circle about 78%).
 2. Size, position, rotation, and drawing direction don't matter, and closed shapes can start anywhere. Only the shape does.
 3. The best shape wins if its score is at least `MIN_SCORE` (0.8) **and** clearly ahead of the runner-up (`MIN_MARGIN`). Otherwise the drawing fizzles. Straight lines, dots, and scribbles are rejected.
-4. The spell your element draws with that shape is readied by `HandService.grant`.
+4. The loadout spell with that shape is readied by `HandService.grant`. When the drawing came from a spell card, only that spell's shape counts.
 
 `tests/Glyphs.spec.luau` draws every shape with wobble, rotation, reversal, and random start points, and checks that an element never repeats a shape and that each spell uses its role's shape. Admin commands still take spell names through `WordMatcher` (`;give fireball`).
 
@@ -64,11 +65,11 @@ How well a stroke follows its shape sets a **quality** from 0 to 1 (`Spells/Qual
 
 | What | Stats | Worst to best |
 |---|---|---|
-| Power | `damage`, `heal`, `shield`, `health`, `hazardDps`, and the bonus part of `damageMult` | x0.85 to x1.2 |
+| Power | `damage`, `heal`, `shield`, `health`, `hazardDps`, and the bonus part of `damageMult` | x0.85 to x1.5 |
 | Size | `radius` (the hit area) | x0.9 to x1.25 |
 | Time | `duration`, `statusDuration`, `lifetime` | x0.85 to x1.3 |
 
-Cooldowns, range, and speed never change, and an average drawing (quality 0.5) is close to the numbers in the spell tables below. `tests/Quality.spec.luau` checks that even a perfect drawing stays inside the balance budgets times its bonus, so a new spell must leave that headroom.
+Cooldowns, range, and speed never change, and an average drawing (quality 0.5, also what admin-given copies get) is close to the numbers in the spell tables below. Quality shows as a tier on the hotbar copy: Rough (1 star), Good (2, from 0.35), Great (3, from 0.7), Perfect (4, from 0.92). `tests/Quality.spec.luau` checks that even a perfect drawing stays inside the balance budgets times its bonus, so a new spell must leave that headroom.
 
 ## Hitboxes
 
@@ -138,12 +139,14 @@ Neutral crate spells that belong to no element.
 |---|---|---|---|---|---|
 | Rare | **Lightning** | zigzag (M) | Zone | 2.5s | Point and click: a thunderbolt strikes where you aim after a short flash. 18 damage. Range 60. |
 | Common | **Heal** | heart | Buff | 60s | A warm light mends you: restore 20 health. It takes a full minute to recharge. |
-| Legendary | **Black Hole** | spiral | Zone | 20s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Range 70. |
-| Epic | **Turret** | hook (J) | Placeable | 20s | Summon a 30-health turret that shoots bullets at the nearest enemy for 20 seconds. |
+| Legendary | **Black Hole** | spiral | Zone | 20s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Training dummies and Battleground NPCs get sucked in and hurt too. Range 70. |
+| Epic | **Turret** | hook (J) | Placeable | 20s | Summon a 30-health turret that shoots bullets at the nearest enemy, training dummy, or Battleground NPC for 20 seconds. |
+
+Crate spells show their numbers (damage or heal, cooldown, duration, range) in the crate reveal and the Spellbook's detail panel (`Spells/SpellStats`).
 
 ### Notes on the spells
 
-- **Earth Wall:** the imported earth-wall model. **Your own spells (and your allies') fly straight through it, while enemy spells hit it**. The whole wall has a shared **35-damage** budget. As the budget drains, the pieces break one by one (the low base first, then the rubble, then the tall stones). Without the model it falls back to a 3×2 grid of blocks.
+- **Earth Wall:** the `EarthWall` block model, a wide rectangular wall of staggered rubble (33 stones). **Your own spells (and your allies') fly straight through it, while enemy spells hit it**. The whole wall has a shared **35-damage** budget; as it drains, the stones break off one by one, low pieces first. Without the model it falls back to a 3×2 grid of blocks.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground while readied, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
 - **Water Body** makes you immune to damage *and* effects (stun, knockback) for its duration. **Air Shield** blocks one hit of any kind, including a spell's effect, then pops.
 - **Fire Boost** multiplies all your damage by 1.25 for 8s (it stacks multiplicatively with the Power match boost).
@@ -158,11 +161,13 @@ In a duel the spellbook is always your loadout. After each round you pick **one 
 
 | Boost | Effect |
 |---|---|
-| 💥 Power | +15% damage |
-| ❤ Vitality | +20 max health |
-| 👟 Swiftness | +3 move speed |
-| ⏱ Focus | Spells recharge 12% faster (never below half) |
-| 🧪 Health Potion | Once a round, heal 35 when you fall below 35% health |
+| Power (PWR) | +15% damage |
+| Vitality (HP) | +20 max health |
+| Swiftness (SPD) | +3 move speed |
+| Focus (FOC) | Spells recharge 12% faster (never below half) |
+| Health Potion (POT) | Once a round, heal 35 when you fall below 35% health |
+
+The short tag is what the HUD shows under the match bar.
 
 ## Stats the spells read
 
@@ -177,13 +182,14 @@ In a duel the spellbook is always your loadout. After each round you pick **one 
 | Movement | `Archetypes/Movement.luau` | `dashSpeed` / `teleport` + `range` / `lift` |
 | Summon | `Archetypes/Summon.luau` | `health, lifetime`, plus one of `decoy`, `melee`, or `flier` (shoots), or none for a stationary slam using `radius`. All use `damage, range` |
 
-**`visual.model`:** every spell names a 3D model that replaces its primitive look: the bolt for projectiles, the column or boulder for zones and lines, the head emblem for buffs, the body for placeables (the primitive stays as the invisible hitbox). A model is either a **block model** (the classic blocky Parts in `Models/BlockModels`, built by `ModelKit` in any place) or an imported mesh stored in the place (`ReplicatedStorage.Models`: Fireball, Water Lock's bubble, Earth Wall, Gust, and the Arcane spells' Lightning bolt, Heal emblem, Black Hole, and Turret). Without the model, the primitive `visual` is drawn. See [`assets/models/README.md`](../assets/models/README.md).
+**`visual.model`:** every spell names a 3D model that replaces its primitive look: the bolt for projectiles, the column or boulder for zones and lines, the head emblem for buffs, the body for placeables (the primitive stays as the invisible hitbox). A model is either a **block model** (the classic blocky Parts in `Models/BlockModels`, built by `ModelKit` in any place) or an imported mesh stored in the place (`ReplicatedStorage.Models`: Fireball, Water Lock's bubble, Gust, and the Arcane spells' Lightning bolt, Heal emblem, Black Hole, and Turret). Without the model, the primitive `visual` is drawn. See [`assets/models/README.md`](../assets/models/README.md).
 
 ## Look and feel: the spell registry
 
 Every spell has a **model**, a **particle style**, a **cast animation**, and **sounds**. The numbers live in `SpellDefinitions`; the presentation lives in one table, [`SpellRegistry`](../src/shared/Spells/SpellRegistry.luau), mirrored for reading in [`docs/semantic/spell_registry.yaml`](semantic/spell_registry.yaml) and in the table below. `tests/Registry.spec.luau` fails if a spell is missing from it, or names a model, style, pose, or cue that doesn't exist.
 
-- **Model** (`visual.model` / `stats.model`): 14 spells use block models made in Blender (`tools/blender/block_models.py`); Fireball, Fire Bomb, Water Lock, Earth Wall, Gust, and Whirlwind use imported meshes.
+- **Model** (`visual.model` / `stats.model`): 15 spells use block models made in Blender (`tools/blender/block_models.py`, Earth Wall included); Fireball, Fire Bomb, Water Lock, Gust, Whirlwind, and the four Arcane spells use imported meshes.
+- **Wind-up:** every spell swells as it is summoned. Bolts grow from a spark to full size as they leave the hand (`FxController` `BOLT_GROW`), and spells with no growing effect get a wind-up ball or bubble in their colour (`CastPoses.SWELLS`, `SpellVfx` swell). Cosmetic only.
 - **Particles** (`Spells/VfxStyles`): a bolt trail and impact burst per spell; buffs also get an **aura** on the caster (rising embers, a water shimmer, wind streaks, or orbiting blades) for as long as they last (`SpellVfx.buffAura`). Zones draw their element's column (`SpellVfx.pillar`), Earth Punch and Earth Pillar rise as boulders and spikes (`SpellVfx.rise`), and Earthquake spreads ground cracks and pulsing rings while it winds up (`SpellVfx.quake`).
 - **Cast animation** (`Spells/CastPoses`): nearly every spell has its own pose, played on the caster by `Fx/CastAnimations` for every player to see: Fireball raises the flame overhead before the throw, slashes cut across with a glowing hand trail, Rock Throw scoops and heaves a boulder, Earth Wall / Pillar / Quake stomp (dust and a thud when the foot lands), Earth Punch lunges a fist into the ground, Gust fans a ring of wind, Whirlwind and Tornado twist the body, Lightning and the big spells gather sparks into the raised hand. Poses use arms, legs, knees, lean, and waist twist, and are built as KeyframeSequences at runtime (no uploads). A pose's *beat* (`CastPoses.BEATS`) is the body effect and sound that lands with it. Earthquake holds its Stomp for the whole channel. No two spells of one element share a pose (`tests/Registry.spec`).
 - **Hit effects** (`Spells/VfxStyles` `hit` kind, drawn by `SpellVfx.impact`): Fireball and Fire Bomb explode (flash, flames, smoke, embers), Fire Slash leaves crossed cut marks, Water Slice and Water Wave splash droplets, Water Lock's bubble swells and pops, Rock Throw cracks into rubble, Gust and Whirlwind push out rings of air, Tornado adds flung debris, and Lightning flashes white with jagged forks. Each projectile spell has its own impact sound (some layered, via a cue's `with`).
@@ -235,7 +241,7 @@ Run this during a playtest (the server's module cache is fresh) and paste the ou
 local Defs = require(game.ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Elements = require(game.ReplicatedStorage.Shared.Spells.Elements)
 for _, element in Elements.LIST do
-	print(`### {element.icon} {element.name}\n`)
+	print(`### {element.name}\n`)
 	print("| Slot | Spell | Draw | Archetype | Cooldown | What it does |\n|---|---|---|---|---|---|")
 	for slot, def in Defs.ofElement(element.id) do
 		print(("| %d | **%s**%s | %s | %s | %ss | %s |"):format(slot, def.name, def.ultimate and " ★" or "", def.glyph, def.archetype, tostring(def.cooldown), def.description))
