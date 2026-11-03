@@ -17,7 +17,7 @@
 # Keep this file in sync when you add or change a feature (the checklist in
 # docs/CONTRIBUTING.md says so).
 
-version: "5 # bump when the shape of this file changes"
+version: "6 # bump when the shape of this file changes"
 game: Spellcraft Arena
 genre: all-ages PvP; pick an element, draw a spell's shape to get that spell, then cast it
 platforms: [PC, mobile, console, VR]
@@ -30,9 +30,11 @@ glossary:
   loadout: the equipped element's 3 base spells plus up to 2 equipped crate spells; no two may share a glyph (src/shared/Spells/Loadout.luau)
   rarity: Common, Uncommon, Rare, Epic, Legendary (src/shared/Spells/Rarity.luau); decides a crate spell's chance in the gacha
   element: Fire, Water, Earth, or Air (src/shared/Spells/Elements.luau); three base spells each; the first is a free pick, the others cost coins; a player equips one at a time
-  school: an element, or Arcane (neutral crate spells: Lightning, Heal, Black Hole, Turret)
+  school: "an element, or Arcane (neutral crate spells: Lightning, Heal, Black Hole, Turret)"
   spellbook (match): the player's loadout (3 base spells + equipped crate spells), locked in when the match starts
-  elements owned: profile.elements; the first is a free pick, the rest come from Element Crates; profile.element is the equipped one
+  elements owned: profile.elements; the first is a free pick, the rest are bought with coins (BuyElement); profile.element is the equipped one
+  quality: how closely a drawing follows its shape (0..1, Spells/Quality); scales the copy's power, size, and duration when cast
+  pity: profile.pity, crate spins since the last Epic or better; the 10th spin in a row is guaranteed Epic+ (Economy/Crates PITY)
   slot: display order within a school (1-3 base spells, 4 a crate spell, 5 an ultimate)
   role: the kind of move (basic, fast, boost, defense, stun, heavy, area, support, storm, summon, ward, vortex, ultimate); decides the glyph
   ultimate: slot 5; 30-40 damage (or a game-changing effect) on a cooldown of 15s or more
@@ -43,14 +45,14 @@ glossary:
   wins: profile.stats.wins; the leaderboard stat
   hub: Inkwell Plaza, a round floating island (sand plaza, marble amphitheatre, rim overlooks) over open ocean, where players spawn, pick elements, open crates, and pick teams (no PvP)
   glyph: "the single-stroke shape drawn to ready a spell (src/shared/Spells/Glyphs.luau); chosen by the spell's role (Glyphs.ROLE): basic circle, fast slash, boost square, defense and stun triangle, heavy bolt, area V (chevron), support heart, storm zigzag M, summon hook J, ward X, vortex spiral, ultimate star"
-  arena: an instanced match map summoned below the hub island (ArenaService.slotOrigin: Config.ARENA ring of slots at y = -300, radius 560), built at design size then scaled by Config.ARENA_SCALE (2), so hub players can spectate it
+  arena: "an instanced match map summoned below the hub island (ArenaService.slotOrigin: Config.ARENA ring of slots at y = -300, radius 560), built at design size then scaled by Config.ARENA_SCALE (2), so hub players can spectate it"
   terrain: "breakable map cells (MapKit.terrain; Destructible + Terrain attribute): the floors of every map, Crayon Canyon cliffs, end walls, mesas and ramps, the dais and temple steps, the snow bank, and the Sparring Arena outcrops; scenery props (trees, pillars, spires, cubes, columns, torches, bridges) use Config.PROPS tiers Brick 15 / Light 25 / Medium 45 / Heavy 70. Spell damage chips a cell (Config.TERRAIN.HEALTH: Ground 240 for the baseplate, Rock 45 for scenery rock), touching cells take SPLASH of it, so heavier spells carve faster and wider. Only the hub, rock undersides and the Sparring Arena colosseum/statue stay solid. A fresh arena each round restores everything; breaking terrain earns no quest credit; floor cells (GroundTile) are skipped by a skimming bolt's wide sweep"
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
-  server_order: [PlayerDataService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, DashService, SpellInputService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
+  server_order: [PlayerDataService, TelemetryService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, DashService, SpellInputService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
-  client_order: [ClientState, LightingController, AudioController, HudController, MenuController, CrateController, DraftController, PlacementController, ReticleController, CursorController, DrawController, InputController, EffectsController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
+  client_order: [ClientState, LightingController, AudioController, HudController, PartyController, MapVoteController, MenuController, CrateController, DraftController, PlacementController, ReticleController, CursorController, DrawController, InputController, EffectsController, JuiceController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
   rules:
     - init() wires state and looks up remotes; no yielding cross-service calls
     - start() connects events and starts loops
@@ -72,7 +74,7 @@ features:
         - { id: FireBomb, rarity: Epic,   role: ultimate, glyph: star,     archetype: Projectile, model: Fireball, what: "ultimate: r10, 35 dmg, cd 16" }
       Water:
         - { id: WaterSlice,  role: fast,     glyph: slash,    archetype: Projectile, model: WaterSlice, what: "fast, r4.5, 10 dmg, cd 2" }
-        - { id: WaterBody,   role: boost,    glyph: square,  archetype: Buff, model: WaterBody,       what: "invincible 7s, cd 22 (stats.invincible)" }
+        - { id: WaterBody,   role: boost,    glyph: square,  archetype: Buff, model: WaterBody,       what: "invincible 3s, cd 22 (stats.invincible)" }
         - { id: WaterLock,   role: stun,     glyph: triangle, archetype: Control,    model: WaterBubble, what: "r4, 5 dmg + Stun 1.5s, cd 4" }
         - { id: WaterWave, rarity: Rare,   role: heavy,    glyph: bolt,     archetype: Projectile, model: WaterWave, what: "large piercing wave, r11, 25 dmg, cd 8 (stats.pierce)" }
         - { id: WaterNebula, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: WaterNebula,       what: "ultimate: point-and-click water pillar, r13, 35 dmg, cd 18" }
@@ -80,8 +82,8 @@ features:
         - { id: RockThrow,  role: basic,    glyph: circle,   archetype: Projectile, model: RockThrow, what: "large rock, r6, 15 dmg, cd 3" }
         - { id: EarthWall,  role: defense,    glyph: triangle,  archetype: Placeable,  model: EarthWall, what: "35 HP breakable wall, cd 4; your own spells pass through it, enemy spells hit it" }
         - { id: EarthPunch, role: heavy,    glyph: bolt,     archetype: Zone, model: EarthPunch,       what: "point-and-click boulder under the aim point, r7, 20 dmg, cd 5 (reticle, rise)" }
-        - { id: EarthPillar, rarity: Uncommon, role: area,    glyph: chevron,   archetype: Line, model: EarthPillar,       what: "6 pillars (r6.5, 9 apart) in a line in front, 30 dmg, cd 9" }
-        - { id: Earthquake, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: Earthquake,       what: "ultimate: centered on the caster, r25, 40 dmg, 1.2s cast with the caster rooted, cd 22 (channel, pillar)" }
+        - { id: EarthPillar, rarity: Uncommon, role: area,    glyph: chevron,   archetype: Line, model: EarthPillar,       what: "6 pillars (r13, 18 apart) in a line in front, 30 dmg, cd 9" }
+        - { id: Earthquake, rarity: Legendary, role: ultimate, glyph: star,     archetype: Zone, model: Earthquake,       what: "ultimate: centered on the caster, r50, 40 dmg, 1.2s cast with the caster rooted, cd 22 (channel, pillar)" }
       Air:
         - { id: Gust,      role: basic,    glyph: circle,   archetype: Projectile, model: Gust, what: "fast, r4.6, 15 dmg, cd 3" }
         - { id: Whirlwind, role: heavy,    glyph: bolt,     archetype: Projectile, model: Gust, what: "wide gust, r10, 15 dmg, knockback 95, cd 5" }
@@ -115,7 +117,7 @@ features:
 
   - id: casting
     summary: Drawing grants copies; casting validates on the server and dispatches to the archetype.
-    flow: client DrawController records a stroke -> DrawSpell -> SpellInputService (draw gate: only in a match's Round phase, the Battleground, or the hub's PracticeZone; validate, 1s draw cooldown) -> GlyphRecognizer -> HandService.grant (in spellbook in a match; refused if the spell is already held; max 5) -> client CastSpell(target, rotationY) -> CastService (alive, readied, cooldown, clamp to stats.range or PLACE_RANGE) -> Archetypes/<archetype>.cast(ctx) -> consume copy + shared cooldown -> Fx("cast")
+    flow: "client DrawController records a stroke -> DrawSpell -> SpellInputService (draw gate: only in a match's Round phase, the Battleground, or the hub's PracticeZone; validate, 1s draw cooldown) -> GlyphRecognizer -> HandService.grant (in spellbook in a match; refused if the spell is already held; max 5) -> client CastSpell(target, rotationY) -> CastService (alive, readied, cooldown, clamp to stats.range or PLACE_RANGE) -> Archetypes/<archetype>.cast(ctx) -> consume copy + shared cooldown -> Fx(\"cast\")"
     files:
       server: [src/server/Services/SpellInputService.luau, src/shared/Spells/GlyphRecognizer.luau, src/shared/Spells/Glyphs.luau, src/server/Services/HandService.luau, src/server/Services/CastService.luau, src/server/Services/Archetypes/*.luau]
       client: [src/client/Controllers/DrawController.luau, src/client/Controllers/InputController.luau, src/client/Controllers/PlacementController.luau, src/client/Controllers/ReticleController.luau]
@@ -126,10 +128,10 @@ features:
     invariants:
       - the server clamps every target to range; the client reticle/ghost only mirror that
       - archetype returning false keeps the copy (e.g. blocked placement)
-      - drawing is refused outside fights: MatchService.canDraw is the rule (Battleground, the player's match is in phase Round, or they stand in a PracticeZone volume: shared/Util/PracticeZone); the client mirrors it in ClientState.canDraw / inPractice
+      - "drawing is refused outside fights: MatchService.canDraw is the rule (Battleground, the player's match is in phase Round, or they stand in a PracticeZone volume: shared/Util/PracticeZone); the client mirrors it in ClientState.canDraw / inPractice"
 
   - id: reticle
-    summary: Hover hitbox for point-and-click spells (Fire Pillar, Water Nebula, Earth Punch).
+    summary: Hover hitbox for point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole).
     owner: src/client/Controllers/ReticleController.luau
     behavior:
       - active while the readied spell has stats.reticle
@@ -142,10 +144,12 @@ features:
   - id: effects
     summary: Cosmetic visuals rendered on clients from server Fx events; the server creates no projectile parts.
     owner: src/client/Controllers/FxController.luau (+ src/client/Fx/SpellVfx.luau styles)
-    fx_kinds: [projectile, projectileEnd, poof, beam, number, cast, shatter, chip, dust, shockwave, strike, modelPop]
+    fx_kinds: [projectile, projectileEnd, poof, beam, number, damage, heal, shield, sfx, cast, shatter, chip, dust, shockwave, strike, modelPop, pillar, rise, quake, glyph, dash, vortex, suck, deploy, muzzle]
     new_kinds:
-      strike: (center, radius, delay, modelName, color) a bolt model slams down at a burst (no current spell uses it)
-      modelPop: (character, modelName, color) a model rises over the head and fades (no current spell uses it)
+      strike: (center, radius, delay, modelName, color) a bolt model slams down at a burst (Lightning)
+      modelPop: "(character, modelName, color) a model rises over the head and fades (buffs: Fire Boost, Water Body, Air Boost, Air Shield, Heal)"
+      vortex / suck: Black Hole's core and the motes pulled off each victim
+      deploy / muzzle: Turret's scan ring and chime, and each shot's flash, casing and crack
       pillar: (center, radius, color, elementId, spellId) an element column erupts (Fire Pillar, Water Nebula, Earthquake); the spell's visual.model is the column's body unless the spell channels
       rise: (center, radius, delay, color, kind, height, modelName?) a boulder or stone pillar rises (Earth Punch, Earth Pillar)
       quake: (center, radius, duration, color, modelName?) Earthquake wind-up
@@ -153,7 +157,8 @@ features:
     aura: "Buff spells (Fire Boost, Water Body, Air Boost, Air Shield): SpellVfx.buffAura gives the caster rising/swirling particles, an outline Highlight, and orbiting blocks for stats.duration (VfxStyles.AURAS)"
     models_in_effects: "pillar (Fire Pillar, Water Nebula) grows the block model as the column; rise draws the boulder/spike model (Earth Punch, Earth Pillar); quake spreads the Earthquake crack model; all fall back to the plain shapes"
     spin: "parts/models tagged SpinFx spin locally"
-    invariants: [clients skip effects farther than 600 studs, never trust or report hits from the client]
+    swell: "every spell grows in as it is summoned: bolts scale up over BOLT_GROW (0.25s) in FxController; CastPoses.SWELLS gives spells with no growing effect a wind-up ball or bubble (SpellVfx swell); cosmetic only"
+    invariants: [clients skip effects farther than FxController DRAW_DISTANCE (900 studs), never trust or report hits from the client]
 
   - id: elements
     summary: Four base elements of three spells each; the first is a free pick, the others are bought with coins; a player equips one and draws its base spells plus up to two equipped crate spells (the loadout).
@@ -169,7 +174,7 @@ features:
       - switching element drops extras that now clash with the new base spells (Loadout.sanitize)
       - the first crate spell won is equipped automatically when a slot is free and it fits
     remotes:
-      c2s: [ChooseElement (elementId), BuyElement (elementId), SetLoadout (slot, spellId?)]
+      c2s: ["ChooseElement (elementId)", "BuyElement (elementId)", "SetLoadout (slot, spellId?)"]
     tests: tests/Economy.spec.luau (Elements, Rarity, Loadout)
 
   - id: boosts
@@ -188,8 +193,9 @@ features:
     owner: src/server/Services/EconomyService.luau
     api:
       - "addCoins(player, amount, reason, quiet?)"
-      - "spend(player, amount) -> bool"
+      - "spend(player, amount, item?) -> bool"
       - "recordWin(player)"
+      - "setWins(player, n) / reset(player, scope) (admin ;wins and ;reset)"
       - "coins(player) / wins(player)"
       - "track(player, event, amount?)"
       - "consumeFirstWin(player)"
@@ -198,8 +204,9 @@ features:
     config: src/shared/Config.luau COINS { STARTING 150, MATCH_WIN 100, FIRST_WIN_OF_DAY 50, DAILY_LOGIN 25 }
     paid_by: MatchService.finishMatch (winners only; never in solo matches)
     remotes:
-      c2s: [ClaimQuest, SaveSettings, ClaimLikeReward]
-      s2c: ["ProfileUpdated (coins, elements, element, quests, streak, stats, settings, rewards)"]
+      c2s: [ClaimQuest, SaveSettings, TutorialDone]
+      s2c: ["ProfileUpdated (coins, elements, element, spells, loadout, tutorial, quests, streak, stats, settings, pity, rewards {likeFav, likeReadyAt})"]
+    # the Like & Favourite gift is claimed through the hub gift box's ProximityPrompt, not a remote (feature support_reward)
     invariants:
       - only EconomyService writes profile.coins and profile.stats.wins
       - never trust a client number for coins
@@ -208,14 +215,15 @@ features:
   - id: crates
     summary: A Spell Crate gacha bought with coins; a server-decided spin wins one crate spell, picked by rarity.
     shared: "src/shared/Economy/Crates.luau (LIST: Spell, price 100; pool, ofRarity, odds, ownsAll, roll(owned, rng, pity) -> {spell, rarity, duplicate, refund, guaranteed}; PITY {SPINS 10, RARITY Epic}, spinsToPity, nextPity; SPIN_TIME 4); src/shared/Spells/Rarity.luau (weights 55/25/12/6/2, duplicate refunds 20/35/55/75/90)"
-    server: src/server/Services/CrateService.luau (open(player, crateId) -> (CrateResult?, reason?))
-    client: src/client/Controllers/CrateController.luau (shop panel with the odds, a reel of spell cards in rarity colours with a tick per card, rarity reveal sound and flash, the won spell's numbers from Spells/SpellStats)
+    server: src/server/Services/CrateService.luau (open(player, crateId) -> (CrateResult?, reason?); resetPity; the only writer of profile.pity)
+    client: src/client/Controllers/CrateController.luau (shop panel with the odds and the spins left until the pity, a reel of spell cards in rarity colours with a tick per card, rarity reveal sound and flash, the won spell's numbers from Spells/SpellStats)
     hub: Spell Crate stage in src/server/Maps/InkwellPlaza.luau (prompt named "Crates", five rarity orbs)
     remotes:
       c2s: [OpenCrate (crateId)]
-      s2c: ["CrateOpened (CrateResult: crate, spell, rarity, duplicate, refund, equipped, coins)"]
+      s2c: ["CrateOpened (CrateResult: crate, spell, rarity, duplicate, refund, equipped, pity, coins)"]
     rules:
       - refused during a match, before the first element is picked, while the previous spin (4s) runs, or when every crate spell is owned
+      - pity - a spin below Epic adds 1 to profile.pity; at PITY.SPINS - 1 the next spin is Epic or Legendary (Rarity.roll with a minimum) and prefers an unowned spell of that rarity or better; an Epic+ spin resets it
       - a spell already owned pays back its rarity's refund (less than a spin) instead
       - the result is decided and saved before the reel spins; the toast and the refund wait SPIN_TIME
     tests: tests/Economy.spec.luau
@@ -229,9 +237,9 @@ features:
     state: player attribute InBattleground (server logic and HUD), character attribute Battleground
     rules:
       - MatchService.relation lets any two players who are both InBattleground harm each other, and any Battleground player harm NPCs (Hostile attribute); nobody else can
-      - drop-in point is random: 25 samples scored by distance from NPC spots and other fighters, clear of scenery (GetPartBoundsInBox)
+      - "drop-in point is random: 25 samples scored by distance from NPC spots and other fighters, clear of scenery (GetPartBoundsInBox)"
       - knocked-out fighters respawn at a new random spot after RESPAWN_DELAY, with spawn protection (MatchService.respawnAt)
-      - HubService respawns neither them nor gives hub-speed regen (they get the slow passive regen); MatchService.joinQueue refuses while inside, and starting a match pulls you out
+      - HubService neither respawns them nor heals them (no passive regen outside the hub); MatchService.joinQueue refuses while inside, and starting a match pulls you out
       - no wins or boosts; coins come only from NPC knockouts; you must have an element equipped to enter
     client: "HudController banner and Return to Hub button (LeaveBattleground remote), HealthController (every other fighter's bar is red)"
     tests: tests/Battleground.spec.luau
@@ -244,7 +252,7 @@ features:
       - one NPC per part tagged NpcSpot (attribute NpcType); a replacement appears after respawn seconds (Config.BATTLEGROUND.NPC.RESPAWN unless the type overrides)
       - NPCs are Destructible models with Hostile=true, so all spells hurt them via DestructibleService; they are not knocked back or stunned
       - they only target players with InBattleground, only think while one is within 260 studs, give up past their leash, then walk home and heal
-      - a player who hits one (DestructibleService.Damaged) provokes it: it chases that player at any distance, ignoring leash and aggro range, until they fall or leave the Battleground (no sniping from range); merely being noticed is escapable
+      - "a player who hits one (DestructibleService.Damaged) provokes it: it chases that player at any distance, ignoring leash and aggro range, until they fall or leave the Battleground (no sniping from range); merely being noticed is escapable"
       - a red "!" billboard (Alert, on the head) shows while an NPC has a target
       - status spells (Water Lock stun, Root, Time Stop, Slow, ...) work on NPCs via StatusService.targetOf; a stunned/rooted/time-stopped NPC does nothing and its wind-ups are cancelled; hard-CC immunity applies to NPCs too; NPC speed/size live in BaseWalkSpeed/BaseScale attributes
       - melee swings and ranged bolts have a windup (telegraphed with a red highlight); ranged bolts are Projectile.launch with no caster
@@ -272,7 +280,7 @@ features:
       - PartyAction is rate limited (0.3s) and every argument is type-checked; invites expire after INVITE_SECONDS and need the inviter to still be online
       - MatchService.relation (inside the Battleground) and areAllies use PartyService.sameParty; matches keep their own teams
       - BattlegroundService.spawnCFrame drops you within 10 studs of a party member already inside (falls back to the random spot)
-    client: "src/client/Controllers/PartyController.luau (Party button under the wallet, panel with invites / members / players), HealthController (blue bars for party mates)"
+    client: "src/client/Controllers/PartyController.luau (Party button on the left, under Admin; the panel opens beside the side menu; panel with invites / members / players), HealthController (blue bars for party mates)"
 
   - id: leaderboard
     summary: Wins leaderboard - leaderstats, the hub's Most Wins board, and the top-3 podium with avatars.
@@ -301,7 +309,7 @@ features:
     summary: Session-locked DataStore profiles with autosave and BindToClose.
     owner: src/server/Services/PlayerDataService.luau
     store: PlayerProfiles_v1/u_<userId> = { data, lockJobId, lockTime }
-    schema: 5
+    schema: 6
     profile_fields:
       - schema
       - coins
@@ -315,11 +323,13 @@ features:
       - "daily {lastLoginDay, streak, lastFirstWinDay, questDay, quests}"
       - "settings {drawKey, music, sfx, shake}"
       - "rewards {likeFav}"
+      - "pity (crate spins since the last Epic or better; CrateService)"
     migrations:
       "1->2": drop xp/level; re-roll quests; drop unknown spell ids; ensure starters owned
       "2->3": drop ownedSpells; elements = [], element = "" (the player picks a first element)
       "3->4": add settings.music (true) and rewards.likeFav (false); nothing to transform
       "4->5": add spells = [] and loadout = []; tutorial.done = true for players who already picked an element, false for everyone else
+      "5->6": add pity = 0; settings.sfx and settings.shake come from the defaults without a bump
     invariants: [bump SCHEMA and migrate in reconcile() for breaking changes, never save over another server's lock]
 
   - id: hub
@@ -329,26 +339,24 @@ features:
     contents:
       - spawn (HubSpawn, on the plaza's south side)
       - inkwell fountain + 4 element shrines (each lists its 3 base spells, shapes, and price; prompt opens the Spellbook), Spellbook kiosk, Daily Quests chest, Like & Favourite gift box
-      - team boxes in an arc facing the centre: two 1v1, two 2v2, one 3v3, one 4v4 (pads carry Box, Mode, Team, Slots); the red Arena Gate behind them
+      - "team boxes in an arc facing the centre: two 1v1, two 2v2, one 3v3, one 4v4 (pads carry Box, Mode, Team, Slots); the red Arena Gate behind them"
       - amphitheatre, leaning marble pillars, ruined arch, bare and block-model trees, flag poles
-      - two Training Groves (west and east, 100 x 112 each, tag PracticeZone + BuildZone: the only hub places to draw and cast; one row of 7 dummies each facing the plaza (DummySpot FaceYaw), archery targets, fence, hay)
+      - "two Training Groves (west and east, 100 x 112 each, tag PracticeZone + BuildZone: the only hub places to draw and cast; one row of 7 dummies each facing the plaza (DummySpot FaceYaw), archery targets, fence, hay)"
       - winners' podium (tag PodiumSpot) and Most Wins board (tag WinsBoard), both facing the centre
-      - four SPECTATE overlooks on the rim: duels are fought on arenas summoned below the island (ArenaService.slotOrigin)
+      - "four SPECTATE overlooks on the rim: duels are fought on arenas summoned below the island (ArenaService.slotOrigin)"
       - rock cone, stalactites and crystals underneath; an ocean tile grid at Config.HUB.OCEAN_Y
       - wizard statue on the inkwell (the hub centerpiece)
-      - Battleground portal: the BattlegroundPortal block model (octagonal stone gateway, ~30 studs tall, swirling blue discs) at the end of the south road, trigger tagged BattlegroundPortal
-      - Training Grove (BuildZone + PracticeZone + dummies)
-      - Spellbook kiosk (Grimoire model)
-      - Like & Favourite gift box on the plaza's west edge (tag LikeGift, prompt claims the one-time gift)
-      - Daily Quests chest
-      - Crate Shop stage (Crate model x5)
-      - podium + Most Wins board at the hall entrance
+      - "Battleground portal: the BattlegroundPortal block model (octagonal stone gateway, ~30 studs tall, swirling blue discs) at the end of the south road, trigger tagged BattlegroundPortal"
+      - Spellbook kiosk (Grimoire model, bearing 150 r 36), Daily Quests chest (bearing 210 r 36)
+      - Like & Favourite gift box on the plaza's south edge (bearing 180 r 40; tag LikeGift, prompt claims the one-time gift)
+      - Crate Shop stage (the Spell Crate, Crate model tinted gold, five rarity orbs)
     prompts: { Spellbook: MenuController Spellbook panel, Quests: Daily Quests panel, Crates: CrateController shop }
 
   - id: drawing
     summary: Players trace a glyph; the server recognizes it and readies the spell. Replaced typing, chat casting, and voice.
     owners: [src/shared/Spells/Glyphs.luau, src/shared/Spells/GlyphRecognizer.luau, src/server/Services/SpellInputService.luau, src/client/Controllers/DrawController.luau]
-    glyphs: { circle: basic, slash: fast, square: boost, triangle: defense and stun, bolt: heavy, chevron: area, star: ultimate }  # by role; the equipped element decides which spell
+    glyphs: { circle: basic, slash: fast, square: boost, triangle: defense and stun, bolt: heavy, chevron: area, star: ultimate, heart: support, zigzag: storm, hook: summon, x: ward, spiral: vortex }  # by role; the loadout decides which spell
+    entry_points: "a spell card or key 1-5 for a spell not held opens the canvas traced over that spell's shape (DrawSpell carries the spell id); F / ButtonX / the Draw button opens a blank canvas"
     straight_strokes: "a stroke whose points all stay within 22% of the line between its ends (and whose ends are far apart) is a slash, in any direction"
     remotes:
       c2s: [DrawSpell]   # (points, spellId?): spellId = the card being traced
@@ -361,7 +369,7 @@ features:
 
     invariants:
       - the server recognizes the stroke itself; GlyphResult is feedback only
-      - only the equipped element's five shapes are ever recognized
+      - only the loadout's five shapes are ever recognized (one only, when tracing a spell card)
       - circle vs square is decided by how much of its bounding box the stroke fills (GlyphRecognizer.boxFill)
       - no spell uses a swirl or squiggle (tests/Glyphs.spec.luau)
       - recognition ignores size, position, rotation, direction, and the start point of closed shapes
@@ -378,18 +386,19 @@ features:
 
   - id: models
     summary: Hand-made meshes stored in the place under ReplicatedStorage.Models; ModelKit is the only reader.
-    reader: src/shared/ModelKit.luau (get, clone(name, "effect"|"solid"|"attached", scale?), isBlock, blockNames): place models first, then block models
+    reader: "src/shared/ModelKit.luau (get, clone(name, \"effect\"|\"solid\"|\"attached\", scale?), isBlock, blockNames): place models first, then block models"
     pipeline: Blender (scene in centimeters, 1 BU = 1 cm) -> assets/models/*.fbx -> Studio Import 3D -> tools/prepare-models.luau (scale, pivot, colors, collision) -> save the place
-    models: [Fireball, WaterBubble, RockWall, Arena, Grimoire, Gust, Crate]   # imported meshes in the place; Zap, Heal, BlackHole, Turret are imported but no longer used by any spell
-    block_models: "see feature block_models: 24 generated blocky models that exist in every place"
+    models: [Fireball, WaterBubble, Gust, Zap, Heal, BlackHole, Turret, Arena, Grimoire, Crate]   # imported meshes in the place; RockWall is still imported but no spell names it (Earth Wall uses the EarthWall block model)
+    block_models: "see feature block_models: 27 generated blocky models that exist in every place"
     docs: assets/models/README.md
     invariants: [every use has a plain-shape fallback, model part names are the contract with prepare-models and tests/Models.spec.luau]
 
   - id: admin_and_debug
     admin: src/server/Services/AdminService.luau (";" chat commands and the AdminCommand remote; coins, wins, crate, give, unlock, startmatch, ...) docs/ADMIN.md
-    admin_panel: src/client/Controllers/AdminController.luau (draggable, closable window: pick a target, click buttons; opened by the 🛡 Admin button or the ` key; shown when player attribute IsAdmin is true) with its buttons in src/shared/Admin/Catalog.luau (each button is one command string; {t} = target, {v} = typed value)
+    admin_panel: "src/client/Controllers/AdminController.luau (draggable, closable window: pick a target, click buttons; opened by the Admin button or the ` key; shown when player attribute IsAdmin is true) with its buttons in src/shared/Admin/Catalog.luau (each button is one command string; {t} = target, {v} = typed value)"
     admin_remotes: [AdminCommand (client->server, admins only, <=200 chars, rate limited), AdminLog (server->client, a command's reply)]
-    debug: src/server/Services/DebugService.luau (Studio only; ServerStorage.SpellcraftDebug:Invoke(command, arg) with coins, wins, crate, state, solo, unlockall, knockback)
+    debug: src/server/Services/DebugService.luau (Studio only; ServerStorage.SpellcraftDebug:Invoke(command, arg) with state, coins, takecoins, wins, crate, unlockall, element, solo, cast, knockback, likefav, tutorial; listed in docs/ADMIN.md)
+    reset: ";reset <player> <coins|wins|stats|elements|spells|pity|rewards|tutorial|all>: each scope goes through its owner (EconomyService.reset, ElementService.reset, CrateService.resetPity); players in a match are skipped"
 
   - id: spell_registry
     summary: One table that says what every spell looks, moves, and sounds like; kept in code, in YAML, and in a test.
@@ -402,17 +411,17 @@ features:
 
   - id: block_models
     summary: The classic blocky models (spells, trees, dummy, crates, chest, statue) generated from one Blender spec; they exist in every place.
-    source_of_truth: tools/blender/block_models.py (Python spec of blocks: position, size, colour, material, rotation, shape)
+    source_of_truth: "tools/blender/block_models.py (Python spec of blocks: position, size, colour, material, rotation, shape)"
     outputs: [src/shared/Models/BlockModels.luau (generated data; never hand-edit), assets/models/blocks/*.fbx, assets/models/source/BlockModels.blend]
     reader: ModelKit.get/clone (builds Parts on first use; an imported place model of the same name wins)
-    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, EarthWall, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue]
-    used_by: "bolts (FxController), buff emblems (Buff -> modelPop), columns/boulders/cracks (SpellVfx), scenery (Maps/Battleground, Maps/InkwellPlaza), dummies (HubService), crate and chest (InkwellPlaza), statue (Maps/SparringArena)"
+    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, EarthWall, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue, BattlegroundPortal, ArenaPortal]
+    used_by: "bolts (FxController), buff emblems (Buff -> modelPop), columns/boulders/cracks (SpellVfx), the Earth Wall (Placeable.buildModelWall), the hub portals (InkwellPlaza), scenery (Maps/Battleground, Maps/InkwellPlaza), dummies (HubService), crate and chest (InkwellPlaza), statue (Maps/SparringArena)"
     conventions: "blocky Parts, flat colours, Roblox materials; effect models carry an invisible Root (PrimaryPart); `base` models stand on y = 0, others are centered; forward = -Z"
     tests: tests/Models.spec.luau
 
   - id: cast_animations
     summary: Every move has a cast pose; clients play it on the caster with a runtime KeyframeSequence.
-    data: src/shared/Spells/CastPoses.luau (POSES: one pose per spell, e.g. Fireball, Slash, Slice, Heave, GroundPunch, Stomp, Fan, Spin, Cyclone, Call; BEATS: the body effect on a pose - orb, trail, stomp, gather, swirl, splash, push; SWELLS: the wind-up ball or bubble that grows before the spell; projectiles also grow in, FxController BOLT_GROW)
+    data: "src/shared/Spells/CastPoses.luau (POSES: one pose per spell, e.g. Fireball, Slash, Slice, Heave, GroundPunch, Stomp, Fan, Spin, Cyclone, Call; BEATS: the body effect on a pose - orb, trail, stomp, gather, swirl, splash, push; SWELLS: the wind-up ball or bubble that grows before the spell; projectiles also grow in, FxController BOLT_GROW)"
     player: src/client/Fx/CastAnimations.luau (KeyframeSequenceProvider:RegisterKeyframeSequence -> Animator at Action3 priority; R15 arms, elbows, waist lean and twist, legs; R6 arm and leg swing)
     trigger: Fx "cast" -> FxController.onCast -> SpellVfx.castAnimation (pose + SpellVfx.castBeat; the beat's cue plays at beat.at) (.. SpellRegistry.animationFor(spell), channel seconds)
     notes: "Motor6D.C0 is read-only at runtime, so poses are animations, not C0 tweens; a channelled spell (Earthquake) holds its pose for stats.delay"
@@ -435,7 +444,7 @@ features:
     docs: docs/ECONOMY.md
 
   - id: tutorial
-    summary: A first-join guided walk-through with glowing arrows: choose an element, spin for a spell, draw it, cast it, then earn coins in a duel or the Battleground.
+    summary: "A first-join guided walk-through with glowing arrows: choose an element, spin for a spell, draw it, cast it, then earn coins in a duel or the Battleground."
     client: "src/client/Controllers/TutorialController.luau (welcome screen, coach card, 5 steps, Skip); src/client/Fx/GuideArrow.luau (bobbing world arrow + outline + ground chevron trail + off-screen edge pointer; GUI arrows for buttons)"
     server: "profile.tutorial.done, set by the TutorialDone remote (EconomyService); schema 5 marks players who already picked an element as done"
     rules:
@@ -449,7 +458,7 @@ features:
     client: src/client/Controllers/CursorController.luau (mouse only; the normal arrow returns over buttons, menus, and the drawing canvas)
 
   - id: ui_theme
-    summary: The studded Roblox look: pastel panels and buttons (Blue Grey, Blue, Orange, Green, Red, Purple, ...) with faint stud grids, bevels, thick near-black borders, and dark ink text; white outlined text only over the world or dark overlays.
+    summary: "The studded Roblox look: pastel panels and buttons (Blue Grey, Blue, Orange, Green, Red, Purple, ...) with faint stud grids, bevels, thick near-black borders, and dark ink text; white outlined text only over the world or dark overlays."
     owner: src/client/UI/Theme.luau (frame, button, label, corner, stroke, padding, bevel, studs; COLORS; STUD_IMAGE)
     texture: assets/ui/studs.png (made by tools/make-stud-texture.py; uploaded as rbxassetid://111722228846947)
     behavior:
@@ -458,12 +467,12 @@ features:
       - orange = primary/accent, green = go, red = stop/close, blue = everything else
 
   - id: dash
-    summary: A short leap forward on Q / B / the Dash button: arms out, three pale wind streaks behind you, a cooldown.
-    server: src/server/Services/DashService.luau (dash(player, direction): alive, not anchored, no Stun/Root/TimeStop/Channel, off cooldown; replies DashStarted(endsAt, direction); Fx "dash" to everyone)
+    summary: A forward somersault on Q / B / the Dash button - arms flung wide, a full flip, three pale wind streaks behind you, a landing puff and thud, a cooldown.
+    server: "src/server/Services/DashService.luau (dash(player, direction): alive, not anchored, no Stun/Root/TimeStop/Channel, off cooldown; replies DashStarted(endsAt, direction); Fx \"dash\" to everyone)"
     client: src/client/Controllers/DashController.luau (key Q, gamepad ButtonB, the button with a cooldown readout; moves the player's own character with a LinearVelocity for Config.DASH.DURATION and pops it up Config.DASH.HOP)
     config: Config.DASH { COOLDOWN 8, SPEED 70, DURATION 0.4, HOP 38, TRAILS 3 } (about 28 studs, airborne about as long as the dash); on cooldown the button shows only the countdown; Q is a reserved key (can't be the draw key)
     remotes: { c2s: [Dash], s2c: [DashStarted] }
-    animation: CastPoses.Dash (arms wide) through Fx/CastAnimations; SpellVfx.windStreaks (Config.DASH.TRAILS Trails), puff and whoosh from FxController onDash
+    animation: CastPoses.Dash (arms wide, `flip` = a 360 degree hip rotation in four quarter turns over Config.DASH.DURATION) through Fx/CastAnimations; landing dust and the dashLand cue; SpellVfx.windStreaks (Config.DASH.TRAILS Trails), puff and whoosh from FxController onDash
 
   - id: duel_maps
     summary: Seven duel maps, each summoned as an instanced arena below the floating hub so hub players can watch the fight.
@@ -475,7 +484,7 @@ features:
     tests: tests/Maps.spec.luau
 
   - id: spectate
-    summary: Watch another player: a camera-only feature, no server involvement.
+    summary: "Watch another player: a camera-only feature, no server involvement."
     client: src/client/Controllers/SpectateController.luau (the "Watch" side button opens a player list with each player's place; a top bar has Previous / Next / Stop; follows respawns; ends when the target leaves or you join a fight)
     rules: only available when not fighting (the hub); CameraSubject is set to the target's Humanoid
 
@@ -486,11 +495,6 @@ features:
   - id: classes_planned
     summary: NOT BUILT. A second layer on top of elements (element + class); only the notes and open questions exist.
     docs: docs/CLASSES.md
-
-testing:
-  run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
-  specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/WordMatcher.spec.luau]
-  live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Spell") / ("unlockall") / ("tutorial", false) / ("wins", 3) / ("likefav", false) / ("takecoins", 250)
 
   - id: telemetry
     summary: The analytics funnel. Sends how players move through the game to Roblox's AnalyticsService (Creator Hub > Analytics) so drop-off can be seen and fixed.
@@ -538,3 +542,8 @@ testing:
     pure_modules: [src/shared/Util/Ballistic.luau, src/shared/Util/Pit.luau]
     tunables: Config.RESCUE
     tests: tests/Rescue.spec.luau
+
+testing:
+  run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
+  specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Knockback.spec.luau, tests/Maps.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/Rescue.spec.luau, tests/SpellStats.spec.luau, tests/Telemetry.spec.luau, tests/Terrain.spec.luau, tests/Vortex.spec.luau, tests/WordMatcher.spec.luau]
+  live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Spell") / ("unlockall") / ("tutorial", false) / ("wins", 3) / ("likefav", false) / ("takecoins", 250) / ("cast", {spell, target})

@@ -2,7 +2,7 @@
 
 There are two ways to run a command, and both go through the same server code:
 
-- **The Admin panel (click).** Admins see a purple **Admin** button under the wallet. Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
+- **The Admin panel (click).** Admins see a purple **Admin** button in the top-left corner (the Party button sits under it). Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
 - **Chat (type).** Use the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
@@ -45,8 +45,8 @@ Leaving the target out means `me` where that makes sense.
 | Command | What it does |
 |---|---|
 | `;help [command]` | Lists the commands, or shows one command's usage |
-| `;give <player> <spell\|all>` | Gives spell copies, skipping the spellbook and recharge rules. The hotbar holds 5. |
-| `;unlock <player> <Fire\|Water\|Earth\|Air\|all>` | Permanently unlocks an element (saved) |
+| `;give <player> <spell\|all>` | Gives spell copies at average drawing quality, skipping the spellbook and recharge rules. The hotbar holds 5 (one copy per spell). |
+| `;unlock <player> <Fire\|Water\|Earth\|Air\|spells\|all>` | Permanently unlocks an element, every crate spell (`spells`), or both (`all`) (saved) |
 | `;coins <player> <amount>` | Grants coins (spent on crates) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
 | `;reset <player> <coins\|wins\|stats\|elements\|spells\|pity\|rewards\|tutorial\|all>` | Resets saved data: coins back to the starting amount, wins/stats to 0, owned elements or crate spells forgotten (free first pick again), crate pity to 0, the Like & Favourite gift claimable again, the tutorial shown again. Players in a match are skipped. |
@@ -54,8 +54,8 @@ Leaving the target out means `me` where that makes sense.
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |
-| `;speed <player> <n>` | Sets walk speed (default 18). Resets on the next status change or respawn. |
-| `;freecast <player>` | Toggles no typing cooldown and no recharges, for testing |
+| `;speed <player> <n>` | Sets walk speed (0 to 200; the normal speed is `Config.WALK_SPEED`, 24). Resets on the next status change or respawn. |
+| `;freecast <player>` | Toggles no drawing cooldown and no recharges, for testing |
 | `;tp <player> <destination>` | Teleports players to another player |
 | `;bring <player>` | Teleports players to you |
 | `;hub <player>` | Pulls players out of their match and back to the hub |
@@ -88,6 +88,26 @@ COMMANDS.example = {
 }
 ```
 
-Commands run in their own thread, so yielding inside them (DataStores, filtering, bans) is fine.
+Commands run in their own thread, so yielding inside them (DataStores, filtering, bans) is fine. Saved data must still go through its owner (`EconomyService` for coins and wins, `ElementService` for elements and spells, `CrateService` for the pity).
+
+## Studio debug commands
+
+In Studio playtests, `game.ServerStorage.SpellcraftDebug:Invoke(command, arg)` (run from the Server context; `DebugService`) reaches the live game without the admin panel:
+
+| Command | Arg | Does |
+|---|---|---|
+| `state` | | returns your coins, wins, elements, element, crate spells, loadout, and tutorial flag |
+| `coins` / `takecoins` | number | adds / removes coins |
+| `wins` | number | records that many wins |
+| `crate` | `"Spell"` | spins the Spell Crate (returns the result or the refusal) |
+| `unlockall` | | owns every element and crate spell |
+| `element` | element id | grants and equips that element |
+| `solo` | mode | starts a match against nobody (rounds end on the timer; pays nothing) |
+| `cast` | `{spell = id, target = Vector3}` | gives you that spell and casts it through the normal pipeline |
+| `knockback` | | pushes you, to test knockback |
+| `likefav` | boolean | sets whether the Like & Favourite gift is claimed |
+| `tutorial` | boolean | `false` shows the tutorial again on the next join |
+
+Studio playtests with API access save to the real DataStore, so these change the tester's saved profile.
 
 To give it a button, add an entry in `src/shared/Admin/Catalog.luau`: `button("Label", "example {t}")`, or `input(...)` for a command that needs typed text (`{t}` is the picked target, `{v}` the typed value).

@@ -8,7 +8,7 @@ local Config = {
 	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.
 	GLOBAL_CAST_LOCKOUT = 0.35,
 	-- Seconds between drawn spells. Each recognized drawing adds one copy of
-	-- a spell (up to MAX_HAND held, duplicates allowed).
+	-- a spell (one per spell; hand slot N holds the Nth loadout spell).
 	DRAW_COOLDOWN = 1,
 	-- Largest stroke the server will look at (points), and how far from the
 	-- screen a point may be (in screen heights). Clients send ~4px samples.

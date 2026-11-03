@@ -4,6 +4,12 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (documentation refresh)
+- **Every doc re-checked against the code** (README, CLAUDE.md, GAME_DESIGN, ECONOMY, SPELLS, CONTROLS, ADMIN, CONTRIBUTING, ARCHITECTURE, `docs/semantic/features.yaml`, `assets/models/README.md`, the `add-map` skill). Fixed stale claims: up to 5 duplicate copies (now one per spell, slot N = the Nth loadout spell, keys 1-5), passive health regen in fights and the Battleground (removed), profile schema 4/5 (now 6 with `pity`), crates winning elements, drawing quality's top power (x1.5, not x1.2), Earth Wall's imported mesh (now the `EarthWall` block model), the Arcane models marked unused (they are used), emoji button labels, the 8-spell / 8-shape layout notes, the Water Body / Earth Pillar / Earthquake numbers, and the Studio debug command list.
+- **New in the docs:** the Spell Crate pity, the water and pit rescues, drawing quality tiers, the spell wind-up swell, the dash somersault, every service, controller and shared module in the ARCHITECTURE layout, a migration table, the Battleground rows of the PvP table, and a Studio debug command table in ADMIN.md.
+- **`docs/semantic/features.yaml` is valid YAML again:** values containing `: ` are quoted, and the `testing` block no longer swallows the telemetry, juice and rescue features. Bootstrap orders, Fx kinds, remotes, and the spec list now match the code.
+- `;speed`'s help text names the real default walk speed (`Config.WALK_SPEED`, 24; it said 18), and a stale "duplicates allowed" comment in `Config` is fixed.
+
 ### Added (spell wind-up)
 - **Every spell now swells as it is summoned.** Projectiles (Fireball, Fire Slash, Water Slice, Water Lock, Water Wave, Rock Throw, Gust, Whirlwind, Tornado, Fire Bomb) grow from a small spark to full size over 0.25s as they leave the caster (`BOLT_GROW` in `FxController`; turret bullets are born full size). Spells that had no growing effect get a wind-up ball or bubble in their color (`CastPoses.SWELLS`, `SpellVfx` `swell`): Fire Boost, Water Body, Water Lock, Water Wave, Water Nebula, Gust, Whirlwind, Tornado, Air Boost, Air Shield, Heal, Turret. Fireball, Rock Throw, Fire Pillar, Fire Bomb, Lightning and Black Hole already grew in the hand and are unchanged; the Earth stomps and Earthquake keep their ground effects. Cosmetic only: server timing and balance are untouched.
 

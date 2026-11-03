@@ -5,8 +5,8 @@
 #
 # model      3D model: a block model built by ModelKit from Models/BlockModels (Blender
 #            source tools/blender/block_models.py, FBX in assets/models/blocks), or an
-#            imported mesh stored in the place (Fireball, WaterBubble, RockWall, Gust, Zap,
-#            Heal, BlackHole, Turret)
+#            imported mesh stored in the place (Fireball, WaterBubble, Gust, Zap, Heal,
+#            BlackHole, Turret)
 # vfx        key into Spells/VfxStyles (bolt trail + impact burst; buffs also an aura)
 # fx         the Fx remote events the spell triggers on clients (FxController)
 # animation  key into Spells/CastPoses (the cast pose, played by Fx/CastAnimations)
@@ -197,7 +197,7 @@ spells:
     role: defense
     archetype: Placeable
     cooldown: 4
-    model: RockWall
+    model: EarthWall
     vfx: EarthWall
     fx: [dust, chip, shatter, cast]
     animation: Bulwark
@@ -356,7 +356,7 @@ spells:
     rarity: Common
     role: support
     archetype: Buff
-    cooldown: 30
+    cooldown: 60
     model: Heal
     vfx: Heal
     fx: [modelPop, cast, aura]
@@ -372,7 +372,7 @@ spells:
     rarity: Legendary
     role: vortex
     archetype: Zone
-    cooldown: 10
+    cooldown: 20
     model: BlackHole
     vfx: BlackHole
     fx: [vortex, suck, spin, shockwave, cast]
@@ -385,10 +385,10 @@ spells:
     name: Turret
     element: Arcane
     slot: 4
-    rarity: Rare
+    rarity: Epic
     role: summon
     archetype: Placeable
-    cooldown: 12
+    cooldown: 20
     model: Turret
     vfx: Turret
     fx: [deploy, muzzle, projectile, dust, cast]

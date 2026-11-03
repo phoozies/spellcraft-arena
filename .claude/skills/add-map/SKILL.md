@@ -16,7 +16,7 @@ A map module is `return function(makeProp: (Instance, number) -> ()): Model`. It
 - A `SmallModeWalls` folder (may be empty; its walls show only for 1v1 and 2v2).
 - Breakable cover: pass the part to `makeProp(part, health)`; `MapKit.blockWall` builds breakable brick walls.
 - Optional jump pads: tag `JumpPad` with a `LaunchVelocity` attribute. Maps are scaled by `Config.ARENA_SCALE`, so aim any pad for the scaled distances.
-- No rim wall means ring-outs (the void is `Config.ARENA_VOID_DEPTH` below the origin); otherwise `MapKit.barrierRing(model, radius, height)`.
+- No rim wall means players can be knocked off into the water `ArenaService` puts under every arena (`Config.RESCUE.WATER_SURFACE`), which splashes them and throws them back onto their spawn pad (`Services/Rescue`; `Config.ARENA_VOID_DEPTH` is only a fallback for a player with no pad); otherwise `MapKit.barrierRing(model, radius, height)`. Floors made of terrain cells can be carved into pits; `Rescue` throws out a player walled in on every side.
 
 Use `MapKit.disc`, `pillar`, `underside` (the rock cone that makes a floor look like it floats; arenas hang in the air below the hub), `tree`, `blockWall` and `part`. Put a seeded `MapKit.rng(seed)` behind any scatter so every server builds the same map. Every model needs a plain-shape fallback.
 
