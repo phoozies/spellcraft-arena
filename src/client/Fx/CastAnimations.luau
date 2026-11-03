@@ -23,12 +23,18 @@ local registered: { [string]: { id: string, length: number } } = {}
 -- The playing track per character and pose, so a repeat cast restarts it.
 local tracks: { [Model]: { [string]: AnimationTrack } } = setmetatable({}, { __mode = "k" }) :: any
 
-local function pose(name: string, cframe: CFrame, weight: number, parent: Pose?): Pose
+local function pose(
+	name: string,
+	cframe: CFrame,
+	weight: number,
+	parent: Pose?,
+	style: Enum.PoseEasingStyle?
+): Pose
 	local p = Instance.new("Pose")
 	p.Name = name
 	p.CFrame = cframe
 	p.Weight = weight
-	p.EasingStyle = Enum.PoseEasingStyle.Cubic
+	p.EasingStyle = style or Enum.PoseEasingStyle.Cubic
 	p.EasingDirection = Enum.PoseEasingDirection.Out
 	if parent then
 		parent:AddSubPose(p)
@@ -78,7 +84,10 @@ local function keyframe(time: number, key: CastPoses.Key?, r15: boolean, _legs: 
 	frame.Time = time
 	local root = pose("HumanoidRootPart", CFrame.identity, 0)
 	if r15 then
-		local lower = pose("LowerTorso", CFrame.identity, 0, root)
+		-- A somersault turns the whole body at the hips, at a steady speed.
+		local flip = if key then math.rad(-(key.flip or 0)) else 0
+		local lower =
+			pose("LowerTorso", CFrame.Angles(flip, 0, 0), 1, root, Enum.PoseEasingStyle.Linear)
 		local lean = if key then math.rad(-(key.lean or 0)) else 0
 		local upper = pose("UpperTorso", CFrame.Angles(lean, 0, 0), 1, lower)
 		local right = if key then key.right else nil

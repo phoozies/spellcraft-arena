@@ -1697,7 +1697,7 @@ function SpellVfx.windStreaks(character: Model, count: number, seconds: number)
 	if not root or not root:IsA("BasePart") then
 		return
 	end
-	local lifetime = 0.45
+	local lifetime = 0.3 -- short, so the streaks do not hide the somersault
 	for i = 1, count do
 		local spread = if count > 1 then (i - 1) / (count - 1) * 2 - 1 else 0 -- -1..1
 		local x = spread * 1.5

@@ -347,7 +347,8 @@ local function onDeploy(position: Vector3, color: Color3, _spellId: string?)
 	AudioController.play("turretOnline", position)
 end
 
--- A player dashed: the dash pose, a puff at their feet, and a whoosh.
+-- A player dashed: the somersault pose, a puff at their feet, and a whoosh;
+-- when the leap ends, a smaller puff and a thud where they land.
 local function onDash(character: Model, direction: Vector3)
 	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") or not near(root.Position) then
@@ -355,10 +356,18 @@ local function onDash(character: Model, direction: Vector3)
 	end
 	CastAnimations.play(character, "Dash")
 	SpellVfx.windStreaks(character, Config.DASH.TRAILS, Config.DASH.DURATION)
+	local dustColor = Color3.fromRGB(220, 220, 230)
 	local feet = root.Position - Vector3.new(0, 2.8, 0)
-	SpellVfx.dust(folder, feet, 5, Color3.fromRGB(220, 220, 230))
-	SpellVfx.dust(folder, feet - direction * 3, 4, Color3.fromRGB(220, 220, 230))
+	SpellVfx.dust(folder, feet, 5, dustColor)
+	SpellVfx.dust(folder, feet - direction * 3, 4, dustColor)
 	AudioController.play("dash", root.Position)
+	task.delay(Config.DASH.DURATION, function()
+		if root.Parent then
+			local land = root.Position - Vector3.new(0, 2.8, 0)
+			SpellVfx.dust(folder, land, 4, dustColor)
+			AudioController.play("dashLand", land)
+		end
+	end)
 end
 
 -- A player just drew a glyph: show it over their head.
