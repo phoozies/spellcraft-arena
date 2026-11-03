@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (spell wind-up)
+- **Every spell now swells as it is summoned.** Projectiles (Fireball, Fire Slash, Water Slice, Water Lock, Water Wave, Rock Throw, Gust, Whirlwind, Tornado, Fire Bomb) grow from a small spark to full size over 0.25s as they leave the caster (`BOLT_GROW` in `FxController`; turret bullets are born full size). Spells that had no growing effect get a wind-up ball or bubble in their color (`CastPoses.SWELLS`, `SpellVfx` `swell`): Fire Boost, Water Body, Water Lock, Water Wave, Water Nebula, Gust, Whirlwind, Tornado, Air Boost, Air Shield, Heal, Turret. Fireball, Rock Throw, Fire Pillar, Fire Bomb, Lightning and Black Hole already grew in the hand and are unchanged; the Earth stomps and Earthquake keep their ground effects. Cosmetic only: server timing and balance are untouched.
+
 ### Changed (dash somersault)
 - **The dash is now a forward somersault** (arms flung wide, a full 360 degree flip in four quarter turns over `Config.DASH.DURATION`) instead of a held lean. New `flip` field on `CastPoses` keys, applied to the hips by `CastAnimations`. Landing now gets a smaller dust puff and a `dashLand` thud, and the wind streaks fade faster (0.45s to 0.3s).
 

@@ -1364,11 +1364,94 @@ function BEATS.build(parent, character, beat, color)
 	end)
 end
 
+-- The wind-up (Spells/CastPoses SWELLS): a ball of the spell's color grows
+-- where the caster summons it, then bursts into the spell. A `body` swell is a
+-- see-through bubble round the chest instead of a solid ball.
+local function swell(parent: Instance, character: Model, spec: CastPoses.Swell, color: Color3)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local right = handOf(character, "Right")
+	local left = handOf(character, "Left")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+	-- Dark spells still need a glow you can see.
+	if color.R + color.G + color.B < 0.9 then
+		color = color:Lerp(WHITE, 0.5)
+	end
+	local bubble = spec.where == "body"
+	local ball = Instance.new("Part")
+	ball.Shape = Enum.PartType.Ball
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.CastShadow = false
+	ball.Material = Enum.Material.Neon
+	ball.Color = color
+	ball.Transparency = if bubble then 0.7 else 0.25
+	ball.Size = Vector3.one * 0.3
+	ball.Parent = parent
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = TEX.sparkle
+	sparks.Color = ColorSequence.new(color, WHITE)
+	sparks.LightEmission = 1
+	sparks.Size = NumberSequence.new(0.5, 0)
+	sparks.Lifetime = NumberRange.new(0.25, 0.4)
+	sparks.Speed = NumberRange.new(2, 5)
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Rate = 30
+	sparks.Parent = ball
+
+	local function centre(): Vector3
+		if spec.where == "hands" then
+			if right and right.Parent then
+				return if left and left.Parent
+					then (right.Position + left.Position) / 2
+					else right.Position
+			end
+		elseif spec.where == "overhead" then
+			return root.Position + Vector3.new(0, 3.2, 0)
+		end
+		return root.Position
+	end
+
+	every(spec.at, function(t)
+		if not root.Parent then
+			ball:Destroy()
+			return false
+		end
+		-- Eases out: it swells fast at first, then settles to full size.
+		local grow = 1 - (1 - t / spec.at) ^ 2
+		ball.Size = Vector3.one * math.max(spec.size * grow, 0.3)
+		ball.Position = centre()
+		return true
+	end)
+	-- Released: it bursts outward into the spell.
+	task.delay(spec.at, function()
+		if not ball.Parent then
+			return
+		end
+		sparks.Enabled = false
+		sparks:Emit(10)
+		TweenService
+			:Create(ball, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = Vector3.one * spec.size * 1.5,
+				Transparency = 1,
+			})
+			:Play()
+	end)
+	Debris:AddItem(ball, spec.at + 0.4)
+end
+
 function SpellVfx.castBeat(parent: Instance, character: Model, poseName: string, color: Color3)
 	local beat = CastPoses.BEATS[poseName]
 	local run = if beat then BEATS[beat.kind] else nil
 	if beat and run then
 		run(parent, character, beat, color)
+	end
+	local spec = CastPoses.SWELLS[poseName]
+	if spec then
+		swell(parent, character, spec, color)
 	end
 end
 

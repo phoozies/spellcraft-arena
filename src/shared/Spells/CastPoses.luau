@@ -514,4 +514,28 @@ CastPoses.BEATS = {
 
 CastPoses.BEAT_KINDS = { "orb", "trail", "stomp", "gather", "swirl", "splash", "push", "build" }
 
+-- SWELLS are the wind-up of a spell: a glowing ball (or bubble) of the spell's
+-- color that grows to `size` studs over `at` seconds, then bursts into the
+-- spell. They ride on a pose in addition to its beat, so a pose with an orb or
+-- gather beat (which already grow) has none. `where` is `hands` (between the
+-- hands), `overhead` (above the head), or `body` (a bubble round the chest).
+export type Swell = { at: number, size: number, where: string }
+
+CastPoses.SWELL_PLACES = { "hands", "overhead", "body" }
+
+CastPoses.SWELLS = {
+	Flex = { at = 0.3, size = 4, where = "body" },
+	Flow = { at = 0.26, size = 3, where = "hands" },
+	Point = { at = 0.2, size = 2.6, where = "hands" },
+	Wave = { at = 0.18, size = 3, where = "hands" },
+	Downpour = { at = 0.3, size = 4, where = "overhead" },
+	Fan = { at = 0.14, size = 2, where = "hands" },
+	Spin = { at = 0.2, size = 3.5, where = "body" },
+	Cyclone = { at = 0.3, size = 4, where = "overhead" },
+	Surge = { at = 0.3, size = 4.5, where = "body" },
+	Guard = { at = 0.35, size = 6, where = "body" },
+	Offer = { at = 0.45, size = 3, where = "overhead" },
+	Deploy = { at = 0.18, size = 2.4, where = "hands" },
+} :: { [string]: Swell }
+
 return CastPoses
