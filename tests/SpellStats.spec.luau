@@ -20,9 +20,8 @@ return function(t: any)
 
 		t.it("shows Turret's health and lifetime, and Heal's amount", function()
 			local turret = SpellDefinitions.get("Turret") :: any
-			t.expect(SpellStats.text(turret)).toBe(
-				"Damage 6   Health 30   Cooldown 20s   Duration 20s   Range 80"
-			)
+			t.expect(SpellStats.text(turret))
+				.toBe("Damage 6   Health 30   Cooldown 20s   Duration 20s   Range 80")
 			local heal = SpellDefinitions.get("Heal") :: any
 			t.expect(SpellStats.text(heal)).toBe("Heal 20   Cooldown 60s")
 		end)
