@@ -11,7 +11,7 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 ### Changed (spell UI)
 - **Every spell now shows as a sigil** (`UI/Sigil`): its shape in glowing ink (new `GlyphView.glow`: halo, glow, core and shine, all opaque so nothing beads) inside a small night-blue magic circle ringed in the spell's colour with rune stones, the drawing canvas's look.
 - **Spell cards** (Spellbook, loadout, collection, Spell Crate reel) get a band of the spell's colour, the sigil, the name, and a rarity or school pill; unwon spells are grey with a "?" sigil.
-- **Hotbar slots show the spell's sigil** (they showed only the name); the readied slot's rune ring turns, and an empty slot shows the grey sigil of the spell that fills it.
+- **Hotbar slots show the spell's sigil once a copy is ready in them** (they showed only the name); the readied slot's rune ring turns. An empty slot shows only the dimmed name of the spell that fills it, no sigil.
 - **The cards above the hotbar** match: a colour band and sigil; hovering lifts a card, and the card you are tracing lifts further with its accent outline and a spinning sigil.
 - The Spellbook's spell picture, the canvas banner, and the hub's element shrines use the glowing sigil ink too.
 

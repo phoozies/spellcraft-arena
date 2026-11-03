@@ -426,13 +426,10 @@ local function refreshHotbar()
 			slot.bubble.BackgroundColor3 = color
 			setReadied(slot, isReadied)
 		else
-			-- Empty slot: shows (dimmed) which spell drawing fills it with.
+			-- Empty slot: only the (dimmed) name of the spell drawing fills it
+			-- with; the sigil shows once a copy is ready in the slot.
 			local waiting = SpellDefinitions.get(ClientState.drawableSpells()[i] or "")
 			slot.button.Visible = true
-			if waiting then
-				-- Its shape, unlit: draw it to fill the slot.
-				Sigil.create(slot.icon, waiting.glyph, 40, Theme.COLORS.grey)
-			end
 			slot.stars.Text = ""
 			slot.name.Text = if waiting then waiting.name else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
