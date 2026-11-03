@@ -169,10 +169,11 @@ function SpellInputService.submitStroke(
 	TelemetryService.onboarding(player, "FirstSpellDrawn")
 	local def = SpellDefinitions.get(spellId)
 	resultRemote:FireClient(player, spellId, glyphId, quality)
-	-- Everyone nearby sees the glyph pop up over the caster's head.
+	-- Everyone nearby sees the glyph traced in the air by the caster's wand
+	-- and pulled into it (Fx/WandVfx), coloured by how well it was drawn.
 	local character = player.Character
 	if def and character then
-		fxRemote:FireAllClients("glyph", character, def.glyph, def.visual.color)
+		fxRemote:FireAllClients("glyph", character, def.glyph, def.visual.color, quality)
 	end
 	return spellId
 end

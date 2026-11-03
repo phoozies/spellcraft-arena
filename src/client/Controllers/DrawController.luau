@@ -1,21 +1,25 @@
 --!strict
--- Drawing a spell. Two ways to open the drawing canvas:
---   * TAP A SPELL CARD (above the hotbar): the canvas shows that spell's
---     shape as a faint guide with a dot tracing it; you trace over it. The
---     closer your line follows the shape, the better the quality (and the
---     stronger the cast; see Spells/Quality).
+-- Drawing a spell with your wand. Two ways to open the drawing canvas:
+--   * TAP A SPELL CARD (above the hotbar) or press its key: the canvas shows
+--     that spell's shape as a glowing guide with a comet tracing it; you trace
+--     over it. The closer your line follows the shape, the better the quality
+--     (and the stronger the cast; see Spells/Quality).
 --   * Press the draw key (default F, changeable in Settings), tap the Draw
 --     button, or press X on a gamepad: a blank canvas; draw any of your
---     element's shapes from memory.
--- Then drag a mouse/finger (or push the right stick). When you let go the
--- stroke is sent to the server (DrawSpell), which decides what it is and how
--- well it followed the shape; the answer (GlyphResult) colors the line by
--- quality tier. G / Escape / the draw key again cancels.
+--     loadout's shapes from memory.
+-- Then drag a mouse/finger (or push the right stick). The line glows in the
+-- spell's colour with a sparking pen tip, and your wand writes the same stroke
+-- in the air in front of you (WandController). When you let go the stroke is
+-- sent to the server (DrawSpell), which decides what it is and how well it
+-- followed the shape; the answer (GlyphResult) flashes the line in its quality
+-- colour and pulls it into the wand, or turns it red. G / Escape / the draw
+-- key again cancels.
 --
 -- Everything here is input and feedback. The server owns recognition,
 -- ownership, cooldown, and the hotbar.
 
 local ContextActionService = game:GetService("ContextActionService")
+local Debris = game:GetService("Debris")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,6 +28,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
@@ -31,12 +36,14 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Types = require(ReplicatedStorage.Shared.Types)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
+local WandAir = require(ReplicatedStorage.Shared.Util.WandAir)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
 local JuiceController = require(script.Parent.JuiceController)
+local WandController = require(script.Parent.WandController)
 
 local player = Players.LocalPlayer
 
@@ -44,29 +51,48 @@ local DrawController = {}
 
 type InputKind = "mouse" | "touch" | "pad"
 
--- Pixels between recorded points.
+-- Pixels between recorded points, and between drawn line pieces.
 local SAMPLE_SPACING = 4
+local DRAW_SPACING = 8
 local STICK_RADIUS = 0.3 -- of the screen height
-local LINE_THICKNESS = 10
+-- The ink: a wide soft glow, a solid core, and a white shine down the middle.
+local GLOW_THICKNESS = 30
+local CORE_THICKNESS = 12
+local SHINE_THICKNESS = 4
 -- How long a sent line waits for the server's verdict before fading anyway.
 local VERDICT_TIMEOUT = 1.5
+-- Pen-tip sparkles: at most this many on screen.
+local MAX_SPARKS = 50
+-- The comet behind the guide's tracer dot: how many trailing dots, how far apart.
+local COMET_DOTS = 6
+local COMET_GAP = 14
 
-local PEN = Color3.fromRGB(105, 240, 130)
+local WHITE = Color3.new(1, 1, 1)
 local GOOD = Color3.fromRGB(255, 214, 64)
 local BAD = Color3.fromRGB(239, 83, 80)
 
 local gui: ScreenGui
-local dim: Frame -- the input surface + dimmed backdrop, visible while drawing
-local banner: TextLabel
+local dim: Frame -- the input surface + vignette, visible while drawing
+local bannerFrame: Frame
+local bannerIcon: Frame
+local bannerTitle: TextLabel
+local bannerHint: TextLabel
+local runes: Frame -- the turning rune circle behind the guide
+local runesInner: Frame
+local runesScale: UIScale
 local inkLayer: Frame -- always on top, so a sent line outlives the canvas
-local ink: Frame -- the line being drawn
+local ink: Frame -- the line being drawn (glow, core and shine layers)
+local pen: Frame -- the glowing orb at the pen tip
+local sparkLayer: Frame
 local drawButton: TextButton
 local keyCap: TextLabel
 
 -- The spell whose shape the canvas is showing (nil = a blank canvas).
 local target: Types.SpellDef? = nil
-local previewHolder: Frame -- the faint guide shape + tracer dot, under the ink
+local inkColor = WHITE
+local previewHolder: Frame -- the guide shape + tracer comet, under the ink
 local tracer: Frame -- a dot that runs along the guide to show how to draw it
+local comet: { Frame } = {}
 local tracerPath: { Vector2 } = {}
 local tracerLength = 0
 
@@ -74,25 +100,123 @@ local active = false
 local drawing = false
 local inputKind: InputKind = "mouse"
 local stroke: { Vector2 } = {}
+local lastDrawn: Vector2? = nil
 local strokeStart = 0
 local touchInput: InputObject? = nil
 local pendingInk: Frame? = nil -- the line sent to the server, awaiting its verdict
+local sparkCount = 0
 
 function DrawController.isActive(): boolean
 	return active
 end
 
-local function viewportHeight(): number
+local function viewport(): Vector2
 	local camera = workspace.CurrentCamera
-	return if camera then camera.ViewportSize.Y else 720
+	return if camera then camera.ViewportSize else Vector2.new(1280, 720)
+end
+
+local function viewportHeight(): number
+	return viewport().Y
+end
+
+-- The colour of a blank canvas: your element's (the same as your wand's tip).
+local function elementColor(): Color3
+	local profile = ClientState.profile
+	if profile and Elements.get(profile.element) then
+		return Elements.color(profile.element)
+	end
+	return Elements.ARCANE.color
+end
+
+local function layer(parent: Instance, name: string, z: number): Frame
+	local f = Instance.new("Frame")
+	f.Name = name
+	f.BackgroundTransparency = 1
+	f.Size = UDim2.fromScale(1, 1)
+	f.ZIndex = z
+	f.Parent = parent
+	return f
+end
+
+-- A full-size see-through group: everything inside is drawn opaque and the
+-- group fades as one, so overlapping line pieces don't stack up into beads.
+local function group(parent: Instance, name: string, transparency: number): CanvasGroup
+	local g = Instance.new("CanvasGroup")
+	g.Name = name
+	g.BackgroundTransparency = 1
+	g.Size = UDim2.fromScale(1, 1)
+	g.GroupTransparency = transparency
+	g.Parent = parent
+	return g
 end
 
 local function newInk()
 	ink = Instance.new("Frame")
 	ink.Name = "Ink"
 	ink.BackgroundTransparency = 1
+	-- Anchored in the middle so a UIScale collapses it towards the centre.
+	ink.AnchorPoint = Vector2.new(0.5, 0.5)
+	ink.Position = UDim2.fromScale(0.5, 0.5)
 	ink.Size = UDim2.fromScale(1, 1)
 	ink.Parent = inkLayer
+	group(ink, "Glow", 0.78).ZIndex = 1
+	layer(ink, "Core", 2)
+	layer(ink, "Shine", 3)
+	local scale = Instance.new("UIScale")
+	scale.Parent = ink
+end
+
+-- Every line piece of an ink frame (all three layers).
+local function inkPieces(line: Frame): { Frame }
+	local pieces = {}
+	for _, piece in line:GetDescendants() do
+		if piece:IsA("Frame") and piece.Name == "Segment" then
+			table.insert(pieces, piece)
+		end
+	end
+	return pieces
+end
+
+local function drawPiece(from: Vector2, to: Vector2)
+	-- Every piece is opaque (the Glow group fades as one), so joints don't bead.
+	GlyphView.segment(ink:FindFirstChild("Glow") :: Instance, from, to, GLOW_THICKNESS, inkColor)
+	GlyphView.segment(ink:FindFirstChild("Core") :: Instance, from, to, CORE_THICKNESS, inkColor)
+	local shine = GlyphView.segment(
+		ink:FindFirstChild("Shine") :: Instance,
+		from,
+		to,
+		SHINE_THICKNESS,
+		inkColor:Lerp(WHITE, 0.75)
+	)
+	shine:SetAttribute("Shine", true)
+end
+
+-- A tiny spark that flies off the pen tip and fades.
+local function spark(at: Vector2)
+	if sparkCount >= MAX_SPARKS then
+		return
+	end
+	sparkCount += 1
+	local size = math.random(6, 11)
+	local s = Instance.new("Frame")
+	s.AnchorPoint = Vector2.new(0.5, 0.5)
+	s.Position = UDim2.fromOffset(at.X, at.Y)
+	s.Size = UDim2.fromOffset(size, size)
+	s.Rotation = 45
+	s.BorderSizePixel = 0
+	s.BackgroundColor3 = inkColor:Lerp(WHITE, math.random() * 0.6)
+	s.Parent = sparkLayer
+	local drift = Vector2.new(math.random(-40, 40), math.random(-10, 45))
+	TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.fromOffset(at.X + drift.X, at.Y + drift.Y),
+		Size = UDim2.fromOffset(0, 0),
+		Rotation = 45 + math.random(-180, 180),
+		BackgroundTransparency = 1,
+	}):Play()
+	task.delay(0.5, function()
+		sparkCount -= 1
+		s:Destroy()
+	end)
 end
 
 local function addPoint(position: Vector2)
@@ -101,15 +225,40 @@ local function addPoint(position: Vector2)
 		return
 	end
 	table.insert(stroke, position)
-	if last then
-		GlyphView.segment(ink, last, position, LINE_THICKNESS, PEN)
+	pen.Position = UDim2.fromOffset(position.X, position.Y)
+	WandController.strokePoint(position)
+	if not lastDrawn then
+		lastDrawn = position
+		return
 	end
+	local from = lastDrawn :: Vector2
+	if (position - from).Magnitude >= DRAW_SPACING then
+		drawPiece(from, position)
+		lastDrawn = position
+		spark(position)
+	end
+end
+
+-- The point `distance` pixels along the guide (looping is up to the caller).
+local function pointAlong(distance: number): Vector2?
+	for i = 2, #tracerPath do
+		local from, to = tracerPath[i - 1], tracerPath[i]
+		local segment = (to - from).Magnitude
+		if distance <= segment or i == #tracerPath then
+			return from + (to - from) * math.clamp(distance / math.max(segment, 1e-6), 0, 1)
+		end
+		distance -= segment
+	end
+	return nil
 end
 
 -- Shows (or clears) the guide for `def`'s shape in the middle of the canvas.
 local function showPreview(def: Types.SpellDef?)
 	tracer.Visible = false
-	tracer.Parent = nil -- keep it out of the clear below
+	tracer.Parent = nil -- keep it (and its comet) out of the clear below
+	for _, dot in comet do
+		dot.Parent = nil
+	end
 	previewHolder:ClearAllChildren()
 	table.clear(tracerPath)
 	tracerLength = 0
@@ -117,23 +266,46 @@ local function showPreview(def: Types.SpellDef?)
 	if not def or not glyph then
 		return
 	end
-	local camera = workspace.CurrentCamera
-	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	local view = viewport()
 	-- The shape fills the middle 72% of its frame: size the frame to the screen.
-	local size = math.floor(math.min(viewport.X * 0.82, viewport.Y * 0.8))
-	local color = SpellCard.colorOf(def.id)
-	local holder = GlyphView.create(previewHolder, def.glyph, size, color, {
+	local size = math.floor(math.min(view.X * 0.82, view.Y * 0.8))
+	local props = {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.56),
-	}, math.max(8, size * 0.05))
+		Position = UDim2.fromScale(WandAir.SCREEN_CENTER.X, WandAir.SCREEN_CENTER.Y),
+	}
+	-- The guide is drawn opaque inside see-through groups, so the overlapping
+	-- line pieces fade as one shape (no darker beads where they overlap).
+	local glowGroup = group(previewHolder, "GuideGlow", 0.84)
+	local glow =
+		GlyphView.create(glowGroup, def.glyph, size, inkColor, props, math.max(20, size * 0.11))
+	if glow then
+		for _, child in glow:GetChildren() do
+			if child:IsA("Frame") then
+				child.BackgroundColor3 = inkColor
+			end
+		end
+	end
+	local lineGroup = group(previewHolder, "GuideLine", 0.42)
+	local holder =
+		GlyphView.create(lineGroup, def.glyph, size, inkColor, props, math.max(8, size * 0.05))
 	if not holder then
 		return
 	end
+	-- A soft darker edge in the spell's own colour instead of black.
 	for _, child in holder:GetChildren() do
-		if child:IsA("Frame") then
-			child.BackgroundTransparency = 0.4
+		if child:IsA("Frame") and child.Name == "Outline" then
+			child.BackgroundColor3 = inkColor:Lerp(Color3.new(0, 0, 0), 0.45)
 		end
 	end
+	-- The tracer and its comet ride above the groups at the same place.
+	local tracerHost = Instance.new("Frame")
+	tracerHost.Name = "TracerHost"
+	tracerHost.BackgroundTransparency = 1
+	tracerHost.Size = UDim2.fromOffset(size, size)
+	tracerHost.AnchorPoint = props.AnchorPoint
+	tracerHost.Position = props.Position
+	tracerHost.ZIndex = 3
+	tracerHost.Parent = previewHolder
 	-- The tracer's route, in the holder's own pixels.
 	for _, point in glyph.points do
 		table.insert(tracerPath, GlyphView.pointAt(point, size))
@@ -141,33 +313,69 @@ local function showPreview(def: Types.SpellDef?)
 	for i = 2, #tracerPath do
 		tracerLength += (tracerPath[i] - tracerPath[i - 1]).Magnitude
 	end
-	tracer.Parent = holder
-	tracer.BackgroundColor3 = color
+	for _, dot in comet do
+		dot.BackgroundColor3 = inkColor:Lerp(WHITE, 0.3)
+		dot.Parent = tracerHost
+	end
+	tracer.Parent = tracerHost
+	tracer.BackgroundColor3 = inkColor
 	tracer.Visible = true
 end
 
--- Moves the tracer dot along the guide (every frame while it is showing).
+-- Moves the tracer comet along the guide (every frame while it is showing).
 local function stepTracer()
 	if not tracer.Visible or tracerLength <= 0 then
 		return
 	end
 	-- 2.4s per lap, then a short pause before it starts again.
 	local lap = (os.clock() % 3) / 2.4
-	if lap >= 1 or drawing then
-		tracer.BackgroundTransparency = 1 -- gone while you draw, so it doesn't distract
-		return
-	end
-	tracer.BackgroundTransparency = 0.05
+	local hidden = lap >= 1 or drawing -- gone while you draw, so it doesn't distract
+	tracer.BackgroundTransparency = if hidden then 1 else 0.05
 	local distance = lap * tracerLength
-	for i = 2, #tracerPath do
-		local from, to = tracerPath[i - 1], tracerPath[i]
-		local segment = (to - from).Magnitude
-		if distance <= segment or i == #tracerPath then
-			local point = from + (to - from) * math.clamp(distance / math.max(segment, 1e-6), 0, 1)
-			tracer.Position = UDim2.fromOffset(point.X, point.Y)
-			break
+	local head = pointAlong(distance)
+	if head then
+		tracer.Position = UDim2.fromOffset(head.X, head.Y)
+	end
+	for index, dot in comet do
+		local behind = distance - index * COMET_GAP
+		local p = if behind > 0 then pointAlong(behind) else nil
+		dot.Visible = not hidden and p ~= nil
+		if p then
+			dot.Position = UDim2.fromOffset(p.X, p.Y)
 		end
-		distance -= segment
+	end
+end
+
+local function updateBanner(def: Types.SpellDef?)
+	bannerIcon:ClearAllChildren()
+	if def then
+		GlyphView.create(bannerIcon, def.glyph, 44, inkColor, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+		})
+		bannerTitle.Text = `Trace {def.name}`
+		bannerHint.Text = `Closer = stronger   [{ClientState.drawKeyName()}] cancel`
+	else
+		bannerTitle.Text = "Draw a spell with your wand"
+		bannerHint.Text = `Any shape in your loadout   [{ClientState.drawKeyName()}] cancel`
+	end
+	bannerFrame.BackgroundColor3 = Theme.COLORS.panel
+	local stripe = bannerFrame:FindFirstChild("Stripe")
+	if stripe and stripe:IsA("Frame") then
+		stripe.BackgroundColor3 = inkColor
+	end
+end
+
+-- Pops the canvas pieces in when it opens.
+local function playOpen()
+	runesScale.Scale = 0.6
+	TweenService:Create(runesScale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 })
+		:Play()
+	local bannerScale = bannerFrame:FindFirstChildOfClass("UIScale")
+	if bannerScale then
+		bannerScale.Scale = 0.85
+		TweenService:Create(bannerScale, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 })
+			:Play()
 	end
 end
 
@@ -185,21 +393,44 @@ local function setActive(on: boolean, spellId: string?)
 	if active == on and (not on or target == def) then
 		return
 	end
+	local wasActive = active
 	active = on
 	target = def
+	if drawing then
+		WandController.strokeCancel()
+	end
 	drawing = false
 	touchInput = nil
 	table.clear(stroke)
+	lastDrawn = nil
+	pen.Visible = false
 	dim.Visible = on
+	inkColor = if def then SpellCard.colorOf(def.id) else elementColor()
 	-- Opening, switching, or cancelling mid-stroke wipes the unsent line.
-	ink:ClearAllChildren()
+	for _, piece in inkPieces(ink) do
+		piece:Destroy()
+	end
 	showPreview(def)
 	if on then
-		if def then
-			banner.Text = `Trace the {def.name}! Closer = stronger.`
-		else
-			banner.Text = `Draw a spell!  [{ClientState.drawKeyName()}] to cancel`
+		updateBanner(def)
+		for _, ring in { runes, runesInner } do
+			local s = ring:FindFirstChildOfClass("UIStroke")
+			if s then
+				s.Color = inkColor
+			end
 		end
+		for _, tick in runes:GetChildren() do
+			if tick:IsA("Frame") and tick.Name == "Tick" then
+				tick.BackgroundColor3 = inkColor:Lerp(WHITE, 0.2)
+			end
+		end
+		pen.BackgroundColor3 = inkColor
+		if not wasActive then
+			playOpen()
+		end
+	end
+	if wasActive ~= on then
+		WandController.setDrawing(on)
 	end
 	drawButton.BackgroundColor3 = if on then Theme.COLORS.accent else Theme.COLORS.panelLight
 end
@@ -227,6 +458,62 @@ local function thinned(points: { Vector2 }): { Vector2 }
 	return out
 end
 
+-- A line the magic couldn't use: shake it, turn it red, and fade it.
+local function rejectLine(line: Frame)
+	for _, piece in inkPieces(line) do
+		if not piece:GetAttribute("Shine") then
+			TweenService:Create(piece, TweenInfo.new(0.1), { BackgroundColor3 = BAD }):Play()
+		end
+	end
+	task.spawn(function()
+		for i = 1, 6 do
+			if not line.Parent then
+				return
+			end
+			line.Position = UDim2.new(0.5, (if i % 2 == 0 then 1 else -1) * (8 - i), 0.5, 0)
+			task.wait(0.035)
+		end
+		line.Position = UDim2.fromScale(0.5, 0.5)
+		for _, piece in inkPieces(line) do
+			TweenService:Create(piece, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
+		end
+		task.wait(0.4)
+		line:Destroy()
+	end)
+end
+
+-- A line that worked: flash it in its quality colour, then collapse it
+-- inward while the wand pulls the air copy in.
+local function acceptLine(line: Frame, color: Color3)
+	for _, piece in inkPieces(line) do
+		if not piece:GetAttribute("Shine") then
+			piece.BackgroundColor3 = color:Lerp(WHITE, 0.35)
+			TweenService:Create(piece, TweenInfo.new(0.2), { BackgroundColor3 = color }):Play()
+		end
+	end
+	task.delay(0.25, function()
+		if not line.Parent then
+			return
+		end
+		local scale = line:FindFirstChildOfClass("UIScale")
+		if scale then
+			TweenService:Create(
+				scale,
+				TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+				{ Scale = 0.05 }
+			):Play()
+		end
+		for _, piece in inkPieces(line) do
+			TweenService:Create(
+				piece,
+				TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ BackgroundTransparency = 1 }
+			):Play()
+		end
+		Debris:AddItem(line, 0.4)
+	end)
+end
+
 local function finishStroke()
 	if not drawing then
 		return
@@ -242,12 +529,17 @@ local function finishStroke()
 	end
 	drawing = false
 	touchInput = nil
+	pen.Visible = false
 	table.clear(stroke)
+	lastDrawn = nil
 
 	local extent = math.max(high.X - low.X, high.Y - low.Y)
 	if #points < GlyphRecognizer.MIN_POINTS or extent < GlyphRecognizer.MIN_EXTENT then
 		HudController.toast("Draw a bigger shape!", "error")
-		ink:ClearAllChildren()
+		WandController.strokeCancel()
+		for _, piece in inkPieces(ink) do
+			piece:Destroy()
+		end
 		return -- stay on the canvas for another try
 	end
 	local now = os.clock()
@@ -256,11 +548,13 @@ local function finishStroke()
 			`Draw again in {math.ceil((ClientState.drawReadyAt - now) * 10) / 10}s`,
 			"error"
 		)
+		WandController.strokeCancel()
 		setActive(false)
 		return
 	end
 	ClientState.drawReadyAt = now + Config.DRAW_COOLDOWN
 	Remotes.get("DrawSpell"):FireServer(points, if target then target.id else nil)
+	WandController.strokeSent()
 
 	-- Close the canvas but keep the line until the server says what it was.
 	local sent = ink
@@ -280,37 +574,21 @@ end
 local function onVerdict(spellId: string?, _glyphId: string?, quality: number?)
 	local line = pendingInk
 	pendingInk = nil
-	-- No text popup: it covers too much of a phone screen. The ink line's
-	-- colour (and the screen juice) shows how well it was drawn.
+	-- No text popup: it covers too much of a phone screen. The line's colour,
+	-- the wand, and the screen juice show how well it was drawn.
+	local color = if spellId then (if quality then Quality.tier(quality).color else GOOD) else BAD
+	WandController.verdict(spellId ~= nil, color)
 	if spellId and quality then
 		JuiceController.drawn(Quality.tier(quality).stars)
 	end
 	if not line or not line.Parent then
 		return
 	end
-	local color = if spellId then (if quality then Quality.tier(quality).color else GOOD) else BAD
-	for _, child in line:GetChildren() do
-		if child:IsA("Frame") then
-			TweenService:Create(child, TweenInfo.new(0.12), { BackgroundColor3 = color }):Play()
-		end
+	if spellId then
+		acceptLine(line, color)
+	else
+		rejectLine(line)
 	end
-	task.delay(0.35, function()
-		if not line.Parent then
-			return
-		end
-		for _, child in line:GetChildren() do
-			if child:IsA("Frame") then
-				TweenService:Create(
-					child,
-					TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-					{ BackgroundTransparency = 1 }
-				):Play()
-			end
-		end
-		task.delay(0.45, function()
-			line:Destroy()
-		end)
-	end)
 end
 
 local function startStroke(position: Vector2, kind: InputKind)
@@ -321,13 +599,156 @@ local function startStroke(position: Vector2, kind: InputKind)
 	inputKind = kind
 	strokeStart = os.clock()
 	table.clear(stroke)
-	ink:ClearAllChildren()
+	lastDrawn = nil
+	for _, piece in inkPieces(ink) do
+		piece:Destroy()
+	end
+	pen.Visible = true
+	WandController.strokeBegin(inkColor)
 	addPoint(position)
 end
 
 local function touchPosition(input: InputObject): Vector2
 	-- Touch positions leave out the top bar; the canvas ignores that inset.
 	return Vector2.new(input.Position.X, input.Position.Y) + GuiService:GetGuiInset()
+end
+
+-- True when a visible button outside the canvas is under `at` (viewport
+-- pixels, top bar included).
+local function overButton(at: Vector2): boolean
+	local inset = GuiService:GetGuiInset()
+	local playerGui = player:FindFirstChildOfClass("PlayerGui")
+	if not playerGui then
+		return false
+	end
+	for _, object in playerGui:GetGuiObjectsAtPosition(at.X - inset.X, at.Y - inset.Y) do
+		if object:IsA("GuiButton") and object.Visible and not object:IsDescendantOf(gui) then
+			return true
+		end
+	end
+	return false
+end
+
+local function circle(parent: Instance, props: { [string]: any }): Frame
+	local f = Instance.new("Frame")
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.BorderSizePixel = 0
+	for key, value in props do
+		(f :: any)[key] = value
+	end
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = f
+	f.Parent = parent
+	return f
+end
+
+-- The vignette: darker at the edges, clear in the middle so the world (and
+-- the wand's drawing in the air) shows through.
+local function vignette(parent: Frame, rotation: number)
+	local edge = Instance.new("Frame")
+	edge.Name = "Vignette"
+	edge.Size = UDim2.fromScale(1, 1)
+	edge.BackgroundColor3 = Color3.fromRGB(14, 8, 36)
+	edge.BackgroundTransparency = 0.35
+	edge.BorderSizePixel = 0
+	edge.Parent = parent
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = rotation
+	gradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.28, 1),
+		NumberSequenceKeypoint.new(0.72, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	gradient.Parent = edge
+end
+
+local function buildRunes()
+	runes = circle(dim, {
+		Name = "Runes",
+		Position = UDim2.fromScale(WandAir.SCREEN_CENTER.X, WandAir.SCREEN_CENTER.Y),
+		Size = UDim2.fromScale(0.9, 0.9),
+		BackgroundTransparency = 1,
+	})
+	local aspect = Instance.new("UIAspectRatioConstraint")
+	aspect.Parent = runes
+	runesScale = Instance.new("UIScale")
+	runesScale.Parent = runes
+	local outer = Instance.new("UIStroke")
+	outer.Thickness = 3
+	outer.Transparency = 0.55
+	outer.Color = WHITE
+	outer.Parent = runes
+	runesInner = circle(runes, {
+		Name = "Inner",
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.8, 0.8),
+		BackgroundTransparency = 1,
+	})
+	local inner = Instance.new("UIStroke")
+	inner.Thickness = 2
+	inner.Transparency = 0.7
+	inner.Color = WHITE
+	inner.Parent = runesInner
+	-- Rune ticks around the outer ring: every third one is a bigger stone.
+	for i = 0, 23 do
+		local angle = i / 24 * math.pi * 2
+		local big = i % 3 == 0
+		local tick = Instance.new("Frame")
+		tick.Name = "Tick"
+		tick.AnchorPoint = Vector2.new(0.5, 0.5)
+		tick.Position = UDim2.fromScale(0.5 + math.sin(angle) * 0.5, 0.5 - math.cos(angle) * 0.5)
+		tick.Size = UDim2.fromOffset(if big then 14 else 7, if big then 14 else 7)
+		tick.Rotation = 45
+		tick.BorderSizePixel = 0
+		tick.BackgroundTransparency = if big then 0.3 else 0.5
+		tick.Parent = runes
+	end
+end
+
+local function buildBanner()
+	bannerFrame = Theme.frame(dim, {
+		Name = "Banner",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 24),
+		Size = UDim2.new(0.9, 0, 0, 64),
+		ZIndex = 6,
+	})
+	Theme.corner(bannerFrame, 14)
+	Theme.stroke(bannerFrame, Theme.COLORS.outline, 3)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(560, 64)
+	limit.Parent = bannerFrame
+	local scale = Instance.new("UIScale")
+	scale.Parent = bannerFrame
+	local stripe = Instance.new("Frame")
+	stripe.Name = "Stripe"
+	stripe.Position = UDim2.fromOffset(0, 0)
+	stripe.Size = UDim2.new(0, 64, 1, 0)
+	stripe.BorderSizePixel = 0
+	stripe.ZIndex = 6
+	stripe.Parent = bannerFrame
+	Theme.corner(stripe, 14)
+	bannerIcon = Instance.new("Frame")
+	bannerIcon.Name = "Icon"
+	bannerIcon.BackgroundTransparency = 1
+	bannerIcon.Size = UDim2.fromOffset(64, 64)
+	bannerIcon.ZIndex = 7
+	bannerIcon.Parent = bannerFrame
+	bannerTitle = Theme.label(bannerFrame, "", {
+		Position = UDim2.fromOffset(76, 6),
+		Size = UDim2.new(1, -88, 0, 30),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 7,
+	})
+	bannerHint = Theme.label(bannerFrame, "", {
+		Position = UDim2.fromOffset(76, 36),
+		Size = UDim2.new(1, -88, 0, 20),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Theme.COLORS.subtext,
+		ZIndex = 7,
+	})
 end
 
 local function buildCanvas()
@@ -341,43 +762,44 @@ local function buildCanvas()
 	dim = Instance.new("Frame")
 	dim.Name = "Canvas"
 	dim.Size = UDim2.fromScale(1, 1)
-	dim.BackgroundColor3 = Color3.fromRGB(10, 6, 30)
-	dim.BackgroundTransparency = 0.6
+	dim.BackgroundColor3 = Color3.fromRGB(14, 8, 36)
+	dim.BackgroundTransparency = 0.82
 	dim.BorderSizePixel = 0
 	dim.Active = true -- swallows clicks so drawing never casts a spell
 	dim.Visible = false
 	dim.Parent = gui
+	vignette(dim, 90)
+	vignette(dim, 0)
+	buildRunes()
 
 	previewHolder = Instance.new("Frame")
 	previewHolder.Name = "Preview"
 	previewHolder.Size = UDim2.fromScale(1, 1)
 	previewHolder.BackgroundTransparency = 1
+	previewHolder.ZIndex = 2
 	previewHolder.Parent = dim
 
-	tracer = Instance.new("Frame")
-	tracer.Name = "Tracer"
-	tracer.AnchorPoint = Vector2.new(0.5, 0.5)
-	tracer.Size = UDim2.fromOffset(22, 22)
-	tracer.BorderSizePixel = 0
-	tracer.Visible = false
-	tracer.ZIndex = 3
-	local tracerCorner = Instance.new("UICorner")
-	tracerCorner.CornerRadius = UDim.new(0.5, 0)
-	tracerCorner.Parent = tracer
-	Theme.stroke(tracer, Color3.new(1, 1, 1), 3)
-
-	-- 90% of the width on a phone, capped on a big screen; near the top.
-	banner = Theme.label(dim, "", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.05),
-		Size = UDim2.new(0.9, 0, 0, 44),
-		TextColor3 = Theme.COLORS.onDark,
-		TextStrokeTransparency = 0.4,
+	tracer = circle(gui, {
+		Name = "Tracer",
+		Size = UDim2.fromOffset(24, 24),
+		Visible = false,
 		ZIndex = 4,
 	})
-	local bannerLimit = Instance.new("UISizeConstraint")
-	bannerLimit.MaxSize = Vector2.new(720, 52)
-	bannerLimit.Parent = banner
+	Theme.stroke(tracer, WHITE, 3)
+	tracer.Parent = nil
+	for index = 1, COMET_DOTS do
+		local size = 20 - index * 2.5
+		local dot = circle(gui, {
+			Name = "Comet",
+			Size = UDim2.fromOffset(size, size),
+			BackgroundTransparency = 0.2 + index * 0.12,
+			ZIndex = 3,
+		})
+		dot.Parent = nil
+		table.insert(comet, dot)
+	end
+
+	buildBanner()
 
 	inkLayer = Instance.new("Frame")
 	inkLayer.Name = "InkLayer"
@@ -388,15 +810,46 @@ local function buildCanvas()
 	inkLayer.Parent = gui
 	newInk()
 
-	dim.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			startStroke(UserInputService:GetMouseLocation(), "mouse")
-		elseif input.UserInputType == Enum.UserInputType.Touch and not touchInput then
-			touchInput = input
-			startStroke(touchPosition(input), "touch")
+	sparkLayer = layer(gui, "Sparks", 6)
+	pen = circle(gui, {
+		Name = "Pen",
+		Size = UDim2.fromOffset(26, 26),
+		Visible = false,
+		ZIndex = 7,
+	})
+	Theme.stroke(pen, WHITE, 3)
+	local penHalo = circle(pen, {
+		Name = "Halo",
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(2.2, 2.2),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.82,
+		ZIndex = 6,
+	})
+	penHalo.Active = false
+
+	-- Strokes start from UserInputService rather than the canvas frame: the ink
+	-- and spark layers lie over the canvas and would keep GUI input events from
+	-- reaching it. A press on a button (Draw, the hotbar, menus) is left alone.
+	UserInputService.InputBegan:Connect(function(input)
+		if not active or drawing then
+			return
+		end
+		local kind = input.UserInputType
+		if kind == Enum.UserInputType.MouseButton1 then
+			local at = UserInputService:GetMouseLocation()
+			if not overButton(at) then
+				startStroke(at, "mouse")
+			end
+		elseif kind == Enum.UserInputType.Touch and not touchInput then
+			local at = touchPosition(input)
+			if not overButton(at) then
+				touchInput = input
+				startStroke(at, "touch")
+			end
 		end
 	end)
-	dim.InputChanged:Connect(function(input)
+	UserInputService.InputChanged:Connect(function(input)
 		if drawing and input == touchInput then
 			addPoint(touchPosition(input))
 		end
@@ -488,8 +941,16 @@ function DrawController.start()
 
 	-- A mouse drag is sampled every frame (the canvas only reports the
 	-- button going down); a gamepad draws with the right stick.
-	RunService.RenderStepped:Connect(function()
+	RunService.RenderStepped:Connect(function(dt)
 		stepTracer()
+		if active then
+			runes.Rotation = (runes.Rotation + dt * 10) % 360
+			runesInner.Rotation = (runesInner.Rotation - dt * 25) % 360
+			if drawing then
+				local pulse = 1 + math.sin(os.clock() * 14) * 0.12
+				pen.Size = UDim2.fromOffset(26 * pulse, 26 * pulse)
+			end
+		end
 		if drawing and inputKind == "mouse" then
 			addPoint(UserInputService:GetMouseLocation())
 		elseif active and UserInputService:GetLastInputType().Name:sub(1, 7) == "Gamepad" then
@@ -499,18 +960,15 @@ function DrawController.start()
 					stick = Vector2.new(state.Position.X, -state.Position.Y)
 				end
 			end
-			local camera = workspace.CurrentCamera
-			if camera then
-				if stick.Magnitude > 0.5 then
-					local point = camera.ViewportSize / 2 + stick * viewportHeight() * STICK_RADIUS
-					if drawing then
-						addPoint(point)
-					else
-						startStroke(point, "pad")
-					end
-				elseif drawing and inputKind == "pad" and stick.Magnitude < 0.2 then
-					finishStroke()
+			if stick.Magnitude > 0.5 then
+				local point = viewport() / 2 + stick * viewportHeight() * STICK_RADIUS
+				if drawing then
+					addPoint(point)
+				else
+					startStroke(point, "pad")
 				end
+			elseif drawing and inputKind == "pad" and stick.Magnitude < 0.2 then
+				finishStroke()
 			end
 		end
 		-- A stroke that never ends (stuck button) is submitted after a while.

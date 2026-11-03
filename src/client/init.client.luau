@@ -15,6 +15,7 @@ local ORDER = {
 	"PlacementController",
 	"ReticleController",
 	"CursorController",
+	"WandController",
 	"DrawController",
 	"InputController",
 	"EffectsController",

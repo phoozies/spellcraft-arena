@@ -38,6 +38,7 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Util/Ballistic              launch velocity for an arc that lands on a point (rescues)
   Util/Pit                    is a point walled in by terrain on every side (pit rescue)
   Util/PracticeZone           is a position inside a Training Grove (the hub's draw zone)
+  Util/WandAir                wand geometry: the grip in the hand, the air canvas, screen/glyph points -> studs
 
 src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
   Services/
@@ -48,6 +49,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     DestructibleService single damage path, health bars, knockouts, push
     HandService         held spell copies (one per spell; hotbar slot N = Nth loadout spell), match spellbook, readied slot, per-spell cast cooldowns
     DashService         the dash: validates the cooldown and state, tells the client which way to go, fires the dash Fx
+    WandService         welds every player's wand to the right hand, tints it with their element, keeps the Drawing attribute (DrawingState remote; cosmetic)
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon
     SpellInputService   DrawSpell remote → draw gate (fights and the Training Grove) → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
@@ -81,7 +83,8 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PlacementController ghost preview
     ReticleController   hit circle + range ring for point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
     CursorController    the crosshair cursor while a spell is readied
-    DrawController      the drawing canvas (blank or traced over a spell's guide), stroke capture, quality feedback
+    WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
+    DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
     InputController     per-device bindings + aiming (mouse, pad, touch, VR), keys 1-5
     EffectsController   self boosts, slippery friction, team outlines, camera reset
     FxController        dispatches Fx events (bolts, impacts, cast anim, glyphs, shatter, chips, dust, numbers, element pillars, rising rocks, earthquake)
@@ -97,7 +100,8 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PresentationController  VS intro, fades, 3-2-1-FIGHT, round banners, Victory/Defeat (+coins), KO
     TutorialController  the first-join walkthrough (welcome, five guided steps, Skip)
   Fx/SpellVfx           bolt trails, impact bursts, swells, cast beats, buff auras, model columns/boulders/cracks, black hole vortex, magic circle
-  Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator
+  Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator (stop() ends a held pose)
+  Fx/WandVfx            the wand's 3D effects: tip glow + rune circle, the air ribbon and its beam, the absorb burst, the fizzle
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
   Fx/PropSwap           swaps a hub prop for its open block model for a moment (the crate while it spins, the quest chest on a claim)
   UI/Theme              the studded-Roblox look: studded pastel panels and buttons, bevels, dark ink text
@@ -117,7 +121,7 @@ tools/      studio-sync.js / .luau (sync without the Rojo CLI), blender/ (model 
 
 ## Block models (the classic blocky look)
 
-Everything that isn't an imported mesh is a **block model**: a handful of plain, chunky Parts in the classic Roblox style (spell effects, the Earth Wall, trees, cactus, training dummy, Element Crate, quest chest, wizard statue, the two hub portals; 27 in all). They are authored once, in `tools/blender/block_models.py` (a Python spec of blocks with positions, sizes, colours, and materials), and that spec produces two things:
+Everything that isn't an imported mesh is a **block model**: a handful of plain, chunky Parts in the classic Roblox style (spell effects, the Earth Wall, trees, cactus, training dummy, Element Crate, quest chest, wizard statue, the two hub portals, the wand; 28 in all). They are authored once, in `tools/blender/block_models.py` (a Python spec of blocks with positions, sizes, colours, and materials), and that spec produces two things:
 
 - `src/shared/Models/BlockModels.luau` (generated, plain data). `ModelKit` builds a model from it the first time it's asked for, so block models exist in **every** place, including one built by CI, with no import step.
 - `assets/models/blocks/<Name>.fbx` and `assets/models/source/BlockModels.blend`, the Blender versions (1 stud = 28 cm, forward = Blender +Y) for artists and for uploading meshes later.
@@ -131,6 +135,7 @@ Everything that isn't an imported mesh is a **block model**: a handful of plain,
 | `FirePillar`, `WaterNebula` | The column that erupts (`SpellVfx.pillar`) |
 | `EarthPunch`, `EarthPillar` | The boulder or spike that rises (`SpellVfx.rise`) |
 | `Earthquake` | Ground cracks spreading during the wind-up (`SpellVfx.quake`) |
+| `Wand` | Every player's wand, welded to the right hand (`WandService`; the tip, halo and runes take the element colour) |
 | `EarthWall` | The Earth Wall spell (`stats.model`): 33 rubble stones, each its own breakable chunk (`Placeable.buildModelWall`) |
 | `TreeOak`, `TreePine`, `TreeBirch`, `Cactus` | Battleground and hub scenery |
 | `TrainingDummy` | The Training Grove dummies (`HubService.spawnDummy`; parts `Body` and `Head` are the hit parts) |

@@ -453,6 +453,24 @@ CastPoses.POSES = {
 		{ d = 0.06, hold = 0.2, right = { fwd = 85 }, left = { fwd = 10 }, lean = 16 },
 	},
 
+	-- Drawing with the wand (not a spell): the wand arm is raised towards the
+	-- glyph in the air, the other arm out for balance. WandController holds it
+	-- for as long as the canvas is open (CastAnimations.play with a long hold,
+	-- then CastAnimations.stop).
+	WandDraw = {
+		{
+			d = 0.15,
+			right = { fwd = 105, side = 10, elbow = 25 },
+			left = { fwd = 30, side = 30, elbow = 20 },
+			lean = 4,
+		},
+	},
+	-- A drawn glyph snaps into the wand: a quick upward flick.
+	WandFlick = {
+		{ d = 0.07, right = { fwd = 150, elbow = 10 }, left = { fwd = 20, side = 25 }, lean = -4 },
+		{ d = 0.1, hold = 0.12, right = { fwd = 100, elbow = 15 }, left = { fwd = 20, side = 25 } },
+	},
+
 	-- The dash (not a spell): a leap with the arms flung wide, then a full
 	-- forward somersault in four quarter turns (about Config.DASH.DURATION).
 	Dash = {

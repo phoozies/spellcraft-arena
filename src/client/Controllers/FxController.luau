@@ -46,6 +46,7 @@ local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
 local AudioController = require(script.Parent.AudioController)
 local JuiceController = require(script.Parent.JuiceController)
+local WandController = require(script.Parent.WandController)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local NUMBER_COLORS: { [string]: Color3 } = {
@@ -389,11 +390,9 @@ local function onDash(character: Model, direction: Vector3)
 end
 
 -- A player just drew a glyph: show it over their head.
-local function onGlyph(character: Model, glyphId: string, color: Color3)
-	local root = typeof(character) == "Instance" and character:FindFirstChild("HumanoidRootPart")
-	if root and root:IsA("BasePart") and near(root.Position) then
-		SpellVfx.glyphEmblem(folder, character, glyphId, color)
-	end
+-- Someone drew a spell: their wand traces it in the air (WandController).
+local function onGlyph(character: Model, glyphId: string, color: Color3, quality: number?)
+	WandController.onGlyph(character, glyphId, color, quality)
 end
 
 local function onPoof(position: Vector3, color: Color3)
