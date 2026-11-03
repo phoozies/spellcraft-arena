@@ -15,7 +15,9 @@ export type Stat = { label: string, value: string }
 
 local function num(n: number): string
 	local rounded = math.floor(n * 10 + 0.5) / 10
-	return if rounded == math.floor(rounded) then tostring(math.floor(rounded)) else tostring(rounded)
+	return if rounded == math.floor(rounded)
+		then tostring(math.floor(rounded))
+		else tostring(rounded)
 end
 
 function SpellStats.list(def: Types.SpellDef): { Stat }
