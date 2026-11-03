@@ -1,8 +1,8 @@
 # Architecture
 
-A Rojo project in `--!strict` Luau. The server is authoritative for everything. Clients send intent only (a drawn stroke, an aim point, a placement rotation, a boost pick, a crate id, an element id), and the server re-validates all of it.
+A Rojo project in `--!strict` Luau. The server is authoritative for everything. Clients send intent only (a drawn stroke, the point under the first-person crosshair, a placement rotation, a boost pick, a chest id, an element id), and the server re-validates all of it.
 
-For a machine-readable map of every feature (files, remotes, data, invariants), see [`docs/semantic/features.yaml`](semantic/features.yaml). Coins, crates, wins, and the podium are in [ECONOMY.md](ECONOMY.md).
+For a machine-readable map of every feature (files, remotes, data, invariants), see [`docs/semantic/features.yaml`](semantic/features.yaml). Coins, chests, wins, and the podium are in [ECONOMY.md](ECONOMY.md).
 
 ## Layout
 
@@ -17,10 +17,10 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Spells/Quality              recognizer score → drawing quality → stat multipliers and star tiers
   Spells/WordMatcher          admin spell names → spell id
   Spells/Elements             the 4 elements: 3 base spells and a price each (+ the Arcane school)
-  Spells/Rarity               Common..Legendary: crate odds and duplicate refunds
-  Spells/Loadout              base spells + 2 crate spells; one shape per spell
+  Spells/Rarity               Common..Legendary: chest odds and duplicate refunds
+  Spells/Loadout              base spells + 2 chest spells; one shape per spell
   Spells/Placement            placement rules shared by ghost preview + server
-  Spells/SpellStats           the numbers shown for a crate spell (damage/heal, cooldown, duration, range)
+  Spells/SpellStats           the numbers shown for a chest spell (damage/heal, cooldown, duration, range)
   Spells/SpellRegistry        per spell: model, particle style, cast pose, Fx events, sounds (the presentation registry)
   Spells/VfxStyles            particle styles, hit kinds, and buff auras per spell
   Spells/CastPoses            the cast animations as data (POSES, BEATS, SWELLS, the dash flip)
@@ -30,7 +30,7 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Models/BlockModels          GENERATED: every blocky model as plain data (tools/blender/block_models.py)
   UI/GlyphView                draws a glyph as a line (HUD, signs, VFX)
   Match/Boosts                the match boosts + roll/totals (injectable RNG)
-  Economy/Crates              the Spell Crate gacha: price, pity, roll() of a rarity then a spell (injectable RNG)
+  Economy/Chests              the Chest Shop gacha: price, pity, roll() of a rarity then a spell (injectable RNG)
   Battleground/Npcs           the Battleground NPC types (health, speed, attacks, reward, look)
   Admin/Catalog               the Admin panel's tabs and buttons (each one a command string)
   Analytics/Funnels           onboarding and match funnel step names (pure data)
@@ -63,12 +63,12 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
     MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
     PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
-    ElementService      owns profile.elements/element/spells/loadout: free first pick, buy, equip, crate spells, loadout
+    ElementService      owns profile.elements/element/spells/loadout: free first pick, buy, equip, chest spells, loadout
     BoostService        per-match boost picks: max health, speed, damage, cooldowns, Health Potion
-    CrateService        OpenCrate: validate, spend coins, roll a crate spell by rarity (with pity), grant it; only writer of profile.pity
+    ChestService        OpenChest: validate, spend coins, roll a chest spell by rarity (with pity), grant it; only writer of profile.pity
     LeaderboardService  leaderstats (Wins, Coins), Most Wins board, top-3 podium avatars
     DebugService        Studio-only test commands (ServerStorage.SpellcraftDebug BindableFunction)
-  Maps/                 MapKit + one builder per map (code-built, versioned)
+  Maps/                 MapKit, FlatArena (the flat duel board) + one theme per map (code-built, versioned)
 
 src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Controllers/
@@ -77,15 +77,16 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     HudController       hotbar (slot N = Nth loadout spell), spell cards, coins/wins wallet, match bar, toasts, feed
     PartyController     Party button and panel (invites, members)
     MapVoteController   the pre-duel map vote cards
-    MenuController      Play / Spellbook (Elements, Loadout) / Crates / Quests panels
-    CrateController     Crate Shop panel + spin reel (animates the server's result), pity counter
+    MenuController      Play / Spellbook (Elements, Loadout) / Chests / Quests panels
+    ChestController     Chest Shop panel: five chests (3D previews), odds bars, pity, reel (animates the server's result)
     DraftController     boost draft cards
     PlacementController ghost preview
     ReticleController   hit circle + range ring for point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
-    CursorController    the crosshair cursor while a spell is readied
+    CameraController    first person everywhere; frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible
+    LockOnController    centre crosshair (the readied spell's colour / cooldown) and lock-on brackets over the auto-aim target
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
-    InputController     per-device bindings + aiming (mouse, pad, touch, VR), keys 1-5
+    InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5
     EffectsController   self boosts, slippery friction, team outlines, camera reset
     FxController        dispatches Fx events (bolts, impacts, cast anim, glyphs, shatter, chips, dust, numbers, element pillars, rising rocks, earthquake)
     HealthController    own HP bar (shield + damage trail), overhead bars, hides Roblox health
@@ -103,10 +104,11 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator (stop() ends a held pose)
   Fx/WandVfx            the wand's 3D effects: tip glow + rune circle, the air ribbon and its beam, the absorb burst, the fizzle
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
-  Fx/PropSwap           swaps a hub prop for its open block model for a moment (the crate while it spins, the quest chest on a claim)
-  UI/Theme              the studded-Roblox look: studded pastel panels and buttons, bevels, dark ink text
+  Fx/PropSwap           swaps a hub prop for its open block model for a moment (a shop chest, tinted to its rarity, while the reel spins; the quest chest on a claim)
+  UI/Theme              "spellbook at night": indigo panels, gold headings, gem buttons with auto-contrast text, hover/press juice, shadows, pills
+  UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown or Left Alt is held
   UI/Responsive         keeps every UIScale matched to the screen size
-  UI/SpellCard          the spell card used by the Spellbook, crate reel, and loadout
+  UI/SpellCard          the spell card used by the Spellbook, chest reel, and loadout
   UI/Sigil              a spell's sigil: its shape in glowing ink in a small magic circle (cards, hotbar, Spellbook, canvas banner)
 
 src/character → StarterPlayer.StarterCharacterScripts
@@ -122,7 +124,7 @@ tools/      studio-sync.js / .luau (sync without the Rojo CLI), blender/ (model 
 
 ## Block models (the classic blocky look)
 
-Everything that isn't an imported mesh is a **block model**: a handful of plain, chunky Parts in the classic Roblox style (spell effects, the Earth Wall, trees, cactus, training dummy, Element Crate, quest chest, wizard statue, the two hub portals, the wand; 28 in all). They are authored once, in `tools/blender/block_models.py` (a Python spec of blocks with positions, sizes, colours, and materials), and that spec produces two things:
+Everything that isn't an imported mesh is a **block model**: a handful of plain, chunky Parts in the classic Roblox style (spell effects, the Earth Wall, trees, cactus, training dummy, Element Chest, quest chest, wizard statue, the two hub portals, the wand; 28 in all). They are authored once, in `tools/blender/block_models.py` (a Python spec of blocks with positions, sizes, colours, and materials), and that spec produces two things:
 
 - `src/shared/Models/BlockModels.luau` (generated, plain data). `ModelKit` builds a model from it the first time it's asked for, so block models exist in **every** place, including one built by CI, with no import step.
 - `assets/models/blocks/<Name>.fbx` and `assets/models/source/BlockModels.blend`, the Blender versions (1 stud = 28 cm, forward = Blender +Y) for artists and for uploading meshes later.
@@ -140,7 +142,7 @@ Everything that isn't an imported mesh is a **block model**: a handful of plain,
 | `EarthWall` | The Earth Wall spell (`stats.model`): 33 rubble stones, each its own breakable chunk (`Placeable.buildModelWall`) |
 | `TreeOak`, `TreePine`, `TreeBirch`, `Cactus` | Battleground and hub scenery |
 | `TrainingDummy` | The Training Grove dummies (`HubService.spawnDummy`; parts `Body` and `Head` are the hit parts) |
-| `ElementCrate`, `ElementCrateOpen` | The Crate Shop crate (closed); the open one is for reveals |
+| `ElementCrate`, `ElementCrateOpen` | The Chest Shop chest (closed); the open one is for reveals |
 | `QuestChest`, `QuestChestOpen` | The Daily Quests chest on the plaza (closed); open for rewards |
 | `WizardStatue` | The center of the Sparring Arena (`Maps/SparringArena.luau`) |
 | `ArenaPortal` | The hub's red Arena Gate (the same portal, also into the Battleground) |
@@ -161,7 +163,7 @@ Hand-made models (`assets/models/*.fbx`) are imported in Studio, scaled and colo
 | Heal | The emblem over the caster's head (Buff Fx `modelPop`) |
 | BlackHole | The Black Hole swirl (`Archetypes/Zone.luau`; clients add the vortex Fx) |
 | Turret | The Turret body (`Placeable` `skin()`; the primitive stays the hitbox) |
-| Crate | The hub's Crate Shop (the Spell Crate, trim and gem tinted gold) |
+| Chest | The hub's Chest Shop (the Chest Shop, trim and gem tinted gold) |
 | Arena | `Maps/SparringArena.luau`, a match map (not in the hub). The floor top is the model's pivot, so the map's floor is at y = 0. An invisible wall ring (radius 24.2 x the 4 `SCALE` the arena is built at, `CanQuery` off so spells pass) keeps players on the floor, because the seating has no ground and its gaps drop into the void |
 
 Placement overlap tests use `GetPartsInPart` with a parentless probe part. `GetPartBoundsInBox` only tests bounding boxes, so the arena's hollow ring meshes would have blocked every placement inside them.
@@ -190,17 +192,22 @@ client: stroke ──DrawSpell──► SpellInputService
                                     ├ match: in spellbook? hub: owned?
                                     ├ its slot taken and no free slot? → refuse
                                     └ add ONE copy in the spell's own slot (refused if you already hold that spell) and ready it
-client: aim  ──CastSpell───► CastService
+client: crosshair point ──CastSpell──► CastService
                                ├ alive? not frozen/time-stopped?
                                ├ readied slot holds a copy; global lockout 0.35s;
                                │  that spell's SHARED cooldown is over
                                ├ clamp target to range (placeables: 40 studs)
+                               ├ resolveAim: look dir (crosshair point, or the facing if it's off by > MAX_YAW_ERROR);
+                               │  bolts/strikes lock on: AutoAim.pick (nearest enemy in sight near the crosshair),
+                               │  bolts are led (AutoAim.lead) → ctx.target, ctx.lock
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
                                ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, copy kept
                                ├ HandService.consume (that copy used up, its slot left empty; next held copy readied)
                                ├ HandService.startCooldown(def.cooldown) — shared by every copy
                                └ Fx("cast") → every client plays the cast pose, beat, swell + magic circle
 ```
+
+- **Auto-aim** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): candidates are enemy players, hostile NPCs and training dummies within the spell's range. A candidate counts when it is inside the aim cone (`CONE` 10°, widening linearly to `CLOSE_CONE` 30° at point blank, and never narrower than the target's own angular size). Candidates are ranked by `distance × (1 + ANGLE_WEIGHT × (angle / cone)²)`, so the nearest opponent wins unless a slightly further one is right under the crosshair; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `LockOnController` runs the same `pick` on the client to draw the lock-on brackets; only the server's pick counts.
 
 - **Quality:** `SpellInputService` turns the recognizer's score into a quality (`Spells/Quality`), `HandService` stores it with the copy, and `CastService` scales the spell's stats by it (`Quality.apply`) when it is cast.
 
@@ -234,15 +241,15 @@ client: aim  ──CastSpell───► CastService
 ## Matches and arenas
 
 - **One place, instanced arenas, summoned below the hub.** Templates are built once into `ServerStorage.MapTemplates`. Each match clones one to `ArenaService.slotOrigin(slot)`: `Config.ARENA.Y` (-300) studs, on a ring of `Config.ARENA.PER_RING` (8) slots `Config.ARENA.RADIUS` (560) studs from the hub's axis (further rings step out by `RING_STEP`). The hub is a floating island over open ocean, so players on its rim look down and watch the fights; each arena model is `ModelStreamingMode.Persistent` and carries a `SpectatorSign` billboard ("1v1 · Frost Hollow"). Each round, `ArenaService.rebuild` swaps in a fresh copy, which restores broken props.
-- **Arena size and terrain:** every map is built at design size, then `MapKit.scale` enlarges it by `Config.ARENA_SCALE` (2) in `ArenaService.init`. Floors (every map), mesas, ramps and the Sparring Arena outcrops are `MapKit.terrain` cells (`Destructible` + `Terrain`), damaged by `DestructibleService.damageTerrain`: the hit cell takes the full damage, cells touching it take `Config.TERRAIN.SPLASH` of it, so stronger spells break more. Health is explicit, not multiplied: the baseplate (floor cells, `Config.TERRAIN.HEALTH.Ground`, 240) is very tough, while rock cells (45) and scenery (`Config.PROPS`) break in a few hits. Crayon Canyon's cliffs and end walls, the dais and temple steps, the snow bank, trees, torches and the other scenery are breakable too, with health from the `Config.PROPS` tiers (Light 25, Medium 45, Heavy 70, Brick 15). Only the hub, the rock undersides (`Underside`) and the Sparring Arena's imported colosseum and statue (single meshes) stay solid; `tests/Terrain.spec.luau` fails if a map gains solid scenery that can't be broken. The next round clones a fresh arena (`ArenaService.rebuild`), which restores every cell.
+- **Arena size and terrain:** every map is built at design size, then `MapKit.scale` enlarges it by `Config.ARENA_SCALE` (2) in `ArenaService.init`. Floors (every map's tiled board), the curbs and the pillars are `MapKit.terrain` cells (`Destructible` + `Terrain`), damaged by `DestructibleService.damageTerrain`: the hit cell takes the full damage, cells touching it take `Config.TERRAIN.SPLASH` of it, so stronger spells break more. Health is explicit, not multiplied: the baseplate (floor cells, `Config.TERRAIN.HEALTH.Ground`, 240) is very tough, while rock cells (45) and scenery (`Config.PROPS`) break in a few hits. Brick walls, cover blocks, trees, crayons and the other scenery are breakable too, with health from the `Config.PROPS` tiers (Light 25, Medium 45, Heavy 70, Brick 15). Only the hub and the rock undersides (`Underside`) stay solid; `tests/Terrain.spec.luau` fails if a map gains solid scenery that can't be broken. The next round clones a fresh arena (`ArenaService.rebuild`), which restores every cell.
 - **Water and pits (`Services/Rescue`).** Every arena has a Water part under it (`Config.RESCUE.WATER_SURFACE`). `MatchService`'s round loop checks every 0.25s: a player below the surface is splashed (damage and a short stun) and thrown in an arc onto their spawn pad (`match.pads`); a player standing in a hole walled in by terrain cells on every side for 1.5s is thrown out over the rim. The arc is planned by `Ballistic`, checked for obstacles, and followed exactly by the client (`Impulse` remote with a hold). See the `rescue` entry in `docs/semantic/features.yaml`.
-- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `SmallModeWalls`). There are **7 duel maps**: Crayon Canyon, Sparring Arena, Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple, Sky Bridge. Maps are registered in `ArenaService.MAP_NAMES` (and `DISPLAY_NAMES`, which feeds the vote screen), with per-mode weights in `pickMap`. `MapKit` has the shared builders (`disc`, `pillar`, `barrierRing`, `underside`, `tree`, `blockWall`).
+- **The arena contract** is documented in `Maps/MapKit.luau` (`Bounds`, `Spawns/Team1_*`, `Team2_*`, `SmallModeWalls`). There are **7 duel maps**: Crayon Canyon, Sparring Arena, Frost Hollow, Ember Forge, Moss Ruins, Tidal Temple, Sky Bridge. Maps are registered in `ArenaService.MAP_NAMES` (and `DISPLAY_NAMES`, which feeds the vote screen), with per-mode weights in `pickMap`. Every duel map is **flat**: a `FlatArena.Theme` (colours, materials, a round or rect board, walled or open, spawn distance, a cover layout for the Blue half that is point-mirrored for Red, optional decor) built by `Maps/FlatArena.build` (tile-painted floor with team halves and a centre mark, curb and underside, glowing spawn pads and edge lights, a small-mode ring). `MapKit` has the lower-level builders (`disc`, `pillar`, `barrierRing`, `underside`, `tree`, `blockWall`, `terrain` with a per-cell `paint`).
 - **Team boxes** (`HubService.updateBoxes`, every 0.25s): the hub builder tags each side of a box `TeamPad` (`Box`, `Mode`, `Team`, `Slots` attributes; `Box` is the box's id, so a mode can have several boxes: there are two for 1v1 and for 2v2). The service collects who stands on each pad (sticky arrival order, capped at `Slots`), updates the labels, and, once both sides are full, runs a `Config.TEAM_BOX_COUNTDOWN` that restarts if anyone steps off or swaps. It then calls `MatchService.startMatch(mode, players, { teams = {...} })`, where `teams` maps each player to "Blue" or "Red". `Slots` is re-read every tick, so a pad can be resized live.
 - **To move matches to reserved servers later:** keep MatchService's state machine and replace `ArenaService.create` / `spawnAt` with `TeleportService:ReserveServer` and a match place that reads its mode from `TeleportData`.
 
 ## Analytics (`TelemetryService`)
 
-`TelemetryService` sends the funnel to Roblox's `AnalyticsService`: onboarding steps, a per-match funnel, a coin economy flow (sources and sinks) and a few custom events. Step names live in `Shared/Analytics/Funnels`. Other services call it (`EconomyService`, `ElementService`, `CrateService`, `SpellInputService`, `CastService`, `MatchService`, `BattlegroundService`, `Rescue`); it never touches a profile and every call is pcall-wrapped. View the results in the Creator Hub under Analytics. Never renumber an onboarding step that has shipped.
+`TelemetryService` sends the funnel to Roblox's `AnalyticsService`: onboarding steps, a per-match funnel, a coin economy flow (sources and sinks) and a few custom events. Step names live in `Shared/Analytics/Funnels`. Other services call it (`EconomyService`, `ElementService`, `ChestService`, `SpellInputService`, `CastService`, `MatchService`, `BattlegroundService`, `Rescue`); it never touches a profile and every call is pcall-wrapped. View the results in the Creator Hub under Analytics. Never renumber an onboarding step that has shipped.
 
 ## Data
 
@@ -261,4 +268,4 @@ The profile (`Types.Profile`, schema 6: `coins`, `elements`, `element`, `spells`
 - Admin status is decided server-side on join (UserId list, place or group owner, or Studio). A non-admin's `;` message is delivered as plain chat. The Admin panel's `AdminCommand` remote is re-checked for admin status, length (200), and rate on every call. Commands run in their own thread and are logged.
 - `;announce` text goes through `TextService:FilterStringAsync` before broadcast.
 - The client never reports damage, hits, cooldowns, ownership, or coins. It only sends intent.
-- `OpenCrate` is refused mid-match, before your first element is picked, and while a spin is running (4s); the server rolls, spends, and saves before the client's reel starts. `ChooseElement` is refused mid-match.
+- `OpenChest` is refused mid-match, before your first element is picked, and while a chest is opening (4s), and for a chest whose every spell you own; the server rolls, spends, and saves before the client's reel starts. `ChooseElement` is refused mid-match.

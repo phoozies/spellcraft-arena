@@ -1,7 +1,7 @@
 --!strict
 -- Reads a spell's numbers (damage, healing, cooldown, duration, range, ...)
 -- out of its SpellDefinitions row for display. The Spellbook detail and the
--- Spell Crate reveal both show this, so a crate spell's metadata is always
+-- chest reveal both show this, so a chest spell's metadata is always
 -- the same wherever you meet it. Pure data, nothing is stored.
 --
 --   SpellStats.list(def)  -> { { label, value } } in display order

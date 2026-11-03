@@ -156,6 +156,36 @@ return function(t: any)
 			folder:Destroy()
 		end)
 
+		t.it("a round floor has its centre cell (no hole in the middle)", function()
+			if not mapKit then
+				return
+			end
+			local folder = Instance.new("Folder")
+			mapKit.terrainDisc(
+				folder,
+				Vector3.zero,
+				35,
+				4,
+				Color3.new(),
+				Enum.Material.Slate,
+				"Disc",
+				{
+					cell = 10,
+					health = 50,
+					makeProp = noop,
+				}
+			)
+			local centre = false
+			for _, cell in folder:FindFirstChild("Disc"):GetChildren() do
+				local p = (cell :: BasePart).Position
+				if math.abs(p.X) < 1 and math.abs(p.Z) < 1 then
+					centre = true
+				end
+			end
+			t.expect(centre).toBe(true)
+			folder:Destroy()
+		end)
+
 		t.it("scale grows a map about its origin", function()
 			if not mapKit then
 				return

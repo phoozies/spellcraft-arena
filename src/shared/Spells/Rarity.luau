@@ -1,7 +1,7 @@
 --!strict
--- Spell rarities for the Spell Crate gacha. Every crate spell has one
+-- Spell rarities for the Chest Shop gacha. Every chest spell has one
 -- (SpellDefinitions `rarity`); a spin first picks a rarity by `weight`, then
--- a spell of that rarity at random (shared/Economy/Crates). Pure data.
+-- a spell of that rarity at random (shared/Economy/Chests). Pure data.
 --
 --   weight   relative chance of the rarity on a spin (they sum to 100)
 --   refund   coins paid back when the spin lands on a spell you already own
@@ -85,7 +85,7 @@ end
 
 -- Picks a rarity by weight. With `minId`, only that rarity or better can be
 -- picked (the weights of the rest are kept, so Epic stays 3x likelier than
--- Legendary); used by the crate's pity guarantee.
+-- Legendary); used by the chest's pity guarantee.
 function Rarity.roll(rng: Random, minId: string?): Types.RarityId
 	local minRank = Rarity.rank(minId)
 	local total = 0

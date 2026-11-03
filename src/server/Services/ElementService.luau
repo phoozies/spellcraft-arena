@@ -1,11 +1,11 @@
 --!strict
--- Which elements and crate spells a player owns, which element is equipped,
+-- Which elements and chest spells a player owns, which element is equipped,
 -- and the loadout of extra spells.
 --
 --   * The FIRST element is a free pick (ChooseElement), any of the four.
 --   * Every other element is BOUGHT with coins (BuyElement, price in
 --     Spells/Elements). Owned elements can be switched in the hub.
---   * Crate spells are won from the Spell Crate (CrateService calls
+--   * Chest spells are won from the Chest Shop (ChestService calls
 --     ElementService.grantSpell) and equipped in the loadout's two extra
 --     slots (SetLoadout), next to the equipped element's three base spells.
 --     A spell can't join a loadout that already holds a spell with the same
@@ -57,7 +57,7 @@ function ElementService.equipped(player: Player): string?
 	return nil
 end
 
--- Crate spells the player owns.
+-- Chest spells the player owns.
 function ElementService.ownedSpells(player: Player): { string }
 	local profile = PlayerDataService.get(player)
 	return if profile then profile.spells else {}
@@ -182,10 +182,10 @@ function ElementService.setExtra(player: Player, slot: number, spellId: string?)
 	else
 		local def = SpellDefinitions.get(spellId)
 		if not def or not def.rarity then
-			return false, "Only crate spells go in the loadout."
+			return false, "Only chest spells go in the loadout."
 		end
 		if not table.find(profile.spells, spellId) then
-			return false, `You don't own {def.name} yet. Spin the Spell Crate!`
+			return false, `You don't own {def.name} yet. Open a chest!`
 		end
 		-- The other extra and the base spells are what it has to fit beside.
 		local others = Loadout.spells(elementId, {})
@@ -213,7 +213,7 @@ function ElementService.setExtra(player: Player, slot: number, spellId: string?)
 	return true, nil
 end
 
--- Adds a won crate spell to the collection. Returns (isNew, equipped): `isNew` is
+-- Adds a won chest spell to the collection. Returns (isNew, equipped): `isNew` is
 -- false for a duplicate; `equipped` is true when it went straight into an
 -- empty loadout slot (so a first spin is usable right away).
 function ElementService.grantSpell(player: Player, spellId: string): (boolean, boolean)
@@ -240,7 +240,7 @@ function ElementService.grantSpell(player: Player, spellId: string): (boolean, b
 end
 
 -- Admin reset: "elements" forgets every owned element (the next pick is free
--- again), "spells" forgets every crate spell and empties the loadout.
+-- again), "spells" forgets every chest spell and empties the loadout.
 -- Returns false for an unknown scope.
 function ElementService.reset(player: Player, scope: string): boolean
 	local profile = PlayerDataService.get(player)
@@ -312,7 +312,7 @@ function ElementService.start()
 		EconomyService.sendSummary(player)
 	end)
 
-	-- (slot, spellId?) -> equips a crate spell in an extra slot, or empties it.
+	-- (slot, spellId?) -> equips a chest spell in an extra slot, or empties it.
 	Remotes.get("SetLoadout").OnServerEvent:Connect(function(player, slot, spellId)
 		if typeof(slot) ~= "number" or slot ~= slot then
 			return

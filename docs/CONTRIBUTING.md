@@ -19,15 +19,15 @@ Most models are **block models**: edit the spec in `tools/blender/block_models.p
   require(game.ServerScriptService.Tests.Runner)()
   ```
   To add tests, create `tests/<Name>.spec.luau` that returns `function(t) t.describe(...) end`. The runner picks it up automatically.
-- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;unlock me all`, `;coins me 5000`, `;crate me`, `;reset me all`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
+- **Playtest helpers:** in Studio everyone is an admin, so the `;` commands in [ADMIN.md](ADMIN.md) work (`;freecast me`, `;unlock me all`, `;coins me 5000`, `;chest me`, `;reset me all`, `;startmatch 1v1`). From the command bar or the Studio MCP during Play (Server context), use the BindableFunction. The command bar has its own module cache and `_G`, so requiring a service there gives you a fresh, empty copy.
   ```lua
   local debug = game.ServerStorage.SpellcraftDebug
   debug:Invoke("solo", "1v1")       -- match against nobody; rounds end on the timer
   debug:Invoke("coins", 500)
-  debug:Invoke("crate", "Spell")     -- returns the CrateResult (or the refusal reason)
+  debug:Invoke("chest", "Common")     -- returns the ChestResult (or the refusal reason)
   debug:Invoke("wins", 3)
   debug:Invoke("state")             -- your coins, wins, elements, element, spells, loadout, tutorial flag
-  debug:Invoke("unlockall")         -- every element and crate spell
+  debug:Invoke("unlockall")         -- every element and chest spell
   debug:Invoke("element", "Water")  -- own and equip an element
   debug:Invoke("cast", { spell = "BlackHole", target = Vector3.new(0, 0, -40) })
   debug:Invoke("tutorial", false)   -- show the tutorial again on the next join

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local HudController = require(script.Parent.HudController)
 
@@ -194,8 +195,9 @@ function PartyController.init()
 		Visible = false,
 	})
 	Theme.corner(panel, 12)
-	Theme.stroke(panel, Color3.fromRGB(20, 20, 40), 2)
+	Theme.stroke(panel, Theme.COLORS.rim, 2)
 	Theme.padding(panel, 8)
+	MouseLock.whileVisible(panel)
 
 	list = Instance.new("ScrollingFrame")
 	list.Name = "List"

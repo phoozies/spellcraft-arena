@@ -1,7 +1,7 @@
 --!strict
 -- The central hub (Inkwell Plaza): builds it, spawns players there, and runs
 -- the team boxes, and training dummies. (The wins board
--- and podium are LeaderboardService; the crate shop is CrateService.)
+-- and podium are LeaderboardService; the chest shop is ChestService.)
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")

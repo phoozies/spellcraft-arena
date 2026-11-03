@@ -7,6 +7,16 @@
 -- point, and every template is also stored reversed, so where you start and
 -- which way you go don't matter.
 --
+-- On top of plain $1:
+--   * the best-fitting rotation starts from its exact least-squares angle
+--     (as in Protractor) and is only polished by a short search, which is
+--     faster and never settles in the wrong dip of the ±45° range;
+--   * a closed shape drawn past its own start has that tail trimmed off;
+--   * straight strokes are slashes (by straightness, not templates), and a
+--     merely flat stroke still gets template-matched when slashes aren't
+--     allowed;
+--   * circle-vs-square ties are settled by how much of its box the stroke fills.
+--
 -- Pure module (no Instances): the server runs it on the points a client
 -- sends (SpellInputService), tests/Glyphs.spec runs it on noisy strokes.
 
@@ -18,7 +28,9 @@ local SAMPLES = 64
 local SQUARE = 250
 local HALF_DIAGONAL = 0.5 * math.sqrt(2 * SQUARE * SQUARE)
 local ANGLE_RANGE = math.rad(45)
-local ANGLE_PRECISION = math.rad(2)
+-- The fine search looks this far either side of the least-squares angle.
+local REFINE_RANGE = math.rad(8)
+local ANGLE_PRECISION = math.rad(1.5)
 local PHI = 0.5 * (-1 + math.sqrt(5))
 -- Closed shapes get this many start points.
 local START_VARIANTS = 24
@@ -136,9 +148,28 @@ local function distanceAtAngle(points: { Vector2 }, template: { Vector2 }, angle
 	return pathDistance(rotateBy(points, angle), template)
 end
 
--- Golden-section search for the rotation (within ±45°) that fits best.
+-- The rotation that best lines `points` up with `template` in the
+-- least-squares sense, in closed form (both are centred on the origin by
+-- prepare): atan2 of the summed cross and dot products. It is the global best
+-- for squared distance, so the search below only has to polish it for the
+-- plain distance the score uses, instead of hunting the whole ±45° range
+-- (where a golden-section search can settle in the wrong dip).
+local function leastSquaresAngle(points: { Vector2 }, template: { Vector2 }): number
+	local cross, dot = 0, 0
+	for i = 1, #points do
+		local p, q = points[i], template[i]
+		cross += p.X * q.Y - p.Y * q.X
+		dot += p.X * q.X + p.Y * q.Y
+	end
+	return math.atan2(cross, dot)
+end
+
+-- Golden-section search for the rotation (within ±45°) that fits best,
+-- around the least-squares angle.
 local function distanceAtBestAngle(points: { Vector2 }, template: { Vector2 }): number
-	local a, b = -ANGLE_RANGE, ANGLE_RANGE
+	local seed = math.clamp(leastSquaresAngle(points, template), -ANGLE_RANGE, ANGLE_RANGE)
+	local a = math.max(-ANGLE_RANGE, seed - REFINE_RANGE)
+	local b = math.min(ANGLE_RANGE, seed + REFINE_RANGE)
 	local x1 = PHI * a + (1 - PHI) * b
 	local f1 = distanceAtAngle(points, template, x1)
 	local x2 = (1 - PHI) * a + PHI * b
@@ -154,7 +185,7 @@ local function distanceAtBestAngle(points: { Vector2 }, template: { Vector2 }): 
 			f2 = distanceAtAngle(points, template, x2)
 		end
 	end
-	return math.min(f1, f2)
+	return math.min(f1, f2, distanceAtAngle(points, template, seed))
 end
 
 -- A stroke counts as a straight slash when no point strays far from the
@@ -206,6 +237,49 @@ local function boxFill(points: { Vector2 }): number
 		smallest = math.min(smallest, (maxX - minX) * (maxY - minY))
 	end
 	return if smallest > 0 then area / smallest else 0
+end
+
+-- People close a shape by running a little past where they started (a circle
+-- that loops on, a square whose last side overshoots the corner). That tail
+-- is not part of the shape, so when the stroke comes back near its start in
+-- its last stretch and then carries on a short way, the tail is cut off.
+local CLOSE_SEARCH = 0.65 -- look for the return in the last 35% of the path
+local CLOSE_TOLERANCE = 0.15 -- "near the start": this share of the stroke's diagonal
+local MAX_TAIL = 0.22 -- longest tail cut, as a share of the path
+
+local function trimOvershoot(points: { Vector2 }): { Vector2 }
+	local n = #points
+	local total = pathLength(points)
+	if n < 3 or total <= 0 then
+		return points
+	end
+	local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
+	for _, p in points do
+		minX, maxX = math.min(minX, p.X), math.max(maxX, p.X)
+		minY, maxY = math.min(minY, p.Y), math.max(maxY, p.Y)
+	end
+	local tolerance = Vector2.new(maxX - minX, maxY - minY).Magnitude * CLOSE_TOLERANCE
+	local start = points[1]
+	local travelled = 0
+	local best, bestIndex, bestAt = math.huge, n, total
+	for i = 2, n do
+		travelled += (points[i] - points[i - 1]).Magnitude
+		if travelled >= total * CLOSE_SEARCH then
+			local d = (points[i] - start).Magnitude
+			if d < best then
+				best, bestIndex, bestAt = d, i, travelled
+			end
+		end
+	end
+	if
+		best <= tolerance
+		and bestIndex < n
+		and total - bestAt <= total * MAX_TAIL
+		and bestIndex >= GlyphRecognizer.MIN_POINTS
+	then
+		return table.move(points, 1, bestIndex, 1, {})
+	end
+	return points
 end
 
 type Template = { glyphId: string, points: { Vector2 } }
@@ -276,8 +350,13 @@ function GlyphRecognizer.recognize(
 			-- Straighter is better: 1 for a ruler line, 0.8 at the limit.
 			return "slash", 1 - 0.2 * deviation / STRAIGHT_DEVIATION, 0
 		end
-		return nil, 0, 0
+		-- Clearly a line: nothing else to read. A merely flat stroke (a wide,
+		-- shallow V) still gets matched against the shapes below.
+		if deviation <= STRAIGHT_DEVIATION * 0.5 then
+			return nil, 0, 0
+		end
 	end
+	points = trimOvershoot(points)
 	local stroke = prepare(points)
 
 	-- Best distance per glyph (its closest template).

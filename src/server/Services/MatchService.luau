@@ -675,7 +675,7 @@ function MatchService.startMatch(
 		end
 		BoostService.reset(player)
 		-- The match spellbook is the player's loadout: their element's base
-		-- spells plus their equipped crate spells.
+		-- spells plus their equipped chest spells.
 		HandService.setSpellbook(player, ElementService.loadout(player))
 		toastRemote:FireClient(
 			player,

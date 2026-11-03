@@ -116,7 +116,7 @@ local Cues: { [string]: Cue } = {
 	tornadoCast = sound(RUMBLE, 0.9, true, 1, 2.6),
 	tornadoHit = sound(RUMBLE, 0.8, true, 1.3, 1.2),
 
-	-- Arcane (crate spells that belong to no element)
+	-- Arcane (chest spells that belong to no element)
 	zapCharge = sound(TWINKLE, 0.7, true, 2, 0.6),
 	zapStrike = layered(sound(EXPLOSION, 0.8, true, 1.9, 0.9), "zapCrackle"),
 	zapCrackle = sound(TWINKLE, 0.5, true, 2, 0.5),
@@ -154,18 +154,18 @@ local Cues: { [string]: Cue } = {
 	-- The arena's water catching a fallen player (heard from where it splashes).
 	waterSplash = layered(sound(SPLASH, 0.8, true, 0.9, 1.2), "dripSplash"),
 
-	-- Drawing and crates (heard in your ears)
+	-- Drawing and chests (heard in your ears)
 	glyphGood = sound(TWINKLE, 0.6, false, 1, 1),
 	glyphBad = sound(TWINKLE, 0.5, false, 0.55, 0.9),
 	-- The wand (heard by everyone nearby): its tip lights up as a drawing starts,
 	-- and a finished glyph is pulled into it.
 	wandCharge = sound(TWINKLE, 0.35, true, 1.4, 0.5),
 	wandAbsorb = sound(CHIME, 0.5, true, 1.8, 0.9),
-	crateReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
+	chestReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
 	claimReward = sound(CHIME, 0.8, false, 1.5, 2),
 	reelTick = sound(HIT, 0.25, false, 2, 0.15),
-	crateEpic = sound(CHIME, 0.85, false, 1, 3),
-	crateLegendary = sound(CHIME, 1, false, 0.75, 3.5),
+	chestEpic = sound(CHIME, 0.85, false, 1, 3),
+	chestLegendary = sound(CHIME, 1, false, 0.75, 3.5),
 	-- The low buzz for a spell that can't be drawn or cast (replaces text popups).
 	uiError = sound(HIT, 0.5, false, 0.5, 0.3),
 	uiStep = sound(TWINKLE, 0.5, false, 1.4, 0.8),

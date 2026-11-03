@@ -6,7 +6,7 @@
 --   takecoins <n>  remove coins (spends them)
 --   likefav <bool> mark the Like & Favourite gift claimed (true) or claimable again (false)
 --   wins <n>       add n match wins (leaderboard + podium)
---   crate <id>     open a crate (charges coins), returns the result
+--   chest <id>     open a chest (charges coins), returns the result
 --   state          returns {coins, wins, elements, element} per player
 --   solo <mode>    start a match alone (rounds end on the timer)
 --   unlockall      own every element
@@ -23,7 +23,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local CastService = require(script.Parent.CastService)
-local CrateService = require(script.Parent.CrateService)
+local ChestService = require(script.Parent.ChestService)
 local ElementService = require(script.Parent.ElementService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local MatchService = require(script.Parent.MatchService)
@@ -50,10 +50,10 @@ function DebugService.run(player: Player, command: string, arg: any): any
 		for _ = 1, math.clamp(math.floor(arg), 0, 1000) do
 			EconomyService.recordWin(player)
 		end
-	elseif command == "crate" and typeof(arg) == "string" then
-		local result, reason = CrateService.open(player, arg)
+	elseif command == "chest" and typeof(arg) == "string" then
+		local result, reason = ChestService.open(player, arg)
 		if result then
-			Remotes.get("CrateOpened"):FireClient(player, result)
+			Remotes.get("ChestOpened"):FireClient(player, result)
 		end
 		return result or reason
 	elseif command == "state" then
@@ -83,7 +83,7 @@ function DebugService.run(player: Player, command: string, arg: any): any
 			for _, id in Elements.ids() do
 				ElementService.grant(player, id)
 			end
-			for _, def in SpellDefinitions.crateSpells() do
+			for _, def in SpellDefinitions.chestSpells() do
 				ElementService.grantSpell(player, def.id)
 			end
 			EconomyService.sendSummary(player)
@@ -128,7 +128,7 @@ function DebugService.start()
 
 	-- The command bar and the MCP don't share _G or module caches with the
 	-- running game, but they do share instances: invoke this instead, e.g.
-	--   game.ServerStorage.SpellcraftDebug:Invoke("crate", "Common")
+	--   game.ServerStorage.SpellcraftDebug:Invoke("chest", "Common")
 	local bindable = Instance.new("BindableFunction")
 	bindable.Name = "SpellcraftDebug"
 	bindable.OnInvoke = runAll

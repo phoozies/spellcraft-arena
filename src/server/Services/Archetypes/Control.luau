@@ -33,6 +33,7 @@ function Control.cast(ctx: any): boolean?
 			spellName = ctx.def.name,
 			fxKey = ctx.def.id,
 			ignore = { ctx.character },
+			homing = ctx.lock,
 		})
 		return true
 	end

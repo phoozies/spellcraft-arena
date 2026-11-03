@@ -2,9 +2,9 @@
 -- A tappable spell card, styled like the drawing canvas: a band of the
 -- spell's colour across the top, its sigil (the shape in glowing ink inside a
 -- little magic circle, UI/Sigil) over the band, its name, and a pill naming
--- its rarity (crate spells) or element (base spells), all ringed in that
+-- its rarity (chest spells) or element (base spells), all ringed in that
 -- colour. Used by the Spellbook (base spells, loadout, collection) and the
--- Spell Crate (reel and reveal), so a spell always looks the same wherever
+-- chest (reel and reveal), so a spell always looks the same wherever
 -- you meet it.
 --
 --   SpellCard.create(parent, spellId, { size = UDim2, owned = false })
@@ -28,7 +28,7 @@ export type Options = {
 	[string]: any,
 }
 
--- The accent colour of a spell: its rarity (crate spells) or its element.
+-- The accent colour of a spell: its rarity (chest spells) or its element.
 function SpellCard.colorOf(spellId: string): Color3
 	local def = SpellDefinitions.get(spellId)
 	if not def then

@@ -18,12 +18,12 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Chests = require(ReplicatedStorage.Shared.Economy.Chests)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
-local CrateService = require(script.Parent.CrateService)
+local ChestService = require(script.Parent.ChestService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local EconomyService = require(script.Parent.EconomyService)
 local ElementService = require(script.Parent.ElementService)
@@ -189,7 +189,7 @@ COMMANDS.give = {
 
 COMMANDS.unlock = {
 	usage = "unlock <player> <Fire|Water|Earth|Air|spells|all>",
-	help = "Permanently unlock an element (or `spells`: every crate spell) for a player (saved).",
+	help = "Permanently unlock an element (or `spells`: every chest spell) for a player (saved).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local word = args[2] or ""
@@ -213,13 +213,13 @@ COMMANDS.unlock = {
 				ElementService.grant(target, id)
 			end
 			if allSpells then
-				for _, def in SpellDefinitions.crateSpells() do
+				for _, def in SpellDefinitions.chestSpells() do
 					ElementService.grantSpell(target, def.id)
 				end
 			end
 			EconomyService.sendSummary(target)
 		end
-		return `Unlocked {if allSpells then "every crate spell and " else ""}{table.concat(
+		return `Unlocked {if allSpells then "every chest spell and " else ""}{table.concat(
 			wanted,
 			", "
 		)} for {names(targets)}.`
@@ -228,7 +228,7 @@ COMMANDS.unlock = {
 
 COMMANDS.coins = {
 	usage = "coins <player> <amount>",
-	help = "Grant coins (spent on crates).",
+	help = "Grant coins (spent on chests).",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local amount = tonumber(args[2])
@@ -290,7 +290,7 @@ COMMANDS.reset = {
 					if one == "elements" or one == "spells" then
 						ElementService.reset(target, one)
 					elseif one == "pity" then
-						CrateService.resetPity(target)
+						ChestService.resetPity(target)
 					else
 						EconomyService.reset(target, one)
 					end
@@ -305,26 +305,32 @@ COMMANDS.reset = {
 	end,
 }
 
-COMMANDS.crate = {
-	usage = "crate <player>",
-	help = "Spin a Spell Crate for a player (charges their coins, like the shop).",
+COMMANDS.chest = {
+	usage = "chest <player> [common|uncommon|rare|epic|legendary]",
+	help = "Open a chest for a player (charges their coins, like the shop). Default: Common.",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
-		local crateId = "Spell"
-		if #targets == 0 or not Crates.get(crateId) then
-			return "Usage: crate <player>"
+		local wanted = string.lower(args[2] or "common")
+		local chestId: string? = nil
+		for _, chest in Chests.LIST do
+			if string.lower(chest.id) == wanted then
+				chestId = chest.id
+			end
+		end
+		if #targets == 0 or not chestId then
+			return "Usage: chest <player> [common|uncommon|rare|epic|legendary]"
 		end
 		local opened = 0
 		for _, target in targets do
-			local result, reason = CrateService.open(target, crateId)
+			local result, reason = ChestService.open(target, chestId)
 			if result then
 				opened += 1
-				Remotes.get("CrateOpened"):FireClient(target, result)
+				Remotes.get("ChestOpened"):FireClient(target, result)
 			elseif reason then
 				reply(admin, `{target.Name}: {reason}`)
 			end
 		end
-		return `Opened {opened} {crateId} crate(s).`
+		return `Opened {opened} {chestId} chest(s).`
 	end,
 }
 

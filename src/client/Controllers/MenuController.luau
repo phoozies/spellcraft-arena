@@ -1,14 +1,15 @@
 --!strict
 -- Side menu + panels: Play (queues), Spellbook (Elements tab: pick your first
 -- element free, buy others with coins, equip any you own, see each one's three
--- base spells; Loadout tab: the two extra slots and your crate-spell
--- collection), Crates (built by CrateController through createPanel), and
+-- base spells; Loadout tab: the two extra slots and your chest-spell
+-- collection), Chests (built by ChestController through createPanel), and
 -- Daily Quests. Hub kiosks open the matching panel through ProximityPrompts
--- ("Spellbook", "Crates", "Quests").
+-- ("Spellbook", "Chests", "Quests").
 
 local GuiService = game:GetService("GuiService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
@@ -18,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local SpellStats = require(ReplicatedStorage.Shared.Spells.SpellStats)
 local Types = require(ReplicatedStorage.Shared.Types)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -53,7 +55,7 @@ local loadoutCount: TextLabel
 local collection: ScrollingFrame
 local loadoutDetail: TextLabel
 local loadoutButton: TextButton
-local selectedSpell: string? = nil -- crate spell tapped in the Loadout tab
+local selectedSpell: string? = nil -- chest spell tapped in the Loadout tab
 local selectedSlot: number? = nil -- extra slot tapped (1..2)
 local targetSlot: (profile: ClientState.ProfileSummary) -> number
 local setLoadoutDetail: (spellId: string?, profile: ClientState.ProfileSummary) -> ()
@@ -75,13 +77,27 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		ZIndex = 10,
 	})
 	Theme.corner(panel, 18)
-	Theme.stroke(panel, Theme.COLORS.accent, 3)
+	Theme.stroke(panel, Theme.COLORS.rim, 2)
+	Theme.shadow(panel, 14)
+	-- Opening pops the window in (MenuController.open).
+	local pop = Instance.new("UIScale")
+	pop.Name = "Pop"
+	pop.Parent = panel
 	Theme.label(panel, title, {
 		Size = UDim2.new(1, -80, 0, 44),
-		Position = UDim2.fromOffset(16, 8),
+		Position = UDim2.fromOffset(18, 8),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.COLORS.heading,
 	})
+	-- A thin gold rule under the title.
+	local rule = Instance.new("Frame")
+	rule.Name = "TitleRule"
+	rule.BackgroundColor3 = Theme.COLORS.accent
+	rule.BackgroundTransparency = 0.35
+	rule.BorderSizePixel = 0
+	rule.Position = UDim2.fromOffset(18, 54)
+	rule.Size = UDim2.new(1, -36, 0, 2)
+	rule.Parent = panel
 	local close = Theme.button(panel, "X", {
 		Name = "Close",
 		AnchorPoint = Vector2.new(1, 0),
@@ -93,6 +109,8 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		MenuController.close()
 	end)
 	panels[name] = panel
+	-- First person: an open window gives the mouse back so it can be clicked.
+	MouseLock.whileVisible(panel)
 	return panel
 end
 
@@ -100,8 +118,14 @@ function MenuController.open(name: string)
 	for key, panel in panels do
 		panel.Visible = key == name
 	end
+	local wasOpen = openName == name
 	openName = name
 	local panel = panels[name]
+	local pop = panel and panel:FindFirstChild("Pop")
+	if pop and pop:IsA("UIScale") and not wasOpen then
+		pop.Scale = 0.9
+		TweenService:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	end
 	if panel and GuiService:IsTenFootInterface() then
 		local first = panel:FindFirstChildWhichIsA("TextButton", true)
 		GuiService.SelectedObject = first
@@ -528,7 +552,7 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 		return
 	end
 	loadoutHeader.Text =
-		`<b>{element.name}</b> base spells + 2 crate spells. Each spell needs its own shape!`
+		`<b>{element.name}</b> base spells + 2 chest spells. Each spell needs its own shape!`
 	-- Base spells (fixed) then the two extra slots.
 	for slot, def in SpellDefinitions.ofElement(profile.element) do
 		local card = SpellCard.create(loadoutRow, def.id, { size = UDim2.fromOffset(128, 104) })
@@ -568,8 +592,8 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 		end)
 	end
 
-	-- Collection: every crate spell, owned ones lit, the rest hidden as "?".
-	local pool = SpellDefinitions.crateSpells()
+	-- Collection: every chest spell, owned ones lit, the rest hidden as "?".
+	local pool = SpellDefinitions.chestSpells()
 	table.sort(pool, function(a, b)
 		if Rarity.rank(a.rarity) ~= Rarity.rank(b.rarity) then
 			return Rarity.rank(a.rarity) > Rarity.rank(b.rarity)
@@ -631,8 +655,7 @@ local function refreshLoadoutTab(profile: ClientState.ProfileSummary?)
 			MenuController.refreshSpellbook()
 		end)
 	end
-	loadoutCount.Text =
-		`Collection: {have}/{#pool} crate spells. Spin the Spell Crate to find more!`
+	loadoutCount.Text = `Collection: {have}/{#pool} chest spells. Open a chest to find more!`
 	setLoadoutDetail(selectedSpell, profile)
 end
 
@@ -656,8 +679,7 @@ setLoadoutDetail = function(spellId: string?, profile: ClientState.ProfileSummar
 		return
 	end
 	if not owned then
-		loadoutDetail.Text = text
-			.. '  <font color="#7A5A00">Not won yet: spin the Spell Crate!</font>'
+		loadoutDetail.Text = text .. '  <font color="#7A5A00">Not won yet: open a chest!</font>'
 		return
 	end
 	local equippedSlot = table.find(profile.loadout, def.id)
@@ -722,7 +744,7 @@ function MenuController.openPanel(): string?
 	return openName
 end
 
--- A side-menu button by panel name ("Play", "Spellbook", "Crates", ...), so
+-- A side-menu button by panel name ("Play", "Spellbook", "Chests", ...), so
 -- the tutorial can point at it.
 function MenuController.sideButton(name: string): TextButton?
 	return sideButtons[name]
@@ -829,7 +851,7 @@ local function buildSideButtons(root: Instance)
 		{
 			{ "Play", "▶ Play" },
 			{ "Spellbook", "Spells" },
-			{ "Crates", "Crates" },
+			{ "Chests", "Chests" },
 			{ "Quests", "Quests" },
 			{ "Spectate", "Watch" },
 			{ "Settings", "Settings" },
@@ -893,7 +915,7 @@ function MenuController.start()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		if prompt.Name == "Spellbook" then
 			MenuController.openSpellbook(nil)
-		elseif prompt.Name == "Quests" or prompt.Name == "Crates" then
+		elseif prompt.Name == "Quests" or prompt.Name == "Chests" then
 			MenuController.open(prompt.Name)
 		end
 	end)

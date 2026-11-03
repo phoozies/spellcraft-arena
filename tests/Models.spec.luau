@@ -94,8 +94,8 @@ return function(t: any)
 					"TreeBirch",
 					"Cactus",
 					"TrainingDummy",
-					"ElementCrate",
-					"ElementCrateOpen",
+					"ShopChest",
+					"ShopChestOpen",
 					"QuestChest",
 					"QuestChestOpen",
 					"WizardStatue",
@@ -105,14 +105,14 @@ return function(t: any)
 			do
 				t.expect(ModelKit.isBlock(name)).toBeTruthy()
 			end
-			-- The dummy's hit parts, the crate's tinted parts, and the chest lock.
+			-- The dummy's hit parts, the shop chest's tinted parts, and the quest chest lock.
 			local dummy = ModelKit.get("TrainingDummy") :: Model
 			t.expect(dummy:FindFirstChild("Body") ~= nil and dummy:FindFirstChild("Head") ~= nil)
 				.toBeTruthy()
-			local crate = ModelKit.get("ElementCrate") :: Model
+			local chest = ModelKit.get("ShopChest") :: Model
 			t.expect(
-				crate:FindFirstChild("Crate_Trim") ~= nil
-					and crate:FindFirstChild("Crate_Gem") ~= nil
+				chest:FindFirstChild("Chest_Trim") ~= nil
+					and chest:FindFirstChild("Chest_Gem") ~= nil
 			)
 				.toBeTruthy()
 			t.expect((ModelKit.get("QuestChest") :: Model):FindFirstChild("Chest_Lock") ~= nil)

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local HudController = require(script.Parent.HudController)
 
@@ -86,8 +87,9 @@ function MapVoteController.init()
 		ZIndex = 20,
 	})
 	Theme.corner(panel, 14)
-	Theme.stroke(panel, Color3.fromRGB(20, 20, 40), 3)
+	Theme.stroke(panel, Theme.COLORS.rim, 2)
 	Theme.padding(panel, 10)
+	MouseLock.whileVisible(panel)
 
 	title = Theme.label(panel, "", {
 		Size = UDim2.new(0.7, 0, 0, 36),

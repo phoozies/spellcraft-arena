@@ -1,8 +1,8 @@
 --!strict
 -- The four elements. Each has three BASE spells that come with it (the
 -- "base element"): a player picks their first element free and buys the
--- others with coins (`price`). Every other spell is a crate spell, won from the
--- Spell Crate (shared/Economy/Crates) and equipped in the loadout's two extra
+-- others with coins (`price`). Every other spell is a chest spell, won from the
+-- chest (shared/Economy/Chests) and equipped in the loadout's two extra
 -- slots (shared/Spells/Loadout).
 --
 -- A spell's shape comes from its role (a circle for a basic attack, a
@@ -27,7 +27,7 @@ export type Element = {
 }
 
 -- The neutral school of spells that belong to no element (Lightning, Heal,
--- Black Hole, Turret). They only come from crates.
+-- Black Hole, Turret). They only come from chests.
 export type School = {
 	id: string,
 	name: string,

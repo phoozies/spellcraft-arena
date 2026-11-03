@@ -164,7 +164,7 @@ return function(t: any)
 			t.expect(counts.DummySpot >= 12).toBeTruthy()
 			-- Nothing sticks out past the island's rim.
 			t.expect(outermost <= Config.HUB.RADIUS).toBeTruthy()
-			for _, name in { "SpellbookKiosk", "DailyChest", "Crate_Spell" } do
+			for _, name in { "SpellbookKiosk", "DailyChest", "Chest_Common", "Chest_Legendary" } do
 				t.expect(model:FindFirstChild(name) ~= nil).toBeTruthy()
 			end
 			model:Destroy()

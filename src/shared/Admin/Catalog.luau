@@ -49,7 +49,7 @@ local function input(
 	}
 end
 
--- The Give tab lists every spell, grouped by element (crate spells under Arcane).
+-- The Give tab lists every spell, grouped by element (chest spells under Arcane).
 local function spellGroups(): { Group }
 	local order: { string } = {}
 	local byElement: { [string]: { Entry } } = {}
@@ -82,7 +82,7 @@ local function unlockGroup(): Group
 		table.insert(entries, button(`Unlock {id}`, "unlock {t} " .. id, "good"))
 	end
 	table.insert(entries, button("Unlock all elements", "unlock {t} all", "good"))
-	table.insert(entries, button("Unlock crate spells", "unlock {t} spells", "good"))
+	table.insert(entries, button("Unlock chest spells", "unlock {t} spells", "good"))
 	return { title = "Unlock (saved)", entries = entries }
 end
 
@@ -157,8 +157,12 @@ function Catalog.tabs(): { Tab }
 					},
 				},
 				{
-					title = "Spell Crate",
-					entries = { button("Spin a crate (costs coins)", "crate {t}", "purple") },
+					title = "Chests (cost coins)",
+					entries = {
+						button("Open a Common Chest", "chest {t} common", "purple"),
+						button("Open a Rare Chest", "chest {t} rare", "purple"),
+						button("Open a Legendary Chest", "chest {t} legendary", "purple"),
+					},
 				},
 				unlockGroup(),
 				{
@@ -167,8 +171,8 @@ function Catalog.tabs(): { Tab }
 						button("Reset coins", "reset {t} coins", "bad", true),
 						button("Reset wins", "reset {t} wins", "bad", true),
 						button("Reset elements", "reset {t} elements", "bad", true),
-						button("Reset crate spells", "reset {t} spells", "bad", true),
-						button("Reset crate pity", "reset {t} pity", "bad", true),
+						button("Reset chest spells", "reset {t} spells", "bad", true),
+						button("Reset chest pity", "reset {t} pity", "bad", true),
 						button("Reset stats", "reset {t} stats", "bad", true),
 						button("Reset gift claim", "reset {t} rewards", "bad", true),
 						button("Reset tutorial", "reset {t} tutorial", "bad", true),

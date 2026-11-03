@@ -2,7 +2,7 @@
 -- A spell's sigil: its shape in glowing ink inside a little night-sky magic
 -- circle (a ring in the spell's colour, rune stones, a faint inner ring). It
 -- is the drawing canvas's look carried to every place a spell is shown: spell
--- cards (Spellbook, Spell Crate), the cards above the hotbar, the hotbar
+-- cards (Spellbook, chest), the cards above the hotbar, the hotbar
 -- slots, the Spellbook's big picture, and the canvas banner, so a spell
 -- always looks like the magic you draw.
 --

@@ -15,7 +15,7 @@
 --
 -- Which spells work:
 -- * Outside a match: the player's loadout (their element's three base spells
---   plus up to two equipped crate spells).
+--   plus up to two equipped chest spells).
 -- * Match: the same loadout (MatchService sets the spellbook at the start).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -74,7 +74,7 @@ local function push(player: Player)
 end
 
 -- A spell is drawable outside a match when it is in the player's loadout: the
--- equipped element's base spells and their equipped crate spells.
+-- equipped element's base spells and their equipped chest spells.
 local function owns(player: Player, spellId: string): boolean
 	return table.find(ElementService.loadout(player), spellId) ~= nil
 end
@@ -163,7 +163,7 @@ function HandService.grant(
 			end
 			if def.rarity then
 				return false,
-					`{def.name} isn't in your loadout. Equip it in the Spellbook, or spin the Spell Crate!`
+					`{def.name} isn't in your loadout. Equip it in the Spellbook, or open a chest!`
 			end
 			return false,
 				`{def.name} is a {def.element} spell. Buy or equip {def.element} in the Spellbook!`
