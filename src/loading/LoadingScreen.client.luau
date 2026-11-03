@@ -14,7 +14,7 @@ ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local TIPS = {
 	"Press F and trace a shape to ready a spell. You can hold up to 5!",
-	"Spin the Spell Crate for new spells, then equip two of them in your loadout!",
+	"Open a chest for new spells, then equip two of them in your loadout!",
 	"Circle, slash, square, triangle, lightning, V, star: each shape is the same kind of move in every element.",
 	"Star is your ultimate: big damage, long recharge.",
 	"Win coins to buy new elements and to spin for rarer spells.",

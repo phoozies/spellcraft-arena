@@ -1,13 +1,13 @@
 --!strict
--- Elements (shared/Spells/Elements), rarities, the Spell Crate gacha
--- (shared/Economy/Crates), the loadout rules (shared/Spells/Loadout), and match
+-- Elements (shared/Spells/Elements), rarities, the chests
+-- (shared/Economy/Chests), the loadout rules (shared/Spells/Loadout), and match
 -- boosts (shared/Match/Boosts). All pure modules with injectable RNGs.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
-local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Chests = require(ReplicatedStorage.Shared.Economy.Chests)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Loadout = require(ReplicatedStorage.Shared.Spells.Loadout)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
@@ -42,7 +42,7 @@ return function(t: any)
 				end
 			end
 		end)
-		t.it("every spell is a base spell or a crate spell with a rarity, never both", function()
+		t.it("every spell is a base spell or a chest spell with a rarity, never both", function()
 			local base: { [string]: boolean } = {}
 			for _, element in Elements.LIST do
 				for _, id in element.base do
@@ -56,7 +56,7 @@ return function(t: any)
 					t.expect(Rarity.get(def.rarity) ~= nil).toBeTruthy()
 				end
 			end
-			t.expect(#SpellDefinitions.crateSpells()).toBe(#SpellDefinitions.list - 12)
+			t.expect(#SpellDefinitions.chestSpells()).toBe(#SpellDefinitions.list - 12)
 		end)
 		t.it("the ultimate is always slot 5", function()
 			for _, def in SpellDefinitions.list do
@@ -82,12 +82,12 @@ return function(t: any)
 			t.expect(table.concat(names, ",")).toBe("Common,Uncommon,Rare,Epic,Legendary")
 			t.expect(Rarity.TOTAL_WEIGHT).toBe(100)
 		end)
-		t.it("every rarity has at least one spell in the crate", function()
+		t.it("every rarity has at least one spell in a chest", function()
 			for _, rarity in Rarity.LIST do
-				t.expect(#Crates.ofRarity(rarity.id) > 0).toBeTruthy()
+				t.expect(#Chests.ofRarity(rarity.id) > 0).toBeTruthy()
 			end
 		end)
-		t.it("the spells people asked for are in the crate", function()
+		t.it("the spells people asked for are in a chest", function()
 			for _, id in { "Heal", "AirShield", "BlackHole", "Turret", "Zap" } do
 				local def = SpellDefinitions.get(id)
 				t.expect(def ~= nil and def.rarity ~= nil).toBeTruthy()
@@ -95,37 +95,62 @@ return function(t: any)
 		end)
 	end)
 
-	t.describe("Spell Crate", function()
-		t.it("a new player can afford a first spin, and one win funds more", function()
-			local crate = Crates.get("Spell") :: any
-			t.expect(crate ~= nil).toBeTruthy()
-			t.expect(Config.COINS.STARTING >= crate.price).toBeTruthy()
-			t.expect(Config.COINS.MATCH_WIN >= crate.price).toBeTruthy()
-		end)
-		t.it("duplicate refunds always cost less than a spin", function()
-			local crate = Crates.get("Spell") :: any
-			for _, rarity in Rarity.LIST do
-				t.expect(rarity.refund < crate.price).toBeTruthy()
+	t.describe("Chests", function()
+		t.it("there is one chest per rarity, each pricier than the last", function()
+			t.expect(#Chests.LIST).toBe(#Rarity.LIST)
+			local last = 0
+			for index, chest in Chests.LIST do
+				t.expect(chest.id).toBe(Rarity.LIST[index].id)
+				t.expect(chest.minRarity).toBe(Rarity.LIST[index].id)
+				t.expect(chest.price > last).toBeTruthy()
+				last = chest.price
 			end
 		end)
-		t.it("rolls a crate spell of the rolled rarity", function()
-			local rng = Random.new(7)
-			for _ = 1, 300 do
-				local roll = Crates.roll({}, rng)
-				t.expect(roll ~= nil).toBeTruthy()
-				if roll then
-					local def = SpellDefinitions.get(roll.spell)
-					t.expect(def ~= nil and def.rarity == roll.rarity).toBeTruthy()
-					t.expect(roll.duplicate).toBe(false)
-					t.expect(roll.refund).toBe(0)
+		t.it("a new player can afford a Common Chest, and one win funds another", function()
+			local chest = Chests.get("Common") :: any
+			t.expect(Config.COINS.STARTING >= chest.price).toBeTruthy()
+			t.expect(Config.COINS.MATCH_WIN >= chest.price).toBeTruthy()
+		end)
+		t.it("duplicate refunds always cost less than the chest", function()
+			for _, chest in Chests.LIST do
+				for _, rarity in Rarity.LIST do
+					local refund = Chests.refund(chest, rarity.id)
+					t.expect(refund > 0 and refund < chest.price).toBeTruthy()
 				end
 			end
 		end)
-		t.it("follows the odds: commons far outnumber legendaries", function()
+		t.it("a chest only drops its rarity or better", function()
+			local rng = Random.new(7)
+			for _, chest in Chests.LIST do
+				for _ = 1, 200 do
+					local roll = Chests.roll(chest.id, {}, rng) :: any
+					t.expect(roll ~= nil).toBeTruthy()
+					local def = SpellDefinitions.get(roll.spell) :: any
+					t.expect(def.rarity).toBe(roll.rarity)
+					t.expect(Rarity.rank(roll.rarity) >= Rarity.rank(chest.minRarity)).toBeTruthy()
+					t.expect(roll.duplicate).toBe(false)
+				end
+			end
+		end)
+		t.it("each chest's odds add up to 100% and favour its own rarity", function()
+			for _, chest in Chests.LIST do
+				local rows = Chests.odds(chest.id)
+				local total = 0
+				for _, row in rows do
+					total += row.percent
+				end
+				t.expect(total).toBeNear(100, 0.001)
+				t.expect(rows[1].rarity).toBe(chest.minRarity)
+				for i = 2, #rows do
+					t.expect(rows[i].percent < rows[i - 1].percent).toBeTruthy()
+				end
+			end
+		end)
+		t.it("follows the odds: commons far outnumber legendaries in a Common Chest", function()
 			local rng = Random.new(11)
 			local counts: { [string]: number } = {}
 			for _ = 1, 4000 do
-				local roll = Crates.roll({}, rng)
+				local roll = Chests.roll("Common", {}, rng)
 				if roll then
 					counts[roll.rarity] = (counts[roll.rarity] or 0) + 1
 				end
@@ -137,39 +162,55 @@ return function(t: any)
 		end)
 		t.it("pays a refund for spells you own and flags them", function()
 			local rng = Random.new(5)
-			local owned = { "Heal", "AirShield" } -- the whole common tier
+			local owned = Chests.ofRarity("Common") -- the whole common tier
+			local chest = Chests.get("Common") :: any
 			local sawDuplicate = false
 			for _ = 1, 400 do
-				local roll = Crates.roll(owned, rng)
+				local roll = Chests.roll("Common", owned, rng)
 				if roll and roll.duplicate then
 					sawDuplicate = true
-					t.expect(roll.refund).toBe((Rarity.get(roll.rarity) :: any).refund)
+					t.expect(roll.refund).toBe(Chests.refund(chest, roll.rarity))
 					t.expect(table.find(owned, roll.spell) ~= nil).toBeTruthy()
 				end
 			end
 			t.expect(sawDuplicate).toBe(true)
 		end)
+		t.it(
+			"Epic and Legendary chests never give a duplicate while a new spell is left",
+			function()
+				local rng = Random.new(8)
+				for _, id in { "Epic", "Legendary" } do
+					local pool = Chests.pool(id)
+					local owned = { pool[1] }
+					for _ = 1, 200 do
+						local roll = Chests.roll(id, owned, rng) :: any
+						t.expect(roll.duplicate).toBe(false)
+						t.expect(roll.spell ~= pool[1]).toBeTruthy()
+					end
+				end
+			end
+		)
 		t.it("guarantees an Epic or better when the pity counter is full", function()
 			local rng = Random.new(5)
-			local pity = Crates.PITY.SPINS - 1
-			t.expect(Crates.spinsToPity(pity)).toBe(1)
+			local pity = Chests.PITY.SPINS - 1
+			t.expect(Chests.spinsToPity(pity)).toBe(1)
 			for _ = 1, 200 do
-				local roll = Crates.roll({}, rng, pity) :: any
+				local roll = Chests.roll("Common", {}, rng, pity) :: any
 				t.expect(roll.guaranteed).toBe(true)
-				t.expect(Rarity.rank(roll.rarity) >= Rarity.rank(Crates.PITY.RARITY)).toBeTruthy()
+				t.expect(Rarity.rank(roll.rarity) >= Rarity.rank(Chests.PITY.RARITY)).toBeTruthy()
 			end
 		end)
 		t.it("does not guarantee anything with a fresh counter", function()
-			local roll = Crates.roll({}, Random.new(5), 0) :: any
+			local roll = Chests.roll("Common", {}, Random.new(5), 0) :: any
 			t.expect(roll.guaranteed).toBe(false)
-			t.expect(Crates.spinsToPity(0)).toBe(Crates.PITY.SPINS)
+			t.expect(Chests.spinsToPity(0)).toBe(Chests.PITY.SPINS)
 		end)
 		t.it("the pity guarantee prefers a spell you do not own yet", function()
 			local owned = {}
 			local fresh = nil
-			for _, id in Crates.pool() do
+			for _, id in Chests.pool() do
 				local def = SpellDefinitions.get(id) :: any
-				if Rarity.rank(def.rarity) >= Rarity.rank(Crates.PITY.RARITY) and not fresh then
+				if Rarity.rank(def.rarity) >= Rarity.rank(Chests.PITY.RARITY) and not fresh then
 					fresh = id
 				else
 					table.insert(owned, id)
@@ -177,21 +218,26 @@ return function(t: any)
 			end
 			local rng = Random.new(9)
 			for _ = 1, 50 do
-				local roll = Crates.roll(owned, rng, Crates.PITY.SPINS - 1) :: any
+				local roll = Chests.roll("Uncommon", owned, rng, Chests.PITY.SPINS - 1) :: any
 				t.expect(roll.spell).toBe(fresh)
 				t.expect(roll.duplicate).toBe(false)
 			end
 		end)
 		t.it("the pity counter climbs on misses and resets on an Epic or better", function()
-			t.expect(Crates.nextPity(3, "Common")).toBe(4)
-			t.expect(Crates.nextPity(3, "Rare")).toBe(4)
-			t.expect(Crates.nextPity(3, "Epic")).toBe(0)
-			t.expect(Crates.nextPity(9, "Legendary")).toBe(0)
+			t.expect(Chests.nextPity(3, "Common")).toBe(4)
+			t.expect(Chests.nextPity(3, "Rare")).toBe(4)
+			t.expect(Chests.nextPity(3, "Epic")).toBe(0)
+			t.expect(Chests.nextPity(9, "Legendary")).toBe(0)
 		end)
-		t.it("has nothing to roll once you own every crate spell", function()
-			t.expect(Crates.roll(Crates.pool(), Random.new(1))).toBeNil()
-			t.expect(Crates.ownsAll(Crates.pool())).toBe(true)
-			t.expect(Crates.ownsAll({})).toBe(false)
+		t.it("won't sell a chest whose every spell you own", function()
+			t.expect(Chests.roll("Common", Chests.pool(), Random.new(1))).toBeNil()
+			t.expect(Chests.ownsAll(Chests.pool())).toBe(true)
+			t.expect(Chests.ownsAll({})).toBe(false)
+			local legendaries = Chests.pool("Legendary")
+			t.expect(Chests.ownsAll(legendaries, "Legendary")).toBe(true)
+			t.expect(Chests.roll("Legendary", legendaries, Random.new(1))).toBeNil()
+			t.expect(Chests.roll("Common", legendaries, Random.new(1)) ~= nil).toBeTruthy()
+			t.expect(Chests.roll("NoSuchChest", {}, Random.new(1))).toBeNil()
 		end)
 	end)
 
@@ -221,7 +267,7 @@ return function(t: any)
 				end
 			end
 		end)
-		t.it("only takes crate spells", function()
+		t.it("only takes chest spells", function()
 			t.expect(Loadout.problem("Fireball", {}) ~= nil).toBeTruthy()
 			t.expect(Loadout.problem("NotASpell", {}) ~= nil).toBeTruthy()
 		end)

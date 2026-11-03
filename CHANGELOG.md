@@ -4,6 +4,33 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (first person and auto-aim)
+- **The game is first person, everywhere** (new `CameraController`: `LockFirstPerson`, FOV 80). Your right arm and wand stay visible, so you see the wand raise and the magic circle open when you draw.
+- **You never aim with the mouse.** Every device casts at the crosshair in the middle of the screen. The server then **auto-aims** (new pure `shared/Util/AutoAim`, `Config.AUTO_AIM`, `CastService.resolveAim`): for bolts, ground strikes and lines it locks onto the **nearest opponent in plain sight near the crosshair** (players, hostile NPCs, training dummies). The cone is 10°, widening to 30° up close and never narrower than the target itself; candidates rank by distance inflated by how far off-centre they are, and line of sight is only raycast in rank order. Bolts are **led** toward a moving target and **home slightly** (60°/s) until dodged by more than 75°; clients steer their copy the same way (new Fx `projectileTurn` corrections). Walls, boosts, dashes and turrets go exactly where you look.
+- **New crosshair and lock-on marker** (new `LockOnController`, replaces `CursorController`): a centre crosshair in the readied spell's colour (red with the cooldown), and corner brackets that snap onto the opponent your spell will hit. Ground-strike circles snap under that opponent.
+- **Getting the mouse back** (new `UI/MouseLock`): menus, the Chest Shop, the boost pick, the map vote, the party panel, the admin window and the drawing canvas free the mouse while open; hold **Left Alt** anywhere else (a hint shows outside fights). A free mouse never casts.
+
+### Changed (crates are now chests, in five rarities)
+- **The Spell Crate is gone; the Chest Shop sells five chests**: Common (100), Uncommon (250), Rare (500), Epic (1,000), Legendary (2,000) (`shared/Economy/Chests`, replaces `Economy/Crates`). Each wins a chest spell of **its rarity or better**, by the rarity weights renormalised (a Rare Chest is Rare 60%, Epic 30%, Legendary 10%). **Epic and Legendary chests never give a duplicate** while a spell they can drop is unowned. Duplicates pay back 30% of the chest's price. The pity (10th Common-Rare chest without an Epic) is kept. The shop won't sell a chest whose every spell you own.
+- Renamed everywhere: `ChestService`, `ChestController`, remotes `OpenChest` / `ChestOpened`, types `ChestDef` / `ChestResult`, `SpellDefinitions.chestSpells`, funnel step `FirstChestOpen`, sound cues `chest*`, admin `;chest <player> [rarity]`, debug `("chest", "Common")`.
+- **The hub's Chest Shop stage shows all five chests** (new `ShopChest` / `ShopChestOpen` block models: a domed treasure chest whose bands and gem take the rarity colour), each glowing brighter the rarer it is, with its price; its prompt opens the shop on that chest, and the chest throws its lid open while your reel spins.
+- **New Chest Shop panel**: a shelf of the five chests as 3D previews, the picked chest's odds as animated bars, how many of its spells you own, the pity count, and Open; the reel is rolled from that chest's odds.
+
+### Changed (flat maps)
+- **Every duel map is now flat**, rebuilt on a shared `Maps/FlatArena` builder: one level board of breakable tiles painted with a soft checkerboard, a **Blue half and a Red half**, and a centre line and mark; **point-symmetric cover** (brick walls, low walls, pillars, blocks, trees) so both teams get the same map; glowing spawn pads and team-coloured edge lights; a glowing small-mode ring for 1v1 and 2v2. Sparring Arena, Frost Hollow and Sky Bridge (now one long lane) are open for ring-outs; Crayon Canyon (three lanes), Ember Forge, Moss Ruins and Tidal Temple are walled. No more ramps, mesas, bridges or the imported colosseum.
+- **The Battleground is a flat board too**: 30-stud ground tiles painted by biome with stone roads from the gates to the Warlord's Keep, low square rocks, low blocky cliffs instead of tall mountains, and a lower keep.
+
+### Changed (UI)
+- **New look, "spellbook at night"** (`UI/Theme`): deep indigo panels with a top-lit gradient, gold headings, white text, rounder corners, a glowing rim and drop shadow on windows that pop in when opened, and gem-coloured buttons that **pick readable text automatically** and lift on hover / squash on press. New `Theme.pill`, `Theme.shadow`, `Theme.inkFor`, `Theme.juice`.
+
+### Improved (drawing recognition)
+- The recognizer finds the best rotation from its exact **least-squares angle** (as in Protractor) and only polishes it, instead of searching the whole ±45° range: faster, and it can't settle in the wrong dip.
+- **Closing a shape past its start** (a circle that loops on) no longer costs accuracy: the overshoot is trimmed.
+- A flat V is no longer thrown away as a "line" when slashes aren't allowed; only a clearly straight stroke is.
+
+### Fixed
+- Round floors built with `MapKit.terrainDisc` were missing their centre cell (a hole in the middle of the floor).
+
 ### Added (watch others draw, magic circles)
 - **Everyone near you watches you draw.** Your stroke is streamed while you draw (new `AirStroke` remote, small batches every `Config.WAND.STROKE_SEND_RATE`); the server checks it (canvas open, batch size, point range, a rate bucket, a cap per stroke; `WandAir.cleanPoints`) and relays it to players within `RELAY_RANGE`, whose screens write the same glowing ribbon in the air in front of you, in your ink colour.
 - **A magic circle opens in the air** in front of anyone drawing: a faint glass disc, two rings of light, rune stones, and a six-pointed star turning against them; it spins up fast as it opens, then settles. It stands upright facing where the drawer looks (`DrawingState` now sends the facing, kept as the `DrawLook` attribute; `WandAir.facing`), and the stroke is drawn on it. It stays open until the drawing's verdict: readied flashes it (and the ribbon) in the quality colour and pulls the ribbon into the wand; a fizzle crumbles the ribbon (new Fx `glyphFail` from `SpellInputService`). Your own circle opens at once, without waiting for the server.

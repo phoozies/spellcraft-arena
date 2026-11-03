@@ -1,21 +1,23 @@
 --!strict
--- Shared UI look and small builders: the classic studded-Roblox style in a
--- pastel palette. Pastel panels and buttons with a faint grid of studs, a
--- lighter top edge and slightly darker bottom edge (a bevel), small square-ish
--- corners, thick near-black borders, bold dark ink text, and yellow / green /
--- red for primary / go / stop. Dark text on pastel is 7.5:1 or better, so it
--- reads well for all ages and on small phone screens. Text over the world or a
--- dark overlay uses COLORS.onDark (white) with a dark stroke instead.
+-- Shared UI look and small builders: "spellbook at night". Deep indigo
+-- panels with a soft top-lit gradient, gold headings and accents, white ink,
+-- rounded corners, a thin glowing rim, and bright gem-coloured buttons (gold /
+-- green / red for primary / go / stop) that lift when hovered and squash when
+-- pressed. Every button picks its own text colour from its background (dark
+-- ink on bright gems, white on indigo), so any colour a caller gives it stays
+-- readable (4.5:1 or better), for all ages and on small phone screens.
 --
 -- Studs are one tiled image (assets/ui/studs.png, made by
--- tools/make-stud-texture.py) laid over any opaque panel or button; they hide
--- themselves on small, see-through, or dark frames (health bars, overlays).
--- If the image can't load the UI is simply flat pastel.
+-- tools/make-stud-texture.py) laid over bright panels and buttons; they hide
+-- themselves on small, see-through, or dark frames, so the indigo panels are
+-- smooth and the gem buttons keep a faint classic-Roblox texture.
+
+local TweenService = game:GetService("TweenService")
 
 local Theme = {}
 
 Theme.FONT = Enum.Font.FredokaOne
-Theme.BODY_FONT = Enum.Font.GothamMedium
+Theme.BODY_FONT = Enum.Font.BuilderSansBold
 
 -- Uploaded stud tile (a single white/black-shaded stud on transparent).
 Theme.STUD_IMAGE = "rbxassetid://111722228846947"
@@ -23,24 +25,27 @@ Theme.STUD_IMAGE = "rbxassetid://111722228846947"
 Theme.STUD_SIZE = 22
 
 Theme.COLORS = {
-	-- Pastel palette (all take dark text: 7.5:1 to 19:1 against black).
-	panel = Color3.fromRGB(219, 225, 241), -- Blue Grey #DBE1F1: panels, disabled buttons
-	panelLight = Color3.fromRGB(150, 173, 252), -- Blue #96ADFC: buttons, rows, cards
-	accent = Color3.fromRGB(237, 221, 110), -- Orange #EDDD6E: primary buttons, highlights, selected
-	text = Color3.fromRGB(24, 24, 36), -- ink: all text on pastel panels
-	subtext = Color3.fromRGB(50, 58, 84), -- dark slate: secondary text on pastel
-	heading = Color3.fromRGB(72, 44, 128), -- deep purple: titles on pastel
+	-- Night palette: indigo surfaces take white text (11:1 or better); the
+	-- bright gem colours take dark ink (buttons pick automatically).
+	panel = Color3.fromRGB(32, 28, 64), -- deep indigo: panels, windows
+	panelLight = Color3.fromRGB(58, 52, 112), -- lifted indigo: rows, cards, plain buttons
+	accent = Color3.fromRGB(255, 200, 64), -- gold: primary buttons, highlights, selected
+	text = Color3.fromRGB(246, 244, 255), -- ink on indigo
+	subtext = Color3.fromRGB(190, 184, 228), -- soft lavender: secondary text
+	heading = Color3.fromRGB(255, 214, 110), -- gold titles
 	onDark = Color3.fromRGB(255, 255, 255), -- text over the world or dark overlays
-	good = Color3.fromRGB(168, 242, 154), -- Green #A8F29A
-	bad = Color3.fromRGB(224, 166, 170), -- Red #E0A6AA
-	blue = Color3.fromRGB(150, 173, 252),
-	red = Color3.fromRGB(224, 166, 170),
-	purple = Color3.fromRGB(185, 135, 220), -- Purple #B987DC
-	peach = Color3.fromRGB(237, 209, 176), -- Peach #EDD1B0
-	turquoise = Color3.fromRGB(165, 247, 225), -- Turquoise #A5F7E1
-	yellow = Color3.fromRGB(248, 253, 137), -- Yellow #F8FD89
-	grey = Color3.fromRGB(216, 211, 214), -- Grey #D8D3D6
-	outline = Color3.fromRGB(20, 20, 28), -- thick near-black borders
+	ink = Color3.fromRGB(22, 18, 40), -- dark text on bright gem colours
+	good = Color3.fromRGB(92, 220, 140), -- emerald
+	bad = Color3.fromRGB(242, 104, 116), -- ruby
+	blue = Color3.fromRGB(96, 152, 255), -- sapphire
+	red = Color3.fromRGB(242, 104, 116),
+	purple = Color3.fromRGB(176, 118, 255), -- amethyst
+	peach = Color3.fromRGB(255, 176, 128),
+	turquoise = Color3.fromRGB(72, 226, 210),
+	yellow = Color3.fromRGB(255, 232, 96),
+	grey = Color3.fromRGB(122, 118, 156), -- disabled
+	outline = Color3.fromRGB(12, 10, 26), -- near-black edges
+	rim = Color3.fromRGB(122, 108, 214), -- the thin glowing rim on panels
 }
 
 -- Minimum touch target in pixels (before UIScale).
@@ -50,10 +55,16 @@ local function luminance(color: Color3): number
 	return 0.3 * color.R + 0.59 * color.G + 0.11 * color.B
 end
 
--- Rounded corners, kept small so panels stay blocky.
+-- The text colour that reads on `background`: dark ink on bright colours,
+-- white on dark ones.
+function Theme.inkFor(background: Color3): Color3
+	return if luminance(background) > 0.55 then Theme.COLORS.ink else Theme.COLORS.text
+end
+
+-- Rounded corners, soft but not bubbly.
 function Theme.corner(parent: Instance, radius: number?)
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, math.clamp(math.floor((radius or 12) * 0.5), 4, 10))
+	c.CornerRadius = UDim.new(0, math.clamp(math.floor((radius or 12) * 0.75), 6, 16))
 	c.Parent = parent
 	-- Studs follow the panel's shape.
 	local studs = parent:FindFirstChild("Studs")
@@ -101,17 +112,79 @@ function Theme.padding(parent: Instance, px: number)
 	p.Parent = parent
 end
 
--- A lighter top and darker bottom edge on a panel or button.
+-- Lit from above: the top of a panel or button is its full colour and the
+-- bottom sinks into shadow, so flat colour reads as a raised surface.
 function Theme.bevel(target: GuiObject)
 	local gradient = Instance.new("UIGradient")
 	gradient.Name = "Bevel"
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(247, 248, 252)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 220, 236)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(236, 234, 248)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(176, 170, 206)),
 	})
 	gradient.Parent = target
+end
+
+-- A soft drop shadow under a window or card (a blurred dark frame behind it).
+function Theme.shadow(target: GuiObject, spread: number?): Frame
+	local px = spread or 10
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+	shadow.BackgroundTransparency = 0.55
+	shadow.BorderSizePixel = 0
+	shadow.Active = false
+	shadow.AnchorPoint = target.AnchorPoint
+	shadow.Position = target.Position + UDim2.fromOffset(0, px * 0.6)
+	shadow.Size = target.Size + UDim2.fromOffset(px, px)
+	shadow.ZIndex = math.max(target.ZIndex - 1, 0)
+	shadow.Visible = target.Visible
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 18)
+	corner.Parent = shadow
+	local function follow()
+		shadow.Position = target.Position + UDim2.fromOffset(0, px * 0.6)
+		shadow.Size = target.Size + UDim2.fromOffset(px, px)
+		shadow.Visible = target.Visible
+	end
+	target:GetPropertyChangedSignal("Position"):Connect(follow)
+	target:GetPropertyChangedSignal("Size"):Connect(follow)
+	target:GetPropertyChangedSignal("Visible"):Connect(follow)
+	shadow.Parent = target.Parent
+	return shadow
+end
+
+-- A small rounded pill (a tag such as a rarity or a price).
+function Theme.pill(
+	parent: Instance,
+	text: string,
+	color: Color3,
+	props: { [string]: any }?
+): TextLabel
+	local pill = Instance.new("TextLabel")
+	pill.Name = "Pill"
+	pill.BackgroundColor3 = color
+	pill.BorderSizePixel = 0
+	pill.Font = Theme.FONT
+	pill.TextScaled = true
+	pill.Text = text
+	pill.TextColor3 = Theme.inkFor(color)
+	pill.Size = UDim2.fromOffset(90, 24)
+	for key, value in props or {} do
+		(pill :: any)[key] = value
+	end
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = pill
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingRight = UDim.new(0, 8)
+	pad.PaddingTop = UDim.new(0, 3)
+	pad.PaddingBottom = UDim.new(0, 3)
+	pad.Parent = pill
+	pill.Parent = parent
+	return pill
 end
 
 -- Lays the stud pattern over a panel or button. It shows only while the object
@@ -174,6 +247,16 @@ function Theme.label(parent: Instance, text: string, props: { [string]: any }?):
 	for key, value in props or {} do
 		(l :: any)[key] = value
 	end
+	-- Plain ink on a bright surface (a gem-coloured pill or band) turns dark so
+	-- it stays readable; deliberate colours (gold headings, rarity tints) stay.
+	if
+		(l.TextColor3 == Theme.COLORS.text or l.TextColor3 == Theme.COLORS.subtext)
+		and parent:IsA("GuiObject")
+		and parent.BackgroundTransparency < 0.5
+		and luminance(parent.BackgroundColor3) > 0.55
+	then
+		l.TextColor3 = Theme.COLORS.ink
+	end
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 32
 	limit.MinTextSize = 10
@@ -214,6 +297,16 @@ local function addFace(button: TextButton)
 			(face :: any)[prop] = (button :: any)[prop]
 		end)
 	end
+	-- Readable on any colour: the text follows the background (a caller can
+	-- opt out with the KeepTextColor attribute).
+	local function contrast()
+		if not button:GetAttribute("KeepTextColor") then
+			face.TextColor3 = Theme.inkFor(button.BackgroundColor3)
+		end
+	end
+	button:GetPropertyChangedSignal("BackgroundColor3"):Connect(contrast)
+	button:GetPropertyChangedSignal("TextColor3"):Connect(contrast)
+	contrast()
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 28
 	limit.MinTextSize = 8
@@ -239,10 +332,51 @@ function Theme.button(parent: Instance, text: string, props: { [string]: any }?)
 	Theme.bevel(b)
 	Theme.studs(b, 18)
 	Theme.corner(b)
-	Theme.stroke(b, Theme.COLORS.outline, 3)
+	Theme.stroke(b, Theme.COLORS.outline, 2)
 	addFace(b)
+	Theme.juice(b)
 	b.Parent = parent
 	return b
+end
+
+-- Hover lifts a button a little and a press squashes it (ignored while the
+-- button is inactive).
+local HOVER = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local PRESS = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+function Theme.juice(button: GuiButton)
+	local scale = Instance.new("UIScale")
+	scale.Name = "Juice"
+	scale.Parent = button
+	local hovered = false
+	local function to(value: number, info: TweenInfo)
+		-- A caller that animates the button with its own UIScale wins.
+		for _, child in button:GetChildren() do
+			if child:IsA("UIScale") and child ~= scale then
+				scale.Scale = 1
+				return
+			end
+		end
+		TweenService:Create(scale, info, { Scale = value }):Play()
+	end
+	button.MouseEnter:Connect(function()
+		hovered = true
+		if button.Active then
+			to(1.05, HOVER)
+		end
+	end)
+	button.MouseLeave:Connect(function()
+		hovered = false
+		to(1, HOVER)
+	end)
+	button.MouseButton1Down:Connect(function()
+		if button.Active then
+			to(0.94, PRESS)
+		end
+	end)
+	button.MouseButton1Up:Connect(function()
+		to(if hovered then 1.05 else 1, HOVER)
+	end)
 end
 
 return Theme

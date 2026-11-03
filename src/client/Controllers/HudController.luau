@@ -131,7 +131,7 @@ end
 
 -- Glyph cards above the hotbar: what to draw for each spell you can ready.
 -- In a match that is your match spellbook; elsewhere your loadout (your
--- element's base spells and the crate spells you equipped). Each card is a
+-- element's base spells and the chest spells you equipped). Each card is a
 -- small spell card in the canvas's style: a band of the spell's colour and
 -- its sigil (UI/Sigil). A card shows the spell's cooldown while it recharges.
 -- Tapping a card opens the drawing canvas with a preview of its shape to
@@ -187,7 +187,7 @@ local function refreshWords()
 				BackgroundTransparency = 0.1,
 			})
 			Theme.corner(card, 10)
-			-- Crate spells are outlined (and drawn) in their rarity colour.
+			-- Chest spells are outlined (and drawn) in their rarity colour.
 			local stroke = Theme.stroke(card, color, 4)
 			Theme.rim(card, 4, 10)
 			local scale = Instance.new("UIScale")
@@ -505,7 +505,7 @@ function HudController.getGlyphRow(): Frame
 	return glyphRow
 end
 
--- Top-left wallet: coins (spent on crates) and wins (the leaderboard stat).
+-- Top-left wallet: coins (spent on chests) and wins (the leaderboard stat).
 local function buildWallet(root: Frame)
 	local holder = Theme.frame(root, {
 		Name = "Wallet",

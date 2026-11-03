@@ -3,10 +3,11 @@
 -- (BattlegroundService) at a random open spot. It is built far from the
 -- hub in the same place, so a "teleport" is just a move.
 --
--- A 600 x 600 stud square of land, one open world with distant mountain
--- scenery and invisible walls at its edge, split into four
--- biomes (forest, meadow, desert, rocky highlands) dotted with block-model
--- trees (oak, pine, birch), cacti, and rocks. In it:
+-- A 600 x 600 stud square of land: one flat board of 30-stud tiles (like the
+-- duel arenas) with low blocky cliffs past invisible walls at its edge, split
+-- into four biomes (forest, meadow, desert, rocky highlands) painted on the
+-- tiles, crossed by stone roads from the gates to the keep, and dotted with
+-- block-model trees (oak, pine, birch), cacti, and low square rocks. In it:
 --   * six Raider camps (tents, campfire, banner) and two ruined stone circles
 --     guarded by NPCs, and the Warlord's Keep in the middle (the boss)
 --   * "NpcSpot" parts (tag) that name an NPC type in their `NpcType`
@@ -23,7 +24,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local MapKit = require(script.Parent.MapKit)
 
-local GRASS = Color3.fromRGB(98, 168, 74)
 local FOREST = Color3.fromRGB(62, 128, 62)
 local MEADOW = Color3.fromRGB(128, 190, 92)
 local DESERT = Color3.fromRGB(226, 202, 150)
@@ -37,6 +37,8 @@ local CAMPS =
 	{ { -190, -170 }, { 185, -190 }, { -215, 45 }, { 205, 70 }, { -70, 215 }, { 95, 205 } }
 local RUINS = { { -110, -45 }, { 120, -70 } }
 local KEEP_RADIUS = 52
+-- Studs across one ground tile.
+local GROUND_TILE = 30
 
 local function label(part: BasePart, text: string, offset: number, distance: number?): TextLabel
 	local gui = Instance.new("BillboardGui")
@@ -103,36 +105,47 @@ return function(center: Vector3): Model
 	----------------------------------------------------------------------
 	-- Land: grass, four biome patches, mountains, and the edge walls
 	----------------------------------------------------------------------
-	MapKit.part(model, {
-		name = "Ground",
-		size = Vector3.new(half * 2 + 80, 4, half * 2 + 80),
-		cframe = CFrame.new(center - Vector3.new(0, 2, 0)),
-		color = GRASS,
-		material = Enum.Material.Grass,
-	})
-	for index, biome in
-		{
-			{ x = -150, z = -150, color = FOREST, material = Enum.Material.Grass },
-			{ x = -150, z = 150, color = MEADOW, material = Enum.Material.Grass },
-			{ x = 150, z = 150, color = DESERT, material = Enum.Material.Sand },
-			{ x = 150, z = -150, color = ROCKY, material = Enum.Material.Slate },
-		}
-	do
-		MapKit.part(model, {
-			name = "Biome",
-			shape = Enum.PartType.Cylinder,
-			size = Vector3.new(0.2, 300, 300),
-			cframe = CFrame.new(at(biome.x, biome.z, 0.05 + index * 0.02))
-				* CFrame.Angles(0, 0, math.pi / 2),
-			color = biome.color,
-			material = biome.material,
-			canCollide = false,
-		})
+	-- The ground is one flat board of square tiles, like the duel arenas:
+	-- each quarter painted as its biome in a soft checkerboard, with pale stone
+	-- roads running from the four gates to the Warlord's Keep in the middle.
+	local biomes = {
+		forest = { color = FOREST, material = Enum.Material.Grass },
+		meadow = { color = MEADOW, material = Enum.Material.Grass },
+		desert = { color = DESERT, material = Enum.Material.Sand },
+		rocky = { color = ROCKY, material = Enum.Material.Slate },
+		road = { color = STONE_LIGHT, material = Enum.Material.Limestone },
+	}
+	local ground = MapKit.folder(model, "Ground")
+	local count = math.ceil((half * 2 + 60) / GROUND_TILE)
+	for ix = 1, count do
+		for iz = 1, count do
+			local x = (ix - (count + 1) / 2) * GROUND_TILE
+			local z = (iz - (count + 1) / 2) * GROUND_TILE
+			local road = math.abs(x) < GROUND_TILE * 0.6 or math.abs(z) < GROUND_TILE * 0.6
+			local biome = if road
+				then biomes.road
+				elseif x < 0 and z < 0 then biomes.forest
+				elseif x < 0 then biomes.meadow
+				elseif z > 0 then biomes.desert
+				else biomes.rocky
+			local shade = if (ix + iz) % 2 == 0 then 1.04 else 0.96
+			MapKit.part(ground, {
+				name = "GroundTile",
+				size = Vector3.new(GROUND_TILE, 4, GROUND_TILE),
+				cframe = CFrame.new(at(x, z, -2)),
+				color = Color3.new(
+					math.clamp(biome.color.R * shade, 0, 1),
+					math.clamp(biome.color.G * shade, 0, 1),
+					math.clamp(biome.color.B * shade, 0, 1)
+				),
+				material = biome.material,
+			})
+		end
 	end
 
 	-- Sides 1 and 2 are the west and east edges, 3 and 4 the north and south.
-	-- Scenery mountains far beyond the edge (nothing to climb or hit), and
-	-- invisible walls at the edge of the land so nobody can walk off the map.
+	-- Low blocky cliffs just beyond the edge keep the horizon flat (nothing to
+	-- climb or hit), and invisible walls at the edge keep everyone in.
 	for side = 1, 4 do
 		local along = Vector3.new(if side <= 2 then 0 else 1, 0, if side <= 2 then 1 else 0)
 		local out = Vector3.new(
@@ -140,19 +153,15 @@ return function(center: Vector3): Model
 			0,
 			if side == 3 then -1 elseif side == 4 then 1 else 0
 		)
-		for i = 1, 14 do
-			local t = (i - 7.5) / 7 * (half + 20)
-			local height = rng:NextNumber(55, 100)
-			local width = rng:NextNumber(46, 62)
-			local position = center
-				+ along * t
-				+ out * (half + 75)
-				+ Vector3.new(0, height / 2 - 4, 0)
+		for i = 1, 22 do
+			local t = (i - 11.5) / 11 * (half + 30)
+			local height = rng:NextNumber(6, 14)
+			local position = center + along * t + out * (half + 36) + Vector3.new(0, height / 2, 0)
 			MapKit.part(model, {
-				name = "Mountain",
+				name = "Cliff",
 				size = if side <= 2
-					then Vector3.new(40, height, width)
-					else Vector3.new(width, height, 40),
+					then Vector3.new(24, height, 32)
+					else Vector3.new(32, height, 24),
 				cframe = CFrame.new(position),
 				color = if i % 3 == 0
 					then Color3.fromRGB(122, 116, 108)
@@ -234,12 +243,13 @@ return function(center: Vector3): Model
 			canCollide = false,
 		})
 	end
+	-- Rocks are low square blocks (cover you can fight around, not hills).
 	local function rock(x: number, z: number, size: number)
+		local height = size * 0.5
 		MapKit.part(model, {
 			name = "Rock",
-			shape = Enum.PartType.Ball,
-			size = Vector3.new(size, size * 0.75, size * rng:NextNumber(0.8, 1.1)),
-			cframe = CFrame.new(at(x, z, size * 0.3))
+			size = Vector3.new(size, height, size * rng:NextNumber(0.8, 1.1)),
+			cframe = CFrame.new(at(x, z, height / 2))
 				* CFrame.Angles(0, rng:NextNumber(0, 6.28), 0),
 			color = Color3.fromRGB(
 				150 + rng:NextInteger(-14, 14),
@@ -428,8 +438,8 @@ return function(center: Vector3): Model
 		MapKit.part(model, {
 			name = "KeepTower",
 			shape = Enum.PartType.Cylinder,
-			size = Vector3.new(26, 9, 9),
-			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30, 13))
+			size = Vector3.new(16, 9, 9),
+			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30, 8))
 				* CFrame.Angles(0, 0, math.pi / 2),
 			color = STONE_LIGHT,
 			material = Enum.Material.Limestone,
@@ -437,7 +447,7 @@ return function(center: Vector3): Model
 		MapKit.part(model, {
 			name = "KeepBanner",
 			size = Vector3.new(4, 9, 0.3),
-			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30 + 4.8, 20)),
+			cframe = CFrame.new(at(corner[1] * 30, corner[2] * 30 + 4.8, 12)),
 			color = Color3.fromRGB(170, 36, 36),
 			material = Enum.Material.Fabric,
 			canCollide = false,

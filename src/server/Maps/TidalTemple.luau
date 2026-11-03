@@ -1,136 +1,65 @@
 --!strict
--- Tidal Temple — a sandy island around a three-step temple, ringed by shallow
--- sea. Coral pillars and giant clams are breakable cover, and torches light the
--- shore. A wall at the rim keeps everyone on the sand. The sand is breakable
--- terrain, and so are the temple steps, pillars, clams and torches.
+-- Tidal Temple: a sandy temple floor ringed by shallow sea. Coral pillars and
+-- giant clam blocks are the cover, with a sunken pearl glowing over the
+-- centre. Walled in. Built by FlatArena (flat board, mirrored cover, spawn
+-- pads, edge lights); the sea and the pearl don't collide.
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Config = require(ReplicatedStorage.Shared.Config)
+local FlatArena = require(script.Parent.FlatArena)
 local MapKit = require(script.Parent.MapKit)
 
 type Registrar = (instance: Instance, health: number) -> ()
 
-local RADIUS = 58
-local SAND = Color3.fromRGB(238, 214, 160)
-local STONE = Color3.fromRGB(196, 190, 176)
-local CORAL = Color3.fromRGB(255, 120, 130)
+local SEA = Color3.fromRGB(64, 180, 220)
 
-return function(makeProp: Registrar): Model
-	local model = Instance.new("Model")
-	model.Name = "TidalTemple"
-	local rng = MapKit.rng(909)
-
-	MapKit.terrainDisc(
-		model,
-		Vector3.zero,
-		RADIUS,
-		6,
-		SAND,
-		Enum.Material.Sand,
-		"Floor",
-		MapKit.groundTerrain(makeProp)
-	)
-	MapKit.underside(model, -5.5, RADIUS, 55, Color3.fromRGB(150, 128, 98), Enum.Material.Sandstone)
-
-	-- The shallow sea around the island (scenery).
-	local sea = MapKit.disc(
-		model,
-		Vector3.new(0, -1.5, 0),
-		RADIUS + 36,
-		1,
-		Color3.fromRGB(64, 170, 220),
-		Enum.Material.Glass,
-		"Sea"
-	)
-	sea.CanCollide = false
-	sea.Transparency = 0.35
-
-	-- Three temple steps with a glowing pearl on top.
-	local limestone = Enum.Material.Limestone
-	local steps = MapKit.rockTerrain(makeProp)
-	MapKit.terrainDisc(model, Vector3.new(0, 1.5, 0), 20, 1.5, STONE, limestone, "StepLow", steps)
-	MapKit.terrainDisc(model, Vector3.new(0, 3, 0), 14, 1.5, STONE, limestone, "StepMid", steps)
-	MapKit.terrainDisc(
-		model,
-		Vector3.new(0, 4.5, 0),
-		8,
-		1.5,
-		Color3.fromRGB(232, 226, 210),
-		Enum.Material.Marble,
-		"StepHigh",
-		steps
-	)
-	local pearl = MapKit.part(model, {
-		name = "Pearl",
-		shape = Enum.PartType.Ball,
-		size = Vector3.new(3.5, 3.5, 3.5),
-		cframe = CFrame.new(0, 7, 0),
-		color = Color3.fromRGB(190, 240, 255),
-		material = Enum.Material.Neon,
-		canCollide = false,
-	})
-	pearl:AddTag("SpinFx")
-
-	-- Coral pillars (breakable).
-	for i = 1, 4 do
-		local a = (i / 4) * math.pi * 2 + math.pi / 4
-		local base = Vector3.new(math.cos(a) * 38, 0, math.sin(a) * 38)
-		makeProp(MapKit.pillar(model, base, 12, 4, CORAL, Enum.Material.Marble), Config.PROPS.Heavy)
-	end
-
-	-- Giant clams (breakable).
-	for _ = 1, 8 do
-		local a = rng:NextNumber(0, math.pi * 2)
-		local r = rng:NextNumber(24, 50)
-		local clam = MapKit.part(model, {
-			name = "Clam",
+local THEME: FlatArena.Theme = {
+	name = "TidalTemple",
+	seed = 909,
+	shape = "round",
+	radius = 60,
+	floor = Color3.fromRGB(240, 222, 170),
+	floorMaterial = Enum.Material.Sand,
+	accent = Color3.fromRGB(72, 210, 200),
+	curb = Color3.fromRGB(214, 200, 160),
+	curbMaterial = Enum.Material.Sandstone,
+	underside = Color3.fromRGB(150, 130, 96),
+	undersideMaterial = Enum.Material.Sandstone,
+	cover = Color3.fromRGB(230, 214, 176),
+	coverMaterial = Enum.Material.Sandstone,
+	pillar = Color3.fromRGB(255, 128, 150),
+	pillarMaterial = Enum.Material.Pebble,
+	walled = true,
+	spawnDistance = 44,
+	layout = {
+		{ kind = "pillar", x = -18, z = -18 },
+		{ kind = "pillar", x = 18, z = -18 },
+		{ kind = "block", x = -34, z = -30 },
+		{ kind = "block", x = 34, z = -30 },
+		{ kind = "low", x = 0, z = -30, length = 4 },
+		{ kind = "wall", x = -40, z = -4, angle = 90, length = 3 },
+		{ kind = "wall", x = 40, z = -4, angle = 90, length = 3 },
+	},
+	decor = function(model: Model, _rng: Random, _makeProp: Registrar)
+		-- Shallow sea beyond the curb.
+		local sea =
+			MapKit.disc(model, Vector3.new(0, -0.6, 0), 96, 1, SEA, Enum.Material.Glass, "Sea")
+		sea.Transparency = 0.35
+		sea.CanCollide = false
+		sea.CanQuery = false
+		-- The pearl over the centre mark.
+		local pearl = MapKit.part(model, {
+			name = "Pearl",
 			shape = Enum.PartType.Ball,
-			size = Vector3.new(7, 5, 7),
-			cframe = CFrame.new(math.cos(a) * r, 2, math.sin(a) * r),
-			color = Color3.fromRGB(250, 230, 236),
-			material = Enum.Material.SmoothPlastic,
-		})
-		makeProp(clam, Config.PROPS.Light)
-	end
-
-	-- Shore torches.
-	for i = 1, 6 do
-		local a = (i / 6) * math.pi * 2
-		local base = Vector3.new(math.cos(a) * (RADIUS - 3), 0, math.sin(a) * (RADIUS - 3))
-		-- Post and flame are one breakable prop, so the flame goes with the post.
-		local torch = Instance.new("Model")
-		torch.Name = "Torch"
-		torch.Parent = model
-		makeProp(torch, Config.PROPS.Light)
-		MapKit.part(torch, {
-			name = "TorchPost",
-			size = Vector3.new(0.8, 6, 0.8),
-			cframe = CFrame.new(base + Vector3.new(0, 3, 0)),
-			color = Color3.fromRGB(110, 78, 50),
-			material = Enum.Material.Wood,
-		})
-		local flame = MapKit.part(torch, {
-			name = "Flame",
-			shape = Enum.PartType.Ball,
-			size = Vector3.new(1.8, 2.4, 1.8),
-			cframe = CFrame.new(base + Vector3.new(0, 7, 0)),
-			color = Color3.fromRGB(255, 150, 40),
+			size = Vector3.new(4, 4, 4),
+			cframe = CFrame.new(0, 15, 0),
+			color = Color3.fromRGB(250, 246, 255),
 			material = Enum.Material.Neon,
 			canCollide = false,
 		})
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 160, 70)
-		light.Range = 22
-		light.Shadows = false
-		light.Parent = flame
-	end
+		pearl.CanQuery = false
+		pearl:AddTag("SpinFx")
+	end,
+}
 
-	MapKit.barrierRing(model, RADIUS, 50)
-
-	local spawns = MapKit.folder(model, "Spawns")
-	MapKit.teamSpawns(spawns, Vector3.zero, 46, 0.5)
-	MapKit.folder(model, "SmallModeWalls")
-	MapKit.bounds(model, Vector3.new(130, 60, 130), Vector3.new(0, 25, 0))
-	return model
+return function(makeProp: Registrar): Model
+	return FlatArena.build(THEME, makeProp)
 end

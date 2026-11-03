@@ -4,7 +4,7 @@
 
 ## What exists today: elements
 
-Every player equips **one element** (Fire, Water, Earth, or Air). An element is three base spells (plus two crate spells in your loadout), each drawn with a shape that depends on its kind of move (a circle for a basic attack, a slash for a fast attack, and so on; see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are bought with coins.
+Every player equips **one element** (Fire, Water, Earth, or Air). An element is three base spells (plus two chest spells in your loadout), each drawn with a shape that depends on its kind of move (a circle for a basic attack, a slash for a fast attack, and so on; see [SPELLS.md](SPELLS.md)). The first element is a free pick; the other three are bought with coins.
 
 Classes are meant to sit **on top of** elements, not replace them.
 
@@ -17,7 +17,7 @@ Classes are meant to sit **on top of** elements, not replace them.
 ## Open questions (to decide before building)
 
 1. What is a class: a passive/role bonus (tank, assassin, support), a set of spell modifiers, or a replacement for one or more spell slots?
-2. How are classes earned: quests, coins, crates, level-like progression (there is none today), or a free pick per element?
+2. How are classes earned: quests, coins, chests, level-like progression (there is none today), or a free pick per element?
 3. Is there one class per element or classes shared across elements? Can a player mix any class with any owned element?
 4. Do classes change anything in matches only (like boosts), or in the hub too?
 5. What are the classes? (The brief says "make a note of the classes", but doesn't list them yet.)

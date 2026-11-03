@@ -22,7 +22,7 @@ There is no Rojo CLI on this machine. Call `mcp__Roblox_Studio__list_roblox_stud
 
 ## 3. Live state and debugging (during Play, Server context)
 
-`game.ServerStorage.SpellcraftDebug:Invoke("state" | "coins", n | "wins", n | "crate", "Spell" | "unlockall" | "element", "Water" | "solo", "1v1" | "cast", {spell = "BlackHole", target = Vector3})`. Do not `require` a service from the command bar to inspect it (that gives a fresh, empty copy). Studio playtests with API access can write the real DataStore, so debug commands change the tester's saved profile.
+`game.ServerStorage.SpellcraftDebug:Invoke("state" | "coins", n | "wins", n | "chest", "Common" | "unlockall" | "element", "Water" | "solo", "1v1" | "cast", {spell = "BlackHole", target = Vector3})`. Do not `require` a service from the command bar to inspect it (that gives a fresh, empty copy). Studio playtests with API access can write the real DataStore, so debug commands change the tester's saved profile.
 
 ## 4. Looking at a map or the hub
 

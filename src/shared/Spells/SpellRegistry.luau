@@ -181,7 +181,7 @@ local ENTRIES: { [string]: Entry } = {
 		note = "Stacked, turning slabs with flying debris tearing forward",
 	},
 
-	-- Arcane (crate spells; models are imported meshes with plain-shape fallbacks)
+	-- Arcane (chest spells; models are imported meshes with plain-shape fallbacks)
 	Zap = {
 		vfx = "Zap",
 		fx = { "strike", "shockwave", "cast" },

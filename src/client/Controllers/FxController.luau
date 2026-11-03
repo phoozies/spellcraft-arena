@@ -1,6 +1,8 @@
 --!strict
 -- Renders cosmetic effects the server only announces (Fx remote):
 --   projectile     (id, origin, direction, speed, range, visual)  flying bolt
+--                  (+ homing: the auto-aim lock it steers toward)
+--   projectileTurn (id, position, direction, travelled, homing?)   course correction for a homing bolt
 --   projectileEnd  (id, position)                                  remove bolt
 --   poof           (position, color)                               debris burst
 --   beam           (from, to, color)                               chain flash
@@ -43,6 +45,7 @@ local CastPoses = require(ReplicatedStorage.Shared.Spells.CastPoses)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local SpellRegistry = require(ReplicatedStorage.Shared.Spells.SpellRegistry)
 local Types = require(ReplicatedStorage.Shared.Types)
+local AutoAim = require(ReplicatedStorage.Shared.Util.AutoAim)
 local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local SpellVfx = require(script.Parent.Parent.Fx.SpellVfx)
 local AudioController = require(script.Parent.AudioController)
@@ -82,12 +85,15 @@ local BOLT_WIDTH: { [string]: number } = {
 type Bolt = {
 	part: BasePart, -- the part particles/trails hang on (the model's Root)
 	model: Model?,
-	origin: Vector3,
+	position: Vector3,
 	direction: Vector3,
 	speed: number,
 	range: number,
+	travelled: number,
 	born: number,
 	fxKey: string?,
+	-- The auto-aim lock: steered toward exactly as the server does.
+	homing: Model?,
 	color: Color3,
 	baseScale: number, -- the model's full scale, or 1 for a plain shape
 	baseSize: Vector3, -- a plain shape's full size
@@ -117,7 +123,8 @@ local function onProjectile(
 	speed: number,
 	range: number,
 	visual: Types.Visual,
-	fxKey: string?
+	fxKey: string?,
+	homing: Model?
 )
 	if not near(origin) then
 		return
@@ -166,16 +173,47 @@ local function onProjectile(
 	bolts[id] = {
 		part = part :: BasePart,
 		model = model,
-		origin = origin,
+		position = origin,
 		direction = direction,
 		speed = speed,
 		range = range,
+		travelled = 0,
 		born = os.clock(),
 		fxKey = fxKey,
+		homing = if typeof(homing) == "Instance" and homing:IsA("Model") then homing else nil,
 		color = visual.color,
 		baseScale = baseScale,
 		baseSize = baseSize,
 	}
+end
+
+-- The server's course correction for a homing bolt (and when it lost its lock).
+local function onProjectileTurn(
+	id: number,
+	position: Vector3,
+	direction: Vector3,
+	travelled: number,
+	homing: Model?
+)
+	local bolt = bolts[id]
+	if bolt then
+		bolt.position = position
+		bolt.direction = direction
+		bolt.travelled = travelled
+		bolt.homing = homing
+	end
+end
+
+local function homingPoint(target: Model): Vector3?
+	if not target.Parent then
+		return nil
+	end
+	local humanoid = target:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health <= 0 then
+		return nil
+	end
+	local root = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
+	return if root and root:IsA("BasePart") then root.Position else target:GetPivot().Position
 end
 
 local function onProjectileEnd(id: number, position: Vector3)
@@ -601,9 +639,28 @@ end
 
 local function step(dt: number)
 	local now = os.clock()
+	local aim = Config.AUTO_AIM
 	for id, bolt in bolts do
-		local travelled = math.min((now - bolt.born) * bolt.speed, bolt.range)
-		local position = bolt.origin + bolt.direction * travelled
+		if bolt.homing then
+			local point = homingPoint(bolt.homing)
+			local desired = if point then point - bolt.position else nil
+			if
+				desired
+				and desired.Magnitude > 1
+				and AutoAim.angleBetween(bolt.direction, desired)
+					<= math.rad(aim.HOMING_GIVE_UP)
+			then
+				bolt.direction =
+					AutoAim.steer(bolt.direction, desired.Unit, math.rad(aim.HOMING) * dt)
+			else
+				bolt.homing = nil
+			end
+		end
+		local stepLength = math.min(bolt.speed * dt, bolt.range - bolt.travelled)
+		bolt.travelled += math.max(stepLength, 0)
+		bolt.position += bolt.direction * math.max(stepLength, 0)
+		local travelled = bolt.travelled
+		local position = bolt.position
 		local facing = CFrame.lookAt(position, position + bolt.direction)
 		-- Swells to full size over its first moments (turret bullets skip this).
 		local age = now - bolt.born
@@ -648,6 +705,8 @@ function FxController.start()
 	Remotes.get("Fx").OnClientEvent:Connect(function(kind: string, ...)
 		if kind == "projectile" then
 			onProjectile(...)
+		elseif kind == "projectileTurn" then
+			onProjectileTurn(...)
 		elseif kind == "projectileEnd" then
 			onProjectileEnd(...)
 		elseif kind == "poof" then

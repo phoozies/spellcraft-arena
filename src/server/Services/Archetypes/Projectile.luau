@@ -5,7 +5,9 @@
 -- Reads stats: damage, speed, range, radius, knockback, status,
 -- statusDuration, chain, pierce, comboStatus, comboMultiplier.
 -- Also used by Control (status projectiles) and by turrets/summons via
--- Projectile.launch().
+-- Projectile.launch(). A bolt cast with an auto-aim lock (ctx.lock) homes
+-- slightly on its target (Config.AUTO_AIM.HOMING); clients steer their copy the
+-- same way and get a "projectileTurn" correction every HOMING_SYNC seconds.
 --
 -- Performance: every live projectile is stepped by ONE shared Heartbeat
 -- loop, and the server creates no Parts for them. Clients draw the visual
@@ -20,6 +22,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
+local AutoAim = require(ReplicatedStorage.Shared.Util.AutoAim)
 local DestructibleService = require(script.Parent.Parent.DestructibleService)
 local StatusService = require(script.Parent.Parent.StatusService)
 local TrapBubble = require(script.Parent.Parent.TrapBubble)
@@ -34,6 +37,9 @@ export type LaunchOptions = {
 	ignore: { Instance },
 	-- Which client VFX to use (a spell id, or e.g. "Cannonball"); defaults to spellName.
 	fxKey: string?,
+	-- The auto-aim lock (CastService): the bolt turns slightly toward it as it
+	-- flies (Config.AUTO_AIM.HOMING) until it has been dodged.
+	homing: Model?,
 }
 
 type Live = {
@@ -47,9 +53,16 @@ type Live = {
 	travelled: number,
 	ignore: { Instance },
 	params: RaycastParams,
+	homing: Model?,
+	-- os.clock() of the last course correction sent to clients.
+	syncedAt: number,
 }
 
 local Projectile = {}
+
+-- Seconds between course corrections sent for a homing bolt (clients steer
+-- it the same way in between, so these only fix drift).
+local HOMING_SYNC = 0.2
 
 -- Hard cap so a flood of turrets/reflections can't grow the loop unbounded.
 local MAX_LIVE = 300
@@ -137,10 +150,57 @@ local function chainFrom(
 	end
 end
 
+-- Where a homing bolt is heading: its target's middle, or nil once the target
+-- is gone or down.
+function Projectile.homingPoint(target: Model?): Vector3?
+	if not target or not target.Parent then
+		return nil
+	end
+	local humanoid = target:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health <= 0 then
+		return nil
+	end
+	local root = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
+	return if root and root:IsA("BasePart") then root.Position else target:GetPivot().Position
+end
+
+-- Slight tracking toward the auto-aim lock. Drops the lock once the target is
+-- far off the bolt's heading (it sidestepped), so a good dodge still works.
+local function steerHoming(p: Live, dt: number)
+	if not p.homing then
+		return
+	end
+	local point = Projectile.homingPoint(p.homing)
+	local aim = Config.AUTO_AIM
+	local desired = if point then point - p.position else nil
+	if
+		not desired
+		or desired.Magnitude < 1
+		or AutoAim.angleBetween(p.direction, desired) > math.rad(aim.HOMING_GIVE_UP)
+	then
+		p.homing = nil
+	else
+		p.direction = AutoAim.steer(p.direction, desired.Unit, math.rad(aim.HOMING) * dt)
+	end
+	local now = os.clock()
+	if not p.homing or now - p.syncedAt >= HOMING_SYNC then
+		p.syncedAt = now
+		fxRemote:FireAllClients(
+			"projectileTurn",
+			p.id,
+			p.position,
+			p.direction,
+			p.travelled,
+			p.homing
+		)
+	end
+end
+
 -- Advances one projectile; returns true when it is finished.
 local function step(p: Live, dt: number): boolean
 	local opts = p.opts
 	local caster = opts.caster
+	steerHoming(p, dt)
 	local stepLength = math.min(p.speed * dt, p.range - p.travelled)
 	local result: RaycastResult? = nil
 	-- World sweep uses a thin sphere so bolts glide over floors and ledges;
@@ -225,6 +285,7 @@ local function step(p: Live, dt: number): boolean
 		back.origin = p.position - p.direction * 2
 		back.direction = -p.direction
 		back.ignore = { hitTarget }
+		back.homing = nil
 		task.defer(Projectile.launch, back)
 	else
 		applyHit(opts, result.Instance, p.direction)
@@ -293,6 +354,8 @@ function Projectile.launch(opts: LaunchOptions)
 		travelled = 0,
 		ignore = ignore,
 		params = params,
+		homing = opts.homing,
+		syncedAt = os.clock(),
 	}
 	table.insert(live, p)
 	fxRemote:FireAllClients(
@@ -303,7 +366,8 @@ function Projectile.launch(opts: LaunchOptions)
 		p.speed,
 		p.range,
 		opts.visual,
-		opts.fxKey or opts.spellName
+		opts.fxKey or opts.spellName,
+		p.homing
 	)
 	if not loop then
 		loop = RunService.Heartbeat:Connect(tick)
@@ -336,6 +400,7 @@ function Projectile.cast(ctx: any): boolean?
 		spellName = ctx.def.name,
 		fxKey = ctx.def.id,
 		ignore = { ctx.character },
+		homing = ctx.lock,
 	})
 	return true
 end

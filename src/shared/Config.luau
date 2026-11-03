@@ -179,6 +179,41 @@ local Config = {
 	PLACE_RANGE = 40,
 	AIM_RANGE = 200,
 
+	-- First person and auto-aim (shared/Util/AutoAim, CastService, client
+	-- CameraController / LockOnController). The camera is locked in first
+	-- person; spells fly where you look and lock onto the opponent nearest to
+	-- that line who is in plain sight.
+	--   CONE / CLOSE_CONE   half-angle in degrees an opponent may be off the
+	--                       crosshair and still be locked: CLOSE_CONE at point
+	--                       blank, narrowing to CONE at CLOSE_RANGE studs
+	--   ANGLE_WEIGHT        how much being off-centre counts against a target:
+	--                       its distance is multiplied by 1 + WEIGHT * (off)^2,
+	--                       off = 0 at the crosshair, 1 at the cone's edge
+	--   LEAD                share of a moving target's path a bolt is led by
+	--   LEAD_VERTICAL       share of vertical speed that is led (jumps fall back)
+	--   MAX_LEAD_SECONDS    never lead further ahead than this
+	--   HOMING              degrees per second a locked bolt turns toward its
+	--                       target (slight tracking, still dodgeable)
+	--   HOMING_GIVE_UP      a bolt stops tracking once its target is more than
+	--                       this many degrees off its heading (it was dodged)
+	--   MAX_YAW_ERROR       server: degrees the sent look direction may differ
+	--                       from the way the character faces (latency slack);
+	--                       beyond that the character's facing is used
+	--   FOV                 the first-person camera's field of view
+	AUTO_AIM = {
+		CONE = 10,
+		CLOSE_CONE = 30,
+		CLOSE_RANGE = 15,
+		ANGLE_WEIGHT = 1.5,
+		LEAD = 0.8,
+		LEAD_VERTICAL = 0.25,
+		MAX_LEAD_SECONDS = 1.2,
+		HOMING = 60,
+		HOMING_GIVE_UP = 75,
+		MAX_YAW_ERROR = 70,
+		FOV = 80,
+	},
+
 	-- Players needed for each queued mode, as {teamCount, playersPerTeam}.
 	MODES = {
 		["1v1"] = { teams = 2, perTeam = 1 },
@@ -284,9 +319,9 @@ local Config = {
 	AUTOSAVE_INTERVAL = 90,
 
 	-- Coins: earned by winning matches (plus daily login and quests), spent
-	-- on crates (shared/Economy/Crates). There are no levels or XP.
+	-- on chests (shared/Economy/Chests). There are no levels or XP.
 	COINS = {
-		STARTING = 150, -- a new player can open a Common crate right away
+		STARTING = 150, -- a new player can open a Common chest right away
 		MATCH_WIN = 100,
 		FIRST_WIN_OF_DAY = 50,
 		DAILY_LOGIN = 25, -- x streak day, capped at 7

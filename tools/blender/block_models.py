@@ -18,7 +18,7 @@
 # `rot=(rx, ry, rz)` is in degrees, applied in Roblox's YXZ order.
 #
 # Part names are a contract: tests/Models.spec.luau, prepare tools, and the
-# tinting code in the hub (Crate_Trim, Crate_Gem) look parts up by name.
+# tinting code in the hub (Chest_Trim, Chest_Gem) look parts up by name.
 
 import math
 import os
@@ -362,43 +362,51 @@ model("TrainingDummy", [
     P("Cap", (0, 8.6, 0), (2.4, 0.5, 2.4), rgb(200, 60, 50), "Fabric", collide=False),
 ], solid=True, base=True, note="Straw training dummy on a post (parts Body and Head are the hit parts)")
 
-CRATE_WOOD = rgb(140, 92, 52)
+CHEST_WOOD = rgb(132, 86, 50)
 GOLD = rgb(216, 166, 52)
 CYAN = rgb(76, 216, 255)
 
 
-def crate_parts(open_lid):
+def shop_chest_parts(open_lid):
+    # The Chest Shop's chests: a domed treasure chest whose metal bands
+    # (Chest_Trim) and gem (Chest_Gem) are re-tinted to the chest's rarity.
+    lid_wood = rgb(112, 72, 42)
     parts = [
-        P("Crate_Body", (0, -0.4, 0), (3.8, 3.2, 3.8), CRATE_WOOD, "WoodPlanks", collide=True),
-        P("Crate_Trim", (0, -1.55, 0), (4.0, 0.5, 4.0), GOLD, "Metal", collide=False),
-        P("Crate_Trim", (0, 0.2, 0), (4.0, 0.4, 4.0), GOLD, "Metal", collide=False),
+        P("Chest_Body", (0, 1.5, 0), (5.6, 3.0, 3.8), CHEST_WOOD, "WoodPlanks", collide=True),
+        P("Chest_Trim", (0, 0.2, 0), (5.8, 0.4, 4.0), GOLD, "Metal", collide=False),
+        P("Chest_Trim", (0, 2.9, 0), (5.8, 0.3, 4.0), GOLD, "Metal", collide=False),
     ]
-    for x in (-1.9, 1.9):
-        for z in (-1.9, 1.9):
-            parts.append(P("Crate_Trim", (x, -0.4, z), (0.5, 3.4, 0.5), GOLD, "Metal", collide=False))
+    for x in (-2.0, 2.0):
+        parts.append(P("Chest_Trim", (x, 1.5, 0), (0.45, 3.1, 3.95), GOLD, "Metal", collide=False))
+    for x in (-2.75, 2.75):
+        for z in (-1.85, 1.85):
+            parts.append(P("Chest_Trim", (x, 1.5, z), (0.35, 3.1, 0.35), GOLD, "Metal", collide=False))
     if not open_lid:
-        parts.append(P("Crate_Lid", (0, 1.6, 0), (4.0, 1.0, 4.0), rgb(120, 78, 44), "WoodPlanks", collide=True))
-        parts.append(P("Crate_Trim", (0, 2.15, 0), (4.1, 0.2, 1.0), GOLD, "Metal", collide=False))
-        parts.append(P("Crate_Gem", (0, 0.9, -2.0), (0.9, 0.9, 0.3), CYAN, "Neon", rot=(0, 0, 45),
+        parts.append(P("Chest_Lid", (0, 3.0, 0), (5.6, 3.8, 3.8), lid_wood, "WoodPlanks", shape="Cylinder",
+                       collide=True))
+        for x in (-2.0, 2.0):
+            parts.append(P("Chest_Trim", (x, 3.0, 0), (0.5, 3.95, 3.95), GOLD, "Metal", shape="Cylinder",
+                           collide=False))
+        parts.append(P("Chest_Trim", (0, 2.6, -1.95), (1.3, 1.5, 0.3), GOLD, "Metal", collide=False))
+        parts.append(P("Chest_Gem", (0, 2.6, -2.15), (0.8, 0.8, 0.3), CYAN, "Neon", rot=(0, 0, 45),
                        collide=False))
     else:
-        parts.append(P("Crate_Lid", (0, 3.2, 2.2), (4.0, 0.5, 3.6), rgb(120, 78, 44), "WoodPlanks",
-                       rot=(-100, 0, 0), collide=False))
-        parts.append(P("Crate_Glow", (0, 1.25, 0), (3.2, 0.3, 3.2), rgb(255, 235, 150), "Neon", collide=False))
-        parts.append(P("Crate_Gem", (0.8, 2.4, -0.4), (0.7, 0.7, 0.7), CYAN, "Neon", rot=(20, 45, 20),
+        parts.append(P("Chest_Lid", (0, 4.6, 2.4), (5.6, 3.8, 3.8), lid_wood, "WoodPlanks", shape="Cylinder",
+                       rot=(-115, 0, 0), collide=False))
+        parts.append(P("Chest_Glow", (0, 3.0, 0), (4.8, 0.3, 3.0), rgb(255, 235, 150), "Neon", collide=False))
+        parts.append(P("Chest_Gem", (0.8, 3.9, -0.3), (0.8, 0.8, 0.8), CYAN, "Neon", rot=(20, 45, 20),
                        collide=False))
-        parts.append(P("Crate_Gem", (-0.9, 2.9, 0.5), (0.55, 0.55, 0.55), rgb(255, 120, 200), "Neon",
-                       rot=(30, 10, 40), collide=False))
-        parts.append(P("Crate_Gem", (0.1, 3.5, 0.0), (0.45, 0.45, 0.45), rgb(255, 235, 120), "Neon",
+        parts.append(P("Chest_Gem", (-1.0, 4.4, 0.4), (0.6, 0.6, 0.6), CYAN, "Neon", rot=(30, 10, 40),
+                       collide=False))
+        parts.append(P("Chest_Gem", (0.1, 5.0, 0.0), (0.5, 0.5, 0.5), rgb(255, 245, 200), "Neon",
                        rot=(10, 30, 10), collide=False))
     return parts
 
 
-model("ElementCrate", crate_parts(False), solid=True,
-      note="Element Crate: wooden crate with gold trim and a gem (Crate_Trim and Crate_Gem are tinted per use)")
-model("ElementCrateOpen", crate_parts(True), solid=False,
-      note="The Element Crate with its lid thrown back and treasure glowing inside (crate reveal)")
-
+model("ShopChest", shop_chest_parts(False), solid=True, base=True,
+      note="Chest Shop chest: domed treasure chest; Chest_Trim and Chest_Gem are tinted to its rarity")
+model("ShopChestOpen", shop_chest_parts(True), solid=False, base=True,
+      note="A Chest Shop chest thrown open with its gems flying out (chest reveal)")
 
 def chest_parts(open_lid):
     wood = rgb(125, 84, 48)
@@ -541,7 +549,7 @@ def write_luau(repo):
         "-- GENERATED by tools/blender/block_models.py: do not edit by hand. Edit the spec there and",
         "-- rerun `python tools/blender/block_models.py --luau .`.",
         "--",
-        "-- The classic-Roblox blocky models (spell effects, trees, the training dummy, crates, the",
+        "-- The classic-Roblox blocky models (spell effects, trees, the training dummy, chests, the",
         "-- quest chest, the wizard statue) as plain data. ModelKit builds each one from Parts, so",
         "-- they exist in every place without importing meshes. Blender builds the same models from",
         "-- the same spec for the FBX/blend sources (assets/models/blocks).",

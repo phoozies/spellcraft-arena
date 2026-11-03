@@ -163,6 +163,49 @@ return function(t)
 			end
 		)
 
+		t.it("reads a closed shape drawn past its own start (overshoot)", function()
+			for _, id in { "circle", "square", "triangle" } do
+				local glyph = Glyphs.get(id) :: Glyphs.Glyph
+				local points = densify(glyph.points, 12)
+				-- Carry on along the first stretch of the outline again (~12% more).
+				for i = 2, math.floor(#points * 0.12) do
+					table.insert(points, points[i])
+				end
+				t.expect(GlyphRecognizer.recognize(points)).toBe(id)
+			end
+		end)
+
+		t.it("matches a flat V as a chevron where slashes aren't allowed", function()
+			local flat =
+				densify({ Vector2.new(0, 0), Vector2.new(0.5, 0.2), Vector2.new(1, 0) }, 20)
+			t.expect(
+				GlyphRecognizer.recognize(flat, { chevron = true, star = true, circle = true })
+			)
+				.toBe("chevron")
+		end)
+
+		t.it("finds the best rotation however far the stroke is turned (within 45°)", function()
+			local glyph = Glyphs.get("bolt") :: Glyphs.Glyph
+			local base = densify(glyph.points, 16)
+			for _, degrees in { -40, -20, 0, 20, 40 } do
+				local a = math.rad(degrees)
+				local turned = {}
+				for _, p in base do
+					local d = p - Vector2.new(0.5, 0.5)
+					table.insert(
+						turned,
+						Vector2.new(
+							0.5 + d.X * math.cos(a) - d.Y * math.sin(a),
+							0.5 + d.X * math.sin(a) + d.Y * math.cos(a)
+						)
+					)
+				end
+				local id, score = GlyphRecognizer.recognize(turned)
+				t.expect(id).toBe("bolt")
+				t.expect(score > 0.9).toBeTruthy()
+			end
+		end)
+
 		t.it("rejects tiny or too-short strokes", function()
 			local tiny = {}
 			for i = 0, 30 do

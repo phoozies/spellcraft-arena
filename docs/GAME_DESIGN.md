@@ -11,7 +11,7 @@
 
 ## Why these choices (research summary)
 
-- **Retention drives discovery.** In June 2026 Roblox moved "Recommended For You" to a 28-day retention window. It rewards return visits, bringing friends, and spending, not clickbait. That's why the game has daily quests, a login streak, a first-win-of-the-day coin bonus, crates that unlock spells, a wins podium, a collection Spellbook, and party-friendly modes. ([Roblox](https://about.roblox.com/newsroom/2026/06/optimizing-discovery-great-games-reach-millions-players-roblox), [Discovery docs](https://create.roblox.com/docs/discovery.md))
+- **Retention drives discovery.** In June 2026 Roblox moved "Recommended For You" to a 28-day retention window. It rewards return visits, bringing friends, and spending, not clickbait. That's why the game has daily quests, a login streak, a first-win-of-the-day coin bonus, chests that unlock spells, a wins podium, a collection Spellbook, and party-friendly modes. ([Roblox](https://about.roblox.com/newsroom/2026/06/optimizing-discovery-great-games-reach-millions-players-roblox), [Discovery docs](https://create.roblox.com/docs/discovery.md))
 - **What top games share** (Grow a Garden, RIVALS, MM2, Jujutsu Shenanigans): you start playing instantly, rounds are short, goals are visible, play is social, and mobile comes first. ([rowatcher](https://rowatcher.com/news/top-10-roblox-games-by-players-march-2026-data-breakdown))
 - **Input:** typing and voice casting were replaced by drawing glyphs (a $1-style stroke recognizer on the server). It needs no keyboard or microphone, so it works for every device and all ages.
 - **No LLM word interpretation:** `TextGenerator` comes with content-maturity disclosure requirements that conflict with an all-ages rating. A curated dictionary with synonyms keeps things safe and deterministic. ([TextGenerator](https://create.roblox.com/docs/reference/engine/classes/TextGenerator))
@@ -22,12 +22,12 @@
 Hub ──► queue (pad or Play menu) ──► Match (best of 3)
  ▲                                     │
  │   win: coins + 1 win (podium) ◄────┘
- └── Spellbook (coins → new elements), Crate Shop (coins → crate spells), daily quests, login streak
+ └── Spellbook (coins → new elements), Chest Shop (coins → chest spells), daily quests, login streak
 ```
 
 ### In a match
 
-1. **Intro** (4s): a VS screen shows the mode, the map, and both teams with their avatars, then fades to black while everyone is moved into the arena. Your match **spellbook** is your **loadout** (your element's three base spells plus up to two crate spells), locked in for the match. These are the shapes you can draw.
+1. **Intro** (4s): a VS screen shows the mode, the map, and both teams with their avatars, then fades to black while everyone is moved into the arena. Your match **spellbook** is your **loadout** (your element's three base spells plus up to two chest spells), locked in for the match. These are the shapes you can draw.
 2. **Countdown** (5s, frozen in place, with big 3 · 2 · 1 numbers), then **FIGHT!** and the **Round** (up to 120s). The last team standing wins the round. If time runs out, the team with the most remaining health wins.
 3. A round banner announces the result ("BLUE WINS ROUND 1" or "DRAW"). Then comes the **Draft** (15s): you're offered **3 boosts** and pick one (Power +15% damage, Vitality +20 max health, Swiftness +3 speed, Focus -12% cooldowns, Health Potion). Boosts last for the rest of the match, stack up to 3 times, and a pick is made for you if time runs out. There are no new spells to earn in a duel.
 4. **First to 2 round wins** takes the match. The **VICTORY!** screen (with confetti), **DEFEAT**, or **DRAW** shows the coins you won counting up (winners get 100, +50 for the first win of the day), then everything fades back to the hub.
@@ -39,11 +39,11 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 - **Draw** a spell's glyph to add **one copy** of that spell to your hotbar: tap its spell card or press its key (**1-5**) to trace its shape over a guide, or press **F** / tap Draw for a blank canvas. You hold **at most one copy of each spell**, and hotbar slot N always holds the Nth spell of your loadout. The new copy is readied automatically. **You can only draw in the hub's two Training Groves, the rounds of a match, and the Battleground.**
 - **Your wand:** everyone holds a wand tipped with a crystal in their element's colour. Opening the canvas raises it for everyone to see (the tip glows and a rune circle turns at your feet), your stroke is written in the air in front of you as a ribbon of light fed by a beam from the tip, and a recognized glyph flashes in its quality colour and is pulled into the wand (a failed one turns red and crumbles). Other players see your wand trace the glyph.
 - **Drawing quality:** the closer your stroke follows the shape, the stronger the copy (up to +50% power, +25% size, +30% duration; a sloppy one is a little weaker). It shows as 1-4 stars on the hotbar slot (see SPELLS.md).
-- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** With a mouse, a readied spell turns the pointer into a crosshair in the spell's colour.
+- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** You play in first person and never aim with the mouse: the spell goes where you look and locks onto the nearest opponent in sight near the crosshair (corner brackets show the lock).
 - **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, most others 4-22s, Heal 60s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
 - **Dash:** press **Q** (or the Dash button) for a forward somersault with three wind streaks behind you; 8 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
-- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground where you aim, and a ring for their range limit.
+- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground at your crosshair, or under the opponent you're locked onto, and a ring for their range limit.
 - **Placeables** show a ghost preview that follows your aim. Green means you can place it there, red means you can't. Rotate with R, L1/R1, or the ⟳ button.
 - **Which shapes work:** only your loadout's shapes. Others fizzle with an error buzz (there are no spell pop-ups). Each round starts empty-handed, so your first move is to draw.
 - **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
@@ -102,20 +102,27 @@ A blue **Battleground portal** at the end of the hub's south road (and the red A
 - You fight with your loadout and can raise Earth Walls anywhere. There are no wins, boosts, or passive health regeneration. Four **green gate pads** (or the **Return to Hub** button) take you home. You can't join a match queue while you're inside.
 - **Parties** (up to 4, the Party button) can't hurt each other in the Battleground, share buffs and heals, and drop in beside each other.
 
-## Maps (7 duel maps plus the hub; the compact ones suit smaller matches)
+## Maps (7 flat duel maps plus the hub; the compact ones suit smaller matches)
 
-Every map is built at design size and scaled 2x, and almost everything on them breaks: floors, cliffs, mesas, ramps, rocks, ice spires and cubes, trees, pillars, temple steps, arches, torches and cover break in a few spell hits (`Config.PROPS`, rock 45), while the **baseplate is far tougher** (240 per cell, about 16 Fireballs) so a fight can't dig through the ground quickly; heavier spells carve more. Each round starts on a fresh arena. Only the hub, the rock undersides and the Sparring Arena's imported colosseum and statue stay solid.
+Fights are first person with auto-aim, so every duel map is **flat**: one level board, no ramps, mesas, bridges or ledges, and the game is all about cover and line of sight. Each map is a theme on the shared `Maps/FlatArena` builder:
+
+- a **tiled board** painted tile by tile: a soft checkerboard, the **Blue half** and the **Red half** tinted toward their team colour (more so near the spawns), and a centre line and mark, so you always know where you are;
+- **mirrored cover**: the layout is designed for one half and mirrored through the centre for the other, so both teams get the same map. Brick **walls** (hide behind), **low walls** (peek over), tall **pillars**, waist-high **blocks**, and trees;
+- **glowing spawn pads** and team-coloured **edge lights** on a rock curb; in 1v1 and 2v2 a glowing ring (or end lines) marks a smaller fighting area just behind the spawns;
+- **walled** maps keep everyone on the board; **open** maps (Sparring Arena, Frost Hollow, Sky Bridge) let knockback throw you into the water.
+
+Every map is built at design size and scaled 2x, and almost everything breaks: cover, pillars, trees and the curb fall in a few spell hits (`Config.PROPS`, rock 45), while the **floor tiles are far tougher** (240 per cell, about 16 Fireballs); heavier spells carve more. Each round starts on a fresh arena.
 
 | Map | Identity | Signature mechanics |
 |---|---|---|
-| **Inkwell Plaza** (hub) | A round **floating island** over the ocean: a grass top with a sand beach, a dark rock cone underneath, a wooden rail, and a stepped white-marble amphitheatre, leaning pillars, a ruined arch and bare trees. A sand plaza with a giant inkwell and a stone wizard statue is at the centre | Four element shrines, Spellbook kiosk, Daily Quest chest and gift box on the plaza; the team boxes (1v1–4v4) in an arc to the north with the Arena Gate behind them; the Battleground portal to the south (opposite the duels); two Training Groves (west and east: build, smash dummies, the only hub places to draw and cast); marble roads to each; the Crate Shop (south-east); the wins podium + Most Wins board; four rim overlooks to **spectate the duels fought on arenas below the island** |
-| **Crayon Canyon** | Paper canyon, 3 lanes split by mesas (open in every mode, no dividing gates) | Destructible rope bridges, giant crayon cover, ramps to high ground |
-| **Sparring Arena** | A marble-pillared colosseum with sandstone seating and a neon rune ring | A roomy ~184-stud floor (the model scaled 4x), with pillars as cover; invisible walls keep everyone on the floor |
-| **Frost Hollow** | A round sheet of ice with frozen spires | No rim wall: knock enemies into the water; breakable ice cubes and spires |
-| **Ember Forge** | A basalt floor in a lava moat, around a stepped anvil | Obsidian pillars and brick walls as cover; rim wall |
-| **Moss Ruins** | An overgrown courtyard with broken marble arches | Lots of cover: toppled columns, mossy blocks, arches, trees (all breakable); rim wall |
-| **Tidal Temple** | A sandy island around a three-step temple in shallow sea | Coral pillars and giant clams as cover; torches; rim wall |
-| **Sky Bridge** | Two round platforms joined by a plank bridge, with a small island midway | No rim walls: knock enemies into the water; breakable bridge planks |
+| **Inkwell Plaza** (hub) | A round **floating island** over the ocean: a grass top with a sand beach, a dark rock cone underneath, a wooden rail, and a stepped white-marble amphitheatre, leaning pillars, a ruined arch and bare trees. A sand plaza with a giant inkwell and a stone wizard statue is at the centre | Four element shrines, Spellbook kiosk, Daily Quest chest and gift box on the plaza; the team boxes (1v1–4v4) in an arc to the north with the Arena Gate behind them; the Battleground portal to the south (opposite the duels); two Training Groves (west and east: build, smash dummies, the only hub places to draw and cast); marble roads to each; the **Chest Shop** (south-east: five chests, Common to Legendary); the wins podium + Most Wins board; four rim overlooks to **spectate the duels fought on arenas below the island** |
+| **Sparring Arena** | Round slate training ring with a gold centre mark | Four marble pillars, a low wall and two blocks per side: clean sight lines for learning to duel; open edge |
+| **Crayon Canyon** | Long paper board in three lanes split by rows of crayon blocks | Brick cover in every lane, gaps to cut across; giant crayons along the sides; walled |
+| **Frost Hollow** | Round sheet of ice under snow drifts | Ice spires and cubes; open edge, so ring-outs decide close fights |
+| **Ember Forge** | Basalt board ringed by glowing lava with a burning forge core overhead | Obsidian pillars, a brick wall and angled low walls; walled |
+| **Moss Ruins** | Overgrown grass courtyard | The most cover: mossy walls, marble columns, trees and blocks, made for flanking; walled |
+| **Tidal Temple** | Sandy temple floor in a shallow sea, a pearl glowing over the centre | Coral pillars, clam blocks and side walls; walled |
+| **Sky Bridge** | One long narrow plank board over the void | A lane map with little cover and no rails: every knockback can ring someone out |
 
 Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and identical on every server.
 
@@ -123,7 +130,7 @@ Maps are built **from code** (`src/server/Maps/*.luau`) so they're versioned and
 
 Everyone starts with **150 coins** and picks **one element for free** the first time they open the Spellbook. Winning a match pays **100 coins** (+50 for the first win of the day); the daily login chest (25 × streak, capped at 7) and daily quests (25-60) pay coins too. Losing pays nothing, so wins are what the economy rewards.
 
-Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (100 each, at the hub's Crate Shop or the Crates menu), which win a crate spell by rarity; the 10th spin in a row without an Epic or better is guaranteed one. A one-time Like & Favourite gift box on the plaza pays 250 coins (honor system). Equip owned elements and build your two-spell extra loadout in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
+Coins buy **elements** (400 each, in the Spellbook) and **chests** (at the hub's Chest Shop or the Chests menu): Common 100, Uncommon 250, Rare 500, Epic 1,000, Legendary 2,000, each winning a chest spell of its rarity or better (Epic and Legendary never give a duplicate while a new spell is left); the 10th Common-Rare chest in a row without an Epic or better is guaranteed one. A one-time Like & Favourite gift box on the plaza pays 250 coins (honor system). Equip owned elements and build your two-spell extra loadout in the Spellbook (not during a match). Inside a duel, power comes from the **boosts** you pick between rounds, not from new spells. The full rules and the numbers' homes are in [ECONOMY.md](ECONOMY.md).
 
 **Classes** (a second layer on top of elements) are planned but not built: see [CLASSES.md](CLASSES.md).
 
@@ -133,7 +140,7 @@ Coins buy **elements** (400 each, in the Spellbook) and **Spell Crate** spins (1
 
 - Matched spell names come from the dictionary. Raw player text is never shown, except through Roblox's own filtered chat.
 - Knockouts are cartoon poofs with no blood.
-- No paid random items: crates are bought only with coins earned in play. Planned monetization is cosmetic only (spell skins, trails, emotes), and boosts are never sold.
+- No paid random items: chests are bought only with coins earned in play. Planned monetization is cosmetic only (spell skins, trails, emotes), and boosts are never sold.
 - There is no free text input: spells come from drawn strokes, which the server validates (point count, range, rate) and reduces to a spell id.
 
 ## Not yet built (backlog)

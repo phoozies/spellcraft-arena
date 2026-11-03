@@ -16,6 +16,7 @@ local UserInputService = game:GetService("UserInputService")
 local Catalog = require(ReplicatedStorage.Shared.Admin.Catalog)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local player = Players.LocalPlayer
@@ -430,6 +431,7 @@ local function build()
 	})
 	Theme.corner(window, 14)
 	Theme.stroke(window, Theme.COLORS.outline, 4)
+	MouseLock.whileVisible(window)
 
 	-- Title bar: drag it to move the window, X closes it.
 	local titleBar = Theme.frame(window, {

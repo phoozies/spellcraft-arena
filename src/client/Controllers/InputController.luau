@@ -9,8 +9,9 @@
 --   Draw a spell  F (rebindable)   X (right stick)  Draw button, drag   F / X
 --   Rotate        R                L1 / R1          ⟳ button              L1 / R1
 --
--- Aim: mouse cursor (PC), screen center (gamepad), tap point (touch), or
--- the right controller's pointing ray (VR).
+-- Aim: first person, so every device aims from the middle of the screen (the
+-- crosshair) and players never aim with the mouse; VR uses the right
+-- controller's pointing ray. The server adds the auto-aim lock (CastService).
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -21,9 +22,11 @@ local VRService = game:GetService("VRService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local ClientState = require(script.Parent.ClientState)
 local DrawController = require(script.Parent.DrawController)
 local HudController = require(script.Parent.HudController)
+local LockOnController = require(script.Parent.LockOnController)
 local MenuController = require(script.Parent.MenuController)
 local PlacementController = require(script.Parent.PlacementController)
 local ReticleController = require(script.Parent.ReticleController)
@@ -33,14 +36,9 @@ local player = Players.LocalPlayer
 local InputController = {}
 
 local AIM_DISTANCE = Config.AIM_RANGE + 50
-local lastScreenPoint: Vector2? = nil
 
-local function usingGamepad(): boolean
-	local last = UserInputService:GetLastInputType()
-	return last.Name:sub(1, 7) == "Gamepad"
-end
-
-local function aimRay(screenPoint: Vector2?): Ray?
+-- The crosshair's ray: straight out of the camera (the screen's centre).
+local function aimRay(): Ray?
 	local camera = workspace.CurrentCamera
 	if not camera then
 		return nil
@@ -50,22 +48,12 @@ local function aimRay(screenPoint: Vector2?): Ray?
 		local world = camera.CFrame * hand
 		return Ray.new(world.Position, world.LookVector)
 	end
-	local point = screenPoint
-	if not point then
-		if usingGamepad() then
-			point = camera.ViewportSize / 2
-		elseif UserInputService.MouseEnabled then
-			point = UserInputService:GetMouseLocation()
-		else
-			point = lastScreenPoint or camera.ViewportSize / 2
-		end
-	end
-	return camera:ViewportPointToRay(point.X, point.Y)
+	return Ray.new(camera.CFrame.Position, camera.CFrame.LookVector)
 end
 
--- World point under the aim, ignoring our own character and the ghost.
-function InputController.aimPoint(screenPoint: Vector2?): Vector3?
-	local ray = aimRay(screenPoint)
+-- World point under the crosshair, ignoring our own character and the ghost.
+function InputController.aimPoint(): Vector3?
+	local ray = aimRay()
 	if not ray then
 		return nil
 	end
@@ -87,7 +75,7 @@ function InputController.aimPoint(screenPoint: Vector2?): Vector3?
 	return ray.Origin + ray.Direction.Unit * AIM_DISTANCE
 end
 
-local function cast(screenPoint: Vector2?)
+local function cast()
 	if
 		UserInputService:GetFocusedTextBox()
 		or MenuController.isOpen()
@@ -110,10 +98,11 @@ local function cast(screenPoint: Vector2?)
 		Remotes.get("CastSpell"):FireServer(point, rotation)
 		return
 	end
-	-- Point-and-click spells (Fire Pillar, Earth Punch, ...) land on the reticle's clamped point.
-	local target = if ReticleController.isActive() and not screenPoint
+	-- Ground strikes (Fire Pillar, Earth Punch, ...) land on the reticle's
+	-- clamped point; everything else goes where the crosshair points.
+	local target = if ReticleController.isActive()
 		then ReticleController.getTarget()
-		else InputController.aimPoint(screenPoint)
+		else InputController.aimPoint()
 	if target then
 		Remotes.get("CastSpell"):FireServer(target)
 	end
@@ -157,10 +146,17 @@ end
 
 function InputController.start()
 	PlacementController.setAimProvider(function()
-		return InputController.aimPoint(nil), nil
+		return InputController.aimPoint(), nil
 	end)
+	-- A ground strike snaps onto the auto-aim lock (LockOnController), the
+	-- same opponent the server will aim it at.
 	ReticleController.setAimProvider(function()
-		return InputController.aimPoint(nil)
+		local lock = LockOnController.getLock()
+		local root = lock and (lock:FindFirstChild("HumanoidRootPart") or lock.PrimaryPart)
+		if root and root:IsA("BasePart") then
+			return root.Position
+		end
+		return InputController.aimPoint()
 	end)
 
 	-- Mouse clicks go through UserInputService so clicks on GUI are ignored.
@@ -169,7 +165,10 @@ function InputController.start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			cast(nil)
+			-- A free mouse (menus, Left Alt) clicks UI, never casts.
+			if not MouseLock.isFree() then
+				cast()
+			end
 		elseif input.KeyCode == Enum.KeyCode.R then
 			PlacementController.rotate(math.pi / 4)
 		else
@@ -181,16 +180,16 @@ function InputController.start()
 		end
 	end)
 
-	UserInputService.TouchTapInWorld:Connect(function(position, processedByUI)
+	-- A tap anywhere in the world casts at the crosshair (not at the tap).
+	UserInputService.TouchTapInWorld:Connect(function(_, processedByUI)
 		if not processedByUI then
-			lastScreenPoint = position
-			cast(position)
+			cast()
 		end
 	end)
 
 	ContextActionService:BindAction("SpellcraftCast", function(_, state)
 		if state == Enum.UserInputState.Begin then
-			cast(nil)
+			cast()
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.ButtonR2)

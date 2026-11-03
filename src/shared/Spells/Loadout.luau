@@ -1,11 +1,11 @@
 --!strict
 -- The loadout: the spells a player can draw. It is the equipped element's
--- three base spells plus up to MAX_EXTRA crate spells they own and chose to
+-- three base spells plus up to MAX_EXTRA chest spells they own and chose to
 -- equip. Pure rules (no Instances) so the server enforces them, the client
 -- UI explains them, and tests check them.
 --
 -- One shape per spell: the server tells spells apart by the shape drawn, so
--- two spells in a loadout can't share a glyph (Glyphs.ROLE). A crate spell
+-- two spells in a loadout can't share a glyph (Glyphs.ROLE). A chest spell
 -- that clashes with the base spells or the other extra is not equippable.
 
 local Elements = require(script.Parent.Elements)
@@ -50,7 +50,7 @@ end
 function Loadout.problem(spellId: string, others: { string }): string?
 	local def = SpellDefinitions.get(spellId)
 	if not def or not def.rarity then
-		return "Only crate spells go in the loadout."
+		return "Only chest spells go in the loadout."
 	end
 	local clashing = Loadout.clash(others, spellId)
 	if clashing then
@@ -60,7 +60,7 @@ function Loadout.problem(spellId: string, others: { string }): string?
 	return nil
 end
 
--- Cleans an untrusted extras list: owned crate spells only, no repeats, no
+-- Cleans an untrusted extras list: owned chest spells only, no repeats, no
 -- shape clashes with the base spells or each other, at most MAX_EXTRA.
 function Loadout.sanitize(elementId: string, extras: any, owned: { string }): { string }
 	local kept: { string } = {}

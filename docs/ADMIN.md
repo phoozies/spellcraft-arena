@@ -12,8 +12,8 @@ Every command you run sends you a short confirmation toast and is printed to the
 - **Target (left):** `Me`, `All`, `Others`, or any other player in the server. Every button that acts on a player uses the picked target.
 - **Tabs (right):**
   - **Player:** heal, god mode, free cast, knockback, kill, bring / go to / send to hub, walk speed, status effects, kick, ban.
-  - **Spells:** give any spell (grouped by element, crate spells under Arcane) or all of them.
-  - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, a Reset group (coins, wins, stats, elements, crate spells, crate pity, gift claim, tutorial, everything), spin a Spell Crate, unlock elements.
+  - **Spells:** give any spell (grouped by element, chest spells under Arcane) or all of them.
+  - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, a Reset group (coins, wins, stats, elements, chest spells, chest pity, gift claim, tutorial, everything), open a Common, Rare or Legendary chest, unlock elements.
   - **Match:** start 1v1 to 4v4 now, end a match, send everyone to the hub, clear hub objects.
   - **Server:** announce a message, unban a UserId, list commands.
 - **Danger buttons** (kill, kick, ban, end match, everyone to hub) change to **Sure?** and need a second click within 2 seconds.
@@ -46,11 +46,11 @@ Leaving the target out means `me` where that makes sense.
 |---|---|
 | `;help [command]` | Lists the commands, or shows one command's usage |
 | `;give <player> <spell\|all>` | Gives spell copies at average drawing quality, skipping the spellbook and recharge rules. The hotbar holds 5 (one copy per spell). |
-| `;unlock <player> <Fire\|Water\|Earth\|Air\|spells\|all>` | Permanently unlocks an element, every crate spell (`spells`), or both (`all`) (saved) |
-| `;coins <player> <amount>` | Grants coins (spent on crates) |
+| `;unlock <player> <Fire\|Water\|Earth\|Air\|spells\|all>` | Permanently unlocks an element, every chest spell (`spells`), or both (`all`) (saved) |
+| `;coins <player> <amount>` | Grants coins (spent on chests) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
-| `;reset <player> <coins\|wins\|stats\|elements\|spells\|pity\|rewards\|tutorial\|all>` | Resets saved data: coins back to the starting amount, wins/stats to 0, owned elements or crate spells forgotten (free first pick again), crate pity to 0, the Like & Favourite gift claimable again, the tutorial shown again. Players in a match are skipped. |
-| `;crate <player>` | Spins a Spell Crate for the player, charging their coins like the shop |
+| `;reset <player> <coins\|wins\|stats\|elements\|spells\|pity\|rewards\|tutorial\|all>` | Resets saved data: coins back to the starting amount, wins/stats to 0, owned elements or chest spells forgotten (free first pick again), chest pity to 0, the Like & Favourite gift claimable again, the tutorial shown again. Players in a match are skipped. |
+| `;chest <player>` | Spins a chest for the player, charging their coins like the shop |
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |
@@ -88,7 +88,7 @@ COMMANDS.example = {
 }
 ```
 
-Commands run in their own thread, so yielding inside them (DataStores, filtering, bans) is fine. Saved data must still go through its owner (`EconomyService` for coins and wins, `ElementService` for elements and spells, `CrateService` for the pity).
+Commands run in their own thread, so yielding inside them (DataStores, filtering, bans) is fine. Saved data must still go through its owner (`EconomyService` for coins and wins, `ElementService` for elements and spells, `ChestService` for the pity).
 
 ## Studio debug commands
 
@@ -96,11 +96,11 @@ In Studio playtests, `game.ServerStorage.SpellcraftDebug:Invoke(command, arg)` (
 
 | Command | Arg | Does |
 |---|---|---|
-| `state` | | returns your coins, wins, elements, element, crate spells, loadout, and tutorial flag |
+| `state` | | returns your coins, wins, elements, element, chest spells, loadout, and tutorial flag |
 | `coins` / `takecoins` | number | adds / removes coins |
 | `wins` | number | records that many wins |
-| `crate` | `"Spell"` | spins the Spell Crate (returns the result or the refusal) |
-| `unlockall` | | owns every element and crate spell |
+| `chest` | `"Common"` .. `"Legendary"` | opens that chest (returns the result or the refusal) |
+| `unlockall` | | owns every element and chest spell |
 | `element` | element id | grants and equips that element |
 | `solo` | mode | starts a match against nobody (rounds end on the timer; pays nothing) |
 | `cast` | `{spell = id, target = Vector3}` | gives you that spell and casts it through the normal pipeline |

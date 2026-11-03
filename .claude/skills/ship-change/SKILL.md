@@ -11,7 +11,7 @@ Do these before telling the user a change is done.
 2. **Format and lint**: `stylua` on changed files, `selene`, `rojo build` (CI: `.github/workflows/ci.yml`). Every file starts with `--!strict` and a header comment saying what it owns.
 3. **Docs for the feature you touched**:
    - `docs/semantic/features.yaml` (the machine-readable entry: files, remotes, config, invariants)
-   - the human doc: `docs/ARCHITECTURE.md` (services, arenas), `docs/ECONOMY.md` (coins, crates, hub layout), `docs/SPELLS.md`, `docs/CONTROLS.md`, `docs/GAME_DESIGN.md`, `docs/ADMIN.md`
+   - the human doc: `docs/ARCHITECTURE.md` (services, arenas), `docs/ECONOMY.md` (coins, chests, hub layout), `docs/SPELLS.md`, `docs/CONTROLS.md`, `docs/GAME_DESIGN.md`, `docs/ADMIN.md`
    - `README.md` if the one-screen summary changed; `CLAUDE.md` only for rules or "the game in one screen"
 4. **`CHANGELOG.md`**: add to `## [Unreleased]` in Keep a Changelog style (`### Added`, `### Changed`, `### Fixed`), player-visible behaviour first, then the files or config keys that matter.
 5. **Rules check** (`CLAUDE.md`): the server decides; one owner per state; data not code for spells; models have fallbacks; tunables in `Config`; balance budgets and unique glyphs and aliases still pass.

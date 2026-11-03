@@ -295,6 +295,9 @@ export type TerrainOptions = {
 	-- Return false to leave a cell out (x, z are the cell's center, relative to
 	-- the block's center); used to cut round islands from a square block.
 	keep: ((x: number, z: number) -> boolean)?,
+	-- The colour of the cell at (x, z) (same frame as `keep`), so a floor can
+	-- be painted tile by tile (team halves, a centre mark, a checkerboard).
+	paint: ((x: number, z: number) -> Color3)?,
 }
 
 -- A solid block of terrain built from separately breakable cells (tagged
@@ -318,15 +321,16 @@ function MapKit.terrain(parent: Instance, props: PartProps, options: TerrainOpti
 					(iz - (nz + 1) / 2) * cellSize.Z
 				)
 				if options.keep == nil or options.keep(offset.X, offset.Z) then
+					local tint = if options.paint then options.paint(offset.X, offset.Z) else base
 					local shade = 1 + ((ix * 7 + iy * 3 + iz * 5) % 5 - 2) * 0.025
 					local cell = MapKit.part(folder, {
 						name = "TerrainCell",
 						size = cellSize,
 						cframe = props.cframe * CFrame.new(offset),
 						color = Color3.new(
-							math.clamp(base.R * shade, 0, 1),
-							math.clamp(base.G * shade, 0, 1),
-							math.clamp(base.B * shade, 0, 1)
+							math.clamp(tint.R * shade, 0, 1),
+							math.clamp(tint.G * shade, 0, 1),
+							math.clamp(tint.B * shade, 0, 1)
 						),
 						material = props.material,
 					})
@@ -378,11 +382,11 @@ function MapKit.terrainDisc(
 	hole: number?
 ): Folder
 	local reach = radius + options.cell * 0.4
-	local inner = hole or -1
-	local withShape = table.clone(options)
+	local withShape = table.clone(options) :: TerrainOptions
 	withShape.keep = function(x: number, z: number)
 		local d = x * x + z * z
-		return d <= reach * reach and d >= inner * inner
+		-- (Without a hole every cell counts, the centre one included.)
+		return d <= reach * reach and (hole == nil or d >= hole * hole)
 	end
 	return MapKit.terrain(parent, {
 		name = name,

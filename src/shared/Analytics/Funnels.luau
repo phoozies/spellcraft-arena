@@ -18,7 +18,7 @@ Funnels.ONBOARDING = {
 	"FirstMatchStarted",
 	"FirstMatchFinished",
 	"FirstWin",
-	"FirstCrateSpin",
+	"FirstChestOpen",
 	"FirstElementBought",
 } :: { string }
 

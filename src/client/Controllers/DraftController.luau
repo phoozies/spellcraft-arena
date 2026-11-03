@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local HudController = require(script.Parent.HudController)
 
@@ -111,6 +112,7 @@ function DraftController.init()
 		Visible = false,
 		ZIndex = 20,
 	})
+	MouseLock.whileVisible(overlay)
 	Theme.label(overlay, "Choose a boost for the rest of the match!", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0.18, 0),

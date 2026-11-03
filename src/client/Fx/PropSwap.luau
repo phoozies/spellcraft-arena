@@ -1,9 +1,9 @@
 --!strict
--- Briefly swaps a hub prop for its "open" block model: the Element Crate for
--- ElementCrateOpen while a crate spins, the Daily Quests chest for
--- QuestChestOpen when a quest is claimed. Local and cosmetic; the closed prop
--- keeps its collision and prompt, and comes back when the time is up. Does
--- nothing when either model is missing.
+-- Briefly swaps a hub prop for its "open" block model: a Chest Shop chest for
+-- ShopChestOpen (tinted to its rarity) while the reel spins, the Daily Quests
+-- chest for QuestChestOpen when a quest is claimed. Local and cosmetic; the
+-- closed prop keeps its collision and prompt, and comes back when the time is
+-- up. Does nothing when either model is missing.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,7 +19,8 @@ local function findProp(name: string): Model?
 end
 
 -- Shows `openName` in place of the model called `propName` for `seconds`.
-function PropSwap.show(propName: string, openName: string, seconds: number)
+-- `tint` recolours the open model's Chest_Trim and Chest_Gem parts and its glow.
+function PropSwap.show(propName: string, openName: string, seconds: number, tint: Color3?)
 	local prop = findProp(propName)
 	if not prop or prop:GetAttribute("Swapped") then
 		return
@@ -27,6 +28,13 @@ function PropSwap.show(propName: string, openName: string, seconds: number)
 	local open = ModelKit.clone(openName, "effect", prop:GetScale())
 	if not open then
 		return
+	end
+	if tint then
+		for _, part in open:GetDescendants() do
+			if part:IsA("BasePart") and (part.Name == "Chest_Trim" or part.Name == "Chest_Gem") then
+				part.Color = tint
+			end
+		end
 	end
 	prop:SetAttribute("Swapped", true)
 	open:PivotTo(prop:GetPivot())
@@ -42,7 +50,7 @@ function PropSwap.show(propName: string, openName: string, seconds: number)
 	end
 	-- A warm glow from the open lid.
 	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(255, 226, 140)
+	light.Color = tint or Color3.fromRGB(255, 226, 140)
 	light.Range = 14
 	light.Brightness = 2
 	light.Parent = open.PrimaryPart or open:FindFirstChildWhichIsA("BasePart")

@@ -3,7 +3,7 @@
 -- glowing arrows pointing at exactly where to go and what to press.
 --
 --   1. Choose an element   Spellbook kiosk / "Spells" button, then Choose
---   2. Spin for a spell    Crate shop / "Crates" button, then Spin
+--   2. Open a chest        Chest Shop / "Chests" button, then Open
 --   3. Draw a spell        Training Grove, press the draw key, trace the shape
 --   4. Cast it             aim at a training dummy and click
 --   5. Earn coins          the Battleground portal or a Duel pad
@@ -21,14 +21,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
-local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Chests = require(ReplicatedStorage.Shared.Economy.Chests)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local GuideArrow = require(script.Parent.Parent.Fx.GuideArrow)
 local AudioController = require(script.Parent.AudioController)
 local ClientState = require(script.Parent.ClientState)
-local CrateController = require(script.Parent.CrateController)
+local ChestController = require(script.Parent.ChestController)
 local HudController = require(script.Parent.HudController)
 local MenuController = require(script.Parent.MenuController)
 
@@ -207,47 +208,47 @@ local STEPS: { Step } = {
 	},
 	{
 		id = "spin",
-		title = "Spin for a spell",
+		title = "Open a chest",
 		text = function()
-			if panelOpen("Crates") then
-				return "Press <b>Spin!</b> to win a random spell. The rarer, the stronger!"
+			if panelOpen("Chests") then
+				return "The Common Chest is picked. Press <b>Open</b> to win a random spell. The rarer, the stronger!"
 			end
-			return "Spells come from the <b>Spell Crate</b>. You have coins for a spin: go to the crate!"
+			return "Spells come from <b>chests</b>. You have coins for a Common Chest: go to the Chest Shop!"
 		end,
 		guide = function()
 			return {
 				GuideArrow.world(function()
-					if panelOpen("Crates") then
+					if panelOpen("Chests") then
 						return nil
 					end
-					return positionOf(named("Crate_Spell"))
+					return positionOf(named("Chest_Common"))
 				end, {
-					label = "Spell Crate",
+					label = "chest",
 					trail = true,
 					highlight = function()
-						return named("CrateModel_Spell") or named("Crate_Spell")
+						return named("ChestModel_Common") or named("Chest_Common")
 					end,
 				}),
-				sideGuide("Crates", "Open me!"),
+				sideGuide("Chests", "Open me!"),
 				GuideArrow.gui(function()
-					if not panelOpen("Crates") then
+					if not panelOpen("Chests") then
 						return nil
 					end
-					return CrateController.spinButton()
-				end, { text = "Spin!", side = "top" }),
+					return ChestController.spinButton()
+				end, { text = "Open!", side = "top" }),
 			}
 		end,
 		done = function()
 			local profile = ClientState.profile
-			return profile ~= nil and #profile.spells > 0 and not CrateController.isSpinning()
+			return profile ~= nil and #profile.spells > 0 and not ChestController.isSpinning()
 		end,
 		skip = function()
-			-- No coins and no spells: nothing to spin with, so move on.
+			-- No coins and no spells: nothing to open a chest with, so move on.
 			local profile = ClientState.profile
 			return profile ~= nil
 				and #profile.spells == 0
-				and profile.coins < Crates.LIST[1].price
-				and not CrateController.isSpinning()
+				and profile.coins < Chests.LIST[1].price
+				and not ChestController.isSpinning()
 		end,
 		praise = function()
 			local profile = ClientState.profile
@@ -500,6 +501,9 @@ local function buildUi()
 	gotItButton.Activated:Connect(function()
 		TutorialController.finish(true)
 	end)
+	-- First person: the mouse is free while there is a button to press (the
+	-- welcome screen and the last step's "Got it!"); Skip is a hold of Left Alt.
+	MouseLock.whileVisible(gotItButton)
 
 	-- The welcome screen shown before step one.
 	welcome = Theme.frame(root, {
@@ -513,6 +517,7 @@ local function buildUi()
 	if bevel then
 		bevel:Destroy()
 	end
+	MouseLock.whileVisible(welcome)
 	local title = Theme.label(welcome, "Welcome to Spellcraft Arena!", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.36),

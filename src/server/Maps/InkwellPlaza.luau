@@ -20,7 +20,7 @@
 --   west     a Training Grove, and east its mirror twin (both past the ring road,
 --            the only places in the hub to draw and cast)
 --   diagonals  a half-amphitheatre of stands on each south diagonal (inside the
---            ring, clear of every road); the Crate Shop out on the south-east and
+--            ring, clear of every road); the Chest Shop out on the south-east and
 --            a matching pavilion on the south-west
 --   rim      a wooden rail, a beach, and four SPECTATE overlooks. Duels are not
 --            fought here: ArenaService summons each arena BELOW the island (see
@@ -39,24 +39,24 @@
 --   PodiumSpot (Rank 1-3)           LeaderboardService stands the top-3
 --                                   players' avatars on these pedestals (their
 --                                   front face, and the avatars, face the centre)
---   ProximityPrompts named "Spellbook", "Quests" and "Crates" open UI on
---   the client (MenuController / CrateController)
+--   ProximityPrompts named "Spellbook", "Quests" and "Chests" open UI on
+--   the client (MenuController / ChestController; a chest's prompt carries
+--   its ChestId so the shop opens on that chest)
 --   LikeGift                        the gift box: its ProximityPrompt claims the
 --                                   one-time Like & Favourite coin gift
 --                                   (EconomyService)
 --
--- The spellbook kiosk uses the imported Grimoire model and the crate shop
--- the Crate model (ReplicatedStorage.Models via ModelKit), with plain-shape
+-- The spellbook kiosk uses the imported Grimoire model and the Chest Shop
+-- the ShopChest block model (ReplicatedStorage.Models via ModelKit), with plain-shape
 -- fallbacks when the place doesn't have them. The warm afternoon light is the
 -- client's LightingController.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Crates = require(ReplicatedStorage.Shared.Economy.Crates)
+local Chests = require(ReplicatedStorage.Shared.Economy.Chests)
 local ModelKit = require(ReplicatedStorage.Shared.ModelKit)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local MapKit = require(script.Parent.MapKit)
@@ -591,7 +591,7 @@ return function(): Model
 			Vector3.new(side * (GROVE_CENTER_X - GROVE_X / 2), 0, 0)
 		)
 	end
-	road(polar(135, RING_ROAD_OUTER - 4), polar(135, 114)) -- to the Crate Shop
+	road(polar(135, RING_ROAD_OUTER - 4), polar(135, 114)) -- to the Chest Shop
 	road(polar(225, RING_ROAD_OUTER - 4), polar(225, 114)) -- to the pavilion
 
 	MapKit.disc(
@@ -1163,75 +1163,66 @@ return function(): Model
 	buildGrove(1)
 
 	----------------------------------------------------------------------
-	-- Crate shop (south-east, outside the ring road): one Spell Crate on a stage
-	-- with a glowing orb for each rarity beside it, facing the plaza. The
-	-- crate's prompt opens the shop panel.
+	-- Chest Shop (south-east, outside the ring road): the five chests, Common to
+	-- Legendary, in a row on a stage facing the plaza, each banded and lit in
+	-- its rarity's colour with its price above it. A chest's prompt opens the
+	-- shop panel with that chest picked (ChestController reads its ChestId).
 	----------------------------------------------------------------------
 	local SHOP = polar(135, 122)
 	local shopFrame = facingCenter(SHOP)
 	MapKit.part(model, {
-		name = "CrateStage",
-		size = Vector3.new(34, 1, 10),
+		name = "ChestStage",
+		size = Vector3.new(36, 1, 10),
 		cframe = shopFrame * CFrame.new(0, 0.5, 0),
 		color = Color3.fromRGB(69, 39, 160),
 		material = Enum.Material.SmoothPlastic,
 	})
-	pointedArch(model, shopFrame * CFrame.new(0, 1, 6), 36, 12, 1.4, STONE_LIGHT)
+	pointedArch(model, shopFrame * CFrame.new(0, 1, 6), 38, 12, 1.4, STONE_LIGHT)
 	label(
-		signAnchor(model, "CrateShopSign", shopFrame:PointToWorldSpace(Vector3.new(0, 15, 3))),
-		"Spell Crate\nSpin for new spells!",
+		signAnchor(model, "ChestShopSign", shopFrame:PointToWorldSpace(Vector3.new(0, 15, 3))),
+		"Chest Shop\nOpen chests for new spells!",
 		0,
 		90
 	)
-	local crate = Crates.LIST[1]
-	local holder = MapKit.part(model, {
-		name = `Crate_{crate.id}`,
-		size = Vector3.new(5, 5, 5),
-		cframe = shopFrame * CFrame.new(0, 3.5, 0),
-		color = GOLD,
-		material = Enum.Material.WoodPlanks,
-	})
-	local crateModel = ModelKit.clone("ElementCrate", "solid") or ModelKit.clone("Crate", "solid")
-	if crateModel then
-		-- The model replaces the block; an imported Crate's trim and gem are tinted
-		-- gold (the block ElementCrate is already gold-trimmed with a cyan gem).
-		holder.Transparency = 1
-		local _, size = crateModel:GetBoundingBox()
-		crateModel:ScaleTo(5.5 / math.max(size.X, 0.01))
-		-- Facing the plaza the shoppers come from.
-		crateModel:PivotTo(shopFrame * CFrame.new(0, 3.5, 0))
-		for _, part in crateModel:GetDescendants() do
-			if
-				crateModel.Name == "Crate"
-				and part:IsA("BasePart")
-				and (part.Name == "Crate_Trim" or part.Name == "Crate_Gem")
-			then
-				part.Color = GOLD
-			end
-		end
-		crateModel.Name = `CrateModel_{crate.id}`
-		crateModel.Parent = model
-	end
-	glow(holder, GOLD, 16, 1.2)
-	local priceTag = label(holder, `{crate.name}\n{crate.price} coins`, 5.5, 60)
-	priceTag.TextColor3 = GOLD
-	prompt(holder, "Crates", "Open shop", crate.name)
-	for index, rarity in Rarity.LIST do
-		local orb = MapKit.part(model, {
-			name = `RarityOrb_{rarity.id}`,
-			shape = Enum.PartType.Ball,
-			size = Vector3.new(2.6, 2.6, 2.6),
-			cframe = shopFrame * CFrame.new((index - 3) * 7, 3, 1),
-			color = rarity.color,
-			material = Enum.Material.Neon,
-			canCollide = false,
+	for index, shopChest in Chests.LIST do
+		local color = Chests.color(shopChest.id)
+		local spot = shopFrame * CFrame.new((index - 3) * 6.8, 1, 0)
+		local holder = MapKit.part(model, {
+			name = `Chest_{shopChest.id}`,
+			size = Vector3.new(4.6, 4, 3.2),
+			cframe = spot * CFrame.new(0, 2, 0),
+			color = color,
+			material = Enum.Material.WoodPlanks,
 		})
-		glow(orb, rarity.color, 12, 1)
-		label(orb, rarity.name, 3, 50).TextColor3 = rarity.color
+		local shopModel = ModelKit.clone("ShopChest", "solid")
+		if shopModel then
+			-- The model replaces the block; its bands and gem take the rarity colour.
+			holder.Transparency = 1
+			holder.CanCollide = false
+			local _, size = shopModel:GetBoundingBox()
+			shopModel:ScaleTo(4.8 / math.max(size.X, 0.01))
+			-- Standing on the stage, lid hinge at the back, facing the plaza.
+			shopModel:PivotTo(spot)
+			for _, part in shopModel:GetDescendants() do
+				if
+					part:IsA("BasePart") and (part.Name == "Chest_Trim" or part.Name == "Chest_Gem")
+				then
+					part.Color = color
+				end
+			end
+			shopModel.Name = `ChestModel_{shopChest.id}`
+			shopModel.Parent = model
+		end
+		-- Rarer chests glow brighter.
+		glow(holder, color, 10 + index * 2, 0.6 + index * 0.25)
+		local priceTag = label(holder, `{shopChest.name}\n{shopChest.price} coins`, 4.5, 60)
+		priceTag.TextColor3 = color
+		local open = prompt(holder, "Chests", "Open shop", shopChest.name)
+		open:SetAttribute("ChestId", shopChest.id)
 	end
 
 	----------------------------------------------------------------------
-	-- Pavilion (south-west): the Crate Shop's mirror twin, so the hub balances.
+	-- Pavilion (south-west): the Chest Shop's mirror twin, so the hub balances.
 	-- A quiet dais under a marble arch, lit by torches.
 	----------------------------------------------------------------------
 	local pavilionFrame = facingCenter(polar(225, 122))

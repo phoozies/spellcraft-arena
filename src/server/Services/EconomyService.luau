@@ -1,11 +1,11 @@
 --!strict
 -- Coins, wins, daily login streak, first-win bonus, daily quests, and
 -- player settings. The ONLY place that mutates profile.coins or
--- profile.stats.wins (crates spend through EconomyService.spend).
+-- profile.stats.wins (chests spend through EconomyService.spend).
 --
 -- There are no levels or XP: players earn coins by winning matches
 -- (Config.COINS.MATCH_WIN, + FIRST_WIN_OF_DAY), from the daily login chest,
--- and from quests, then spend them on crates (CrateService) to unlock spells.
+-- and from quests, then spend them on chests (ChestService) to unlock spells.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -84,7 +84,7 @@ end
 EconomyService.sendSummary = sendSummary
 
 -- Adds coins (amount > 0). `reason` is for logs/analytics only. `quiet`
--- skips the client summary (crate refunds are revealed after the spin).
+-- skips the client summary (chest refunds are revealed after the spin).
 function EconomyService.addCoins(player: Player, amount: number, reason: string, quiet: boolean?)
 	local profile = PlayerDataService.get(player)
 	if not profile or amount <= 0 or amount ~= amount then

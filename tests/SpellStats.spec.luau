@@ -1,5 +1,5 @@
 --!strict
--- The numbers shown for a crate spell (Spells/SpellStats) match its definition.
+-- The numbers shown for a chest spell (Spells/SpellStats) match its definition.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

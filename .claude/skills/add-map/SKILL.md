@@ -22,6 +22,8 @@ Use `MapKit.disc`, `pillar`, `underside` (the rock cone that makes a floor look 
 
 ## Steps
 
+Duel maps are **flat** (first person with auto-aim): describe the map as a `FlatArena.Theme` and return `FlatArena.build(THEME, makeProp)`. Give the cover `layout` for the Blue half (negative Z) only; it is mirrored through the centre for Red. Kinds: `wall`, `low`, `pillar`, `block`, `tree`; `center = true` places one piece in the middle. Keep it level: no ramps, ledges or raised platforms.
+
 1. Create `src/server/Maps/<MapName>.luau` (`--!strict`, a header comment describing the map and its rules, same style as `FrostHollow.luau`).
 2. Register it in `src/server/Services/ArenaService.luau`: `MAP_NAMES`, `DISPLAY_NAMES`, and a weight in `pickMap` (0 excludes a mode, as `SparringArena` does for 4v4). `MapVoteService` and the vote screen pick it up automatically. The screen is a 4-wide grid of two rows, so a ninth map needs a layout change in `MapVoteController`.
 3. Add it to `EXPECTED_MAPS` in `tests/Maps.spec.luau` (and bump the count it asserts).
@@ -33,7 +35,7 @@ Do not position arenas inside the map. `ArenaService.slotOrigin(slot)` summons t
 
 ## The hub island
 
-`src/server/Maps/InkwellPlaza.luau` builds the hub as a round floating island. Bearings are degrees clockwise from north (-Z); `polar(bearing, radius)` places things. Services find parts by **tag and name**, so keep these: tags `HubSpawn`, `TeamPad` (with `Box`, `Mode`, `Team`, `Slots`), `TeamBoxHeader`, `BuildZone`, `PracticeZone`, `DummySpot`, `BattlegroundPortal`, `WinsBoard`, `PodiumSpot` (with `Rank`), `LikeGift`; names `SpellbookKiosk`, `Crate_Spell`, `CrateModel_Spell`, `Leaderboard`. `tests/Maps.spec.luau` checks them, and that nothing sticks out past `Config.HUB.RADIUS`. Pedestals and the wins board face the centre (their front face), and `LeaderboardService` turns the avatars to match.
+`src/server/Maps/InkwellPlaza.luau` builds the hub as a round floating island. Bearings are degrees clockwise from north (-Z); `polar(bearing, radius)` places things. Services find parts by **tag and name**, so keep these: tags `HubSpawn`, `TeamPad` (with `Box`, `Mode`, `Team`, `Slots`), `TeamBoxHeader`, `BuildZone`, `PracticeZone`, `DummySpot`, `BattlegroundPortal`, `WinsBoard`, `PodiumSpot` (with `Rank`), `LikeGift`; names `SpellbookKiosk`, `Chest_<Rarity>`, `ChestModel_<Rarity>`, `Leaderboard`. `tests/Maps.spec.luau` checks them, and that nothing sticks out past `Config.HUB.RADIUS`. Pedestals and the wins board face the centre (their front face), and `LeaderboardService` turns the avatars to match.
 
 ## Verify
 

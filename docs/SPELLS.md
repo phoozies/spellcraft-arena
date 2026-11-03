@@ -1,6 +1,6 @@
 # Spells
 
-Spellcraft Arena has **24 spells**. Four **base elements** (Fire, Water, Earth, Air) come with **three base spells** each; the other **12 are crate spells** with a rarity (Common to Legendary), won from the Spell Crate. You equip one element and build a **loadout**: its three base spells plus up to **two crate spells** you own. Your first element is a free pick; the others are bought with coins (see [ECONOMY.md](ECONOMY.md)). In a match your loadout is locked in and is your spellbook.
+Spellcraft Arena has **24 spells**. Four **base elements** (Fire, Water, Earth, Air) come with **three base spells** each; the other **12 are chest spells** with a rarity (Common to Legendary), won from the Chest Shop. You equip one element and build a **loadout**: its three base spells plus up to **two chest spells** you own. Your first element is a free pick; the others are bought with coins (see [ECONOMY.md](ECONOMY.md)). In a match your loadout is locked in and is your spellbook.
 
 > **Source of truth:** [`src/shared/Spells/SpellDefinitions.luau`](../src/shared/Spells/SpellDefinitions.luau) and [`Elements.luau`](../src/shared/Spells/Elements.luau).
 > The tables below are generated from them (see "Regenerating"). Don't hand-edit numbers here.
@@ -38,7 +38,7 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
 - **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's two **Training Groves** (100 x 112 stud yards in the west and east with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
 - **Which shapes work:** only the spells of your loadout (the others are never even considered). A shape from a spell you don't have equipped fizzles.
-- **Your ready spell shows on your cursor:** while a spell is readied, the mouse becomes a pulsing crosshair in the spell's colour with its name and "Click to cast" (red with the seconds left while it recharges).
+- **Your ready spell shows on your crosshair:** in first person the centre crosshair takes the readied spell's colour and name (red with the seconds left while it recharges), and corner brackets mark the opponent auto-aim will hit.
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 
@@ -77,7 +77,7 @@ Hitbox sizes are the spell's `radius` in studs; players add `Config.HITBOX_BONUS
 
 ## The 24 spells
 
-Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all Arcane spells) are **crate spells**: their rarity is in the table under "Crate spells".
+Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all Arcane spells) are **chest spells**: their rarity is in the table under "Chest spells".
 
 ### 🔥 Fire
 
@@ -119,9 +119,9 @@ Slots 1-3 of each element are its **base spells**. Slot 4 and 5 spells (and all 
 | 4 | **Air Shield** | X | Buff | 14s | A swirling shield for 4 seconds that blocks the next spell or damage that hits you. |
 | 5 | **Tornado** ★ | star | Projectile | 18s | ULTIMATE: a tornado tears forward, blowing away everything it hits. 30 damage. |
 
-### Crate spells
+### Chest spells
 
-Won from the Spell Crate (100 coins a spin). A spin rolls a rarity by weight, then a spell of that rarity; a spell you already own pays its rarity's refund in coins. Odds and refunds live in `Spells/Rarity.luau`.
+Won from the Chest Shop's five chests (Common 100 to Legendary 2,000 coins). A chest rolls a rarity by weight among its rarity and better, then a spell of that rarity; a spell you already own pays back 30% of the chest's price. Chests live in `Economy/Chests.luau`, weights in `Spells/Rarity.luau` (see [ECONOMY.md](ECONOMY.md)).
 
 | Rarity | Chance | Refund | Spells |
 |---|---|---|---|
@@ -133,7 +133,7 @@ Won from the Spell Crate (100 coins a spin). A spin rolls a rarity by weight, th
 
 ### ✨ Arcane
 
-Neutral crate spells that belong to no element.
+Neutral chest spells that belong to no element.
 
 | Rarity | Spell | Draw | Archetype | Cooldown | What it does |
 |---|---|---|---|---|---|
@@ -142,7 +142,7 @@ Neutral crate spells that belong to no element.
 | Legendary | **Black Hole** | spiral | Zone | 20s | Point and click: a black hole drags every enemy it catches to its center and holds them there for 3 seconds (they can still cast spells), dealing 10 damage over time. Training dummies and Battleground NPCs get sucked in and hurt too. Range 70. |
 | Epic | **Turret** | hook (J) | Placeable | 20s | Summon a 30-health turret that shoots bullets at the nearest enemy, training dummy, or Battleground NPC for 20 seconds. |
 
-Crate spells show their numbers (damage or heal, cooldown, duration, range) in the crate reveal and the Spellbook's detail panel (`Spells/SpellStats`).
+Chest spells show their numbers (damage or heal, cooldown, duration, range) in the chest reveal and the Spellbook's detail panel (`Spells/SpellStats`).
 
 ### Notes on the spells
 

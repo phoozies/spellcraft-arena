@@ -16,8 +16,8 @@ export type ProfileSummary = {
 	coins: number,
 	elements: { string },
 	element: string, -- the equipped element ("" before the first pick)
-	spells: { string }, -- crate spells owned
-	loadout: { string }, -- crate spells equipped beside the element's base spells
+	spells: { string }, -- chest spells owned
+	loadout: { string }, -- chest spells equipped beside the element's base spells
 	tutorial: { done: boolean },
 	quests: { Types.DailyQuest },
 	streak: number,
@@ -25,7 +25,7 @@ export type ProfileSummary = {
 	settings: { drawKey: string, music: boolean, sfx: boolean, shake: boolean },
 	-- likeReadyAt: server time (workspace:GetServerTimeNow) the gift can be claimed.
 	rewards: { likeFav: boolean, likeReadyAt: number },
-	pity: number, -- crate spins since the last Epic or better
+	pity: number, -- chests opened since the last Epic or better
 }
 
 local ClientState = {
@@ -55,7 +55,7 @@ local ClientState = {
 }
 
 -- The spells the player can draw right now: this match's spellbook, or (in the
--- hub and Battleground) their element's base spells plus equipped crate spells.
+-- hub and Battleground) their element's base spells plus equipped chest spells.
 function ClientState.drawableSpells(): { string }
 	if ClientState.spellbook then
 		return table.clone(ClientState.spellbook)

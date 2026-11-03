@@ -13,9 +13,9 @@
 --
 -- Getting spells: an element's three BASE spells (slots 1-3, no `rarity`)
 -- come with the element: the first is a free pick, the others are bought with
--- coins. Every other spell is a CRATE spell (it has a `rarity`) won from the
--- Spell Crate and equipped in the loadout's two extra slots (shared/Spells/
--- Loadout). Slot 4 is a crate spell, slot 5 an ultimate. Neutral crate spells
+-- coins. Every other spell is a CHEST spell (it has a `rarity`) won from the
+-- Chest Shop's chests and equipped in the loadout's two extra slots (shared/
+-- Spells/Loadout). Slot 4 is a chest spell, slot 5 an ultimate. Neutral chest spells
 -- belong to the "Arcane" school instead of an element.
 --
 -- Copy model: drawing a glyph adds one copy of the spell to the hotbar
@@ -564,7 +564,7 @@ local DEFINITIONS: { SpellDef } = {
 	},
 
 	----------------------------------------------------------------------
-	-- Arcane (crate spells that belong to no element)
+	-- Arcane (chest spells that belong to no element)
 	----------------------------------------------------------------------
 	{
 		id = "Zap",
@@ -711,7 +711,7 @@ for _, element in Elements.LIST do
 	end
 end
 for _, def in DEFINITIONS do
-	assert(isBase[def.id] ~= nil or def.rarity ~= nil, `{def.id} needs a rarity (a crate spell)`)
+	assert(isBase[def.id] ~= nil or def.rarity ~= nil, `{def.id} needs a rarity (a chest spell)`)
 	assert(
 		def.element == "Arcane" or Elements.get(def.element) ~= nil,
 		`{def.id} is in an unknown school`
@@ -734,8 +734,9 @@ function SpellDefinitions.ofElement(elementId: string): { SpellDef }
 	return list
 end
 
--- Every crate spell: the Spell Crate's prize pool.
-function SpellDefinitions.crateSpells(): { SpellDef }
+-- Every chest spell: the Chest Shop's prize pool (each chest drops the ones of
+-- its rarity or better).
+function SpellDefinitions.chestSpells(): { SpellDef }
 	local list: { SpellDef } = {}
 	for _, def in DEFINITIONS do
 		if def.rarity then

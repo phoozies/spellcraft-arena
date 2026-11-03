@@ -1,10 +1,12 @@
 --!strict
 -- Validates CastSpell requests and dispatches to the spell's archetype.
 --
--- The client only sends intent: a target point and (for placeables) a
--- rotation. The server checks the character is alive and allowed to act,
--- the spell is readied and off cooldown, clamps the target to range, then
--- builds a CastContext the archetype uses for all world queries.
+-- The client only sends intent: the point under its first-person crosshair
+-- and (for placeables) a rotation. The server checks the character is alive
+-- and allowed to act, the spell is readied and off cooldown, clamps the target
+-- to range, runs auto-aim (resolveAim: the nearest opponent in sight near the
+-- crosshair becomes ctx.lock, and bolts are led), then builds a CastContext
+-- the archetype uses for all world queries.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -15,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Types = require(ReplicatedStorage.Shared.Types)
+local AutoAim = require(ReplicatedStorage.Shared.Util.AutoAim)
 local DestructibleService = require(script.Parent.DestructibleService)
 local HandService = require(script.Parent.HandService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -33,6 +36,8 @@ export type CastContext = {
 	def: Types.SpellDef,
 	quality: number,
 	target: Vector3,
+	-- The auto-aim lock (a character or NPC), if the spell locked onto one.
+	lock: Model?,
 	rotationY: number,
 	team: string?,
 	-- Folder new structures/summons go into (arena or hub).
@@ -135,6 +140,126 @@ local function isFiniteVector(v: any): boolean
 	return typeof(v) == "Vector3" and v.X == v.X and v.Y == v.Y and v.Z == v.Z and v.Magnitude < 1e6
 end
 
+-- Spells that are thrown or struck AT something get the auto-aim lock; boosts,
+-- walls, dashes and turrets just go where you look.
+local AIMED_ARCHETYPES = { Projectile = true, Control = true, Line = true, Zone = true }
+
+local function rootOf(model: Model): BasePart?
+	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+-- Everything the caster could lock onto: enemy players, hostile NPCs and
+-- training dummies (never props, walls or allies).
+local function aimCandidates(caster: Player): { AutoAim.Candidate }
+	local candidates: { AutoAim.Candidate } = {}
+	for _, other in Players:GetPlayers() do
+		local character = other.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and rootOf(character)
+		if
+			other ~= caster
+			and character
+			and root
+			and humanoid
+			and humanoid.Health > 0
+			and DestructibleService.canHarm(caster, character)
+		then
+			table.insert(candidates, {
+				position = root.Position,
+				velocity = root.AssemblyLinearVelocity,
+				radius = 2,
+				key = character,
+			})
+		end
+	end
+	for _, thing in CollectionService:GetTagged("Destructible") do
+		if
+			thing:IsA("Model")
+			and DestructibleService.isTrainingTarget(thing)
+			and DestructibleService.canHarm(caster, thing)
+		then
+			local root = rootOf(thing)
+			local humanoid = thing:FindFirstChildOfClass("Humanoid")
+			if root and (not humanoid or humanoid.Health > 0) then
+				table.insert(candidates, {
+					position = root.Position,
+					velocity = root.AssemblyLinearVelocity,
+					radius = math.max(2, thing:GetExtentsSize().X / 2),
+					key = thing,
+				})
+			end
+		end
+	end
+	return candidates
+end
+
+-- Nothing solid between the caster's eyes and the candidate.
+local function inSight(eye: Vector3, character: Model, candidate: AutoAim.Candidate): boolean
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character, candidate.key :: Instance }
+	params.RespectCanCollide = true
+	local offset = candidate.position - eye
+	return workspace:Raycast(eye, offset, params) == nil
+end
+
+-- The way the player looks: toward the point under their crosshair, unless
+-- that is far from where their character faces (a lagging or lying client),
+-- in which case the character's facing is used with the sent pitch.
+local function lookDirection(eye: Vector3, root: BasePart, target: Vector3): Vector3
+	local look = target - eye
+	if look.Magnitude < 1e-3 then
+		return root.CFrame.LookVector
+	end
+	look = look.Unit
+	local flat = Vector3.new(look.X, 0, look.Z)
+	local facing = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+	if
+		flat.Magnitude > 1e-3
+		and AutoAim.angleBetween(flat, facing) > math.rad(Config.AUTO_AIM.MAX_YAW_ERROR)
+	then
+		return (facing.Unit * flat.Magnitude + Vector3.new(0, look.Y, 0)).Unit
+	end
+	return look
+end
+
+-- Decides the shot: the auto-aim lock (a character or NPC) and the point to
+-- throw at (led for bolts), or no lock and the point under the crosshair.
+local function resolveAim(
+	player: Player,
+	character: Model,
+	root: BasePart,
+	def: Types.SpellDef,
+	target: Vector3,
+	maxRange: number
+): (Vector3, Model?)
+	local head = character:FindFirstChild("Head")
+	local eye = if head and head:IsA("BasePart")
+		then head.Position
+		else root.Position + Vector3.new(0, 1.5, 0)
+	if not AIMED_ARCHETYPES[def.archetype] or (def.stats.range or 1) <= 0 then
+		return target, nil -- placed, self-centred or self-cast: exactly where asked
+	end
+	local look = lookDirection(eye, root, target)
+	local reach = math.min((target - eye).Magnitude, maxRange)
+	local straight = eye + look * math.max(reach, 1)
+	local lock = AutoAim.pick(eye, look, aimCandidates(player), {
+		range = maxRange,
+		visible = function(candidate)
+			return inSight(eye, character, candidate)
+		end,
+	})
+	if not lock then
+		return straight, nil
+	end
+	local speed = def.stats.speed
+	local aimPoint = if speed and (def.archetype == "Projectile" or def.archetype == "Control")
+		then AutoAim.lead(eye, lock.position, lock.velocity, speed * Config.PROJECTILE_SPEED_SCALE)
+		else lock.position
+	return aimPoint, lock.key :: Model
+end
+
 local function onCast(player: Player, target: any, rotationY: any)
 	if not isFiniteVector(target) then
 		return
@@ -185,6 +310,10 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if offset.Magnitude > maxRange then
 		target = root.Position + offset.Unit * maxRange
 	end
+	-- First person: the spell goes where the player looks, locked onto the
+	-- nearest opponent in sight near the crosshair (shared/Util/AutoAim).
+	local lock: Model? = nil
+	target, lock = resolveAim(player, character, root, def, target :: Vector3, maxRange)
 
 	local archetype = archetypes[def.archetype]
 	if not archetype then
@@ -202,6 +331,7 @@ local function onCast(player: Player, target: any, rotationY: any)
 		def = Quality.apply(def, quality),
 		quality = quality,
 		target = target,
+		lock = lock,
 		rotationY = rotation,
 		team = activeHooks.teamOf(player),
 		structures = activeHooks.structuresFolderFor(player),

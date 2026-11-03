@@ -24,15 +24,15 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 type Profile = Types.Profile
 
 local STORE_NAME = "PlayerProfiles_v1"
--- 2: levels/XP removed; coins added (crates unlock spells).
+-- 2: levels/XP removed; coins added (chests unlock spells).
 -- 3: spells come from elements: ownedSpells is gone, profile.elements and
 --    profile.element replace it (players pick their first element again).
 -- 4: settings.music (background music on/off) and rewards.likeFav (the
 --    one-time Like & Favourite gift); both just get their defaults.
--- 5: elements are bought with coins and crates win SPELLS: profile.spells
---    (crate spells owned), profile.loadout (up to 2 equipped), and
+-- 5: elements are bought with coins and chests win SPELLS: profile.spells
+--    (chest spells owned), profile.loadout (up to 2 equipped), and
 --    profile.tutorial.done (players who already picked an element skip it).
--- 6: profile.pity (crate spins since the last Epic or better).
+-- 6: profile.pity (chests opened since the last Epic or better).
 local SCHEMA = 6
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
@@ -135,7 +135,7 @@ local function reconcile(data: any): Profile
 	if typeof(data.element) ~= "string" or not table.find(owned, data.element) then
 		data.element = owned[1] or ""
 	end
-	-- Crate spells: real crate spells only, no repeats; the loadout is the owned
+	-- Chest spells: real chest spells only, no repeats; the loadout is the owned
 	-- ones that still fit next to the equipped element's base spells.
 	local spells = {}
 	if typeof(data.spells) == "table" then

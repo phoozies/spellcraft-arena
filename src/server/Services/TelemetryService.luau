@@ -104,7 +104,7 @@ function TelemetryService.coinsEarned(
 	end)
 end
 
--- Coins leaving the economy (`item`: what they bought, e.g. a crate id).
+-- Coins leaving the economy (`item`: what they bought, e.g. a chest id).
 function TelemetryService.coinsSpent(player: Player, amount: number, balance: number, item: string)
 	record("economy", `sink:{item}`, amount)
 	pcall(function()
