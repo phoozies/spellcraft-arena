@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (dash somersault)
+- **The dash is now a forward somersault** (arms flung wide, a full 360 degree flip in four quarter turns over `Config.DASH.DURATION`) instead of a held lean. New `flip` field on `CastPoses` keys, applied to the hips by `CastAnimations`. Landing now gets a smaller dust puff and a `dashLand` thud, and the wind streaks fade faster (0.45s to 0.3s).
+
 ### Fixed (admin panel outlines)
 - **Button outlines are no longer clipped** at the edges of the Admin panel's scrolling lists (targets, tabs content, log): they are inset with padding. The Economy tab's Reset group now also has stats, gift claim and tutorial buttons.
 

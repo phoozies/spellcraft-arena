@@ -36,6 +36,9 @@ export type Key = {
 	leftLeg: Leg?,
 	lean: number?,
 	twist: number?,
+	-- Degrees the whole body has somersaulted forward (360 = one full flip);
+	-- list each quarter turn as its own key so the spin takes the long way round.
+	flip: number?,
 }
 
 -- orb     a ball gathers in the hand(s) and is released at `at` (`material`
@@ -450,15 +453,37 @@ CastPoses.POSES = {
 		{ d = 0.06, hold = 0.2, right = { fwd = 85 }, left = { fwd = 10 }, lean = 16 },
 	},
 
-	-- The dash (not a spell): a leap with the arms flung wide and swept back,
-	-- body tipped forward, held for the whole dash.
+	-- The dash (not a spell): a leap with the arms flung wide, then a full
+	-- forward somersault in four quarter turns (about Config.DASH.DURATION).
 	Dash = {
 		{
-			d = 0.07,
-			hold = 0.34,
+			d = 0.04,
 			right = { fwd = -30, side = 70, elbow = 10 },
 			left = { fwd = -30, side = 70, elbow = 10 },
-			lean = 32,
+		},
+		{
+			d = 0.09,
+			right = { fwd = -30, side = 70, elbow = 10 },
+			left = { fwd = -30, side = 70, elbow = 10 },
+			flip = 90,
+		},
+		{
+			d = 0.09,
+			right = { fwd = -30, side = 70, elbow = 10 },
+			left = { fwd = -30, side = 70, elbow = 10 },
+			flip = 180,
+		},
+		{
+			d = 0.09,
+			right = { fwd = -30, side = 70, elbow = 10 },
+			left = { fwd = -30, side = 70, elbow = 10 },
+			flip = 270,
+		},
+		{
+			d = 0.09,
+			right = { fwd = -30, side = 70, elbow = 10 },
+			left = { fwd = -30, side = 70, elbow = 10 },
+			flip = 360,
 		},
 	},
 } :: { [string]: { Key } }

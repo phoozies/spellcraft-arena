@@ -90,6 +90,7 @@ return function(t: any)
 					t.expect(key.d > 0 and key.d <= 0.5).toBeTruthy()
 					t.expect((key.hold or 0) <= 1).toBeTruthy()
 					t.expect(math.abs(key.twist or 0) <= 90).toBeTruthy()
+					t.expect((key.flip or 0) >= 0 and (key.flip or 0) <= 360).toBeTruthy()
 					for _, rawLimb in { key.right, key.left, key.rightLeg, key.leftLeg } do
 						local limb: any = rawLimb
 						for _, angle in
