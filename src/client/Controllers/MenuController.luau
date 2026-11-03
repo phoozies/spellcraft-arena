@@ -17,8 +17,8 @@ local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local SpellStats = require(ReplicatedStorage.Shared.Spells.SpellStats)
-local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Types = require(ReplicatedStorage.Shared.Types)
+local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local AudioController = require(script.Parent.AudioController)
@@ -392,7 +392,13 @@ local function showSpell(def: Types.SpellDef)
 	local shape = Glyphs.get(def.glyph)
 	local color = SpellCard.colorOf(def.id)
 	detailGlyph:ClearAllChildren()
-	GlyphView.create(detailGlyph, def.glyph, 96, color)
+	Sigil.setSpinning(
+		Sigil.create(detailGlyph, def.glyph, 88, color, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+		}),
+		true
+	)
 	local tag = if def.ultimate then "  <b>ULTIMATE</b>" else ""
 	local rarity = if def.rarity then `  <b>{string.upper(def.rarity)}</b>` else ""
 	detailLabel.Text = `<b>{def.name}</b>{tag}{rarity}\n{def.description}\n\n`

@@ -718,11 +718,13 @@ return function(): Model
 			local def = SpellDefinitions.get(id)
 			if def then
 				local x = (slot - 1) * 128 + 4
-				GlyphView.create(
+				-- Glowing ink, like the drawing canvas and the spell sigils.
+				GlyphView.glow(
 					gui,
 					def.glyph,
 					68,
 					element.color,
+					slab.Color,
 					{ Position = UDim2.fromOffset(x + 28, 78) }
 				)
 				local name = Instance.new("TextLabel")

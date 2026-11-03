@@ -1,7 +1,9 @@
 --!strict
 -- The wand's 3D visuals (client only, local and cosmetic):
 --   charge     while a player's canvas is open: the wand tip glows and sparks,
---              and a rune circle turns at their feet
+--              a rune circle turns at their feet, and a magic circle opens in
+--              the air in front of them (rings, rune stones, and a star that
+--              turn against each other), the backdrop their stroke is drawn on
 --   ribbon     a drawing written in the air in front of the caster: a glowing
 --              ribbon of light that follows the stroke, fed by a beam from the
 --              wand tip; when it is done it flashes in its quality colour and
@@ -43,8 +45,26 @@ local RING_BLOCKS = 20
 local INNER_RADIUS = 2.3
 local INNER_BLOCKS = 12
 
+-- The magic circle in the air: blocks in its outer ring, its inner ring, its
+-- rune stones, and the small ring in the middle of its star. It sits a little
+-- behind the drawing, and spins up fast when it opens, then settles.
+local CIRCLE_OUTER = 28
+local CIRCLE_INNER = 20
+local CIRCLE_STONES = 8
+local CIRCLE_CORE = 12
+local CIRCLE_BEHIND = 0.35
+local SPIN_FAST = 7
+local SPIN_SLOW = 0.5
+
+export type Charge = {
+	stop: () -> (),
+	-- Lights the whole circle up in `color` (a drawing landed).
+	flash: (color: Color3) -> (),
+}
+
 export type Ribbon = {
-	add: (self: Ribbon, offset: Vector2) -> (),
+	-- True when the point was used (far enough from the last one).
+	add: (self: Ribbon, offset: Vector2) -> boolean,
 	finish: (self: Ribbon, ok: boolean, color: Color3?) -> (),
 	cancel: (self: Ribbon) -> (),
 }
@@ -75,6 +95,12 @@ end
 function WandVfx.colorOf(character: Model): Color3
 	local tip = WandVfx.tipOf(character)
 	return if tip then tip.Color else Color3.fromRGB(190, 130, 255)
+end
+
+-- The way a drawing player faces (WandService's DrawLook attribute), or nil.
+function WandVfx.lookOf(character: Model): Vector3?
+	local look = character:GetAttribute("DrawLook")
+	return if typeof(look) == "Vector3" then look else nil
 end
 
 local function glowPart(parent: Instance, size: Vector3, color: Color3, ball: boolean?): Part
@@ -204,9 +230,123 @@ local function runeCircle(parent: Instance, color: Color3): (Part, { BasePart })
 	return hub, parts
 end
 
--- Lights a character's wand while their canvas is open. Returns a function
--- that puts it out.
-function WandVfx.charge(parent: Instance, character: Model, color: Color3): () -> ()
+-- Welds `part` to an anchored hub (moving the hub moves the part) and marks
+-- the transparency it fades in to.
+local function onHub(hub: BasePart, part: BasePart, cframe: CFrame, target: number)
+	part.Anchored = false
+	part.Massless = true
+	part.Transparency = 1
+	part:SetAttribute("Target", target)
+	part:SetAttribute("Base", part.Color)
+	part.CFrame = hub.CFrame * cframe
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = hub
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+local function hubPart(parent: Instance, name: string): Part
+	local hub = Instance.new("Part")
+	hub.Name = name
+	hub.Anchored = true
+	hub.CanCollide = false
+	hub.CanQuery = false
+	hub.CanTouch = false
+	hub.Transparency = 1
+	hub.Size = Vector3.one * 0.2
+	hub.Parent = parent
+	return hub
+end
+
+-- A ring of `count` blocks of `radius` in a hub's XY plane (its face).
+local function airRing(
+	hub: BasePart,
+	parts: { BasePart },
+	color: Color3,
+	radius: number,
+	count: number,
+	width: number,
+	target: number
+)
+	local chord = radius * math.pi * 2 / count * 1.06
+	for i = 1, count do
+		local angle = i / count * math.pi * 2
+		local block = glowPart(hub, Vector3.new(width, chord, 0.06), color)
+		onHub(hub, block, CFrame.Angles(0, 0, angle) * CFrame.new(radius, 0, 0), target)
+		table.insert(parts, block)
+	end
+end
+
+-- The magic circle in the air: an outer hub (glass disc, two rings, rune
+-- stones) and a star hub (a six-pointed star and a small ring) that turn
+-- against each other. Both hubs face along their -Z.
+local function magicCircle(parent: Instance, color: Color3): (Part, Part, { BasePart }, PointLight)
+	local radius = Config.WAND.CIRCLE_RADIUS
+	local outer = hubPart(parent, "MagicCircle")
+	local star = hubPart(parent, "MagicStar")
+	local parts: { BasePart } = {}
+
+	local disc = glowPart(outer, Vector3.new(0.04, radius * 2, radius * 2), color)
+	disc.Shape = Enum.PartType.Cylinder
+	onHub(outer, disc, CFrame.Angles(0, math.pi / 2, 0), 0.9)
+	table.insert(parts, disc)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 12
+	light.Brightness = 0
+	light.Shadows = false
+	light.Parent = disc
+
+	airRing(outer, parts, color:Lerp(WHITE, 0.15), radius, CIRCLE_OUTER, 0.16, 0.05)
+	airRing(outer, parts, color, radius * 0.86, CIRCLE_INNER, 0.08, 0.35)
+	for i = 1, CIRCLE_STONES do
+		local angle = (i + 0.5) / CIRCLE_STONES * math.pi * 2
+		local stone = glowPart(outer, Vector3.new(0.3, 0.3, 0.08), color:Lerp(WHITE, 0.45))
+		onHub(
+			outer,
+			stone,
+			CFrame.Angles(0, 0, angle)
+				* CFrame.new(radius * 0.93, 0, 0)
+				* CFrame.Angles(0, 0, math.pi / 4),
+			0
+		)
+		table.insert(parts, stone)
+	end
+
+	-- Two triangles make the star; its points touch the inner ring.
+	local tip = radius * 0.86
+	for flip = 0, 1 do
+		local corners: { Vector3 } = {}
+		for k = 0, 2 do
+			local angle = math.pi / 2 + flip * math.pi + k * math.pi * 2 / 3
+			table.insert(corners, Vector3.new(math.cos(angle) * tip, math.sin(angle) * tip, 0))
+		end
+		for k = 1, 3 do
+			local from, to = corners[k], corners[k % 3 + 1]
+			local delta = to - from
+			local bar = glowPart(star, Vector3.new(delta.Magnitude, 0.07, 0.05), color)
+			onHub(
+				star,
+				bar,
+				CFrame.new((from + to) / 2) * CFrame.Angles(0, 0, math.atan2(delta.Y, delta.X)),
+				0.5
+			)
+			table.insert(parts, bar)
+		end
+	end
+	airRing(star, parts, color, tip * 0.5, CIRCLE_CORE, 0.06, 0.55)
+	return outer, star, parts, light
+end
+
+-- Lights a character's wand while their canvas is open, and opens the magic
+-- circle on the upright air canvas facing `look()` (WandAir.facing). Returns
+-- a handle that puts it all out or flashes it.
+function WandVfx.charge(
+	parent: Instance,
+	character: Model,
+	color: Color3,
+	look: () -> Vector3?
+): Charge
 	local source = sourceOf(character)
 	local light: PointLight? = nil
 	local emitter: ParticleEmitter? = nil
@@ -223,27 +363,42 @@ function WandVfx.charge(parent: Instance, character: Model, color: Color3): () -
 	end
 
 	local hub, parts = runeCircle(parent, color)
+	local circle, star, circleParts, circleLight = magicCircle(parent, color)
+	for _, part in circleParts do
+		table.insert(parts, part)
+	end
 	for _, part in parts do
 		TweenService
-			:Create(part, TweenInfo.new(0.3), { Transparency = part:GetAttribute("Target") or 0 })
+			:Create(part, TweenInfo.new(0.35), { Transparency = part:GetAttribute("Target") or 0 })
 			:Play()
 	end
+	TweenService:Create(circleLight, TweenInfo.new(0.35), { Brightness = 1.6 }):Play()
+
+	local opened = os.clock()
 	local angle = 0
-	local connection = RunService.Heartbeat:Connect(function(dt)
+	local spin = 0
+	local function place(dt: number)
 		local feet = feetOf(character)
-		if not feet or not character.Parent then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if not feet or not root or not root:IsA("BasePart") or not character.Parent then
 			return
 		end
 		angle += dt * 0.9
 		hub.CFrame = CFrame.new(feet) * CFrame.Angles(0, angle, 0)
-	end)
-	local feet = feetOf(character)
-	if feet then
-		hub.CFrame = CFrame.new(feet)
+		-- Spins up fast as it opens (or flashes), then settles to a slow turn.
+		local speed = SPIN_SLOW + (SPIN_FAST - SPIN_SLOW) * math.exp(-(os.clock() - opened) * 3)
+		spin += dt * speed
+		local frame = WandAir.facing(root.Position, look() or root.CFrame.LookVector)
+			* CFrame.new(0, 0, -CIRCLE_BEHIND)
+		circle.CFrame = frame * CFrame.Angles(0, 0, spin)
+		star.CFrame = frame * CFrame.Angles(0, 0, -spin * 1.6)
 	end
+	local connection = RunService.Heartbeat:Connect(place)
+	place(0)
 
 	local stopped = false
-	return function()
+	local handle = {}
+	function handle.stop()
 		if stopped then
 			return
 		end
@@ -257,11 +412,33 @@ function WandVfx.charge(parent: Instance, character: Model, color: Color3): () -
 			TweenService:Create(light, TweenInfo.new(0.25), { Brightness = 0 }):Play()
 			Debris:AddItem(light, 0.3)
 		end
+		TweenService:Create(circleLight, TweenInfo.new(0.3), { Brightness = 0 }):Play()
 		for _, part in parts do
 			TweenService:Create(part, TweenInfo.new(0.3), { Transparency = 1 }):Play()
 		end
 		Debris:AddItem(hub, 0.35)
+		Debris:AddItem(circle, 0.35)
+		Debris:AddItem(star, 0.35)
 	end
+	function handle.flash(flashColor: Color3)
+		if stopped then
+			return
+		end
+		opened = os.clock() -- a burst of spin
+		local bright = flashColor:Lerp(WHITE, 0.3)
+		for _, part in circleParts do
+			part.Color = bright
+			local base = part:GetAttribute("Base")
+			TweenService:Create(part, TweenInfo.new(0.5), {
+				Color = if typeof(base) == "Color3" then base else color,
+			}):Play()
+		end
+		circleLight.Color = flashColor
+		circleLight.Brightness = 5
+		TweenService:Create(circleLight, TweenInfo.new(0.5), { Brightness = 1.6, Color = color })
+			:Play()
+	end
+	return handle :: Charge
 end
 
 -- The flash and sparks when a glyph lands in the wand.
@@ -361,9 +538,9 @@ function WandVfx.ribbon(parent: Instance, character: Model, frame: CFrame, color
 
 	local self = {} :: any
 
-	function self.add(_: any, offset: Vector2)
+	function self.add(_: any, offset: Vector2): boolean
 		if done then
-			return
+			return false
 		end
 		local point = WandAir.toWorld(frame, offset)
 		spark.CFrame = CFrame.new(point)
@@ -377,12 +554,12 @@ function WandVfx.ribbon(parent: Instance, character: Model, frame: CFrame, color
 			local dot = glowPart(folder, Vector3.one * CORE * 1.3, color, true)
 			dot.CFrame = CFrame.new(point)
 			table.insert(pieces, dot)
-			return
+			return true
 		end
 		local from = last :: Vector3
 		local length = (point - from).Magnitude
 		if length < MIN_STEP or #pieces >= MAX_SEGMENTS * 3 then
-			return
+			return false
 		end
 		local mid = (from + point) / 2
 		local cframe = CFrame.lookAt(mid, point)
@@ -403,6 +580,7 @@ function WandVfx.ribbon(parent: Instance, character: Model, frame: CFrame, color
 			:Create(core, TweenInfo.new(0.15), { Size = Vector3.new(CORE, CORE, core.Size.Z) })
 			:Play()
 		last = point
+		return true
 	end
 
 	local function stopFeed()
@@ -501,8 +679,7 @@ function WandVfx.airGlyph(
 	if not glyph or not root or not root:IsA("BasePart") then
 		return
 	end
-	local look = root.CFrame
-	local frame = WandAir.frame(root.Position, look.LookVector, look.RightVector, Vector3.yAxis)
+	local frame = WandAir.facing(root.Position, WandVfx.lookOf(character) or root.CFrame.LookVector)
 	local ribbon = WandVfx.ribbon(parent, character, frame, color)
 	local points: { Vector2 } = {}
 	for _, p in glyph.points do

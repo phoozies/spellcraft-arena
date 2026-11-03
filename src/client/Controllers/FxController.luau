@@ -12,7 +12,8 @@
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
 --   strike         (center, radius, delay, modelName, color, spellId?)  a bolt model slams down after `delay`
 --   modelPop       (character, modelName, color)                   a model pops up over a head and fades
---   glyph          (character, glyphId, color)                     the drawn glyph pops over a head
+--   glyph          (character, glyphId, color, quality)            a drawing was readied: the live stroke (or a traced glyph) flashes and is pulled into the wand
+--   glyphFail      (character)                                     a drawing fizzled: the live stroke crumbles
 --   dash           (character, direction)                          dash pose, dust puff, and whoosh
 --   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)
 --   rise           (center, radius, delay, color, kind, height, model?)  boulder/pillar rises from the ground
@@ -389,7 +390,6 @@ local function onDash(character: Model, direction: Vector3)
 	end)
 end
 
--- A player just drew a glyph: show it over their head.
 -- Someone drew a spell: their wand traces it in the air (WandController).
 local function onGlyph(character: Model, glyphId: string, color: Color3, quality: number?)
 	WandController.onGlyph(character, glyphId, color, quality)
@@ -684,6 +684,8 @@ function FxController.start()
 			onDeploy(...)
 		elseif kind == "glyph" then
 			onGlyph(...)
+		elseif kind == "glyphFail" then
+			WandController.onGlyphFail(...)
 		elseif kind == "dash" then
 			onDash(...)
 		elseif kind == "shatter" then

@@ -17,8 +17,8 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
-local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local AudioController = require(script.Parent.AudioController)
@@ -34,7 +34,7 @@ local slots: {
 		button: TextButton,
 		cooldown: Frame,
 		cooldownText: TextLabel,
-		icon: TextLabel,
+		icon: Frame,
 		name: TextLabel,
 		stars: TextLabel,
 		stroke: UIStroke,
@@ -131,12 +131,44 @@ end
 
 -- Glyph cards above the hotbar: what to draw for each spell you can ready.
 -- In a match that is your match spellbook; elsewhere your loadout (your
--- element's base spells and the crate spells you equipped).
--- A card shows the spell's cooldown while it recharges. Tapping a card opens
--- the drawing canvas with a preview of its shape to trace (the better you
--- follow it, the stronger the spell: Spells/Quality).
+-- element's base spells and the crate spells you equipped). Each card is a
+-- small spell card in the canvas's style: a band of the spell's colour and
+-- its sigil (UI/Sigil). A card shows the spell's cooldown while it recharges.
+-- Tapping a card opens the drawing canvas with a preview of its shape to
+-- trace (the better you follow it, the stronger the spell: Spells/Quality);
+-- while you trace it the card lifts and its sigil turns (setTracing).
 local glyphRow: Frame
-local glyphCards: { [string]: { card: Frame, name: TextLabel, cover: TextLabel } } = {}
+type WordCard = {
+	card: Frame,
+	name: TextLabel,
+	cover: TextLabel,
+	sigil: Frame,
+	stroke: UIStroke,
+	scale: UIScale,
+	color: Color3,
+	hovered: boolean,
+}
+local glyphCards: { [string]: WordCard } = {}
+local tracing: string? = nil
+
+-- Lifts the card being traced (or hovered) and turns its sigil.
+local function styleWord(id: string, entry: WordCard)
+	local traced = tracing == id
+	entry.stroke.Color = if traced then Theme.COLORS.accent else entry.color
+	entry.stroke.Thickness = if traced then 5 else 4
+	Sigil.setSpinning(entry.sigil, traced)
+	TweenService:Create(entry.scale, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+		Scale = if traced then 1.14 elseif entry.hovered then 1.07 else 1,
+	}):Play()
+end
+
+-- The spell whose canvas is open (nil when it closes); DrawController calls it.
+function HudController.setTracing(spellId: string?)
+	tracing = spellId
+	for id, entry in glyphCards do
+		styleWord(id, entry)
+	end
+end
 
 local function refreshWords()
 	for _, entry in glyphCards do
@@ -152,22 +184,34 @@ local function refreshWords()
 				Name = def.id,
 				Size = UDim2.fromOffset(62, 74),
 				LayoutOrder = order,
-				BackgroundTransparency = 0.2,
+				BackgroundTransparency = 0.1,
 			})
 			Theme.corner(card, 10)
 			-- Crate spells are outlined (and drawn) in their rarity colour.
-			Theme.stroke(card, color, 4)
+			local stroke = Theme.stroke(card, color, 4)
 			Theme.rim(card, 4, 10)
-			GlyphView.create(card, def.glyph, 46, color, { Position = UDim2.fromOffset(8, 2) })
+			local scale = Instance.new("UIScale")
+			scale.Parent = card
+			local band = Theme.frame(card, {
+				Name = "Band",
+				Size = UDim2.new(1, 0, 0, 26),
+				BackgroundColor3 = color,
+			})
+			Theme.corner(band, 10)
+			local sigil = Sigil.create(card, def.glyph, 44, color, {
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 4),
+			})
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
-				Position = UDim2.new(0, 2, 1, -18),
+				Position = UDim2.new(0, 2, 1, -19),
 			})
 			local cover = Theme.label(card, "", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundColor3 = Color3.new(0, 0, 0),
 				BackgroundTransparency = 1,
-				TextColor3 = Theme.COLORS.bad,
+				TextColor3 = Theme.COLORS.onDark,
+				TextStrokeTransparency = 0.3,
 				ZIndex = 4,
 			})
 			Theme.corner(cover, 10)
@@ -178,10 +222,31 @@ local function refreshWords()
 			hit.Size = UDim2.fromScale(1, 1)
 			hit.ZIndex = 6
 			hit.Parent = card
+			local entry: WordCard = {
+				card = card,
+				name = name,
+				cover = cover,
+				sigil = sigil,
+				stroke = stroke,
+				scale = scale,
+				color = color,
+				hovered = false,
+			}
 			hit.Activated:Connect(function()
 				ClientState.DrawRequested:Fire(id)
 			end)
-			glyphCards[id] = { card = card, name = name, cover = cover }
+			hit.MouseEnter:Connect(function()
+				entry.hovered = true
+				styleWord(id, entry)
+			end)
+			hit.MouseLeave:Connect(function()
+				entry.hovered = false
+				styleWord(id, entry)
+			end)
+			glyphCards[id] = entry
+			if tracing == id then
+				styleWord(id, entry)
+			end
 		end
 	end
 end
@@ -241,12 +306,12 @@ local function buildHotbar(root: Frame)
 		stroke.Thickness = 4
 		local scale = Instance.new("UIScale")
 		scale.Parent = button
-		-- A soft round "bubble" of the spell's colour behind the icon, shown on
+		-- A soft round "bubble" of the spell's colour behind the sigil, shown on
 		-- the equipped slot.
 		local bubble = Theme.frame(button, {
 			Name = "Bubble",
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.36),
+			Position = UDim2.new(0.5, 0, 0, 26),
 			Size = UDim2.fromScale(0.86, 0.86),
 			BackgroundTransparency = 1,
 		})
@@ -259,15 +324,19 @@ local function buildHotbar(root: Frame)
 			Position = UDim2.fromOffset(4, 2),
 			TextColor3 = Theme.COLORS.subtext,
 		})
-		local icon = Theme.label(button, "", {
-			Name = "Glyph",
-			Size = UDim2.new(1, 0, 0.45, 0),
-			Position = UDim2.fromScale(0, 0.08),
-		})
+		-- The spell's sigil (UI/Sigil), rebuilt when the slot changes.
+		local icon = Instance.new("Frame")
+		icon.Name = "SigilHolder"
+		icon.BackgroundTransparency = 1
+		icon.AnchorPoint = Vector2.new(0.5, 0)
+		icon.Position = UDim2.new(0.5, 0, 0, 6)
+		icon.Size = UDim2.fromOffset(40, 40)
+		icon.ZIndex = 2
+		icon.Parent = button
 		local name = Theme.label(button, "", {
 			Name = "SpellName",
-			Size = UDim2.new(1, -6, 0.3, 0),
-			Position = UDim2.new(0, 3, 0.55, 0),
+			Size = UDim2.new(1, -6, 0.26, 0),
+			Position = UDim2.new(0, 3, 0.6, 0),
 		})
 		local stars = Theme.label(button, "", {
 			Name = "Quality",
@@ -275,7 +344,8 @@ local function buildHotbar(root: Frame)
 			Size = UDim2.fromOffset(40, 14),
 			Position = UDim2.new(1, -3, 0, 3),
 			TextXAlignment = Enum.TextXAlignment.Right,
-			ZIndex = 2,
+			TextStrokeTransparency = 0.2,
+			ZIndex = 5,
 		})
 		local cooldown = Theme.frame(button, {
 			Name = "Cooldown",
@@ -329,12 +399,12 @@ local function refreshHotbar()
 	for i, slot in slots do
 		local id = ClientState.hand[i]
 		local def = id and SpellDefinitions.get(id)
+		slot.icon:ClearAllChildren()
 		if def then
 			local color = Elements.color(def.element)
 			slot.button.Visible = true
-			slot.icon.Text = ""
-			slot.icon.TextColor3 = color
-			slot.icon.TextStrokeTransparency = 0
+			local sigil = Sigil.create(slot.icon, def.glyph, 40, SpellCard.colorOf(def.id))
+			Sigil.setSpinning(sigil, i == ClientState.readiedSlot)
 			slot.name.Text = def.name
 			slot.name.TextColor3 = Theme.COLORS.text
 			-- How well this copy was drawn: 1 to 4 stars.
@@ -359,7 +429,10 @@ local function refreshHotbar()
 			-- Empty slot: shows (dimmed) which spell drawing fills it with.
 			local waiting = SpellDefinitions.get(ClientState.drawableSpells()[i] or "")
 			slot.button.Visible = true
-			slot.icon.Text = ""
+			if waiting then
+				-- Its shape, unlit: draw it to fill the slot.
+				Sigil.create(slot.icon, waiting.glyph, 40, Theme.COLORS.grey)
+			end
 			slot.stars.Text = ""
 			slot.name.Text = if waiting then waiting.name else ""
 			slot.name.TextColor3 = Theme.COLORS.subtext
