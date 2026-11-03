@@ -66,6 +66,11 @@ local MAX_DEBRIS = 120
 -- A bolt whose visual has `model` is drawn with that imported model
 -- (ReplicatedStorage.Models) instead of a plain shape. Its width is the
 -- spell's visual size times this factor (default 1).
+-- Seconds a bolt takes to swell from a small spark to full size as it leaves
+-- the caster. Turret bullets are born full size.
+local BOLT_GROW = 0.25
+local BOLT_GROW_FROM = 0.2
+
 local BOLT_WIDTH: { [string]: number } = {
 	Fireball = 1.6,
 	WaterBubble = 1.3,
@@ -82,6 +87,8 @@ type Bolt = {
 	born: number,
 	fxKey: string?,
 	color: Color3,
+	baseScale: number, -- the model's full scale, or 1 for a plain shape
+	baseSize: Vector3, -- a plain shape's full size
 }
 
 local bolts: { [number]: Bolt } = {}
@@ -145,6 +152,15 @@ local function onProjectile(
 		part = shape
 	end
 	SpellVfx.decorateBolt(part :: BasePart, fxKey, visual.color)
+	local baseScale = if model then model:GetScale() else 1
+	local baseSize = (part :: BasePart).Size
+	if fxKey ~= "Bullet" then
+		if model then
+			model:ScaleTo(baseScale * BOLT_GROW_FROM)
+		else
+			(part :: BasePart).Size = baseSize * BOLT_GROW_FROM
+		end
+	end
 	bolts[id] = {
 		part = part :: BasePart,
 		model = model,
@@ -155,6 +171,8 @@ local function onProjectile(
 		born = os.clock(),
 		fxKey = fxKey,
 		color = visual.color,
+		baseScale = baseScale,
+		baseSize = baseSize,
 	}
 end
 
@@ -588,6 +606,16 @@ local function step(dt: number)
 		local travelled = math.min((now - bolt.born) * bolt.speed, bolt.range)
 		local position = bolt.origin + bolt.direction * travelled
 		local facing = CFrame.lookAt(position, position + bolt.direction)
+		-- Swells to full size over its first moments (turret bullets skip this).
+		local age = now - bolt.born
+		if age < BOLT_GROW + dt and bolt.fxKey ~= "Bullet" then
+			local grow = BOLT_GROW_FROM + (1 - BOLT_GROW_FROM) * math.min(age / BOLT_GROW, 1)
+			if bolt.model then
+				bolt.model:ScaleTo(bolt.baseScale * grow)
+			else
+				bolt.part.Size = bolt.baseSize * grow
+			end
+		end
 		if bolt.model then
 			bolt.model:PivotTo(facing)
 		else

@@ -412,7 +412,7 @@ features:
 
   - id: cast_animations
     summary: Every move has a cast pose; clients play it on the caster with a runtime KeyframeSequence.
-    data: src/shared/Spells/CastPoses.luau (POSES: one pose per spell, e.g. Fireball, Slash, Slice, Heave, GroundPunch, Stomp, Fan, Spin, Cyclone, Call; BEATS: the body effect on a pose - orb, trail, stomp, gather, swirl, splash, push)
+    data: src/shared/Spells/CastPoses.luau (POSES: one pose per spell, e.g. Fireball, Slash, Slice, Heave, GroundPunch, Stomp, Fan, Spin, Cyclone, Call; BEATS: the body effect on a pose - orb, trail, stomp, gather, swirl, splash, push; SWELLS: the wind-up ball or bubble that grows before the spell; projectiles also grow in, FxController BOLT_GROW)
     player: src/client/Fx/CastAnimations.luau (KeyframeSequenceProvider:RegisterKeyframeSequence -> Animator at Action3 priority; R15 arms, elbows, waist lean and twist, legs; R6 arm and leg swing)
     trigger: Fx "cast" -> FxController.onCast -> SpellVfx.castAnimation (pose + SpellVfx.castBeat; the beat's cue plays at beat.at) (.. SpellRegistry.animationFor(spell), channel seconds)
     notes: "Motor6D.C0 is read-only at runtime, so poses are animations, not C0 tweens; a channelled spell (Earthquake) holds its pose for stats.delay"

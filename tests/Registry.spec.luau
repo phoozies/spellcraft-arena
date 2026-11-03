@@ -137,6 +137,26 @@ return function(t: any)
 			end
 		end)
 
+		t.it(
+			"every wind-up swell rides on a real pose, ends inside it, and has no beat that already grows",
+			function()
+				for name, spec in CastPoses.SWELLS do
+					local keys = CastPoses.POSES[name]
+					t.expect(keys ~= nil).toBeTruthy()
+					t.expect(table.find(CastPoses.SWELL_PLACES, spec.where) ~= nil).toBeTruthy()
+					local length = 0
+					for _, key in keys do
+						length += key.d + (key.hold or 0)
+					end
+					t.expect(spec.at > 0 and spec.at <= length).toBeTruthy()
+					t.expect(spec.size > 0).toBeTruthy()
+					local beat = CastPoses.BEATS[name]
+					t.expect(beat == nil or (beat.kind ~= "orb" and beat.kind ~= "gather"))
+						.toBeTruthy()
+				end
+			end
+		)
+
 		t.it("every impact style names a known hit kind", function()
 			for _, style in VfxStyles.STYLES do
 				if style.hit then
