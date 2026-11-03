@@ -38,7 +38,7 @@ src/shared  → ReplicatedStorage.Shared      pure data + logic used by both sid
   Util/Ballistic              launch velocity for an arc that lands on a point (rescues)
   Util/Pit                    is a point walled in by terrain on every side (pit rescue)
   Util/PracticeZone           is a position inside a Training Grove (the hub's draw zone)
-  Util/WandAir                wand geometry: the grip in the hand, the air canvas, screen/glyph points -> studs
+  Util/WandAir                wand geometry: the grip in the hand, the air canvas (upright, facing the drawer), screen/glyph points -> studs, checks for relayed stroke data
 
 src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
   Services/
@@ -49,7 +49,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     DestructibleService single damage path, health bars, knockouts, push
     HandService         held spell copies (one per spell; hotbar slot N = Nth loadout spell), match spellbook, readied slot, per-spell cast cooldowns
     DashService         the dash: validates the cooldown and state, tells the client which way to go, fires the dash Fx
-    WandService         welds every player's wand to the right hand, tints it with their element, keeps the Drawing attribute (DrawingState remote; cosmetic)
+    WandService         welds every player's wand to the right hand, tints it with their element, keeps the Drawing / DrawLook attributes (DrawingState remote), relays live strokes to nearby players (AirStroke; cosmetic)
     CastService         validates casts, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon
     SpellInputService   DrawSpell remote → draw gate (fights and the Training Grove) → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
@@ -107,6 +107,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   UI/Theme              the studded-Roblox look: studded pastel panels and buttons, bevels, dark ink text
   UI/Responsive         keeps every UIScale matched to the screen size
   UI/SpellCard          the spell card used by the Spellbook, crate reel, and loadout
+  UI/Sigil              a spell's sigil: its shape in glowing ink in a small magic circle (cards, hotbar, Spellbook, canvas banner)
 
 src/character → StarterPlayer.StarterCharacterScripts
   Health.server.luau    empty: replaces Roblox's default regen (HubService does the hub regen)

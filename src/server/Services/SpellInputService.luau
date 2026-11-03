@@ -6,7 +6,9 @@
 --   ──► GlyphRecognizer (only the shapes of the player's loadout) ──► the
 --   spell drawn with that shape ──► HandService.grant (hotbar copy; only
 --   loadout spells work, in the hub and in matches)
---   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback
+--   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback,
+--   and Fx "glyph" (readied) or "glyphFail" (fizzled) to everyone, so the stroke
+--   they watched being drawn in the air (WandService relays it) lands or crumbles
 --
 -- Quality: the recognizer's score for the stroke becomes a 0..1 quality
 -- (Spells/Quality) stored on the copy; the better the stroke follows the
@@ -103,6 +105,16 @@ local function sanitize(raw: any): { Vector2 }?
 	return points
 end
 
+-- Tells the drawer their drawing failed, and everyone that its stroke in the
+-- air crumbles.
+local function reject(player: Player, glyphId: string?)
+	resultRemote:FireClient(player, nil, glyphId)
+	local character = player.Character
+	if character then
+		fxRemote:FireAllClients("glyphFail", character)
+	end
+end
+
 -- Recognizes a stroke and readies the spell. Returns the granted spell id.
 function SpellInputService.submitStroke(
 	player: Player,
@@ -113,7 +125,7 @@ function SpellInputService.submitStroke(
 		local allowed, reason = drawGate(player)
 		if not allowed then
 			toastRemote:FireClient(player, reason or "You can't draw right now.", "error")
-			resultRemote:FireClient(player, nil, nil)
+			reject(player)
 			return nil
 		end
 	end
@@ -129,7 +141,7 @@ function SpellInputService.submitStroke(
 	local loadout = ElementService.loadout(player)
 	if #loadout == 0 then
 		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "error")
-		resultRemote:FireClient(player, nil, nil)
+		reject(player)
 		return nil
 	end
 	local spellByGlyph: { [string]: string } = {}
@@ -150,20 +162,20 @@ function SpellInputService.submitStroke(
 	if spellId and target and spellId ~= target.id then
 		-- Drew a different shape than the one on the card.
 		toastRemote:FireClient(player, `That isn't a {target.name}. Follow the shape!`, "error")
-		resultRemote:FireClient(player, nil, glyphId)
+		reject(player, glyphId)
 		return nil
 	end
 	if not spellId then
 		local hints = Config.FIZZLE_HINTS
 		toastRemote:FireClient(player, hints[math.random(1, #hints)], "error")
-		resultRemote:FireClient(player, nil, nil)
+		reject(player)
 		return nil
 	end
 	local quality = Quality.fromScore(score)
 	local ok, message = HandService.grant(player, spellId, nil, quality)
 	if not ok then
 		toastRemote:FireClient(player, message or "Fizzle!", "error")
-		resultRemote:FireClient(player, nil, glyphId)
+		reject(player, glyphId)
 		return nil
 	end
 	TelemetryService.onboarding(player, "FirstSpellDrawn")

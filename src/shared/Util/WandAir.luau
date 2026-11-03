@@ -4,6 +4,8 @@
 -- can check it:
 --   grip       where the wand sits in the right hand
 --   frame      the "air canvas" in front of a character where a drawing shows
+--   facing     that canvas standing upright, facing where the drawer looks
+--   cleanLook / cleanPoints   validate relayed drawing data (WandService)
 --   fromScreen a point of the on-screen stroke -> studs on the air canvas
 --   fromGlyph  a point of a glyph shape (Spells/Glyphs, 0..1 box) -> studs
 
@@ -42,6 +44,50 @@ function WandAir.frame(root: Vector3, look: Vector3, right: Vector3, up: Vector3
 	local r = if right.Magnitude > 1e-3 then right.Unit else Vector3.new(1, 0, 0)
 	local u = if up.Magnitude > 1e-3 then up.Unit else Vector3.yAxis
 	return CFrame.fromMatrix(center, r, u)
+end
+
+-- The upright air canvas (and magic circle) of a player drawing while facing
+-- `look`: the same for the drawer and everyone watching, so a stroke relayed
+-- as canvas studs lands in the same place on every screen.
+function WandAir.facing(root: Vector3, look: Vector3): CFrame
+	local flat = Vector3.new(look.X, 0, look.Z)
+	flat = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+	return WandAir.frame(root, flat, flat:Cross(Vector3.yAxis), Vector3.yAxis)
+end
+
+-- A facing direction from the network: a finite Vector3 with some horizontal
+-- length, returned flattened to a unit vector, or nil.
+function WandAir.cleanLook(raw: any): Vector3?
+	if typeof(raw) ~= "Vector3" then
+		return nil
+	end
+	local flat = Vector3.new(raw.X, 0, raw.Z)
+	local length = flat.Magnitude
+	if length ~= length or length == math.huge or length < 1e-3 then
+		return nil
+	end
+	return flat / length
+end
+
+-- A batch of air-canvas points from the network (1 to `max` finite Vector2s
+-- inside the canvas's clamp), or nil.
+function WandAir.cleanPoints(raw: any, max: number): { Vector2 }?
+	if typeof(raw) ~= "table" or #raw < 1 or #raw > max then
+		return nil
+	end
+	local limit = Config.WAND.AIR_SIZE * 0.75 + 1e-3
+	local points: { Vector2 } = {}
+	for i = 1, #raw do
+		local p = raw[i]
+		if typeof(p) ~= "Vector2" or p.X ~= p.X or p.Y ~= p.Y then
+			return nil
+		end
+		if math.abs(p.X) > limit or math.abs(p.Y) > limit then
+			return nil
+		end
+		points[i] = p
+	end
+	return points
 end
 
 -- A stroke point in screen pixels -> (right, up) studs on the air canvas.

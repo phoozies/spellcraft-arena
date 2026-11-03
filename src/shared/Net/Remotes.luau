@@ -14,7 +14,8 @@ local FOLDER_NAME = "Remotes"
 local DEFINITIONS: { [string]: string } = {
 	-- Client -> Server
 	DrawSpell = "(points: {Vector2}, spellId: string?) a stroke drawn on screen (screen-height units); the server recognizes it and scores how well it follows the shape. spellId = the spell card being traced",
-	DrawingState = "(on: boolean) the drawing canvas opened or closed; the server sets the character's Drawing attribute so everyone sees the wand raised (cosmetic, rate limited)",
+	DrawingState = "(on: boolean, look: Vector3?) the drawing canvas opened or closed (look = the way the drawer faces); the server sets the character's Drawing and DrawLook attributes so everyone sees the wand raised and the magic circle (cosmetic, rate limited)",
+	AirStroke = "(kind: string, data: {Vector2} | Color3?) the live stroke being drawn: begin (data = its ink colour) / points (data = air-canvas studs) / end / cancel. The server checks it (canvas open, sizes, rate) and relays it to nearby players as (character, kind, data?) so they watch the shape being drawn (cosmetic)",
 	SelectSlot = "(slot: number) ready the spell in a hand slot (hotbar tap/keys)",
 	CastSpell = "(target: Vector3, rotationY: number?) cast the readied spell at a point",
 	PickDraft = "(index: number) choose one of the offered draft cards",

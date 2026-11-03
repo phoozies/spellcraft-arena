@@ -38,6 +38,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local WandAir = require(ReplicatedStorage.Shared.Util.WandAir)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
@@ -348,11 +349,15 @@ end
 
 local function updateBanner(def: Types.SpellDef?)
 	bannerIcon:ClearAllChildren()
+	local props = {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+	}
+	local sigil = if def
+		then Sigil.create(bannerIcon, def.glyph, 48, inkColor, props)
+		else Sigil.blank(bannerIcon, 48, inkColor, "✦", props)
+	Sigil.setSpinning(sigil, true)
 	if def then
-		GlyphView.create(bannerIcon, def.glyph, 44, inkColor, {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-		})
 		bannerTitle.Text = `Trace {def.name}`
 		bannerHint.Text = `Closer = stronger   [{ClientState.drawKeyName()}] cancel`
 	else
@@ -432,6 +437,7 @@ local function setActive(on: boolean, spellId: string?)
 	if wasActive ~= on then
 		WandController.setDrawing(on)
 	end
+	HudController.setTracing(if def then def.id else nil)
 	drawButton.BackgroundColor3 = if on then Theme.COLORS.accent else Theme.COLORS.panelLight
 end
 
@@ -553,8 +559,10 @@ local function finishStroke()
 		return
 	end
 	ClientState.drawReadyAt = now + Config.DRAW_COOLDOWN
-	Remotes.get("DrawSpell"):FireServer(points, if target then target.id else nil)
+	-- The rest of the live stroke goes first, so watchers have all of it
+	-- before the verdict lands.
 	WandController.strokeSent()
+	Remotes.get("DrawSpell"):FireServer(points, if target then target.id else nil)
 
 	-- Close the canvas but keep the line until the server says what it was.
 	local sent = ink

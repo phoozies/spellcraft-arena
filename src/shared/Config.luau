@@ -42,6 +42,12 @@ local Config = {
 	--   TRACE_SECONDS  how long other players' glyphs take to trace in the air
 	--   DRAW_STATE_RATE  least seconds between DrawingState messages a client
 	--                  may send (more are ignored)
+	--   CIRCLE_RADIUS  studs: the magic circle behind a drawing in the air
+	--   STROKE_SEND_RATE  seconds between batches of a live stroke sent to the
+	--                  server (relayed so others watch you draw)
+	--   STROKE_BATCH   most points in one batch; STROKE_MAX_POINTS per stroke
+	--   STROKE_RATE    least seconds between batches the server accepts
+	--   RELAY_RANGE    studs: players farther away aren't sent your stroke
 	WAND = {
 		MODEL = "Wand",
 		TILT = 30,
@@ -50,6 +56,12 @@ local Config = {
 		AIR_HEIGHT = 1.6,
 		TRACE_SECONDS = 0.35,
 		DRAW_STATE_RATE = 0.1,
+		CIRCLE_RADIUS = 3.7,
+		STROKE_SEND_RATE = 0.1,
+		STROKE_BATCH = 24,
+		STROKE_MAX_POINTS = 300,
+		STROKE_RATE = 0.05,
+		RELAY_RANGE = 250,
 	},
 
 	-- Movement & aiming. Players move faster than Roblox's default (16) to

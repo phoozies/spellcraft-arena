@@ -4,6 +4,17 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (watch others draw, magic circles)
+- **Everyone near you watches you draw.** Your stroke is streamed while you draw (new `AirStroke` remote, small batches every `Config.WAND.STROKE_SEND_RATE`); the server checks it (canvas open, batch size, point range, a rate bucket, a cap per stroke; `WandAir.cleanPoints`) and relays it to players within `RELAY_RANGE`, whose screens write the same glowing ribbon in the air in front of you, in your ink colour.
+- **A magic circle opens in the air** in front of anyone drawing: a faint glass disc, two rings of light, rune stones, and a six-pointed star turning against them; it spins up fast as it opens, then settles. It stands upright facing where the drawer looks (`DrawingState` now sends the facing, kept as the `DrawLook` attribute; `WandAir.facing`), and the stroke is drawn on it. It stays open until the drawing's verdict: readied flashes it (and the ribbon) in the quality colour and pulls the ribbon into the wand; a fizzle crumbles the ribbon (new Fx `glyphFail` from `SpellInputService`). Your own circle opens at once, without waiting for the server.
+
+### Changed (spell UI)
+- **Every spell now shows as a sigil** (`UI/Sigil`): its shape in glowing ink (new `GlyphView.glow`: halo, glow, core and shine, all opaque so nothing beads) inside a small night-blue magic circle ringed in the spell's colour with rune stones, the drawing canvas's look.
+- **Spell cards** (Spellbook, loadout, collection, Spell Crate reel) get a band of the spell's colour, the sigil, the name, and a rarity or school pill; unwon spells are grey with a "?" sigil.
+- **Hotbar slots show the spell's sigil** (they showed only the name); the readied slot's rune ring turns, and an empty slot shows the grey sigil of the spell that fills it.
+- **The cards above the hotbar** match: a colour band and sigil; hovering lifts a card, and the card you are tracing lifts further with its accent outline and a spinning sigil.
+- The Spellbook's spell picture, the canvas banner, and the hub's element shrines use the glowing sigil ink too.
+
 ### Added (the wand, 3D drawing)
 - **Every player holds a wand.** A new `Wand` block model (wood grip and shaft, gold bands and prongs, a crystal tip; `tools/blender/block_models.py`, `assets/models/blocks/Wand.fbx`) is welded to the right hand on every spawn by the new `WandService`. Its crystal, halo and runes take your element's colour and change when you switch element. It can't collide or be hit. Without the model a plain stick is used.
 - **Drawing happens in the world.** Opening the canvas raises your wand for everyone (`CastPoses.WandDraw`, held until the canvas closes): the tip glows and sparks, and a rune circle turns at your feet. Your stroke is written in the air in front of you as a glowing ribbon of light, fed by a curved beam from the wand tip. When the server recognizes it, the ribbon flashes in its quality colour and is pulled into the wand with a burst and a flick (`WandFlick`); a failed drawing turns red and crumbles in a puff of smoke. Other players see your wand trace the clean glyph in the air, then absorb it (Fx `glyph` now carries the quality). This replaces the glyph that popped over your head.

@@ -9,6 +9,7 @@ local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
+local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 
 -- Straight-line interpolation so a stroke has many points, like a real drag.
 local function densify(points: { Vector2 }, perSegment: number): { Vector2 }
@@ -266,5 +267,30 @@ return function(t)
 				t.expect(hits / total >= 0.95).toBeTruthy()
 			end
 		)
+	end)
+
+	t.describe("Glyph pictures", function()
+		t.it("draws every spell's shape as glowing ink, core over glow", function()
+			local night = Color3.fromRGB(30, 20, 62)
+			for _, def in SpellDefinitions.list do
+				local holder = GlyphView.glow(nil :: any, def.glyph, 60, def.visual.color, night)
+				t.expect(holder ~= nil).toBeTruthy()
+				local view = holder :: Frame
+				local counts: { [string]: number } = {}
+				local order: { string } = {}
+				for _, piece in view:GetChildren() do
+					counts[piece.Name] = (counts[piece.Name] or 0) + 1
+					if order[#order] ~= piece.Name then
+						table.insert(order, piece.Name)
+					end
+				end
+				-- Four passes of the same line, widest first so the core sits on top.
+				t.expect(table.concat(order, ",")).toBe("Halo,Glow,Core,Shine")
+				t.expect(counts.Halo == counts.Core and counts.Core == counts.Shine).toBeTruthy()
+				t.expect(counts.Core >= 1).toBeTruthy()
+				view:Destroy()
+			end
+			t.expect(GlyphView.glow(nil :: any, "no-such-shape", 60, night, night)).toBe(nil)
+		end)
 	end)
 end
