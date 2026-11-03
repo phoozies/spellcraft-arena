@@ -50,9 +50,9 @@ glossary:
 
 bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
-  server_order: [PlayerDataService, TelemetryService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, DashService, SpellInputService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
+  server_order: [PlayerDataService, TelemetryService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, HandService, CastService, DashService, SpellInputService, WandService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, CrateService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
-  client_order: [ClientState, LightingController, AudioController, HudController, PartyController, MapVoteController, MenuController, CrateController, DraftController, PlacementController, ReticleController, CursorController, DrawController, InputController, EffectsController, JuiceController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
+  client_order: [ClientState, LightingController, AudioController, HudController, PartyController, MapVoteController, MenuController, CrateController, DraftController, PlacementController, ReticleController, CursorController, WandController, DrawController, InputController, EffectsController, JuiceController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
   rules:
     - init() wires state and looks up remotes; no yielding cross-service calls
     - start() connects events and starts loops
@@ -153,7 +153,7 @@ features:
       pillar: (center, radius, color, elementId, spellId) an element column erupts (Fire Pillar, Water Nebula, Earthquake); the spell's visual.model is the column's body unless the spell channels
       rise: (center, radius, delay, color, kind, height, modelName?) a boulder or stone pillar rises (Earth Punch, Earth Pillar)
       quake: (center, radius, duration, color, modelName?) Earthquake wind-up
-      glyph: (character, glyphId, color) the drawn glyph pops over a head
+      glyph: (character, glyphId, color, quality) the caster's wand traces the glyph in the air and pulls it in (feature wand; WandController.onGlyph)
     aura: "Buff spells (Fire Boost, Water Body, Air Boost, Air Shield): SpellVfx.buffAura gives the caster rising/swirling particles, an outline Highlight, and orbiting blocks for stats.duration (VfxStyles.AURAS)"
     models_in_effects: "pillar (Fire Pillar, Water Nebula) grows the block model as the column; rise draws the boulder/spike model (Earth Punch, Earth Pillar); quake spreads the Earthquake crack model; all fall back to the plain shapes"
     spin: "parts/models tagged SpinFx spin locally"
@@ -363,6 +363,7 @@ features:
       s2c: [GlyphResult] # (spellId?, glyphId?, quality?)
     config: [DRAW_COOLDOWN, DRAW_MAX_POINTS, DRAW_MAX_COORD, DRAW_MAX_SECONDS, DEFAULT_DRAW_KEY, QUALITY]
     client_ui: HudController glyph cards (your loadout, outlined by rarity and drawn in the rarity colour with a dark rim (Theme.rim); tapping one opens the canvas with a guide), MenuController spellbook spell cards, hub shrines/banners (UI/GlyphView), draw button + canvas (DrawController)
+    canvas_look: "DrawController: a two-way vignette over the world (so the wand's air drawing shows through), a turning rune circle in the spell's colour, a pastel banner with the spell's glyph, a guide drawn opaque inside CanvasGroups (no beads), a comet tracer, a three-layer ink line (glow group, core, shine) in the spell's colour with a pulsing pen orb and sparks; success flashes the quality colour and collapses the line, failure shakes it red. Strokes start from UserInputService (not the canvas frame) and skip presses on buttons"
     preview: "tapping a glyph card (ClientState.DrawRequested) opens the canvas for that spell: its shape is drawn faint in the middle (GlyphView.create) with a dot tracing it; DrawSpell then carries the spell id and the server only accepts THAT shape"
     quality: "the recognizer score becomes a 0..1 quality (Spells/Quality.fromScore, Config.QUALITY); each hand copy stores it (HandService.qualities); CastService applies Quality.apply to the spell def at cast time: power (damage, heal, shield, health, hazardDps, damageMult bonus) x0.85..1.5, size (radius) x0.9..1.25, time (duration, statusDuration, lifetime) x0.85..1.3; cooldown, range, and speed never change. Tiers Rough/Good/Great/Perfect show as 1-4 stars on the hotbar slot"
     responsive: "UI/Responsive.bind keeps every UIScale matched to the screen (1280x720 design, 960x540 for phones, capped so a 700x470 panel always fits); used by the HUD and the draw button"
@@ -380,7 +381,7 @@ features:
   - id: audio_and_vfx
     summary: Every spell has a cast and an impact sound plus particle effects; all local to each client.
     audio: src/shared/Audio/Cues.luau (cue table) + src/client/Controllers/AudioController.luau (play, falloff, throttle, sound-effects switch); spells name cues in SpellDefinitions `sfx = { cast, impact }`
-    vfx: src/client/Fx/SpellVfx.luau (glyphEmblem, pillar, rise, quake, glyph imprint in castAnimation, per-spell bolt styles) driven from FxController (Fx kinds pillar, rise, quake, glyph); effects are chosen by spell stats (pillar, rise, channel), not by name
+    vfx: src/client/Fx/SpellVfx.luau (pillar, rise, quake, glyph imprint in castAnimation, per-spell bolt styles) driven from FxController (Fx kinds pillar, rise, quake, glyph); effects are chosen by spell stats (pillar, rise, channel), not by name
     mood: src/client/Controllers/LightingController.luau (warm afternoon in the hub vs the arenas' neutral daylight)
     invariants: [a cue with an empty id is silent, every effect works without imported models]
 
@@ -389,7 +390,7 @@ features:
     reader: "src/shared/ModelKit.luau (get, clone(name, \"effect\"|\"solid\"|\"attached\", scale?), isBlock, blockNames): place models first, then block models"
     pipeline: Blender (scene in centimeters, 1 BU = 1 cm) -> assets/models/*.fbx -> Studio Import 3D -> tools/prepare-models.luau (scale, pivot, colors, collision) -> save the place
     models: [Fireball, WaterBubble, Gust, Zap, Heal, BlackHole, Turret, Arena, Grimoire, Crate]   # imported meshes in the place; RockWall is still imported but no spell names it (Earth Wall uses the EarthWall block model)
-    block_models: "see feature block_models: 27 generated blocky models that exist in every place"
+    block_models: "see feature block_models: 28 generated blocky models that exist in every place"
     docs: assets/models/README.md
     invariants: [every use has a plain-shape fallback, model part names are the contract with prepare-models and tests/Models.spec.luau]
 
@@ -414,7 +415,7 @@ features:
     source_of_truth: "tools/blender/block_models.py (Python spec of blocks: position, size, colour, material, rotation, shape)"
     outputs: [src/shared/Models/BlockModels.luau (generated data; never hand-edit), assets/models/blocks/*.fbx, assets/models/source/BlockModels.blend]
     reader: ModelKit.get/clone (builds Parts on first use; an imported place model of the same name wins)
-    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, EarthWall, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue, BattlegroundPortal, ArenaPortal]
+    models: [FireSlash, WaterSlice, RockThrow, WaterWave, Tornado, FireBoost, WaterBody, AirBoost, AirShield, FirePillar, WaterNebula, EarthPunch, EarthPillar, Earthquake, EarthWall, TreeOak, TreePine, TreeBirch, Cactus, TrainingDummy, Wand, ElementCrate, ElementCrateOpen, QuestChest, QuestChestOpen, WizardStatue, BattlegroundPortal, ArenaPortal]
     used_by: "bolts (FxController), buff emblems (Buff -> modelPop), columns/boulders/cracks (SpellVfx), the Earth Wall (Placeable.buildModelWall), the hub portals (InkwellPlaza), scenery (Maps/Battleground, Maps/InkwellPlaza), dummies (HubService), crate and chest (InkwellPlaza), statue (Maps/SparringArena)"
     conventions: "blocky Parts, flat colours, Roblox materials; effect models carry an invisible Root (PrimaryPart); `base` models stand on y = 0, others are centered; forward = -Z"
     tests: tests/Models.spec.luau
@@ -492,6 +493,24 @@ features:
     summary: On touch-only devices, fights hide the side menu, wallet, party button and panel, kill feed, and boost icons.
     client: src/client/Controllers/MobileController.luau (ClientState.PresenceChanged); the hotbar, spell cards, Draw and Dash buttons, health, match bar, and Return to Hub stay
 
+  - id: wand
+    summary: Every player holds a wand. Opening the drawing canvas raises it (everyone sees the tip glow and a rune circle turn at your feet); your stroke is written in the air in front of you as a glowing ribbon fed by a beam from the tip, and a recognized glyph flashes in its quality colour and is pulled into the wand. Other players see the clean glyph traced by your wand.
+    server: "src/server/Services/WandService.luau (equip on CharacterAdded: ModelKit.clone(Config.WAND.MODEL, 'attached') welded to RightHand / Right Arm at WandAir.grip, else a plain stick; Tip/TipGlow/Rune tinted Elements.color of the equipped element, retinted on ElementService.Changed; DrawingState remote -> character attribute Drawing)"
+    client: "src/client/Controllers/WandController.luau (watches every character's Drawing attribute: CastPoses WandDraw held + WandVfx.charge; your own stroke via strokeBegin/strokePoint/strokeSent/strokeCancel/verdict from DrawController; onGlyph from FxController for other players); src/client/Fx/WandVfx.luau (charge, ribbon, airGlyph, absorb burst, fizzle)"
+    shared: "src/shared/Util/WandAir.luau (grip, frame, fromScreen, fromGlyph, toWorld; pure); model Wand in tools/blender/block_models.py"
+    config: "Config.WAND { MODEL, TILT, AIR_DISTANCE, AIR_SIZE, AIR_HEIGHT, TRACE_SECONDS, DRAW_STATE_RATE }"
+    remotes:
+      c2s: ["DrawingState (on: boolean)"]
+    fx: "glyph (character, glyphId, color, quality): other clients trace the glyph in the air from the caster's wand (WandVfx.airGlyph) and play WandFlick + wandAbsorb; the caster's own client skips it (its live ribbon already shows)"
+    cues: [wandCharge, wandAbsorb]
+    poses: [WandDraw (held while drawing; CastAnimations.stop ends it), WandFlick]
+    rules:
+      - cosmetic only - the wand never decides anything; SpellInputService still recognizes every stroke
+      - "DrawingState: type-checked boolean; opening is rate limited (DRAW_STATE_RATE), closing is always accepted so the wand never stays raised"
+      - the wand's parts never collide, query, or touch (spells and hitboxes ignore it); without the block model a plain stick is used
+      - wand effects for characters over 250 studs from the camera are skipped (the pose still plays)
+    tests: tests/Wand.spec.luau
+
   - id: classes_planned
     summary: NOT BUILT. A second layer on top of elements (element + class); only the notes and open questions exist.
     docs: docs/CLASSES.md
@@ -545,5 +564,5 @@ features:
 
 testing:
   run: require(game.ServerScriptService.Tests.Runner)() from the Server context during a playtest
-  specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Knockback.spec.luau, tests/Maps.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/Rescue.spec.luau, tests/SpellStats.spec.luau, tests/Telemetry.spec.luau, tests/Terrain.spec.luau, tests/Vortex.spec.luau, tests/WordMatcher.spec.luau]
+  specs: [tests/Audio.spec.luau, tests/Balance.spec.luau, tests/Battleground.spec.luau, tests/Economy.spec.luau, tests/Glyphs.spec.luau, tests/Knockback.spec.luau, tests/Maps.spec.luau, tests/Models.spec.luau, tests/Npcs.spec.luau, tests/Quality.spec.luau, tests/Registry.spec.luau, tests/Rescue.spec.luau, tests/SpellStats.spec.luau, tests/Telemetry.spec.luau, tests/Terrain.spec.luau, tests/Vortex.spec.luau, tests/Wand.spec.luau, tests/WordMatcher.spec.luau]
   live_checks: ServerStorage.SpellcraftDebug:Invoke("state") / ("crate", "Spell") / ("unlockall") / ("tutorial", false) / ("wins", 3) / ("likefav", false) / ("takecoins", 250) / ("cast", {spell, target})

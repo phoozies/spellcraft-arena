@@ -14,6 +14,7 @@ Two kinds of model live here:
 | `blocks/FirePillar.fbx`, `WaterNebula.fbx`, `EarthPunch.fbx`, `EarthPillar.fbx`, `Earthquake.fbx` | zone and line effects |
 | `blocks/EarthWall.fbx` | the Earth Wall spell: a wide rectangular wall of staggered rubble (33 stones, each breaks off on its own) |
 | `blocks/TreeOak.fbx`, `TreePine.fbx`, `TreeBirch.fbx`, `Cactus.fbx` | scenery |
+| `blocks/Wand.fbx` | every player's wand (grip at the origin, pointing -Z; `Tip`, `TipGlow` and `Rune` take the element colour in game) |
 | `blocks/TrainingDummy.fbx` | Training Grove dummy |
 | `blocks/ElementCrate.fbx`, `ElementCrateOpen.fbx` | the hub crate (closed, open; the Spell Crate falls back to it) |
 | `blocks/QuestChest.fbx`, `QuestChestOpen.fbx` | Daily Quests chest (closed, open) |

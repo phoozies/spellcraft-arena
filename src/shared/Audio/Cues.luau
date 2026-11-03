@@ -157,6 +157,10 @@ local Cues: { [string]: Cue } = {
 	-- Drawing and crates (heard in your ears)
 	glyphGood = sound(TWINKLE, 0.6, false, 1, 1),
 	glyphBad = sound(TWINKLE, 0.5, false, 0.55, 0.9),
+	-- The wand (heard by everyone nearby): its tip lights up as a drawing starts,
+	-- and a finished glyph is pulled into it.
+	wandCharge = sound(TWINKLE, 0.35, true, 1.4, 0.5),
+	wandAbsorb = sound(CHIME, 0.5, true, 1.8, 0.9),
 	crateReveal = sound(CHIME, 0.7, false, 1.3, 2.5),
 	claimReward = sound(CHIME, 0.8, false, 1.5, 2),
 	reelTick = sound(HIT, 0.25, false, 2, 0.15),

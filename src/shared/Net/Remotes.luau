@@ -14,6 +14,7 @@ local FOLDER_NAME = "Remotes"
 local DEFINITIONS: { [string]: string } = {
 	-- Client -> Server
 	DrawSpell = "(points: {Vector2}, spellId: string?) a stroke drawn on screen (screen-height units); the server recognizes it and scores how well it follows the shape. spellId = the spell card being traced",
+	DrawingState = "(on: boolean) the drawing canvas opened or closed; the server sets the character's Drawing attribute so everyone sees the wand raised (cosmetic, rate limited)",
 	SelectSlot = "(slot: number) ready the spell in a hand slot (hotbar tap/keys)",
 	CastSpell = "(target: Vector3, rotationY: number?) cast the readied spell at a point",
 	PickDraft = "(index: number) choose one of the offered draft cards",

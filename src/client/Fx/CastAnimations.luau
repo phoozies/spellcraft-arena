@@ -193,4 +193,14 @@ function CastAnimations.play(character: Model, poseName: string?, extraHold: num
 	end)
 end
 
+-- Ends `poseName` early on `character` (a held pose such as WandDraw),
+-- easing back to the resting pose over `fade` seconds.
+function CastAnimations.stop(character: Model, poseName: string, fade: number?)
+	local byPose = tracks[character]
+	local track = byPose and byPose[poseName]
+	if track then
+		track:Stop(fade or 0.2)
+	end
+end
+
 return CastAnimations

@@ -32,6 +32,26 @@ local Config = {
 		TIME = { 0.85, 1.3 },
 	},
 
+	-- The wand every player holds (WandService welds the "Wand" block model to
+	-- the right hand; client Fx/WandVfx draws the spell in the air with it).
+	--   MODEL          block model name (Models/BlockModels, Blender spec)
+	--   TILT           degrees the wand leans forward from the forearm's line
+	--   AIR_DISTANCE   studs in front of the chest where a drawing appears
+	--   AIR_SIZE       studs across a full-size drawing in the air
+	--   AIR_HEIGHT     studs above the root part the drawing is centred
+	--   TRACE_SECONDS  how long other players' glyphs take to trace in the air
+	--   DRAW_STATE_RATE  least seconds between DrawingState messages a client
+	--                  may send (more are ignored)
+	WAND = {
+		MODEL = "Wand",
+		TILT = 30,
+		AIR_DISTANCE = 5,
+		AIR_SIZE = 6,
+		AIR_HEIGHT = 1.6,
+		TRACE_SECONDS = 0.35,
+		DRAW_STATE_RATE = 0.1,
+	},
+
 	-- Movement & aiming. Players move faster than Roblox's default (16) to
 	-- keep fights lively; projectiles are sped up by the same ratio and get
 	-- a bigger hitbox so they still land.

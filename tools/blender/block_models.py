@@ -316,6 +316,32 @@ model("Cactus", [
     P("CactusFlower", (0, 9.2, 0), (0.7, 0.5, 0.7), rgb(255, 120, 160), "Neon", collide=False),
 ], solid=True, base=True, note="Desert cactus")
 
+# ---------------------------------------------------------------- the wand
+# Every player's wand (WandService welds it to the right hand). The grip is at
+# the origin and the wand points forward (-Z). The crystal `Tip`, its `TipGlow`
+# halo and the `Rune` inlays are tinted with the player's element colour in
+# game; the wood and gold keep their colours.
+WAND_DARK = rgb(92, 58, 38)
+WAND_WOOD = rgb(150, 100, 62)
+WAND_GOLD = rgb(216, 166, 52)
+model("Wand", [
+    P("Pommel", (0, 0, 0.62), (0.42, 0.42, 0.42), WAND_GOLD, "SmoothPlastic", shape="Ball"),
+    P("Grip", (0, 0, 0.05), (0.36, 0.36, 1.1), WAND_DARK, "Wood"),
+    P("GripWrap", (0, 0, 0.25), (0.4, 0.4, 0.12), rgb(60, 36, 24), "Fabric"),
+    P("GripWrap", (0, 0, -0.1), (0.4, 0.4, 0.12), rgb(60, 36, 24), "Fabric"),
+    P("Band", (0, 0, -0.55), (0.44, 0.44, 0.14), WAND_GOLD, "SmoothPlastic"),
+    P("Shaft", (0, 0, -1.55), (0.26, 0.26, 1.9), WAND_WOOD, "Wood"),
+    P("Rune", (0, 0.135, -1.3), (0.1, 0.02, 0.5), rgb(255, 255, 255), "Neon"),
+    P("Rune", (0, 0.135, -1.95), (0.1, 0.02, 0.3), rgb(255, 255, 255), "Neon"),
+    P("Band", (0, 0, -2.55), (0.36, 0.36, 0.14), WAND_GOLD, "SmoothPlastic"),
+    P("Prong", (0.16, 0, -2.78), (0.08, 0.08, 0.4), WAND_GOLD, "SmoothPlastic", rot=(0, -12, 0)),
+    P("Prong", (-0.16, 0, -2.78), (0.08, 0.08, 0.4), WAND_GOLD, "SmoothPlastic", rot=(0, 12, 0)),
+    P("Prong", (0, 0.16, -2.78), (0.08, 0.08, 0.4), WAND_GOLD, "SmoothPlastic", rot=(12, 0, 0)),
+    P("Prong", (0, -0.16, -2.78), (0.08, 0.08, 0.4), WAND_GOLD, "SmoothPlastic", rot=(-12, 0, 0)),
+    P("Tip", (0, 0, -3.0), (0.34, 0.34, 0.34), rgb(255, 255, 255), "Neon", rot=(45, 45, 0)),
+    P("TipGlow", (0, 0, -3.0), (0.62, 0.62, 0.62), rgb(255, 255, 255), "Neon", t=0.65, shape="Ball"),
+], note="Every player's wand: grip at the origin, pointing forward (-Z); Tip, TipGlow and Rune take the element colour")
+
 # ---------------------------------------------------------------- props
 model("TrainingDummy", [
     P("Foot", (0, 0.25, 0), (3.4, 0.5, 3.4), rgb(120, 86, 56), "Wood", collide=True),
