@@ -20,8 +20,8 @@ local player = Players.LocalPlayer
 local CrosshairController = {}
 
 local DOT = 5
-local HINT_AIMING = "M  menu     Alt  cursor"
-local HINT_CURSOR = "Click a button     Alt  back to aiming"
+local HINT_AIMING = "M  menu     Shift  cursor"
+local HINT_CURSOR = "Click a button     Shift  back to aiming"
 
 local dot: Frame
 local hint: TextLabel

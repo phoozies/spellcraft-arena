@@ -235,8 +235,8 @@ features:
     tests: tests/Economy.spec.luau
 
   - id: battleground
-    summary: A drop-in open world far from the hub, reached through a hub portal; you land at a random spot, fight other players, and hunt hostile NPCs for coins. Replaces the FFA queue mode.
-    server: "src/server/Services/BattlegroundService.luau (enter, leave, isIn; random spawn sampling; respawns; touch wiring; LeaveBattleground remote)"
+    summary: A drop-in open world far from the hub, reached through a hub portal or the Play window's button; you land at a random spot, fight other players, and hunt hostile NPCs for coins. Replaces the FFA queue mode.
+    server: "src/server/Services/BattlegroundService.luau (enter, leave, isIn; random spawn sampling; respawns; touch wiring; EnterBattleground and LeaveBattleground remotes)"
     map: "src/server/Maps/Battleground.luau (600x600 flat board of 30-stud ground tiles painted in 4 biomes with stone roads from the gates to the keep, low blocky cliffs past invisible walls, low square rocks, 6 Raider camps, 2 ruins, the Warlord's Keep, NpcSpot parts, 4 BattlegroundExit gate pads, a BuildZone; no spawn points)"
     hub: "two big stone portals in src/server/Maps/InkwellPlaza.luau: the blue BattlegroundPortal block model (south) and the red ArenaPortal block model (the Arena Gate, north); each has an invisible trigger tagged BattlegroundPortal over its opening"
     config: "Config.BATTLEGROUND: CENTER (15000,0,0), far enough that the Battleground cannot be seen from the hub, HALF_SIZE 300, RESPAWN_DELAY 3, NPC { RESPAWN 45, COIN_CAP 120, COIN_WINDOW 300 }"
@@ -247,7 +247,7 @@ features:
       - knocked-out fighters respawn at a new random spot after RESPAWN_DELAY, with spawn protection (MatchService.respawnAt)
       - HubService neither respawns them nor heals them (no passive regen outside the hub); MatchService.joinQueue refuses while inside, and starting a match pulls you out
       - no wins or boosts; coins come only from NPC knockouts; you must have an element equipped to enter
-    client: "HudController banner and Return to Hub button (LeaveBattleground remote), HealthController (every other fighter's bar is red)"
+    client: "MenuController Battleground button in the Play window (EnterBattleground remote, same rules and cooldown as the portal), HudController banner and Return to Hub button (LeaveBattleground remote), HealthController (every other fighter's bar is red)"
     tests: tests/Battleground.spec.luau
 
   - id: npcs
@@ -465,9 +465,7 @@ features:
 
   - id: first_person
     summary: "First person everywhere: spells go where a one-dot sight points the moment they are drawn (no click, nothing marks a target); bolts alone get a quiet assist toward the opponent closest to the sight."
-    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing and keeps the right arm and wand visible); src/client/Controllers/CursorController.luau + src/shared/Util/CursorMode.luau (Left Alt: a tap keeps the cursor out until the next click or tap, a hold until release; Config.CURSOR); src/client/Controllers/CrosshairController.luau (the sight: one dot, shown over the canvas; a cursor hint on keyboards; no target marker); src/client/UI/MouseLock.luau (an invisible Modal button, shown only with a mouse, frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, spectate bar, admin window, tutorial welcome)"
-    tests: "tests/CursorMode.spec.luau"
-    rules:
+    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing and keeps the right arm and wand visible); src/client/Controllers/CursorController.luau (Shift toggles the cursor like shift lock, Roblox's own shift lock is off, a window or the canvas ends it; Config.CURSOR); src/client/Controllers/CrosshairController.luau (the sight: one dot, shown over the canvas; a cursor hint on keyboards; no target marker); src/client/UI/MouseLock.luau (an invisible Modal button, shown only with a mouse, frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, spectate bar, admin window, tutorial welcome)"    rules:
       - every device casts at the screen centre (VR the right hand); the aim point is read when the stroke ends and sent with it; the canvas holds the camera still (mouse freed, gamepad stick sunk)
       - CastService.resolveAim decides where every spell goes; the client shows no lock
       - mouse look speed is settings.camera (Config.CAMERA, default 0.25), applied through UserInputService.MouseDeltaSensitivity

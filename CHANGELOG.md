@@ -5,9 +5,12 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 ## [Unreleased]
 
 ### Added (clicking buttons in first person)
-- **Tap Left Alt to get the cursor** (new `CursorController`, rules in `Util/CursorMode`, tunables in `Config.CURSOR`). It stays out until your next click or another tap, then you are back to aiming; holding Left Alt still works. Left Alt can no longer be chosen as the draw key.
+- **Press Shift to get the cursor** (new `CursorController`, keys in `Config.CURSOR`), like Roblox's shift lock: it stays out until you press Shift again, or until a window or the canvas opens and closes. This replaces holding Left Alt, and Roblox's own shift lock is turned off.
 - **The cursor hint now shows in fights too** (Return to Hub has no key) and changes while the cursor is out.
 - **The spectate bar frees the mouse**, and the tutorial now tells PC players how to reach the glowing button.
+
+### Added (Battleground button)
+- **The Play window has a Battleground button** (`EnterBattleground` remote). It follows the same rules as walking into the portal, and is hidden while you are already there.
 
 ### Changed (bigger buttons on touch)
 - **Bigger touch targets on phones and tablets:** spell cards, Return to Hub, Party, window Close buttons, and the tutorial's Skip. Party moves beside the side menu on touch so they can't overlap. The hidden button that frees the mouse is no longer shown on devices without a mouse.

@@ -163,7 +163,7 @@ local function useGlowingButton(): string
 	if Responsive.isTouch() then
 		return "tap the glowing button"
 	end
-	return "tap <b>Alt</b> and click the glowing button"
+	return "press <b>Shift</b> and click the glowing button"
 end
 
 local STEPS: { Step } = {
@@ -488,7 +488,7 @@ local function buildUi()
 		TutorialController.finish(true)
 	end)
 	-- First person: the mouse is free while there is a button to press (the
-	-- welcome screen and the last step's "Got it!"); Skip is a tap of Left Alt.
+	-- welcome screen and the last step's "Got it!"); Skip is a press of Shift.
 	MouseLock.whileVisible(gotItButton)
 
 	-- The welcome screen shown before step one.

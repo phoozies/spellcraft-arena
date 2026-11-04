@@ -5,12 +5,17 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local StarterPlayer = game:GetService("StarterPlayer")
 
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 -- We spawn characters ourselves so dead players don't pop back into the hub
 -- mid-round (MatchService / HubService call LoadCharacter).
 Players.CharacterAutoLoads = false
+
+-- Shift is the cursor key (CursorController), not Roblox's shift lock. A client
+-- script may not change this.
+StarterPlayer.EnableMouseLockOption = false
 
 Remotes.setup()
 

@@ -59,7 +59,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     Rescue              water splash and pit rescue (called from MatchService's round loop)
     TrapBubble          Water Lock's bubble around a stunned victim
     HubService          builds the hub, spawning, team boxes, dummies, hub regen (no regen anywhere else)
-    BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
+    BattlegroundService the drop-in Battleground: portal/gate pads, the Play window's button, random-spot teleports, respawns, no queue while inside
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
     MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
     PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
@@ -83,7 +83,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
     CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing; keeps your arm and wand visible except while drawing
-    CursorController    the cursor key: tap Left Alt for one click, or hold it (rules in Util/CursorMode)
+    CursorController    the cursor key: Shift turns the cursor on and off, like shift lock (Config.CURSOR)
     CrosshairController the sight: one dot, shown over the canvas too; the cursor hint on keyboards
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback

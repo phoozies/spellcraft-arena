@@ -7,6 +7,7 @@
 -- ("Spellbook", "Chests", "Quests").
 
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -32,9 +33,12 @@ local PropSwap = require(script.Parent.Parent.Fx.PropSwap)
 
 local MenuController = {}
 
+local player = Players.LocalPlayer
+
 local panels: { [string]: Frame } = {}
 local openName: string? = nil
 local modeButtons: { [string]: TextButton } = {}
+local battlegroundButton: TextButton
 local elementList: Frame
 local elementButtons: { [string]: TextButton } = {}
 local spellRow: Frame
@@ -158,14 +162,32 @@ local function buildPlay(root: Instance)
 		end)
 		modeButtons[info.mode] = button
 	end
+	-- The bottom row lines up with the two columns of modes.
+	local rowHeight = if Responsive.isTouch() then Theme.TOUCH else 40
+	battlegroundButton = Theme.button(panel, "Battleground", {
+		Name = "Battleground",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 16, 1, -14),
+		Size = UDim2.new(0.5, -24, 0, rowHeight),
+		BackgroundColor3 = Theme.COLORS.accent,
+	})
+	battlegroundButton.Activated:Connect(function()
+		Remotes.get("EnterBattleground"):FireServer()
+		MenuController.close()
+	end)
 	local leave = Theme.button(panel, "Leave queue", {
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -14),
-		Size = UDim2.fromOffset(160, 40),
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -20, 1, -14),
+		Size = UDim2.new(0.5, -24, 0, rowHeight),
 	})
 	leave.Activated:Connect(function()
 		Remotes.get("SetQueue"):FireServer(nil)
 	end)
+end
+
+-- You are already there: Return to Hub is the way out.
+local function refreshBattlegroundButton()
+	battlegroundButton.Visible = player:GetAttribute("InBattleground") ~= true
 end
 
 local function refreshPlay()
@@ -889,6 +911,8 @@ end
 
 function MenuController.start()
 	ClientState.QueueChanged:Connect(refreshPlay)
+	player:GetAttributeChangedSignal("InBattleground"):Connect(refreshBattlegroundButton)
+	refreshBattlegroundButton()
 	ClientState.ProfileChanged:Connect(function()
 		local profile = ClientState.profile
 		-- Select what you have equipped (and open the picker on a first visit).
