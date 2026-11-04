@@ -11,7 +11,8 @@ You cast a spell by **drawing its shape**: the moment you finish, it flies where
 | Dash | **Q** or the **Dash** button | **B** | **Dash** button | n/a |
 | Watch a player | **Watch** side button | same | same | same |
 | Aim | Look with the mouse **before** you open the canvas | Right stick | Drag the screen | Your right hand points |
-| Menu | **M** (Settings during a match), or the side buttons with **Left Alt** held | Select | Side buttons | Pointer |
+| Click an on-screen button | **Tap Left Alt**, click the button (or hold **Left Alt** for several clicks) | Select | Tap it | Pointer |
+| Menu | **M** (Settings during a match), or tap **Left Alt** and click a side button | Select | Side buttons | Pointer |
 | Rotate a placeable | **R** | **L1 / R1** | **⟳** button | **L1 / R1** |
 | Menus | Side buttons (Play, Spells, Chests, Quests, Watch, Settings) | Select + navigate with the stick | Side buttons | Pointer |
 | Admin panel (admins only) | **`** or the **Admin** button | n/a | **Admin** button | n/a |
@@ -29,7 +30,7 @@ You cast a spell by **drawing its shape**: the moment you finish, it flies where
 
 - **First person:** the camera is always first person and every device casts at the sight in the middle of the screen; nobody clicks to cast or aims with the cursor. **Look at your target first, then draw:** the canvas frees the mouse, so the view holds still until you finish. You can still walk while drawing. The sight is one small dot and nothing marks a target. Strikes, lines and walls land exactly where it points. Bolts fly along it and get a small, invisible assist toward the opponent closest to it.
 - **Camera speed:** mouse look runs at 25% by default; change it in **Settings**.
-- **Getting the mouse:** windows (menus, the Chest Shop, the boost pick, the map vote) and the drawing canvas free the mouse while they're open; hold **Left Alt** to use it anywhere else (the side menu, the spell cards).
+- **Getting the mouse:** windows (menus, the Chest Shop, the boost pick, the map vote), the spectate bar and the drawing canvas free the mouse while they're open. Anywhere else (the side menu, the spell cards, Return to Hub), **tap Left Alt**: the cursor stays out until your next click or another tap, then you are back to aiming. Holding **Left Alt** keeps it out until you let go. Touch needs none of this: just tap the button.
 - **Ground strikes** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground and a ring for their range limit while you trace them.
 - **Placeables** (Earth Wall, Turret) show a green or red ghost while you trace them. They land where you look, at most 20 studs away, and stand side-on to you (**R** turns them further).
 

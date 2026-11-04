@@ -86,6 +86,10 @@ local Config = {
 	-- setting and the range and step of the Settings control (saved per player).
 	CAMERA = { SENSITIVITY = 0.25, MIN = 0.05, MAX = 1, STEP = 0.05 },
 
+	-- The cursor key (Left Alt): a press shorter than TAP_SECONDS keeps the cursor
+	-- out; it locks again CLICK_RELEASE seconds after the next click.
+	CURSOR = { TAP_SECONDS = 0.3, CLICK_RELEASE = 0.1 },
+
 	-- Settings: the default key that starts drawing a spell, and keys that
 	-- can't be bound to it (movement, chat, the spell keys, cancel, menus).
 	DEFAULT_DRAW_KEY = "F",
@@ -110,6 +114,7 @@ local Config = {
 		"G",
 		"LeftShift",
 		"RightShift",
+		"LeftAlt",
 		"Up",
 		"Down",
 		"Left",

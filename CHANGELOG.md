@@ -4,6 +4,14 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (clicking buttons in first person)
+- **Tap Left Alt to get the cursor** (new `CursorController`, rules in `Util/CursorMode`, tunables in `Config.CURSOR`). It stays out until your next click or another tap, then you are back to aiming; holding Left Alt still works. Left Alt can no longer be chosen as the draw key.
+- **The cursor hint now shows in fights too** (Return to Hub has no key) and changes while the cursor is out.
+- **The spectate bar frees the mouse**, and the tutorial now tells PC players how to reach the glowing button.
+
+### Changed (bigger buttons on touch)
+- **Bigger touch targets on phones and tablets:** spell cards, Return to Hub, Party, window Close buttons, and the tutorial's Skip. Party moves beside the side menu on touch so they can't overlap. The hidden button that frees the mouse is no longer shown on devices without a mouse.
+
 ### Changed (slower bolts, slower camera)
 - **Bolts fly a third slower** (`Config.PROJECTILE_SPEED_SCALE` 1.5 to 1; a Fireball now moves 95 studs a second instead of 142). This covers every projectile, including NPC and turret shots.
 - **Bolts track more often and curve more visibly:** the assist's cone is 15° (was 10°). The turn rate stays 60°/s, which now bends a slower bolt further. A steady walker gets hit; reversing direction up close still dodges (`tests/AutoAim.spec`).

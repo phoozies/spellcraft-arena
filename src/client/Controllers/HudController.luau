@@ -123,7 +123,7 @@ end
 -- trace it, the stronger the spell: Spells/Quality), and finishing it casts the
 -- spell at once. A disc dims with the seconds left while its spell recharges.
 local glyphRow: Frame
-local CARD_SIZE, CARD_GAP = 48, 6
+local CARD_SIZE, CARD_GAP = if Responsive.isTouch() then 60 else 48, 6 -- bigger for fingers
 local MAX_CARDS = 5
 type WordCard = {
 	card: Frame,
@@ -239,6 +239,10 @@ end
 -- The width the spell cards span on screen (the health bar matches it).
 function HudController.cardRowWidth(): number
 	return MAX_CARDS * CARD_SIZE + (MAX_CARDS - 1) * CARD_GAP
+end
+
+function HudController.cardSize(): number
+	return CARD_SIZE
 end
 
 local function buildGlyphRow(root: Frame)
@@ -384,7 +388,9 @@ local function buildBattleBanner(root: Frame)
 		Name = "BattleLeave",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 8),
-		Size = UDim2.fromOffset(120, 26),
+		Size = if Responsive.isTouch()
+			then UDim2.fromOffset(150, Theme.TOUCH)
+			else UDim2.fromOffset(120, 26),
 		BackgroundColor3 = Theme.COLORS.panel,
 		BackgroundTransparency = 0.35,
 		Visible = false,

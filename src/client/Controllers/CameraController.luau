@@ -8,9 +8,9 @@
 -- than Roblox's default so the sight is easy to place.
 --
 -- Each frame, after Roblox's camera has run:
---   * the mouse is let go while the drawing canvas is open or Left Alt is held
---     (UI/MouseLock; open windows free it themselves through whileVisible), so
---     shapes can be traced and buttons clicked;
+--   * the mouse is let go while the drawing canvas is open (UI/MouseLock; open
+--     windows free it themselves through whileVisible, CursorController does
+--     for the cursor key), so shapes can be traced and buttons clicked;
 --   * your right arm and wand stay visible (first person hides your own body),
 --     except while you draw, when the raised arm would cover what you aim at.
 
@@ -50,7 +50,6 @@ end
 
 local function step()
 	MouseLock.set("draw", DrawController.isActive())
-	MouseLock.set("alt", UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt))
 	local character = player.Character
 	if character and not DrawController.isActive() then
 		showViewParts(character)

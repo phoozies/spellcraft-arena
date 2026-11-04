@@ -465,7 +465,8 @@ features:
 
   - id: first_person
     summary: "First person everywhere: spells go where a one-dot sight points the moment they are drawn (no click, nothing marks a target); bolts alone get a quiet assist toward the opponent closest to the sight."
-    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing or holding Left Alt and keeps the right arm and wand visible); src/client/Controllers/CrosshairController.luau (the sight: one dot, shown over the canvas; a menu hint outside fights; no target marker); src/client/UI/MouseLock.luau (an invisible Modal button frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, admin window, tutorial welcome)"
+    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing and keeps the right arm and wand visible); src/client/Controllers/CursorController.luau + src/shared/Util/CursorMode.luau (Left Alt: a tap keeps the cursor out until the next click or tap, a hold until release; Config.CURSOR); src/client/Controllers/CrosshairController.luau (the sight: one dot, shown over the canvas; a cursor hint on keyboards; no target marker); src/client/UI/MouseLock.luau (an invisible Modal button, shown only with a mouse, frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, spectate bar, admin window, tutorial welcome)"
+    tests: "tests/CursorMode.spec.luau"
     rules:
       - every device casts at the screen centre (VR the right hand); the aim point is read when the stroke ends and sent with it; the canvas holds the camera still (mouse freed, gamepad stick sunk)
       - CastService.resolveAim decides where every spell goes; the client shows no lock

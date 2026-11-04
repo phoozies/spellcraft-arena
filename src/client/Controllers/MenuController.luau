@@ -21,6 +21,7 @@ local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinition
 local SpellStats = require(ReplicatedStorage.Shared.Spells.SpellStats)
 local Types = require(ReplicatedStorage.Shared.Types)
 local MouseLock = require(script.Parent.Parent.UI.MouseLock)
+local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -92,7 +93,7 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		Name = "Close",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -10, 0, 10),
-		Size = UDim2.fromOffset(36, 36),
+		Size = if Responsive.isTouch() then UDim2.fromOffset(48, 48) else UDim2.fromOffset(36, 36),
 		BackgroundColor3 = Theme.COLORS.panel,
 	})
 	close.Activated:Connect(function()

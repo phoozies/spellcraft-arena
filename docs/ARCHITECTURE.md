@@ -82,8 +82,9 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     DraftController     boost draft cards
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
-    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible except while drawing
-    CrosshairController the sight: one dot, shown over the canvas too; the menu hint outside fights
+    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing; keeps your arm and wand visible except while drawing
+    CursorController    the cursor key: tap Left Alt for one click, or hold it (rules in Util/CursorMode)
+    CrosshairController the sight: one dot, shown over the canvas too; the cursor hint on keyboards
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
     InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5 open a spell's guide; no cast button
@@ -106,7 +107,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
   Fx/PropSwap           swaps a hub prop for its open block model for a moment (a shop chest, tinted to its rarity, while the reel spins; the quest chest on a claim)
   UI/Theme              minimal: flat near-black surfaces, one accent, hairlines, one typeface, buttons with auto-contrast text, pills
-  UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown or Left Alt is held
+  UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown, the canvas is open or the cursor key is used
   UI/Responsive         keeps every UIScale matched to the screen size
   UI/SpellCard          the spell card used by the Spellbook, chest reel, and loadout
   UI/Sigil              a spell's sigil: its shape in its colour on a small dark disc (HUD spell row, Spellbook, chest)

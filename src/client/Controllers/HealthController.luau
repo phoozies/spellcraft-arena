@@ -31,13 +31,14 @@ local function humanoidOf(character: Model?): Humanoid?
 end
 
 local BOTTOM_LIFT = -24 -- bottom edge: clear of the menu hint
-local GLYPH_LIFT = -78 -- bottom edge when the spell-card row is showing
+local GLYPH_GAP = 30 -- bottom edge over the spell-card row, when it is showing
 
 -- Sits at the bottom of the screen, or above the spell cards when they are up
 -- (fights, the Battleground, the Training Groves).
 local function layoutOwn()
 	local cards = HudController.getGlyphRow()
-	holder.Position = UDim2.new(0.5, 0, 1, if cards.Visible then GLYPH_LIFT else BOTTOM_LIFT)
+	local glyphLift = -(HudController.cardSize() + GLYPH_GAP)
+	holder.Position = UDim2.new(0.5, 0, 1, if cards.Visible then glyphLift else BOTTOM_LIFT)
 end
 
 local function buildHud()
