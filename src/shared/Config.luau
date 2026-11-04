@@ -62,11 +62,11 @@ local Config = {
 	},
 
 	-- Movement & aiming. Players move faster than Roblox's default (16) to
-	-- keep fights lively; projectiles are sped up by the same ratio and get
-	-- a bigger hitbox so they still land.
+	-- keep fights lively. Bolts stay slow enough to see coming, and track a
+	-- little (AUTO_AIM.HOMING) and have a bigger hitbox so they still land.
 	WALK_SPEED = 24,
 	JUMP_POWER = 55,
-	PROJECTILE_SPEED_SCALE = 1.5,
+	PROJECTILE_SPEED_SCALE = 1,
 	-- Studs added to every projectile's hit radius (spherecast) and to
 	-- area-of-effect checks against players.
 	HITBOX_BONUS = 2,
@@ -84,7 +84,7 @@ local Config = {
 
 	-- Mouse look speed: UserInputService.MouseDeltaSensitivity for the default
 	-- setting and the range and step of the Settings control (saved per player).
-	CAMERA = { SENSITIVITY = 0.5, MIN = 0.1, MAX = 1, STEP = 0.1 },
+	CAMERA = { SENSITIVITY = 0.25, MIN = 0.05, MAX = 1, STEP = 0.05 },
 
 	-- Settings: the default key that starts drawing a spell, and keys that
 	-- can't be bound to it (movement, chat, the spell keys, cancel, menus).
@@ -196,7 +196,7 @@ local Config = {
 	-- MAX_YAW_ERROR: how far an aim may be from where the character faces.
 	AUTO_AIM = {
 		ASSIST = true,
-		CONE = 10,
+		CONE = 15,
 		CLOSE_CONE = 25,
 		CLOSE_RANGE = 15,
 		DISTANCE_WEIGHT = 0.25,

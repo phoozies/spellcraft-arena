@@ -469,7 +469,8 @@ features:
     rules:
       - every device casts at the screen centre (VR the right hand); the aim point is read when the stroke ends and sent with it; the canvas holds the camera still (mouse freed, gamepad stick sunk)
       - CastService.resolveAim decides where every spell goes; the client shows no lock
-      - mouse look speed is settings.camera (Config.CAMERA), applied through UserInputService.MouseDeltaSensitivity
+      - mouse look speed is settings.camera (Config.CAMERA, default 0.25), applied through UserInputService.MouseDeltaSensitivity
+      - bolts fly at stats.speed x PROJECTILE_SPEED_SCALE (1) and home on the assist's pick at AUTO_AIM.HOMING; tests/AutoAim.spec checks a steady walker is hit and a close sidestep dodges
 
   - id: ui_theme
     summary: "Minimal: flat near-black surfaces, off-white text, one warm accent, hairlines instead of outlines, one typeface (Builder Sans), and buttons that pick dark or light text by their colour."

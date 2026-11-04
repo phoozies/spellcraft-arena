@@ -38,7 +38,7 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 ## Rules that must stay true
 
 1. **The server decides everything.** Clients send intent only (a drawn stroke, the point under the crosshair, a chest id, a draft pick). Every remote handler validates type, range, ownership, and rate.
-2. **One owner per state.** `EconomyService` is the only writer of `profile.coins` and `profile.stats.wins`; `ElementService` owns `profile.elements`/`profile.element`/`profile.spells`/`profile.loadout` (elements are bought through it; `ChestService` is the only code that wins chest spells); `ChestService` owns `profile.pity`; `PlayerDataService` owns load/save/migration (profile schema **6**).
+2. **One owner per state.** `EconomyService` is the only writer of `profile.coins` and `profile.stats.wins`; `ElementService` owns `profile.elements`/`profile.element`/`profile.spells`/`profile.loadout` (elements are bought through it; `ChestService` is the only code that wins chest spells); `ChestService` owns `profile.pity`; `PlayerDataService` owns load/save/migration (profile schema **7**).
 3. **Data, not code, for spells.** A new spell is a row in `SpellDefinitions.luau`; behavior comes from its archetype (`src/server/Services/Archetypes`). New behavior = a new optional stat read by an archetype.
 4. **Models always have fallbacks.** Imported models live in the place (`ReplicatedStorage.Models`), not the repo; `ModelKit.clone` can return nil and every caller must draw plain shapes instead.
 5. **Balance budgets** in `tests/Balance.spec.luau` (no one-shots, ultimates ≥ 15s and 30+ damage, timed buffs ≤ 60% uptime, …), unique aliases in `tests/WordMatcher.spec.luau`, and one distinct glyph per spell in `tests/Glyphs.spec.luau`.
