@@ -32,7 +32,7 @@ local ElementService = {}
 ElementService.Changed = Signal.new() :: Signal.Signal<Player>
 
 local toastRemote: RemoteEvent
--- Set by HandService: true while the player is locked into a match.
+-- Set by SpellbookService: true while the player is locked into a match.
 local lockCheck: ((Player) -> boolean)? = nil
 
 function ElementService.setLockCheck(fn: (Player) -> boolean)

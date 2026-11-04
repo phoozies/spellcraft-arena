@@ -537,7 +537,7 @@ local function build()
 		Position = UDim2.new(0, 8, 1, -(BAR_H + 6)),
 		Size = UDim2.new(1, -16, 0, BAR_H),
 	})
-	local box = textBox(bar, "Type a command, e.g. give me fireball (press Enter)", nil)
+	local box = textBox(bar, "Type a command, e.g. cast me fireball (press Enter)", nil)
 	box.Size = UDim2.new(1, -96, 1, 0)
 	local runButton = Theme.button(bar, "Run", {
 		AnchorPoint = Vector2.new(1, 0),

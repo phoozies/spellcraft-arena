@@ -1,5 +1,5 @@
 --!strict
--- Client-side mirror of what the server tells us (hand, cooldowns, profile,
+-- Client-side mirror of what the server tells us (spellbook, cooldowns, profile,
 -- match state). Display only — the server re-validates every action.
 
 local Players = game:GetService("Players")
@@ -29,10 +29,11 @@ export type ProfileSummary = {
 }
 
 local ClientState = {
-	hand = {} :: { string }, -- the hotbar: slot N holds a copy of the Nth loadout spell, "" = empty
-	qualities = {} :: { number }, -- how well each copy was drawn (0..1), parallel to hand
-	readiedSlot = nil :: number?,
-	readied = nil :: string?, -- spell id in the readied slot
+	-- The spell whose shape the drawing canvas is showing (nil = closed or blank).
+	-- The crosshair, hit circle, and placement ghost preview where it will land.
+	aiming = nil :: string?,
+	-- How many of this player's drawings have been cast this session.
+	casts = 0,
 	-- Match only: the spells this player may draw this match (nil in the hub).
 	spellbook = nil :: { string }?,
 	cooldowns = {} :: { [string]: number }, -- spellId -> server time it can be cast again
@@ -42,7 +43,7 @@ local ClientState = {
 	match = { phase = "Idle", round = 0, endsAt = 0, scores = {} } :: Types.MatchState,
 	queueCounts = {} :: { [string]: number },
 
-	HandChanged = Signal.new(),
+	SpellbookChanged = Signal.new(),
 	-- Fired with a spell id when the player taps that spell's card: DrawController
 	-- opens the canvas with a preview of its shape.
 	DrawRequested = Signal.new(),
@@ -65,17 +66,6 @@ function ClientState.drawableSpells(): { string }
 		return Loadout.spells(profile.element, profile.loadout)
 	end
 	return {}
-end
-
--- How many spell copies are held (the hotbar can have empty slots between them).
-function ClientState.heldCount(): number
-	local count = 0
-	for _, id in ClientState.hand do
-		if id ~= "" then
-			count += 1
-		end
-	end
-	return count
 end
 
 -- The key that opens the drawing canvas (player setting).
@@ -126,19 +116,17 @@ function ClientState.cooldownLeft(spellId: string): number
 end
 
 function ClientState.start()
-	Remotes.get("HandUpdated").OnClientEvent
-		:Connect(function(hand, readiedSlot, spellbook, qualities)
-			ClientState.hand = hand
-			ClientState.qualities = qualities or {}
-			ClientState.readiedSlot = readiedSlot
-			local readied = if readiedSlot then hand[readiedSlot] else nil
-			ClientState.readied = if readied ~= "" then readied else nil
-			ClientState.spellbook = spellbook
-			ClientState.HandChanged:Fire()
-		end)
+	Remotes.get("SpellbookUpdated").OnClientEvent:Connect(function(spellbook)
+		ClientState.spellbook = spellbook
+		ClientState.SpellbookChanged:Fire()
+	end)
 	Remotes.get("CooldownStarted").OnClientEvent:Connect(function(spellId, readyAt)
 		ClientState.cooldowns[spellId] = readyAt
-		ClientState.HandChanged:Fire()
+	end)
+	Remotes.get("GlyphResult").OnClientEvent:Connect(function(spellId)
+		if spellId then
+			ClientState.casts += 1
+		end
 	end)
 	Remotes.get("ProfileUpdated").OnClientEvent:Connect(function(summary)
 		ClientState.profile = summary

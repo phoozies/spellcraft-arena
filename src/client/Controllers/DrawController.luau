@@ -1,6 +1,6 @@
 --!strict
 -- Drawing a spell with your wand. Two ways to open the drawing canvas:
---   * TAP A SPELL CARD (above the hotbar) or press its key: the canvas shows
+--   * TAP A SPELL CARD or press its key (1-5): the canvas shows
 --     that spell's shape as a glowing guide with a comet tracing it; you trace
 --     over it. The closer your line follows the shape, the better the quality
 --     (and the stronger the cast; see Spells/Quality).
@@ -10,13 +10,14 @@
 -- Then drag a mouse/finger (or push the right stick). The line glows in the
 -- spell's colour with a sparking pen tip, and your wand writes the same stroke
 -- in the air in front of you (WandController). When you let go the stroke is
--- sent to the server (DrawSpell), which decides what it is and how well it
--- followed the shape; the answer (GlyphResult) flashes the line in its quality
--- colour and pulls it into the wand, or turns it red. G / Escape / the draw
--- key again cancels.
+-- sent to the server (DrawSpell) with the point under the crosshair. The server
+-- decides what it is and how well it followed the shape and casts the spell at
+-- once, with no click: aim first, then draw. The answer (GlyphResult) flashes
+-- the line in its quality colour and pulls it into the wand, or turns it red.
+-- G / Escape / the draw key again cancels.
 --
 -- Everything here is input and feedback. The server owns recognition,
--- ownership, cooldown, and the hotbar.
+-- ownership, cooldown, and the cast.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Debris = game:GetService("Debris")
@@ -97,6 +98,10 @@ local comet: { Frame } = {}
 local tracerPath: { Vector2 } = {}
 local tracerLength = 0
 
+-- Set by InputController: the point under the crosshair, and how a placeable
+-- would be turned.
+local aimProvider: (() -> (Vector3?, number?))? = nil
+
 local active = false
 local drawing = false
 local inputKind: InputKind = "mouse"
@@ -109,6 +114,14 @@ local sparkCount = 0
 
 function DrawController.isActive(): boolean
 	return active
+end
+
+function DrawController.setAimProvider(fn: () -> (Vector3?, number?))
+	aimProvider = fn
+end
+
+local function sinkAction(): Enum.ContextActionResult
+	return Enum.ContextActionResult.Sink
 end
 
 local function viewport(): Vector2
@@ -401,6 +414,20 @@ local function setActive(on: boolean, spellId: string?)
 	local wasActive = active
 	active = on
 	target = def
+	ClientState.aiming = if def then def.id else nil
+	-- A gamepad draws with the right stick: it must not swing the camera (the
+	-- spell's aim) while it does.
+	if on and not wasActive then
+		ContextActionService:BindActionAtPriority(
+			"SpellcraftDrawHoldCamera",
+			sinkAction,
+			false,
+			Enum.ContextActionPriority.High.Value,
+			Enum.KeyCode.Thumbstick2
+		)
+	elseif wasActive and not on then
+		ContextActionService:UnbindAction("SpellcraftDrawHoldCamera")
+	end
 	if drawing then
 		WandController.strokeCancel()
 	end
@@ -562,7 +589,11 @@ local function finishStroke()
 	-- The rest of the live stroke goes first, so watchers have all of it
 	-- before the verdict lands.
 	WandController.strokeSent()
-	Remotes.get("DrawSpell"):FireServer(points, if target then target.id else nil)
+	local aim, rotation = nil, nil
+	if aimProvider then
+		aim, rotation = aimProvider()
+	end
+	Remotes.get("DrawSpell"):FireServer(points, if target then target.id else nil, aim, rotation)
 
 	-- Close the canvas but keep the line until the server says what it was.
 	local sent = ink
@@ -838,7 +869,7 @@ local function buildCanvas()
 
 	-- Strokes start from UserInputService rather than the canvas frame: the ink
 	-- and spark layers lie over the canvas and would keep GUI input events from
-	-- reaching it. A press on a button (Draw, the hotbar, menus) is left alone.
+	-- reaching it. A press on a button (Draw, the spell cards, menus) is left alone.
 	UserInputService.InputBegan:Connect(function(input)
 		if not active or drawing then
 			return

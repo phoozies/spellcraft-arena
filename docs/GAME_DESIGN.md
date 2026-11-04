@@ -36,11 +36,11 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 
 ### Casting: draw it, stockpile it, spend it
 
-- **Draw** a spell's glyph to add **one copy** of that spell to your hotbar: tap its spell card or press its key (**1-5**) to trace its shape over a guide, or press **F** / tap Draw for a blank canvas. You hold **at most one copy of each spell**, and hotbar slot N always holds the Nth spell of your loadout. The new copy is readied automatically. **You can only draw in the hub's two Training Groves, the rounds of a match, and the Battleground.**
+- **Draw** a spell's glyph and **it casts at once**: tap its spell card or press its key (**1-5**) to trace its shape over a guide, or press **F** / tap Draw for a blank canvas. Nothing is stored and there is no cast button. **You can only draw in the hub's two Training Groves, the rounds of a match, and the Battleground.**
 - **Your wand:** everyone holds a wand tipped with a crystal in their element's colour. Opening the canvas raises it for everyone to see (the tip glows and a rune circle turns at your feet), your stroke is written in the air in front of you as a ribbon of light fed by a beam from the tip, and a recognized glyph flashes in its quality colour and is pulled into the wand (a failed one turns red and crumbles). Other players see your wand trace the glyph.
-- **Drawing quality:** the closer your stroke follows the shape, the stronger the copy (up to +50% power, +25% size, +30% duration; a sloppy one is a little weaker). It shows as 1-4 stars on the hotbar slot (see SPELLS.md).
-- **Cast** the readied copy: click, R2, tap the world, or pull the VR trigger. **Casting uses the copy up.** You play in first person and never aim with the mouse: the spell goes where you look and locks onto the nearest opponent in sight near the crosshair (corner brackets show the lock).
-- **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, most others 4-22s, Heal 60s; see SPELLS.md). The hotbar shows the cooldown sweep on the slot.
+- **Drawing quality:** the closer your stroke follows the shape, the stronger the spell (up to +50% power, +25% size, +30% duration; a sloppy one is a little weaker). Your line's colour shows how well you did (see SPELLS.md).
+- **Aim** by looking: you play in first person, so look at your target and then draw. The spell goes where you look and locks onto the nearest opponent in sight near the crosshair (corner brackets show the lock).
+- **Cooldowns:** every spell has its own cast cooldown (basic attacks 3s, fast slashes 2s, most others 4-22s, Heal 60s; see SPELLS.md). Its spell card shows the seconds left.
 - **Dash:** press **Q** (or the Dash button) for a forward somersault with three wind streaks behind you; 8 second cooldown.
 - **Drawing cooldown:** 1 second between drawings, enforced by the server. The server reads the stroke itself, so the client can't claim a spell it didn't draw. The key that opens the canvas can be changed in **Settings**.
 - **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground at your crosshair, or under the opponent you're locked onto, and a ring for their range limit.
@@ -49,7 +49,7 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 - **Damage numbers** float over whatever you hit, in the hub and in matches. Yellow is damage, blue is shield absorbed, green is healing. Only the attacker and the target's owner see them.
 - **Spell VFX and audio:** drawing writes the glyph in the air with your wand, and it is pulled into the wand. Every spell has its own cast animation (a pose and a "beat": a fireball growing in the hand, a stomp, a gust of wind), swells from a small spark as it is summoned, and imprints the glyph in a magic circle at the caster's feet. Each spell has its own particles, hit effect, and cast and impact sounds (`Audio/Cues`). Buffs wrap the caster in an aura.
 - **Game feel:** hit markers when your spell lands, a red edge flash and shake when you are hit, a kick when you cast, and pulsing red edges at low health. Camera shake can be switched off in Settings.
-- **Health bars:** your own HP bar sits above the hotbar (as wide as it), with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
+- **Health bars:** your own HP bar sits above the spell cards (as wide as them), with a shield overlay and a trailing damage bar. Bars also float over other players: blue for allies and red for enemies in a match, grey in the hub (shown only when hurt).
 
 ### Balancing for fast play
 

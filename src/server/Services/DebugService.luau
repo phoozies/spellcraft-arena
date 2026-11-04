@@ -11,7 +11,7 @@
 --   solo <mode>    start a match alone (rounds end on the timer)
 --   unlockall      own every element
 --   element <id>   equip an element (grants it first)
---   cast {spell, target}  give yourself the spell and cast it at a Vector3
+--   cast {spell, target}  cast the spell at a Vector3 (the normal rules apply)
 --   knockback      server-push your own character (tests authoritative knockback)
 
 local Players = game:GetService("Players")

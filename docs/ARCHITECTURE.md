@@ -47,12 +47,12 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     EconomyService      coins, wins, daily login/quests, first win, settings, tutorial flag, Like & Favourite gift (only writer of coins/wins)
     StatusService       timed effects (Root, Slow, Shrink, TimeStop, Slippery, buffs)
     DestructibleService single damage path, health bars, knockouts, push
-    HandService         held spell copies (one per spell; hotbar slot N = Nth loadout spell), match spellbook, readied slot, per-spell cast cooldowns
+    SpellbookService    which spells a player can draw (match spellbook, else loadout), per-spell cast cooldowns and the global lockout
     DashService         the dash: validates the cooldown and state, tells the client which way to go, fires the dash Fx
     WandService         welds every player's wand to the right hand, tints it with their element, keeps the Drawing / DrawLook attributes (DrawingState remote), relays live strokes to nearby players (AirStroke; cosmetic)
-    CastService         validates casts, builds CastContext, dispatches archetype
+    CastService         casts a drawn spell at once: validates, resolves auto-aim, builds CastContext, dispatches archetype
     Archetypes/*        Projectile, Control, Placeable, Zone, Line, Buff, Movement, Summon
-    SpellInputService   DrawSpell remote → draw gate (fights and the Training Grove) → validate → 1s draw cooldown → GlyphRecognizer → HandService.grant (+ the chat hook for admin commands)
+    SpellInputService   DrawSpell remote → draw gate (fights and the Training Grove) → validate → 1s draw cooldown → GlyphRecognizer → CastService.cast (+ the chat hook for admin commands)
     AdminService        ";" admin commands (chat), server-side admin check
     ArenaService        builds map templates, summons instanced arenas below the hub island (with water under each), jump pads
     MatchService        queues, round state machine, boost drafts, teams, PvP rules, draw gate (canDraw), water/pit checks
@@ -74,19 +74,19 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Controllers/
     ClientState         mirror of server state + change signals (canDraw, inPractice)
     LightingController  warm hub light vs neutral arena daylight, hub haze
-    HudController       hotbar (slot N = Nth loadout spell), spell cards, coins/wins wallet, match bar, toasts, feed
+    HudController       spell cards (card N = Nth loadout spell), coins/wins wallet, match bar, toasts, feed
     PartyController     Party button and panel (invites, members)
     MapVoteController   the pre-duel map vote cards
     MenuController      Play / Spellbook (Elements, Loadout) / Chests / Quests panels
     ChestController     Chest Shop panel: five chests (3D previews), odds bars, pity, reel (animates the server's result)
     DraftController     boost draft cards
-    PlacementController ghost preview
-    ReticleController   hit circle + range ring for point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
+    PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
+    ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
     CameraController    first person everywhere; frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible
-    LockOnController    centre crosshair (the readied spell's colour / cooldown) and lock-on brackets over the auto-aim target
+    LockOnController    centre crosshair (the traced spell's colour / cooldown, shown over the canvas too) and lock-on brackets over the auto-aim target wherever you can draw
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
-    InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5
+    InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5 open a spell's guide; no cast button
     EffectsController   self boosts, slippery friction, team outlines, camera reset
     FxController        dispatches Fx events (bolts, impacts, cast anim, glyphs, shatter, chips, dust, numbers, element pillars, rising rocks, earthquake)
     HealthController    own HP bar (shield + damage trail), overhead bars, hides Roblox health
@@ -109,7 +109,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown or Left Alt is held
   UI/Responsive         keeps every UIScale matched to the screen size
   UI/SpellCard          the spell card used by the Spellbook, chest reel, and loadout
-  UI/Sigil              a spell's sigil: its shape in glowing ink in a small magic circle (cards, hotbar, Spellbook, canvas banner)
+  UI/Sigil              a spell's sigil: its shape in glowing ink in a small magic circle (HUD cards, Spellbook, canvas banner)
 
 src/character → StarterPlayer.StarterCharacterScripts
   Health.server.luau    empty: replaces Roblox's default regen (HubService does the hub regen)
@@ -182,40 +182,39 @@ Some dependencies would form a cycle, so they're injected instead of required:
 - `DestructibleService.setRelationResolver(fn)`: MatchService decides who may damage whom.
 - `CastService.setWorldHooks(hooks)`: MatchService supplies the team, the structures folder, and the build regions.
 
-## Cast pipeline (copy model)
+## Cast pipeline (draw = cast)
+
+Nothing is stored and nothing is clicked: a recognized drawing is cast in the same server step.
 
 ```
-client: stroke ──DrawSpell──► SpellInputService
+client: stroke + crosshair point + rotation ──DrawSpell──► SpellInputService
                                ├ validate (≤200 Vector2, finite, in range)
-                               ├ 1s draw cooldown (per player)
-                               └ GlyphRecognizer → glyph → spell → HandService.grant
-                                    ├ match: in spellbook? hub: owned?
-                                    ├ its slot taken and no free slot? → refuse
-                                    └ add ONE copy in the spell's own slot (refused if you already hold that spell) and ready it
-client: crosshair point ──CastSpell──► CastService
-                               ├ alive? not frozen/time-stopped?
-                               ├ readied slot holds a copy; global lockout 0.35s;
-                               │  that spell's SHARED cooldown is over
-                               ├ clamp target to range (placeables: 40 studs)
+                               ├ draw gate; 1s draw cooldown (per player)
+                               └ GlyphRecognizer (only SpellbookService.drawable's shapes) → glyph → spell → CastService.cast
+                               ├ alive? not frozen/time-stopped/stunned?
+                               ├ global lockout 0.35s; that spell's cooldown is over
+                               ├ clamp target to range (placeables: Config.PLACE_RANGE, 20 studs)
                                ├ resolveAim: look dir (crosshair point, or the facing if it's off by > MAX_YAW_ERROR);
                                │  bolts/strikes lock on: AutoAim.pick (nearest enemy in sight near the crosshair),
                                │  bolts are led (AutoAim.lead) → ctx.target, ctx.lock
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
-                               ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, copy kept
-                               ├ HandService.consume (that copy used up, its slot left empty; next held copy readied)
-                               ├ HandService.startCooldown(def.cooldown) — shared by every copy
-                               └ Fx("cast") → every client plays the cast pose, beat, swell + magic circle
+                               ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, the drawing fizzles
+                               ├ SpellbookService.startCooldown(def.cooldown)
+                               ├ Fx("cast") → every client plays the cast pose, beat, swell + magic circle
+                               └ GlyphResult to the drawer, Fx("glyph") to everyone (or glyphFail on any refusal)
 ```
 
-- **Auto-aim** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): candidates are enemy players, hostile NPCs and training dummies within the spell's range. A candidate counts when it is inside the aim cone (`CONE` 10°, widening linearly to `CLOSE_CONE` 30° at point blank, and never narrower than the target's own angular size). Candidates are ranked by `distance × (1 + ANGLE_WEIGHT × (angle / cone)²)`, so the nearest opponent wins unless a slightly further one is right under the crosshair; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `LockOnController` runs the same `pick` on the client to draw the lock-on brackets; only the server's pick counts.
+- **Auto-aim** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): candidates are enemy players, hostile NPCs and training dummies within the spell's range. A candidate counts when it is inside the aim cone (`CONE` 15°, widening linearly to `CLOSE_CONE` 30° at point blank, and never narrower than the target's own angular size). Candidates are ranked by `distance × (1 + ANGLE_WEIGHT × (angle / cone)²)`, so the nearest opponent wins unless a slightly further one is right under the crosshair; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `LockOnController` runs the same `pick` on the client to draw the lock-on brackets (every 0.1s); only the server's pick counts.
 
-- **Quality:** `SpellInputService` turns the recognizer's score into a quality (`Spells/Quality`), `HandService` stores it with the copy, and `CastService` scales the spell's stats by it (`Quality.apply`) when it is cast.
+- **Aiming with no click:** the point under the crosshair is read when the stroke ends and travels with it. The canvas frees the mouse, so the camera holds still while you draw; on a gamepad the drawing stick is sunk (`DrawController`) so it can't swing the aim. The crosshair and brackets stay up over the canvas, and a traced spell also shows its hit circle or placement ghost. The aim ray ignores characters, so a wall aimed through an opponent still lands. Placeables default to side-on to you (`PlacementController.getRotation`, R turns them further).
+
+- **Quality:** `SpellInputService` turns the recognizer's score into a quality (`Spells/Quality`) and passes it to `CastService`, which scales the spell's stats by it (`Quality.apply`).
 
 - **Projectile hit tests:** each bolt sweeps a thin sphere (0.75) against the world, so it glides over floors. A second, fatter sweep (radius + `Config.HITBOX_BONUS`) sees only characters and breakables the caster can hurt. The nearest hit wins. Breakables are fetched once per frame and pre-filtered by distance.
 - **Breakable blocks:** `segments` in a placeable's stats builds a grid of separately breakable blocks under an untagged parent Model, which deletes itself when empty. `DestructibleService` darkens damaged parts (`BaseColor` attribute), sends `Fx("chip")` on hits, and sends `Fx("shatter")` per part on break. Arenas use `MapKit.blockWall`.
 - **Match presentation:** `MatchState` carries `roster`, `roundWinner`, `winner`, `won`, and `coinsGained`. A new `Intro` phase (`Config.INTRO_TIME`) plays the VS screen while players are still in the hub. Clients fade to black just before each teleport.
 
-- **Drawing** is recorded by `DrawController` (mouse, touch, or the right stick) in screen-height units and sent once, when the stroke ends. The server never trusts the client's verdict: `GlyphResult` is feedback only. Admin chat commands (`;`) still travel through chat, handled by `SpellInputService`'s `ShouldDeliverCallback`.
+- **Drawing** is recorded by `DrawController` (mouse, touch, or the right stick) in screen-height units and sent once, when the stroke ends, with the crosshair's aim point. The server never trusts the client's verdict: `GlyphResult` is feedback only. Admin chat commands (`;`) still travel through chat, handled by `SpellInputService`'s `ShouldDeliverCallback`.
 - **Audio and mood:** `AudioController` plays cues by name (`Audio/Cues`, spells point at theirs with `sfx`), places them in the world with falloff. `LightingController` fades between the hub's warm afternoon light and the arenas' neutral daylight on the client only.
 - **Damage numbers:** `DestructibleService.damage` and `heal` send `Fx("number", position, amount, kind)` to the attacker and the target's owner only. `FxController` draws them.
 - **Crowd-control immunity:** `StatusService.apply` refuses to refresh an active Root, Time Stop, or Shrink, and adds a 2.5s immunity after it ends (`Config.CC_IMMUNITY`).

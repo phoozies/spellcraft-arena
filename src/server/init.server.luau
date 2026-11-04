@@ -23,7 +23,7 @@ local ORDER = {
 	"StatusService",
 	"DestructibleService",
 	"BoostService",
-	"HandService",
+	"SpellbookService",
 	"CastService",
 	"DashService",
 	"SpellInputService",

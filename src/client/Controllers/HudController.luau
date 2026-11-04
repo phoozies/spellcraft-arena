@@ -1,5 +1,5 @@
 --!strict
--- The always-on HUD: hotbar (hand), glyph cards (what to draw), coins/wins wallet,
+-- The always-on HUD: spell cards (what to draw), coins/wins wallet,
 -- match bar (phase, timer, scores), toasts, and kill feed.
 -- Layout is scale-based with a UIScale clamp so it fits phones through TVs,
 -- and respects device safe areas (ScreenInsets).
@@ -12,11 +12,8 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Boosts = require(ReplicatedStorage.Shared.Match.Boosts)
-local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
-local Rarity = require(ReplicatedStorage.Shared.Spells.Rarity)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
@@ -29,21 +26,6 @@ local player = Players.LocalPlayer
 local HudController = {}
 
 local gui: ScreenGui
-local slots: {
-	{
-		button: TextButton,
-		cooldown: Frame,
-		cooldownText: TextLabel,
-		icon: Frame,
-		name: TextLabel,
-		stars: TextLabel,
-		stroke: UIStroke,
-		bubble: Frame,
-		scale: UIScale,
-		readied: boolean,
-	}
-} =
-	{}
 local coinsLabel: TextLabel
 local winsLabel: TextLabel
 local walletFrame: Frame
@@ -129,7 +111,9 @@ function HudController.toast(message: string, kind: string?)
 	end)
 end
 
--- Glyph cards above the hotbar: what to draw for each spell you can ready.
+-- Spell cards at the bottom of the screen: what to draw for each spell you can
+-- cast (key N or a tap opens the Nth card's shape on the canvas; finishing the
+-- shape casts the spell at once).
 -- In a match that is your match spellbook; elsewhere your loadout (your
 -- element's base spells and the chest spells you equipped). Each card is a
 -- small spell card in the canvas's style: a band of the spell's colour and
@@ -138,6 +122,8 @@ end
 -- trace (the better you follow it, the stronger the spell: Spells/Quality);
 -- while you trace it the card lifts and its sigil turns (setTracing).
 local glyphRow: Frame
+local CARD_WIDTH, CARD_HEIGHT, CARD_GAP = 62, 74, 12
+local MAX_CARDS = 5
 type WordCard = {
 	card: Frame,
 	name: TextLabel,
@@ -182,7 +168,7 @@ local function refreshWords()
 			local color = SpellCard.colorOf(def.id)
 			local card = Theme.frame(glyphRow, {
 				Name = def.id,
-				Size = UDim2.fromOffset(62, 74),
+				Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT),
 				LayoutOrder = order,
 				BackgroundTransparency = 0.1,
 			})
@@ -205,6 +191,14 @@ local function refreshWords()
 			local name = Theme.label(card, def.name, {
 				Size = UDim2.new(1, -4, 0, 16),
 				Position = UDim2.new(0, 2, 1, -19),
+			})
+			-- Its key (1-5), which opens the same canvas as a tap.
+			Theme.label(card, tostring(order), {
+				Name = "Key",
+				Size = UDim2.fromOffset(16, 16),
+				Position = UDim2.fromOffset(3, 2),
+				TextStrokeTransparency = 0.2,
+				ZIndex = 3,
 			})
 			local cover = Theme.label(card, "", {
 				Size = UDim2.fromScale(1, 1),
@@ -264,201 +258,9 @@ local function tickWords()
 	end
 end
 
-local SLOT_WIDTH, SLOT_GAP = 70, 6
-local READIED_SCALE = 1.22 -- the equipped slot swells to this size
-
--- The width the slots span on screen (the health bar matches it).
-function HudController.hotbarWidth(): number
-	return Config.MAX_HAND * SLOT_WIDTH + (Config.MAX_HAND - 1) * SLOT_GAP
-end
-
-local function buildHotbar(root: Frame)
-	local bar = Theme.frame(root, {
-		Name = "Hotbar",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -12),
-		Size = UDim2.fromOffset(5 * 76 + 8, 84),
-		BackgroundTransparency = 1,
-	})
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.Padding = UDim.new(0, SLOT_GAP)
-	layout.Parent = bar
-
-	for i = 1, Config.MAX_HAND do
-		-- A fixed cell for the list layout; the button inside is anchored at its
-		-- bottom middle, so the equipped slot swells upward without moving its
-		-- neighbours.
-		local cell = Theme.frame(bar, {
-			Name = `Cell{i}`,
-			Size = UDim2.fromOffset(SLOT_WIDTH, 80),
-			BackgroundTransparency = 1,
-			LayoutOrder = i,
-		})
-		local button = Theme.button(cell, "", {
-			Name = `Slot{i}`,
-			AnchorPoint = Vector2.new(0.5, 1),
-			Position = UDim2.fromScale(0.5, 1),
-			Size = UDim2.fromScale(1, 1),
-		})
-		local stroke = button:FindFirstChildOfClass("UIStroke") :: UIStroke
-		stroke.Thickness = 4
-		local scale = Instance.new("UIScale")
-		scale.Parent = button
-		-- A soft round "bubble" of the spell's colour behind the sigil, shown on
-		-- the equipped slot.
-		local bubble = Theme.frame(button, {
-			Name = "Bubble",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0, 26),
-			Size = UDim2.fromScale(0.86, 0.86),
-			BackgroundTransparency = 1,
-		})
-		Theme.corner(bubble, 100)
-		local aspect = Instance.new("UIAspectRatioConstraint")
-		aspect.Parent = bubble
-		Theme.label(button, tostring(i), {
-			Name = "Key",
-			Size = UDim2.fromOffset(16, 16),
-			Position = UDim2.fromOffset(4, 2),
-			TextColor3 = Theme.COLORS.subtext,
-		})
-		-- The spell's sigil (UI/Sigil), rebuilt when the slot changes.
-		local icon = Instance.new("Frame")
-		icon.Name = "SigilHolder"
-		icon.BackgroundTransparency = 1
-		icon.AnchorPoint = Vector2.new(0.5, 0)
-		icon.Position = UDim2.new(0.5, 0, 0, 6)
-		icon.Size = UDim2.fromOffset(40, 40)
-		icon.ZIndex = 2
-		icon.Parent = button
-		local name = Theme.label(button, "", {
-			Name = "SpellName",
-			Size = UDim2.new(1, -6, 0.26, 0),
-			Position = UDim2.new(0, 3, 0.6, 0),
-		})
-		local stars = Theme.label(button, "", {
-			Name = "Quality",
-			AnchorPoint = Vector2.new(1, 0),
-			Size = UDim2.fromOffset(40, 14),
-			Position = UDim2.new(1, -3, 0, 3),
-			TextXAlignment = Enum.TextXAlignment.Right,
-			TextStrokeTransparency = 0.2,
-			ZIndex = 5,
-		})
-		local cooldown = Theme.frame(button, {
-			Name = "Cooldown",
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.fromScale(0, 1),
-			Size = UDim2.fromScale(1, 0),
-			BackgroundColor3 = Color3.new(0, 0, 0),
-			BackgroundTransparency = 0.45,
-			ZIndex = 3,
-		})
-		Theme.corner(cooldown)
-		local cooldownText = Theme.label(button, "", {
-			Name = "CooldownText",
-			ZIndex = 4,
-			TextColor3 = Theme.COLORS.onDark,
-			TextStrokeTransparency = 0.3,
-		})
-		button.Activated:Connect(function()
-			Remotes.get("SelectSlot"):FireServer(i)
-		end)
-		slots[i] = {
-			button = button,
-			cooldown = cooldown,
-			cooldownText = cooldownText,
-			icon = icon,
-			name = name,
-			stars = stars,
-			stroke = stroke,
-			bubble = bubble,
-			scale = scale,
-			readied = false,
-		}
-	end
-end
-
--- Pops the slot up (it overshoots, then settles) with a bubble behind its
--- icon when it becomes the equipped spell, and shrinks it back when it isn't.
-local function setReadied(slot: typeof(slots[1]), on: boolean)
-	if slot.readied == on then
-		return
-	end
-	slot.readied = on
-	local grow = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	TweenService:Create(slot.scale, grow, { Scale = if on then READIED_SCALE else 1 }):Play()
-	TweenService:Create(slot.bubble, TweenInfo.new(0.3), {
-		BackgroundTransparency = if on then 0.55 else 1,
-	}):Play()
-end
-
-local function refreshHotbar()
-	for i, slot in slots do
-		local id = ClientState.hand[i]
-		local def = id and SpellDefinitions.get(id)
-		slot.icon:ClearAllChildren()
-		if def then
-			local color = Elements.color(def.element)
-			slot.button.Visible = true
-			local sigil = Sigil.create(slot.icon, def.glyph, 40, SpellCard.colorOf(def.id))
-			Sigil.setSpinning(sigil, i == ClientState.readiedSlot)
-			slot.name.Text = def.name
-			slot.name.TextColor3 = Theme.COLORS.text
-			-- How well this copy was drawn: 1 to 4 stars.
-			local quality = ClientState.qualities[i]
-			if quality then
-				local tier = Quality.tier(quality)
-				slot.stars.Text = string.rep("★", tier.stars)
-				slot.stars.TextColor3 = tier.color
-			else
-				slot.stars.Text = ""
-			end
-			local isReadied = i == ClientState.readiedSlot
-			local rarityColor = if def.rarity then Rarity.color(def.rarity) else color
-			slot.stroke.Color = if isReadied then Theme.COLORS.accent else rarityColor
-			slot.stroke.Thickness = if isReadied then 6 else 4
-			slot.button.BackgroundColor3 = if isReadied
-				then Theme.COLORS.purple
-				else Theme.COLORS.panelLight
-			slot.bubble.BackgroundColor3 = color
-			setReadied(slot, isReadied)
-		else
-			-- Empty slot: only the (dimmed) name of the spell drawing fills it
-			-- with; the sigil shows once a copy is ready in the slot.
-			local waiting = SpellDefinitions.get(ClientState.drawableSpells()[i] or "")
-			slot.button.Visible = true
-			slot.stars.Text = ""
-			slot.name.Text = if waiting then waiting.name else ""
-			slot.name.TextColor3 = Theme.COLORS.subtext
-			slot.stroke.Color = Color3.fromRGB(20, 20, 40)
-			slot.stroke.Thickness = 4
-			slot.button.BackgroundColor3 = Theme.COLORS.panel
-			setReadied(slot, false)
-		end
-	end
-	refreshWords()
-end
-
 local drawBar: Frame
 
 local function tickCooldowns()
-	-- Copies of the same spell share one cooldown, so every slot holding
-	-- that spell shows the same sweep.
-	for i, slot in slots do
-		local id = ClientState.hand[i]
-		local def = id and SpellDefinitions.get(id)
-		local left = if id then ClientState.cooldownLeft(id) else 0
-		if def and left > 0 and def.cooldown > 0 then
-			slot.cooldown.Size = UDim2.fromScale(1, math.clamp(left / def.cooldown, 0, 1))
-			slot.cooldownText.Text = if left >= 1 then tostring(math.ceil(left)) else ""
-		else
-			slot.cooldown.Size = UDim2.fromScale(1, 0)
-			slot.cooldownText.Text = ""
-		end
-	end
 	tickWords()
 	local drawLeft = math.max(0, ClientState.drawReadyAt - os.clock())
 	drawBar.Size = UDim2.new(math.clamp(drawLeft / Config.DRAW_COOLDOWN, 0, 1), 0, 0, 4)
@@ -475,32 +277,37 @@ local function tickCooldowns()
 	end
 end
 
+-- The width the spell cards span on screen (the health bar matches it).
+function HudController.cardRowWidth(): number
+	return MAX_CARDS * CARD_WIDTH + (MAX_CARDS - 1) * CARD_GAP
+end
+
 local function buildGlyphRow(root: Frame)
 	glyphRow = Theme.frame(root, {
 		Name = "Glyphs",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -118),
-		Size = UDim2.fromOffset(560, 74),
+		Position = UDim2.new(0.5, 0, 1, -32),
+		Size = UDim2.fromOffset(560, CARD_HEIGHT),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 12)
+	layout.Padding = UDim.new(0, CARD_GAP)
 	layout.Parent = glyphRow
 	-- Thin bar under the cards that drains during the drawing cooldown.
 	drawBar = Theme.frame(root, {
 		Name = "DrawCooldown",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -104),
+		Position = UDim2.new(0.5, 0, 1, -26),
 		Size = UDim2.new(0, 0, 0, 4),
 		BackgroundColor3 = Theme.COLORS.accent,
 	})
 	Theme.corner(drawBar, 2)
 end
 
--- The row of spell cards above the hotbar (visible where drawing is allowed).
+-- The row of spell cards (visible where drawing is allowed).
 function HudController.getGlyphRow(): Frame
 	return glyphRow
 end
@@ -697,7 +504,6 @@ function HudController.init()
 	local scale = Instance.new("UIScale")
 	scale.Parent = gui
 
-	buildHotbar(root)
 	buildGlyphRow(root)
 	buildWallet(root)
 	buildMatchBar(root)
@@ -724,7 +530,7 @@ function HudController.init()
 end
 
 function HudController.start()
-	ClientState.HandChanged:Connect(refreshHotbar)
+	ClientState.SpellbookChanged:Connect(refreshWords)
 	ClientState.ProfileChanged:Connect(refreshWallet)
 	ClientState.ProfileChanged:Connect(refreshWords)
 	ClientState.MatchChanged:Connect(refreshMatch)
@@ -747,7 +553,7 @@ function HudController.start()
 	refreshBoosts()
 	Remotes.get("Toast").OnClientEvent:Connect(HudController.toast)
 	Remotes.get("Knockout").OnClientEvent:Connect(addFeed)
-	refreshHotbar()
+	refreshWords()
 	RunService.Heartbeat:Connect(tickCooldowns)
 end
 

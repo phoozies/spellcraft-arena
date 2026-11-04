@@ -3,12 +3,9 @@
 -- and the server never trusts a client-reported value from this file.
 
 local Config = {
-	MAX_HAND = 5,
-
 	-- Seconds. Spells cannot be cast faster than this regardless of cooldowns.
 	GLOBAL_CAST_LOCKOUT = 0.35,
-	-- Seconds between drawn spells. Each recognized drawing adds one copy of
-	-- a spell (one per spell; hand slot N holds the Nth loadout spell).
+	-- Seconds between drawn spells. Each recognized drawing casts its spell at once.
 	DRAW_COOLDOWN = 1,
 	-- Largest stroke the server will look at (points), and how far from the
 	-- screen a point may be (in screen heights). Clients send ~4px samples.
@@ -86,7 +83,7 @@ local Config = {
 	INTRO_TIME = 4,
 
 	-- Settings: the default key that starts drawing a spell, and keys that
-	-- can't be bound to it (movement, chat, hotbar, cancel, menus).
+	-- can't be bound to it (movement, chat, the spell keys, cancel, menus).
 	DEFAULT_DRAW_KEY = "F",
 	RESERVED_KEYS = {
 		"W",
@@ -176,7 +173,9 @@ local Config = {
 	ROUNDS_TO_WIN = 2, -- best of 3
 
 	MAX_PLACED_PER_PLAYER = 6,
-	PLACE_RANGE = 40,
+	-- A spell is cast as soon as it is drawn, with the camera still: looking
+	-- straight ahead puts a wall this far away, close enough to take cover at.
+	PLACE_RANGE = 20,
 	AIM_RANGE = 200,
 
 	-- First person and auto-aim (shared/Util/AutoAim, CastService, client
@@ -201,7 +200,7 @@ local Config = {
 	--                       beyond that the character's facing is used
 	--   FOV                 the first-person camera's field of view
 	AUTO_AIM = {
-		CONE = 10,
+		CONE = 15,
 		CLOSE_CONE = 30,
 		CLOSE_RANGE = 15,
 		ANGLE_WEIGHT = 1.5,

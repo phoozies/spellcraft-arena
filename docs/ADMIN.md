@@ -3,7 +3,7 @@
 There are two ways to run a command, and both go through the same server code:
 
 - **The Admin panel (click).** Admins see a purple **Admin** button in the top-left corner (the Party button sits under it). Click it, or press the **`** (backquote) key, to open a classic Roblox-style admin window. Drag its title bar to move it, and close it with **X** (or the button or key again).
-- **Chat (type).** Use the `;` prefix, for example `;give me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
+- **Chat (type).** Use the `;` prefix, for example `;cast me fireball`. Admin commands are never shown in chat. If a non-admin types `;something`, it's sent as a normal chat message.
 
 Every command you run sends you a short confirmation toast and is printed to the server log (`[Admin] name (userId): command`).
 
@@ -12,7 +12,7 @@ Every command you run sends you a short confirmation toast and is printed to the
 - **Target (left):** `Me`, `All`, `Others`, or any other player in the server. Every button that acts on a player uses the picked target.
 - **Tabs (right):**
   - **Player:** heal, god mode, free cast, knockback, kill, bring / go to / send to hub, walk speed, status effects, kick, ban.
-  - **Spells:** give any spell (grouped by element, chest spells under Arcane) or all of them.
+  - **Spells:** make the target cast any spell (grouped by element, chest spells under Arcane) or all of them.
   - **Economy:** coins (+100 / +1,000 / +10,000 or a custom amount), set wins, a Reset group (coins, wins, stats, elements, chest spells, chest pity, gift claim, tutorial, everything), open a Common, Rare or Legendary chest, unlock elements.
   - **Match:** start 1v1 to 4v4 now, end a match, send everyone to the hub, clear hub objects.
   - **Server:** announce a message, unban a UserId, list commands.
@@ -45,7 +45,7 @@ Leaving the target out means `me` where that makes sense.
 | Command | What it does |
 |---|---|
 | `;help [command]` | Lists the commands, or shows one command's usage |
-| `;give <player> <spell\|all>` | Gives spell copies at average drawing quality, skipping the spellbook and recharge rules. The hotbar holds 5 (one copy per spell). |
+| `;cast <player> <spell\|all>` | The player casts the spell(s) now, where they face, at average drawing quality, skipping the spellbook and recharge rules. Replaces `;give`: spells can't be held any more. |
 | `;unlock <player> <Fire\|Water\|Earth\|Air\|spells\|all>` | Permanently unlocks an element, every chest spell (`spells`), or both (`all`) (saved) |
 | `;coins <player> <amount>` | Grants coins (spent on chests) |
 | `;wins <player> <amount>` | Sets the win count (leaderboard, board, podium) |
@@ -69,7 +69,7 @@ Leaving the target out means `me` where that makes sense.
 | `;ban <player> <minutes\|perm> [reason]` | Bans the player across the whole experience (`Players:BanAsync`) |
 | `;unban <userId>` | Lifts a ban |
 
-Spell names can be any alias and can be more than one word, for example `;give me fire bomb`. `;give` readies a copy of the spell on your hotbar even if it isn't in your element.
+Spell names can be any alias and can be more than one word, for example `;cast me fire bomb`. `;cast` works even if the spell isn't in your element.
 
 `ban` takes one player at a time (not `all` or `others`). A player named exactly like the target word always wins over a longer name that starts the same way.
 
@@ -103,7 +103,7 @@ In Studio playtests, `game.ServerStorage.SpellcraftDebug:Invoke(command, arg)` (
 | `unlockall` | | owns every element and chest spell |
 | `element` | element id | grants and equips that element |
 | `solo` | mode | starts a match against nobody (rounds end on the timer; pays nothing) |
-| `cast` | `{spell = id, target = Vector3}` | gives you that spell and casts it through the normal pipeline |
+| `cast` | `{spell = id, target = Vector3}` | casts that spell through the normal pipeline (range, cooldown, placement rules) |
 | `knockback` | | pushes you, to test knockback |
 | `likefav` | boolean | sets whether the Like & Favourite gift is claimed |
 | `tutorial` | boolean | `false` shows the tutorial again on the next join |

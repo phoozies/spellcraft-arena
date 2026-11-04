@@ -29,16 +29,15 @@ No spell uses a swirl or a squiggle.
 
 The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; `tests/Glyphs.spec.luau` checks that the two agree.
 
-## Getting spells: the copy model
+## Casting: draw it and it flies
 
-- **Drawing a spell's shape adds one copy of that spell to your hotbar.** You hold **at most one copy of each spell**, and hotbar slot N always holds the Nth spell of your loadout (the same order as the spell cards and the **1-5** keys); a slot stays empty after a cast. Drawing a spell you already hold is refused with an error buzz; cast it first.
-- **Three ways to draw:** tap a spell card (or press its key, 1-5, when you don't hold it) to trace its shape over a faint guide (the server then accepts only that shape), or press **F** / tap Draw for a blank canvas.
-- **Casting uses up the copy.** Draw the shape again to get another.
+- **Finishing a spell's shape casts it at once**, where you are looking (auto-aim locks onto the nearest opponent near the crosshair). There is no cast button and nothing is stored. Key **N** (1-5) and spell card N are the Nth spell of your loadout.
+- **Three ways to draw:** tap a spell card or press its key (1-5) to trace its shape over a faint guide (the server then accepts only that shape), or press **F** / tap Draw for a blank canvas.
 - **Each spell has its own cast cooldown** (the **Cooldown** column below). Basic attacks wait **3 seconds**, fast slashes **2 seconds**.
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
 - **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's two **Training Groves** (100 x 112 stud yards in the west and east with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
 - **Which shapes work:** only the spells of your loadout (the others are never even considered). A shape from a spell you don't have equipped fizzles.
-- **Your ready spell shows on your crosshair:** in first person the centre crosshair takes the readied spell's colour and name (red with the seconds left while it recharges), and corner brackets mark the opponent auto-aim will hit.
+- **The spell you are tracing shows on your crosshair:** the centre crosshair takes its colour and name (red with the seconds left while it recharges; finishing the shape then only fizzles), and corner brackets mark the opponent auto-aim will hit.
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 
@@ -55,9 +54,9 @@ The client records your stroke and sends it (`DrawSpell`); the server runs `Glyp
 1. A **straight stroke** (no point strays far from the line between its ends) is a slash, in any direction. Anything else is resampled to 64 points, rotated and scaled to a square, then compared with the other shapes in your loadout (the **$1 unistroke recognizer**). A circle and a square look alike to it, so when they are the finalists it checks how much of its tightest bounding box the stroke fills (a square fills nearly all of it, a circle about 78%).
 2. Size, position, rotation, and drawing direction don't matter, and closed shapes can start anywhere. Only the shape does.
 3. The best shape wins if its score is at least `MIN_SCORE` (0.8) **and** clearly ahead of the runner-up (`MIN_MARGIN`). Otherwise the drawing fizzles. Straight lines, dots, and scribbles are rejected.
-4. The loadout spell with that shape is readied by `HandService.grant`. When the drawing came from a spell card, only that spell's shape counts.
+4. The loadout spell with that shape is cast at once by `CastService.cast`, at the point under the crosshair sent with the stroke. When the drawing came from a spell card, only that spell's shape counts.
 
-`tests/Glyphs.spec.luau` draws every shape with wobble, rotation, reversal, and random start points, and checks that an element never repeats a shape and that each spell uses its role's shape. Admin commands still take spell names through `WordMatcher` (`;give fireball`).
+`tests/Glyphs.spec.luau` draws every shape with wobble, rotation, reversal, and random start points, and checks that an element never repeats a shape and that each spell uses its role's shape. Admin commands still take spell names through `WordMatcher` (`;cast me fireball`).
 
 ## Drawing quality
 
@@ -69,7 +68,7 @@ How well a stroke follows its shape sets a **quality** from 0 to 1 (`Spells/Qual
 | Size | `radius` (the hit area) | x0.9 to x1.25 |
 | Time | `duration`, `statusDuration`, `lifetime` | x0.85 to x1.3 |
 
-Cooldowns, range, and speed never change, and an average drawing (quality 0.5, also what admin-given copies get) is close to the numbers in the spell tables below. Quality shows as a tier on the hotbar copy: Rough (1 star), Good (2, from 0.35), Great (3, from 0.7), Perfect (4, from 0.92). `tests/Quality.spec.luau` checks that even a perfect drawing stays inside the balance budgets times its bonus, so a new spell must leave that headroom.
+Cooldowns, range, and speed never change, and an average drawing (quality 0.5, also what an admin `;cast` gets) is close to the numbers in the spell tables below. Quality shows as a tier in the colour of your line when it lands: Rough (1 star), Good (2, from 0.35), Great (3, from 0.7), Perfect (4, from 0.92). `tests/Quality.spec.luau` checks that even a perfect drawing stays inside the balance budgets times its bonus, so a new spell must leave that headroom.
 
 ## Hitboxes
 
@@ -147,13 +146,13 @@ Chest spells show their numbers (damage or heal, cooldown, duration, range) in t
 ### Notes on the spells
 
 - **Earth Wall:** the `EarthWall` block model, a wide rectangular wall of staggered rubble (33 stones). **Your own spells (and your allies') fly straight through it, while enemy spells hit it**. The whole wall has a shared **35-damage** budget; as it drains, the stones break off one by one, low pieces first. Without the model it falls back to a 3×2 grid of blocks.
-- **Point-and-click spells** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground while readied, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
+- **Ground strikes** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground while you trace them, and a ring for their range limit. Aiming past the range pulls the circle in to the limit.
 - **Water Body** makes you immune to damage *and* effects (stun, knockback) for its duration. **Air Shield** blocks one hit of any kind, including a spell's effect, then pops.
 - **Fire Boost** multiplies all your damage by 1.25 for 8s (it stacks multiplicatively with the Power match boost).
 - **Piercing spells** (Water Wave, Tornado) keep flying after they hit a player and hit each player only once. They still stop on walls.
 - **Earthquake** roots you for its whole 1.2s cast (shortened from 2s, so it is much harder to dodge-and-punish) (`stats.channel`) and cancels if you are knocked out first.
 
-`cooldown` on every spell is its **cast cooldown**, shared by every copy of that spell you hold.
+`cooldown` on every spell is its **cast cooldown**.
 
 ## Match boosts (instead of earning spells)
 

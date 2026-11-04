@@ -1,12 +1,12 @@
 --!strict
--- Validates CastSpell requests and dispatches to the spell's archetype.
+-- Casts a spell the moment it is drawn, dispatching to the spell's archetype.
 --
--- The client only sends intent: the point under its first-person crosshair
--- and (for placeables) a rotation. The server checks the character is alive
--- and allowed to act, the spell is readied and off cooldown, clamps the target
--- to range, runs auto-aim (resolveAim: the nearest opponent in sight near the
--- crosshair becomes ctx.lock, and bolts are led), then builds a CastContext
--- the archetype uses for all world queries.
+-- The client only sends intent, with its drawing (SpellInputService): the point
+-- under its first-person crosshair and (for placeables) a rotation. The server
+-- checks the character is alive and allowed to act and the spell is off
+-- cooldown, clamps the target to range, runs auto-aim (resolveAim: the nearest
+-- opponent in sight near the crosshair becomes ctx.lock, and bolts are led),
+-- then builds a CastContext the archetype uses for all world queries.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -19,7 +19,7 @@ local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Types = require(ReplicatedStorage.Shared.Types)
 local AutoAim = require(ReplicatedStorage.Shared.Util.AutoAim)
 local DestructibleService = require(script.Parent.DestructibleService)
-local HandService = require(script.Parent.HandService)
+local SpellbookService = require(script.Parent.SpellbookService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EconomyService = require(script.Parent.EconomyService)
 local BoostService = require(script.Parent.BoostService)
@@ -62,7 +62,6 @@ local CastService = {}
 
 local hooks: WorldHooks? = nil
 local archetypes: { [string]: any } = {}
-local toastRemote: RemoteEvent
 local fxRemote: RemoteEvent
 
 function CastService.setWorldHooks(newHooks: WorldHooks)
@@ -254,51 +253,54 @@ local function resolveAim(
 		return straight, nil
 	end
 	local speed = def.stats.speed
-	local aimPoint = if speed and (def.archetype == "Projectile" or def.archetype == "Control")
+	local aimPoint = if speed
+			and (def.archetype == "Projectile" or def.archetype == "Control")
 		then AutoAim.lead(eye, lock.position, lock.velocity, speed * Config.PROJECTILE_SPEED_SCALE)
 		else lock.position
 	return aimPoint, lock.key :: Model
 end
 
-local function onCast(player: Player, target: any, rotationY: any)
+-- Casts a spell right now at the point under the player's crosshair. Called
+-- for a recognized drawing (SpellInputService), which already checked the
+-- spell is theirs. `force` (admin) skips the cooldown check. Returns (ok,
+-- reason); on false nothing happened and `reason`, if any, says why.
+function CastService.cast(
+	player: Player,
+	spellId: string,
+	target: any,
+	rotationY: any,
+	quality: number,
+	force: boolean?
+): (boolean, string?)
 	if not isFiniteVector(target) then
-		return
+		return false, nil
 	end
-	local rotation = if typeof(rotationY) == "number" and rotationY == rotationY
+	-- Finite only: an infinite number would come out of the % as NaN.
+	local rotation = if typeof(rotationY) == "number" and math.abs(rotationY) < 1e6
 		then rotationY % (2 * math.pi)
 		else 0
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not character or not root or not humanoid or humanoid.Health <= 0 or not hooks then
-		return
+		return false, nil
 	end
 	if StatusService.has(character, "TimeStop") or character:GetAttribute("Frozen") then
-		return
+		return false, nil
 	end
 	-- Stunned (Water Lock) or mid-channel (Earthquake): no casting.
 	if StatusService.has(character, "Stun") or StatusService.has(character, "Channel") then
-		toastRemote:FireClient(player, "You can't cast right now!", "error")
-		return
+		return false, "You can't cast right now!"
 	end
-	-- Must be holding a copy of the readied spell (drawing grants copies).
-	local spellId = HandService.getReadied(player)
-	local def = spellId and SpellDefinitions.get(spellId)
-	if not spellId or not def then
-		toastRemote:FireClient(player, "Draw a spell first!", "error")
-		return
+	local def = SpellDefinitions.get(spellId)
+	if not def then
+		return false, "Unknown spell."
 	end
-	-- Copies of the same spell share one cast cooldown.
-	local ready, left = HandService.checkCast(player, spellId)
-	if not ready then
-		if left > Config.GLOBAL_CAST_LOCKOUT then
-			toastRemote:FireClient(
-				player,
-				`{def.name} cooling down ({math.ceil(left * 10) / 10}s)`,
-				"error"
-			)
+	if not force then
+		local ready, left = SpellbookService.checkCast(player, spellId)
+		if not ready then
+			return false, `{def.name} cooling down ({math.ceil(left * 10) / 10}s)`
 		end
-		return
 	end
 
 	-- Clamp the target to the spell's range (or the general aim range).
@@ -318,11 +320,10 @@ local function onCast(player: Player, target: any, rotationY: any)
 	local archetype = archetypes[def.archetype]
 	if not archetype then
 		warn(`[CastService] no archetype handler for {def.archetype}`)
-		return
+		return false, nil
 	end
 
-	-- A well-drawn copy hits harder, wider, and lasts longer.
-	local quality = HandService.getReadiedQuality(player)
+	-- A well-drawn spell hits harder, wider, and lasts longer.
 	local activeHooks = hooks :: WorldHooks
 	local ctx: CastContext = {
 		player = player,
@@ -348,20 +349,18 @@ local function onCast(player: Player, target: any, rotationY: any)
 	local castOk, result = pcall(archetype.cast, ctx)
 	if not castOk then
 		warn(`[CastService] {def.id} failed: {result}`)
-		return
+		return false, nil
 	end
 	if result == false then
-		return -- archetype rejected (e.g. invalid placement); the copy is kept
+		return false, "Can't cast that there." -- archetype rejected (e.g. invalid placement)
 	end
 
-	-- The copy is used up and every copy of this spell shares the cooldown.
 	-- The Focus match boost shortens every spell's cooldown.
 	local cooldown = def.cooldown * BoostService.cooldownFactor(player)
 	if StatusService.has(character, "CooldownCut") then
 		cooldown *= 0.5
 	end
-	HandService.consume(player)
-	HandService.startCooldown(player, spellId, cooldown)
+	SpellbookService.startCooldown(player, spellId, cooldown)
 	-- Everyone nearby plays the cast animation + magic circle.
 	fxRemote:FireAllClients("cast", character, spellId, target)
 
@@ -374,24 +373,28 @@ local function onCast(player: Player, target: any, rotationY: any)
 	if def.archetype == "Placeable" then
 		EconomyService.track(player, "place")
 	end
+	return true, nil
 end
 
--- Studio QA (DebugService "cast"): hands the player a copy of the spell and
--- casts it at `target` through the normal pipeline, so range, cooldowns,
--- placement and every archetype rule still apply.
-function CastService.castFor(player: Player, spellId: string, target: Vector3): boolean
-	-- A copy left over from an earlier rejected cast would block the grant.
-	HandService.clearCopies(player)
-	local ok = HandService.grant(player, spellId, true)
-	if not ok then
+-- Admin (";cast"): casts a spell for a player where they are facing, at an
+-- average drawing's quality, whether or not they own it or it is cooling down.
+function CastService.castForced(player: Player, spellId: string): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
 		return false
 	end
-	onCast(player, target, 0)
-	return true
+	local target = root.Position + root.CFrame.LookVector * Config.PLACE_RANGE
+	return (CastService.cast(player, spellId, target, 0, Config.QUALITY.DEFAULT, true))
+end
+
+-- Studio QA (DebugService "cast"): casts a spell at `target` through the normal
+-- pipeline, so range, cooldowns, placement and every archetype rule still apply.
+function CastService.castFor(player: Player, spellId: string, target: Vector3): boolean
+	return (CastService.cast(player, spellId, target, 0, Config.QUALITY.DEFAULT))
 end
 
 function CastService.init()
-	toastRemote = Remotes.get("Toast")
 	fxRemote = Remotes.get("Fx")
 	for _, module in script.Parent:WaitForChild("Archetypes"):GetChildren() do
 		if module:IsA("ModuleScript") then
@@ -401,7 +404,6 @@ function CastService.init()
 end
 
 function CastService.start()
-	Remotes.get("CastSpell").OnServerEvent:Connect(onCast)
 	DestructibleService.Destroyed:Connect(function(_, destroyer)
 		if destroyer then
 			EconomyService.track(destroyer, "destroy")
