@@ -8,7 +8,7 @@
 -- heavy, area, support, ultimate) decides the shape the player draws
 -- (Glyphs.ROLE), the same everywhere, and a loadout never repeats a shape.
 --
--- Aliases are admin names (`;give fireball`), matched after normalization
+-- Aliases are admin names (`;cast me fireball`), matched after normalization
 -- (lowercase, no punctuation), so list plain words only.
 --
 -- Getting spells: an element's three BASE spells (slots 1-3, no `rarity`)
@@ -18,11 +18,9 @@
 -- Spells/Loadout). Slot 4 is a chest spell, slot 5 an ultimate. Neutral chest spells
 -- belong to the "Arcane" school instead of an element.
 --
--- Copy model: drawing a glyph adds one copy of the spell to the hotbar
--- (up to 5 held, duplicates allowed); casting uses a copy up. `cooldown` is
--- the spell's CAST cooldown, shared by every copy of that spell. Players
--- have 100 HP and can stockpile copies, so damage per cast cooldown is the
--- budget that matters (~16-20 DPS for the best spammable spells). Ultimates
+-- Drawing a glyph casts the spell at once; nothing is stored. `cooldown` is
+-- the spell's CAST cooldown. Players have 100 HP, so damage per cast cooldown
+-- is the budget that matters (~16-20 DPS for the best spammable spells). Ultimates
 -- hit for 30-40 on long cooldowns. Numbers here are base values: projectile
 -- speed is scaled by Config.PROJECTILE_SPEED_SCALE. tests/Balance.spec.luau
 -- enforces the budgets.

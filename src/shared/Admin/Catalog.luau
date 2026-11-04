@@ -49,7 +49,7 @@ local function input(
 	}
 end
 
--- The Give tab lists every spell, grouped by element (chest spells under Arcane).
+-- The Spells tab lists every spell, grouped by element (chest spells under Arcane).
 local function spellGroups(): { Group }
 	local order: { string } = {}
 	local byElement: { [string]: { Entry } } = {}
@@ -58,12 +58,12 @@ local function spellGroups(): { Group }
 			byElement[def.element] = {}
 			table.insert(order, def.element)
 		end
-		table.insert(byElement[def.element], button(def.name, "give {t} " .. def.id))
+		table.insert(byElement[def.element], button(def.name, "cast {t} " .. def.id))
 	end
 	local groups: { Group } = {
 		{
 			title = "Everything",
-			entries = { button("Give ALL spells", "give {t} all", "accent") },
+			entries = { button("Cast ALL spells", "cast {t} all", "accent") },
 		},
 	}
 	for _, element in order do
@@ -136,7 +136,7 @@ function Catalog.tabs(): { Tab }
 				},
 			},
 		},
-		{ id = "Give", label = "Spells", groups = spellGroups() },
+		{ id = "Spells", label = "Spells", groups = spellGroups() },
 		{
 			id = "Economy",
 			label = "Economy",

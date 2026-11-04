@@ -1,6 +1,6 @@
 --!strict
 -- Admin commands, typed in chat with Config.ADMIN_PREFIX
--- (";"), e.g. ";give me fireball" or ";startmatch 2v2", or clicked in the admin
+-- (";"), e.g. ";cast me fireball" or ";startmatch 2v2", or clicked in the admin
 -- panel (client AdminController), which sends the same text through the
 -- AdminCommand remote. See docs/ADMIN.md.
 --
@@ -23,11 +23,12 @@ local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
 local WordMatcher = require(ReplicatedStorage.Shared.Spells.WordMatcher)
+local CastService = require(script.Parent.CastService)
 local ChestService = require(script.Parent.ChestService)
 local DestructibleService = require(script.Parent.DestructibleService)
 local EconomyService = require(script.Parent.EconomyService)
 local ElementService = require(script.Parent.ElementService)
-local HandService = require(script.Parent.HandService)
+local SpellbookService = require(script.Parent.SpellbookService)
 local MatchService = require(script.Parent.MatchService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local SpellInputService = require(script.Parent.SpellInputService)
@@ -165,25 +166,28 @@ COMMANDS.help = {
 			table.insert(list, commandName)
 		end
 		table.sort(list)
-		return "Commands: " .. table.concat(list, ", ") .. ` (try {Config.ADMIN_PREFIX}help give)`
+		return "Commands: " .. table.concat(list, ", ") .. ` (try {Config.ADMIN_PREFIX}help cast)`
 	end,
 }
 
-COMMANDS.give = {
-	usage = "give <player> <spell|all>",
-	help = "Give spell copies, skipping the spellbook and recharge rules.",
+COMMANDS.cast = {
+	usage = "cast <player> <spell|all>",
+	help = "Make a player cast spells now where they face, skipping the spellbook and recharge rules.",
 	run = function(admin, args)
 		local targets = findPlayers(admin, args[1])
 		local spells = resolveSpells(joinFrom(args, 2))
 		if #targets == 0 or #spells == 0 then
-			return "Usage: give <player> <spell|all>"
+			return "Usage: cast <player> <spell|all>"
 		end
+		local cast = 0
 		for _, target in targets do
 			for _, id in spells do
-				HandService.grant(target, id, true)
+				if CastService.castForced(target, id) then
+					cast += 1
+				end
 			end
 		end
-		return `Gave {#spells} spell(s) to {names(targets)} (hotbar holds {Config.MAX_HAND}).`
+		return `{names(targets)}: {cast} of {#spells * #targets} cast(s) worked.`
 	end,
 }
 
@@ -411,7 +415,7 @@ COMMANDS.freecast = {
 			local on = target:GetAttribute("FreeCast") ~= true
 			target:SetAttribute("FreeCast", if on then true else nil)
 			SpellInputService.setNoDrawCooldown(target, on)
-			HandService.setFreeCasting(target, on)
+			SpellbookService.setFreeCasting(target, on)
 			table.insert(states, `{target.Name}: {if on then "ON" else "off"}`)
 		end
 		return "Free cast — " .. table.concat(states, ", ")

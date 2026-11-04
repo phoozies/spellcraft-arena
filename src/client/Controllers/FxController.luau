@@ -14,7 +14,7 @@
 --   shockwave      (position, radius, color)                       ground ring for slams/bursts
 --   strike         (center, radius, delay, modelName, color, spellId?)  a bolt model slams down after `delay`
 --   modelPop       (character, modelName, color)                   a model pops up over a head and fades
---   glyph          (character, glyphId, color, quality)            a drawing was readied: the live stroke (or a traced glyph) flashes and is pulled into the wand
+--   glyph          (character, glyphId, color, quality)            a drawing was cast: the live stroke (or a traced glyph) flashes and is pulled into the wand
 --   glyphFail      (character)                                     a drawing fizzled: the live stroke crumbles
 --   dash           (character, direction)                          dash pose, dust puff, and whoosh
 --   pillar         (center, radius, color, elementId, spellId)     element column erupts (Fire Pillar...)

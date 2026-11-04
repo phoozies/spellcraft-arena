@@ -26,7 +26,7 @@ local BoostService = require(script.Parent.BoostService)
 local ElementService = require(script.Parent.ElementService)
 local CastService = require(script.Parent.CastService)
 local DestructibleService = require(script.Parent.DestructibleService)
-local HandService = require(script.Parent.HandService)
+local SpellbookService = require(script.Parent.SpellbookService)
 local MapVoteService = require(script.Parent.MapVoteService)
 local PartyService = require(script.Parent.PartyService)
 local SpellInputService = require(script.Parent.SpellInputService)
@@ -339,9 +339,8 @@ local function spawnRound(match: Match)
 		if character then
 			character:SetAttribute("Team", team)
 		end
-		-- Every round starts empty-handed: draw to summon your spells.
-		HandService.resetCooldowns(player)
-		HandService.clearCopies(player)
+		-- Every round starts with every spell ready to draw.
+		SpellbookService.resetCooldowns(player)
 	end
 end
 
@@ -512,7 +511,7 @@ local function finishMatch(match: Match, winner: string?)
 				playerMatch[player] = nil
 				BoostService.reset(player)
 				if player.Parent then
-					HandService.clearMatch(player)
+					SpellbookService.clearMatch(player)
 					MatchService.spawnInHub(player)
 					stateRemote:FireClient(
 						player,
@@ -676,7 +675,7 @@ function MatchService.startMatch(
 		BoostService.reset(player)
 		-- The match spellbook is the player's loadout: their element's base
 		-- spells plus their equipped chest spells.
-		HandService.setSpellbook(player, ElementService.loadout(player))
+		SpellbookService.setSpellbook(player, ElementService.loadout(player))
 		toastRemote:FireClient(
 			player,
 			`Match found: {mode} on {ArenaService.DISPLAY_NAMES[arena.mapName]}!`,
@@ -801,7 +800,7 @@ function MatchService.removeFromMatch(player: Player)
 	end
 	BoostService.reset(player)
 	if player.Parent then
-		HandService.clearMatch(player)
+		SpellbookService.clearMatch(player)
 		stateRemote:FireClient(player, { phase = "Idle", round = 0, endsAt = 0, scores = {} })
 	end
 	local remaining: { [string]: boolean } = {}

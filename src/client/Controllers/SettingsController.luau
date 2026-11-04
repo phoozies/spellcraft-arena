@@ -3,7 +3,7 @@
 -- "Change", press any key, done) and switch the background music, the sound
 -- effects and the screen shake on or off.
 -- Both choices are saved to the player's profile; the server validates them
--- (and refuses reserved keys like WASD, Space, the hotbar numbers, and "/"
+-- (and refuses reserved keys like WASD, Space, the spell keys 1-5, and "/"
 -- which Roblox chat uses).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

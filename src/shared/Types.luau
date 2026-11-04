@@ -84,7 +84,7 @@ export type SpellStats = {
 	-- until the zone ends.
 	hold: boolean?,
 	-- Show the hit circle (radius) on the ground at the aim point while
-	-- this spell is readied, clamped to `range` (Zap).
+	-- this spell is being traced, clamped to `range` (Zap).
 	reticle: boolean?,
 	-- Projectiles: pass through players (each is hit once) instead of stopping
 	-- on the first one (Water Wave, Tornado).
@@ -128,7 +128,7 @@ export type SpellStats = {
 export type SpellDef = {
 	id: string,
 	name: string,
-	aliases: { string }, -- admin names (`;give fire`); players draw `glyph` instead
+	aliases: { string }, -- admin names (`;cast me fire`); players draw `glyph` instead
 	glyph: string, -- id in Spells/Glyphs: the shape drawn to ready this spell
 	-- Names in Audio/Cues: `cast` plays when it's cast, `impact` where it lands.
 	sfx: { cast: string?, impact: string? }?,

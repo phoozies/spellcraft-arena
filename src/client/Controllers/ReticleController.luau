@@ -1,12 +1,11 @@
 --!strict
 -- Hover hitbox for point-and-click spells (stats.reticle, e.g. Fire Pillar). While
--- such a spell is readied:
+-- such a spell's shape is on the canvas:
 --   * a glowing circle the size of the spell's hit radius (+ the player
 --     hitbox bonus) follows the aim point on the ground, and
 --   * a faint ring around the player shows the spell's range limit.
--- The aim point is clamped to the range exactly like CastService clamps it,
--- and InputController casts at getTarget(), so the circle is where the
--- strike lands. Local-only parts; other players never see them.
+-- The aim point is clamped to the range exactly like CastService clamps it, so
+-- the circle is where the strike lands when the shape is finished. Local-only parts; other players never see them.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,7 +24,6 @@ local folder: Folder? = nil
 local circle: Part
 local core: Part
 local rangeRing: Part
-local target: Vector3? = nil
 local activeSpell: string? = nil
 
 -- Set by InputController: returns the world point the player is aiming at.
@@ -33,15 +31,6 @@ local aimProvider: (() -> Vector3?)? = nil
 
 function ReticleController.setAimProvider(fn: () -> Vector3?)
 	aimProvider = fn
-end
-
-function ReticleController.isActive(): boolean
-	return activeSpell ~= nil
-end
-
--- The clamped, ground-snapped point the circle is drawn at (cast here).
-function ReticleController.getTarget(): Vector3?
-	return target
 end
 
 local function disc(name: string, transparency: number, material: Enum.Material): Part
@@ -64,7 +53,6 @@ local function hide()
 		folder.Parent = nil
 	end
 	activeSpell = nil
-	target = nil
 end
 
 local function groundBelow(point: Vector3, character: Model): Vector3
@@ -81,7 +69,7 @@ local function place(part: Part, center: Vector3, radius: number)
 end
 
 local function update()
-	local id = ClientState.readied
+	local id = ClientState.aiming
 	local def = id and SpellDefinitions.get(id)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -104,7 +92,6 @@ local function update()
 		point = root.Position + offset.Unit * range
 	end
 	local ground = groundBelow(point, character)
-	target = ground
 
 	local radius = (def.stats.radius or 4) + Config.HITBOX_BONUS
 	local ready = ClientState.cooldownLeft(def.id) <= 0

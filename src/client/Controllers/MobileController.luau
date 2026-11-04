@@ -2,7 +2,7 @@
 -- Declutters phones and tablets during fights. While a touch-only device is in
 -- a match or the Battleground, the menu buttons, wallet, party button and panel,
 -- kill feed, and boost icons are hidden, so the screen is left for the game:
--- the hotbar, spell cards, Draw and Dash buttons, health bar, the match bar, and
+-- the spell cards, Draw and Dash buttons, health bar, the match bar, and
 -- (in the Battleground) the Return to Hub button. They come back afterwards.
 
 local UserInputService = game:GetService("UserInputService")

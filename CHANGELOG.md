@@ -4,6 +4,15 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (draw to cast)
+- **Finishing a shape casts the spell at once.** There is no click, tap, R2 or trigger to cast any more, and spells can't be stored: the hotbar, held copies and readied slot are gone (`HandService` became the much smaller `SpellbookService`; remotes `CastSpell`, `SelectSlot` and `HandUpdated` are removed, `SpellbookUpdated` is new). `DrawSpell` now carries the point under the crosshair and the placement rotation.
+- **Keys 1-5 and the spell cards open a spell's shape to trace** (the D-pad cycles them); the cards moved down to the bottom of the screen and show their key. A spell on cooldown can still be previewed, but finishing its shape fizzles.
+- **Aiming reworked for no click:** the crosshair and lock-on brackets stay up over the canvas, and brackets now show wherever you can draw, so you know who you will hit before you start. A traced ground strike or wall still previews where it lands. The gamepad stick that draws no longer turns the camera. The auto-aim cone widened from 10° to 15°, since you can't turn while drawing.
+- **Walls and turrets:** they now stand side-on to you by default (R still turns them), land at most 20 studs away instead of 40 (looking straight ahead used to put a wall at the far limit), and the aim ray ignores characters, so aiming through an opponent no longer blocks the placement.
+- **The tutorial's "draw" and "cast" steps are one step.**
+- **Admin: `;give` is now `;cast <player> <spell|all>`**, which casts where the player faces and reports how many worked; the panel's Spells tab uses it.
+- **Hardening:** the 1s draw cooldown now runs before the draw gate, so spamming strokes outside a fight can't flood every client with `glyphFail`; `rotationY` must be finite; a player leaving mid-match no longer recreates their spellbook state.
+
 ### Changed (first person and auto-aim)
 - **The game is first person, everywhere** (new `CameraController`: `LockFirstPerson`, FOV 80). Your right arm and wand stay visible, so you see the wand raise and the magic circle open when you draw.
 - **You never aim with the mouse.** Every device casts at the crosshair in the middle of the screen. The server then **auto-aims** (new pure `shared/Util/AutoAim`, `Config.AUTO_AIM`, `CastService.resolveAim`): for bolts, ground strikes and lines it locks onto the **nearest opponent in plain sight near the crosshair** (players, hostile NPCs, training dummies). The cone is 10°, widening to 30° up close and never narrower than the target itself; candidates rank by distance inflated by how far off-centre they are, and line of sight is only raycast in rank order. Bolts are **led** toward a moving target and **home slightly** (60°/s) until dodged by more than 75°; clients steer their copy the same way (new Fx `projectileTurn` corrections). Walls, boosts, dashes and turrets go exactly where you look.

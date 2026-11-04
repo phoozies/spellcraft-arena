@@ -4,13 +4,13 @@
 --
 --   1. Choose an element   Spellbook kiosk / "Spells" button, then Choose
 --   2. Open a chest        Chest Shop / "Chests" button, then Open
---   3. Draw a spell        Training Grove, press the draw key, trace the shape
---   4. Cast it             aim at a training dummy and click
---   5. Earn coins          the Battleground portal or a Duel pad
+--   3. Cast a spell        Training Grove, look at a dummy, press a spell's key,
+--                          trace the shape (finishing it casts the spell)
+--   4. Earn coins          the Battleground portal or a Duel pad
 --
 -- It runs once per account (profile.tutorial.done, saved through the
 -- TutorialDone remote) and can be skipped at any time. Every step finishes by
--- watching what the server already tells us (profile, hand, cooldowns), so the
+-- watching what the server already tells us (profile, casts), so the
 -- tutorial never changes any rules: it only points. The arrows come from
 -- Fx/GuideArrow. If a fight starts (a match or the Battleground) the tutorial
 -- ends, since the player has clearly found the game.
@@ -71,7 +71,7 @@ local finished = false
 local stepIndex = 0
 local handles: { GuideArrow.Handle } = {}
 local stepStartedAt = 0
-local startHandCount = 0
+local startCasts = 0
 local advancing = false
 
 ----------------------------------------------------------------------
@@ -259,11 +259,11 @@ local STEPS: { Step } = {
 		end,
 	},
 	{
-		id = "draw",
-		title = "Draw a spell",
+		id = "cast",
+		title = "Draw to cast",
 		text = function()
 			if ClientState.inPractice then
-				return `Press <b>{ClientState.drawKeyName()}</b> (or tap <b>Draw</b>) and trace a shape. Tap a spell card to see its shape. The closer you trace, the stronger it is!`
+				return "<b>Look at a training dummy</b>, press <b>1</b> (or tap a spell card) and trace its shape. It casts the moment you finish. The closer you trace, the stronger it is!"
 			end
 			return "You draw spells in fights and in the <b>Training Grove</b>. Follow the arrows and step inside!"
 		end,
@@ -281,24 +281,10 @@ local STEPS: { Step } = {
 					end
 					return HudController.getGlyphRow()
 				end, { text = "Your spells", side = "top" }),
-			}
-		end,
-		done = function()
-			return ClientState.heldCount() > 0
-		end,
-		praise = function()
-			return "You drew a spell! It's ready to cast."
-		end,
-	},
-	{
-		id = "cast",
-		title = "Cast it!",
-		text = function()
-			return "Your spell is ready: the cursor shows it. <b>Aim at a training dummy and click</b> (or tap) to cast!"
-		end,
-		guide = function()
-			return {
 				GuideArrow.world(function()
+					if not ClientState.inPractice then
+						return nil
+					end
 					return positionOf(nearestDummy())
 				end, {
 					label = "Hit the dummy!",
@@ -309,18 +295,10 @@ local STEPS: { Step } = {
 			}
 		end,
 		done = function()
-			if ClientState.heldCount() < startHandCount then
-				return true
-			end
-			for id in ClientState.cooldowns do
-				if ClientState.cooldownLeft(id) > 0 then
-					return true
-				end
-			end
-			return false
+			return ClientState.casts > startCasts
 		end,
 		praise = function()
-			return "Boom! That's how you cast."
+			return "Boom! Draw a shape and it flies where you look."
 		end,
 	},
 	{
@@ -628,7 +606,7 @@ local function enterStep(index: number)
 		return
 	end
 	stepStartedAt = os.clock()
-	startHandCount = ClientState.heldCount()
+	startCasts = ClientState.casts
 	titleLabel.Text = `{index}. {step.title}`
 	bodyLabel.Text = step.text()
 	gotItButton.Visible = step.manual == true

@@ -2,22 +2,20 @@
 -- Drawing a spell: the client sends the stroke it drew (DrawSpell remote),
 -- the server decides what it is.
 --
---   DrawSpell(points, spellId?) ──► validate (table of Vector2, count, range, 1s cooldown)
---   ──► GlyphRecognizer (only the shapes of the player's loadout) ──► the
---   spell drawn with that shape ──► HandService.grant (hotbar copy; only
---   loadout spells work, in the hub and in matches)
+--   DrawSpell(points, spellId?, aim, rotationY?) ──► validate (table of Vector2,
+--   count, range, 1s cooldown) ──► GlyphRecognizer (only the shapes the player
+--   can draw) ──► the spell drawn with that shape ──► CastService.cast at once,
+--   at the point under their crosshair (nothing is ever stored or clicked)
 --   ──► GlyphResult(spellId?, glyphId?, quality?) back to the drawer for feedback,
---   and Fx "glyph" (readied) or "glyphFail" (fizzled) to everyone, so the stroke
+--   and Fx "glyph" (cast) or "glyphFail" (fizzled) to everyone, so the stroke
 --   they watched being drawn in the air (WandService relays it) lands or crumbles
 --
 -- Quality: the recognizer's score for the stroke becomes a 0..1 quality
--- (Spells/Quality) stored on the copy; the better the stroke follows the
--- shape, the stronger the cast (CastService). A client that tapped a spell's
--- card sends that `spellId` as the shape it is tracing: the stroke must be
--- THAT spell's shape (any other shape fizzles); without it, any of the
--- loadout's shapes is accepted.
+-- (Spells/Quality); the better the stroke follows the shape, the stronger the
+-- cast. A client that tapped a spell's card sends that `spellId` as the shape
+-- it is tracing: the stroke must be THAT spell's shape (any other shape
+-- fizzles); without it, any of the player's shapes is accepted.
 --
--- A drawing adds ONE copy of the spell to the hotbar (one copy per spell).
 -- Drawings are limited to one per Config.DRAW_COOLDOWN seconds, and only
 -- allowed in fights: during a match's rounds and in the Battleground (MatchService
 -- installs the rule with setDrawGate; not in the hub, and not while a match counts down).
@@ -35,8 +33,8 @@ local GlyphRecognizer = require(ReplicatedStorage.Shared.Spells.GlyphRecognizer)
 local Quality = require(ReplicatedStorage.Shared.Spells.Quality)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local SpellDefinitions = require(ReplicatedStorage.Shared.Spells.SpellDefinitions)
-local ElementService = require(script.Parent.ElementService)
-local HandService = require(script.Parent.HandService)
+local CastService = require(script.Parent.CastService)
+local SpellbookService = require(script.Parent.SpellbookService)
 local TelemetryService = require(script.Parent.TelemetryService)
 
 local SpellInputService = {}
@@ -115,12 +113,21 @@ local function reject(player: Player, glyphId: string?)
 	end
 end
 
--- Recognizes a stroke and readies the spell. Returns the granted spell id.
+-- Recognizes a stroke and casts the spell at `aim`. Returns the cast spell id.
 function SpellInputService.submitStroke(
 	player: Player,
 	points: { Vector2 },
-	targetId: string?
+	targetId: string?,
+	aim: any,
+	rotationY: any
 ): string?
+	-- The cooldown comes first: every refusal below is broadcast to all clients.
+	local left = SpellInputService.drawCooldownLeft(player)
+	if left > 0 then
+		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "error")
+		return nil
+	end
+	lastDraw[player] = os.clock()
 	if drawGate then
 		local allowed, reason = drawGate(player)
 		if not allowed then
@@ -129,16 +136,10 @@ function SpellInputService.submitStroke(
 			return nil
 		end
 	end
-	local left = SpellInputService.drawCooldownLeft(player)
-	if left > 0 then
-		toastRemote:FireClient(player, `Draw again in {math.ceil(left * 10) / 10}s`, "error")
-		return nil
-	end
-	lastDraw[player] = os.clock()
 
-	-- Only the shapes of the player's loadout are ever recognized (a loadout
+	-- Only the shapes of the player's spells are ever recognized (a loadout
 	-- never repeats a shape), so look-alike shapes can't be confused with them.
-	local loadout = ElementService.loadout(player)
+	local loadout = SpellbookService.drawable(player)
 	if #loadout == 0 then
 		toastRemote:FireClient(player, "Pick your first element in the Spellbook!", "error")
 		reject(player)
@@ -172,7 +173,7 @@ function SpellInputService.submitStroke(
 		return nil
 	end
 	local quality = Quality.fromScore(score)
-	local ok, message = HandService.grant(player, spellId, nil, quality)
+	local ok, message = CastService.cast(player, spellId, aim, rotationY, quality)
 	if not ok then
 		toastRemote:FireClient(player, message or "Fizzle!", "error")
 		reject(player, glyphId)
@@ -235,13 +236,15 @@ function SpellInputService.init()
 end
 
 function SpellInputService.start()
-	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw, targetId)
+	Remotes.get("DrawSpell").OnServerEvent:Connect(function(player, raw, targetId, aim, rotationY)
 		local points = sanitize(raw)
 		if points then
 			SpellInputService.submitStroke(
 				player,
 				points,
-				if typeof(targetId) == "string" then targetId else nil
+				if typeof(targetId) == "string" then targetId else nil,
+				aim,
+				rotationY
 			)
 		end
 	end)

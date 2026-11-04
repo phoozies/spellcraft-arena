@@ -1,9 +1,9 @@
 --!strict
--- Ghost preview for placeable spells. While a Placeable spell is readied a
--- translucent copy follows the aim point, tinted green (valid) or red
--- (blocked / out of range / outside the build area). It uses the exact
--- rules the server uses (shared Spells/Placement), so green means it will
--- succeed.
+-- Ghost preview for placeable spells. While a Placeable spell's shape is on the
+-- canvas a translucent copy follows the aim point, tinted green (valid) or red
+-- (blocked / out of range / outside the build area). It uses the exact rules
+-- the server uses (shared Spells/Placement), so green means finishing the shape
+-- will place it. Placeables face you by default; R turns them further.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -31,8 +31,6 @@ local ghostParts: { BasePart } = {}
 local highlight: Highlight? = nil
 local ghostSpell: string? = nil
 local rotation = 0
-local groundPoint: Vector3? = nil
-local valid = false
 local rotateButton: TextButton
 
 -- Set by InputController: returns the world point the player is aiming at.
@@ -46,8 +44,12 @@ function PlacementController.isActive(): boolean
 	return ghost ~= nil
 end
 
-function PlacementController.getPlacement(): (Vector3?, number, boolean)
-	return groundPoint, rotation, valid
+-- How a placed spell is turned (radians, world yaw): side-on to where you look,
+-- plus any turns of R. Also used for a blank canvas's drawing, which has no ghost.
+function PlacementController.getRotation(): number
+	local camera = workspace.CurrentCamera
+	local look = if camera then camera.CFrame.LookVector else Vector3.new(0, 0, -1)
+	return math.atan2(-look.X, -look.Z) + rotation
 end
 
 function PlacementController.rotate(step: number)
@@ -62,7 +64,7 @@ local function clear()
 	if ghost then
 		ghost:Destroy()
 	end
-	ghost, highlight, ghostSpell, groundPoint = nil, nil, nil, nil
+	ghost, highlight, ghostSpell = nil, nil, nil
 	table.clear(ghostParts)
 	rotateButton.Visible = false
 end
@@ -149,7 +151,7 @@ local function regions(): { BasePart }
 end
 
 local function update()
-	local id = ClientState.readied
+	local id = ClientState.aiming
 	local def = id and SpellDefinitions.get(id)
 	if not def or def.archetype ~= "Placeable" then
 		if ghost then
@@ -168,7 +170,6 @@ local function update()
 	local point = if aimProvider then aimProvider() else nil
 	if not root or not point then
 		setGhostVisible(false)
-		valid = false
 		return
 	end
 
@@ -184,11 +185,9 @@ local function update()
 		workspace:Raycast((point :: Vector3) + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then
 		setGhostVisible(false)
-		valid = false
 		return
 	end
-	groundPoint = down.Position
-	local cframe = Placement.cframeFor(def.visual, down.Position, rotation)
+	local cframe = Placement.cframeFor(def.visual, down.Position, PlacementController.getRotation())
 	if preview:IsA("Model") then
 		preview:PivotTo(cframe)
 	else
@@ -202,7 +201,7 @@ local function update()
 			table.insert(ignore, other.Character)
 		end
 	end
-	valid = Placement.inRegions(down.Position, regions())
+	local valid = Placement.inRegions(down.Position, regions())
 		and Placement.isClear(def.visual, cframe, ignore)
 	local left = ClientState.cooldownLeft(def.id)
 	local color = if valid and left <= 0 then Theme.COLORS.good else Theme.COLORS.bad

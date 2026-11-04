@@ -2,8 +2,7 @@
 -- A spell's sigil: its shape in glowing ink inside a little night-sky magic
 -- circle (a ring in the spell's colour, rune stones, a faint inner ring). It
 -- is the drawing canvas's look carried to every place a spell is shown: spell
--- cards (Spellbook, chest), the cards above the hotbar, the hotbar
--- slots, the Spellbook's big picture, and the canvas banner, so a spell
+-- cards (Spellbook, chest), the HUD's spell cards, the Spellbook's big picture, and the canvas banner, so a spell
 -- always looks like the magic you draw.
 --
 --   Sigil.create(parent, glyphId, size, color, props?) -> Frame
@@ -11,7 +10,7 @@
 --     the same circle with a symbol instead of a shape ("?" for a spell not
 --     won yet)
 --   Sigil.setSpinning(sigil, on)
---     its rune ring turns (the readied hotbar slot, the card being traced,
+--     its rune ring turns (the card being traced,
 --     the Spellbook's picture); one RenderStepped turns every spinning ring
 --
 -- The ink is opaque and blended into the circle's own colour

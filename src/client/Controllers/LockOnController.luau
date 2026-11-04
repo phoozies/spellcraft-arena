@@ -1,13 +1,14 @@
 --!strict
 -- The first-person crosshair and the auto-aim lock-on marker.
 --
---   * A crosshair sits in the middle of the screen. While a spell is readied
---     it wears the spell's colour with its name under it ("Click to cast"),
---     turns red with the seconds left while the spell recharges, and is a small
---     white dot otherwise.
---   * When the readied spell is one that locks on (bolts, ground strikes,
---     lines), the opponent auto-aim would pick right now gets four corner
---     brackets that close in on them, so you know who your spell will hit.
+--   * A crosshair sits in the middle of the screen, also while the drawing
+--     canvas is open: the spell flies from here the moment its shape is
+--     finished. While a spell's shape is being traced it wears the spell's
+--     colour with its name under it, turns red with the seconds left while the
+--     spell recharges, and is a small white dot otherwise.
+--   * Wherever you can draw, the opponent auto-aim would pick right now gets
+--     four corner brackets that close in on them, so you know who your next
+--     spell will hit (none for a traced spell that doesn't lock on, like a wall).
 --     The pick is the same shared/Util/AutoAim rule the server uses (nearest
 --     opponent in sight near the crosshair); the server still decides the shot.
 --
@@ -37,6 +38,10 @@ local AIMED = { Projectile = true, Control = true, Line = true, Zone = true }
 local COOLING = Color3.fromRGB(242, 104, 116)
 local RING = 30
 local BRACKET = 14
+-- Seconds between lock picks, and between scans for dummies and NPCs.
+local PICK_INTERVAL = 0.1
+local TARGET_SCAN_INTERVAL = 2
+local NO_SPELL_COLOR = Color3.new(1, 1, 1)
 
 local gui: ScreenGui
 local cross: Frame
@@ -44,12 +49,15 @@ local ring: Frame
 local ringStroke: UIStroke
 local dot: Frame
 local nameLabel: TextLabel
-local hintLabel: TextLabel
 local altHint: TextLabel
 local marker: Frame
 local brackets: { Frame } = {}
 local lock: Model? = nil
 local lockedSince = 0
+local lastPick = 0
+local trainingTargets: { Model } = {} -- dummies and NPCs, from the last scan
+local lastTargetScan = -math.huge
+local tinted: Color3? = nil
 
 local function rootOf(model: Model): BasePart?
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
@@ -100,20 +108,30 @@ local function candidates(): { AutoAim.Candidate }
 			})
 		end
 	end
-	for _, thing in CollectionService:GetTagged("Destructible") do
-		if
-			thing:IsA("Model")
-			and (thing:GetAttribute("Dummy") == true or thing:GetAttribute("NpcType") ~= nil)
-		then
-			local root = rootOf(thing)
-			local humanoid = thing:FindFirstChildOfClass("Humanoid")
-			if root and (not humanoid or humanoid.Health > 0) then
-				table.insert(list, {
-					position = root.Position,
-					radius = math.max(2, thing:GetExtentsSize().X / 2),
-					key = thing,
-				})
+	-- Finding them walks every breakable in the arena, so it runs far less often
+	-- than the pick itself.
+	local now = os.clock()
+	if now - lastTargetScan >= TARGET_SCAN_INTERVAL then
+		lastTargetScan = now
+		table.clear(trainingTargets)
+		for _, thing in CollectionService:GetTagged("Destructible") do
+			if
+				thing:IsA("Model")
+				and (thing:GetAttribute("Dummy") == true or thing:GetAttribute("NpcType") ~= nil)
+			then
+				table.insert(trainingTargets, thing)
 			end
+		end
+	end
+	for _, thing in trainingTargets do
+		local root = if thing.Parent then rootOf(thing) else nil
+		local humanoid = thing:FindFirstChildOfClass("Humanoid")
+		if root and (not humanoid or humanoid.Health > 0) then
+			table.insert(list, {
+				position = root.Position,
+				radius = math.max(2, thing:GetExtentsSize().X / 2),
+				key = thing,
+			})
 		end
 	end
 	return list
@@ -131,15 +149,15 @@ local function inSight(eye: Vector3, candidate: AutoAim.Candidate): boolean
 	return workspace:Raycast(eye, candidate.position - eye, params) == nil
 end
 
--- The lock the readied spell would get, or nil.
-local function pickLock(def: any): Model?
+-- The lock a spell would get (no spell yet: any bolt), or nil.
+local function pickLock(def: any?): Model?
 	local camera = workspace.CurrentCamera
-	if not camera or not AIMED[def.archetype] or (def.stats.range or 1) <= 0 then
+	if not camera or (def and (not AIMED[def.archetype] or (def.stats.range or 1) <= 0)) then
 		return nil
 	end
 	local eye = camera.CFrame.Position
 	local pick = AutoAim.pick(eye, camera.CFrame.LookVector, candidates(), {
-		range = def.stats.range or Config.AIM_RANGE,
+		range = (def and def.stats.range) or Config.AIM_RANGE,
 		visible = function(candidate)
 			return inSight(eye, candidate)
 		end,
@@ -200,14 +218,6 @@ local function build()
 		Size = UDim2.fromOffset(200, 22),
 		TextStrokeTransparency = 0.2,
 	})
-	hintLabel = Theme.label(cross, "Click to cast", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 1, 36),
-		Size = UDim2.fromOffset(200, 16),
-		Font = Theme.BODY_FONT,
-		TextColor3 = Theme.COLORS.onDark,
-		TextStrokeTransparency = 0.2,
-	})
 
 	-- Outside fights the side menu needs the mouse: say how to get it.
 	altHint = Theme.label(gui, "Hold Left Alt for the mouse", {
@@ -255,6 +265,10 @@ local function build()
 end
 
 local function tint(color: Color3)
+	if color == tinted then
+		return
+	end
+	tinted = color
 	ringStroke.Color = color
 	for _, holder in brackets do
 		for _, bar in holder:GetChildren() do
@@ -291,51 +305,55 @@ local function placeMarker(target: Model, color: Color3)
 	tint(color)
 end
 
+-- Who the lock is right now, re-picked every PICK_INTERVAL.
+local function refreshLock(def: any?, hidden: boolean)
+	local now = os.clock()
+	if now - lastPick < PICK_INTERVAL then
+		return
+	end
+	lastPick = now
+	local picked = if hidden or not ClientState.canDraw() then nil else pickLock(def)
+	if picked ~= lock then
+		lock = picked
+		lockedSince = now
+	end
+end
+
 local function update()
-	local id = ClientState.readied
+	local id = ClientState.aiming
 	local def = id and SpellDefinitions.get(id)
-	local hidden = DrawController.isActive() or MouseLock.isFree()
+	local drawing = DrawController.isActive()
+	-- The canvas frees the mouse too, but the crosshair stays: it is the aim.
+	local hidden = MouseLock.isFree() and not drawing
 	cross.Visible = not hidden
 	altHint.Visible = not hidden
+		and not drawing
 		and UserInputService.KeyboardEnabled
 		and UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch
 		and not ClientState.fighting()
-	if hidden then
+	if hidden or drawing then
 		UserInputService.MouseIconEnabled = true
 	elseif UserInputService.MouseEnabled then
 		-- The crosshair replaces the cursor while the mouse is locked.
 		UserInputService.MouseIconEnabled = false
 	end
-	if not def then
-		ring.Visible = false
+	local color = NO_SPELL_COLOR
+	if def then
+		local left = ClientState.cooldownLeft(def.id)
+		local cooling = left > 0
+		color = if cooling then COOLING else def.visual.color
+		local pulse = if cooling then 0 else math.sin(os.clock() * 7) * 2
+		ring.Size = UDim2.fromOffset(RING + pulse, RING + pulse)
+		nameLabel.Text = if cooling then `{def.name} {math.ceil(left)}s` else def.name
+		nameLabel.TextColor3 = color
+	else
 		nameLabel.Text = ""
-		hintLabel.Text = ""
-		dot.BackgroundColor3 = Color3.new(1, 1, 1)
-		marker.Visible = false
-		lock = nil
-		return
 	end
-	local left = ClientState.cooldownLeft(def.id)
-	local cooling = left > 0
-	local color = if cooling then COOLING else def.visual.color
-	ring.Visible = true
+	ring.Visible = def ~= nil
 	tint(color)
 	dot.BackgroundColor3 = color
-	local pulse = if cooling then 0 else math.sin(os.clock() * 7) * 2
-	ring.Size = UDim2.fromOffset(RING + pulse, RING + pulse)
-	nameLabel.Text = if cooling then `{def.name} {math.ceil(left)}s` else def.name
-	nameLabel.TextColor3 = color
-	local touch = UserInputService:GetLastInputType() == Enum.UserInputType.Touch
-	hintLabel.Text = if cooling
-		then "Recharging…"
-		elseif touch then "Tap to cast"
-		else "Click to cast"
 
-	local picked = if hidden then nil else pickLock(def)
-	if picked ~= lock then
-		lock = picked
-		lockedSince = os.clock()
-	end
+	refreshLock(def, hidden)
 	if lock then
 		placeMarker(lock, color)
 	else
@@ -343,7 +361,7 @@ local function update()
 	end
 end
 
--- The character or NPC the readied spell would lock onto right now.
+-- The character or NPC the next spell would lock onto right now.
 function LockOnController.getLock(): Model?
 	return lock
 end

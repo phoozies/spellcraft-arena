@@ -13,11 +13,9 @@ local FOLDER_NAME = "Remotes"
 -- name -> description (documentation lives next to the definition).
 local DEFINITIONS: { [string]: string } = {
 	-- Client -> Server
-	DrawSpell = "(points: {Vector2}, spellId: string?) a stroke drawn on screen (screen-height units); the server recognizes it and scores how well it follows the shape. spellId = the spell card being traced",
+	DrawSpell = "(points: {Vector2}, spellId: string?, aim: Vector3, rotationY: number?) a stroke drawn on screen (screen-height units); the server recognizes it, scores how well it follows the shape, and casts the spell at once at aim (the point under the crosshair). spellId = the spell card being traced, rotationY = how a placeable is turned",
 	DrawingState = "(on: boolean, look: Vector3?) the drawing canvas opened or closed (look = the way the drawer faces); the server sets the character's Drawing and DrawLook attributes so everyone sees the wand raised and the magic circle (cosmetic, rate limited)",
 	AirStroke = "(kind: string, data: {Vector2} | Color3?) the live stroke being drawn: begin (data = its ink colour) / points (data = air-canvas studs) / end / cancel. The server checks it (canvas open, sizes, rate) and relays it to nearby players as (character, kind, data?) so they watch the shape being drawn (cosmetic)",
-	SelectSlot = "(slot: number) ready the spell in a hand slot (hotbar tap/keys)",
-	CastSpell = "(target: Vector3, rotationY: number?) cast the readied spell at a point",
 	PickDraft = "(index: number) choose one of the offered draft cards",
 	SetQueue = "(mode: string?) join a queue by mode name, or leave with nil",
 	ClaimQuest = "(questId: string) claim a finished daily quest",
@@ -35,7 +33,7 @@ local DEFINITIONS: { [string]: string } = {
 	DebugCommand = "(command: string, arg: any) Studio-only test helpers",
 
 	-- Server -> Client
-	HandUpdated = "(hand: {string} (MAX_HAND slots, slot N = the Nth loadout spell, empty is a blank string), readiedSlot: number?, spellbook: {string}?, qualities: {number}) your spell copies, which slot is readied, and how well each was drawn",
+	SpellbookUpdated = "(spellbook: {string}?) the spells you may draw this match (nil outside a match: your loadout)",
 	CooldownStarted = "(spellId: string, endsAt: number)",
 	DashStarted = "(endsAt: number, direction: Vector3) the dash was allowed: go that way now; the dash can be used again at endsAt (server time)",
 	MapVoteState = "(state: {mode, maps: {{id, name, votes}}, myPick: string?, endsAt: number}?) the open map vote and its tally; nil closes it",

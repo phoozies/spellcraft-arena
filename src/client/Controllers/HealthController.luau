@@ -31,24 +31,24 @@ local function humanoidOf(character: Model?): Humanoid?
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
 
-local HOTBAR_LIFT = -122 -- bottom edge: clear of the hotbar and its cooldown bar
-local GLYPH_LIFT = -200 -- bottom edge when the spell-card row is showing
+local BOTTOM_LIFT = -34 -- bottom edge: clear of the Left Alt hint
+local GLYPH_LIFT = -114 -- bottom edge when the spell-card row is showing
 
--- Sits right above the hotbar, or above the spell cards when they are up
+-- Sits at the bottom of the screen, or above the spell cards when they are up
 -- (fights, the Battleground, the Training Groves).
 local function layoutOwn()
 	local cards = HudController.getGlyphRow()
-	holder.Position = UDim2.new(0.5, 0, 1, if cards.Visible then GLYPH_LIFT else HOTBAR_LIFT)
+	holder.Position = UDim2.new(0.5, 0, 1, if cards.Visible then GLYPH_LIFT else BOTTOM_LIFT)
 end
 
 local function buildHud()
 	local root = HudController.getGui():WaitForChild("Root")
 	holder = Theme.frame(root, {
 		Name = "Health",
-		-- Just above the hotbar; layoutOwn() lifts it over the spell cards.
+		-- layoutOwn() lifts it over the spell cards.
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, HOTBAR_LIFT),
-		Size = UDim2.fromOffset(HudController.hotbarWidth(), 30), -- as wide as the hotbar
+		Position = UDim2.new(0.5, 0, 1, BOTTOM_LIFT),
+		Size = UDim2.fromOffset(HudController.cardRowWidth(), 30), -- as wide as the spell cards
 		BackgroundTransparency = 0.15,
 	})
 	Theme.corner(holder, 10)
