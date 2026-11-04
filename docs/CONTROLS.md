@@ -37,7 +37,7 @@ You cast a spell by **drawing its shape**: the moment you finish, it flies where
 
 ## Dash and spectating
 
-- **Dash** is a forward somersault about 28 studs the way you are moving (or facing): arms flung wide, three pale wind streaks behind you, a dust puff and a thud on landing. It needs 8 seconds to recharge (`Config.DASH`). The button shows only the countdown while it recharges.
+- **Dash** is a forward somersault about 24 studs the way you are moving (or facing): arms flung wide, three pale wind streaks behind you, a dust puff and a thud on landing. It needs 8 seconds to recharge (`Config.DASH`). The button shows only the countdown while it recharges.
 - **Spectate duels from the hub:** walk to the island's rim (the four SPECTATE overlooks) and look down. Every duel is fought on an arena below the island, with a sign naming the mode and map.
 - **Watch** (side menu, in the hub) lists the other players and where they are; pick one to follow them with the camera, and use ◀ ▶ or Stop at the top of the screen. It ends by itself when you join a fight.
 - On a phone or tablet, fights hide the menu, wallet, party, kill feed, and boost icons; the spell cards, Draw and Dash buttons, health, and (in the Battleground) Return to Hub stay.

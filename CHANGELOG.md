@@ -4,6 +4,12 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (slower, straighter bolts and heavier movement)
+- **Bolts are much slower** (`Config.PROJECTILE_SPEED_SCALE` 1 to 0.45; a Fireball now flies about 43 studs a second instead of 95). This covers every projectile, including NPC and turret shots.
+- **Bolts fly dead straight at the sight:** the aim assist is off (`Config.AUTO_AIM.ASSIST = false`), so there is no lock, lead, or tracking. Its turn rate is now 90°/s (was 60°) so that it still works at this speed if it is turned back on.
+- **The screen no longer darkens while drawing:** the canvas's tint and vignette are gone. The rune circle and the ink stay.
+- **Movement is a bit slower:** walk speed 20 (was 24), and lower gravity (new `Config.GRAVITY` 160, was Roblox's default 196.2) with jump power 50 (was 55), so a jump is as high as before but hangs longer. The dash is slowed to match (speed 60, hop 34), about 24 studs instead of 28.
+
 ### Added (clicking buttons in first person)
 - **Press Shift to get the cursor** (new `CursorController`, keys in `Config.CURSOR`), like Roblox's shift lock: it stays out until you press Shift again, or until a window or the canvas opens and closes. This replaces holding Left Alt, and Roblox's own shift lock is turned off.
 - **Shift lock icon in the bottom left** (PC only, Roblox's built-in textures): blue while the mouse is locked, white while the cursor is out. Click it to go back to aiming.

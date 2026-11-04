@@ -53,7 +53,7 @@ Players have **100 HP**. In the hub health regenerates 5 HP/s; in matches and th
 
 ### Balancing for fast play
 
-Players move fast (walk speed 24), so every bolt flies 1.5× faster and has a bigger hitbox against players and breakables (+2 studs on top of each spell's own generous radius), while still gliding over floors. Since you can hold all five loadout spells at once, the numbers are budgeted per cast cooldown:
+Players walk at 20 studs a second, and bolts fly straight and slowly enough to sidestep (`stats.speed` × 0.45, a Fireball about 43), so each has a bigger hitbox against players and breakables (+2 studs on top of each spell's own generous radius), while still gliding over floors. Since you can hold all five loadout spells at once, the numbers are budgeted per cast cooldown:
 - No normal hit takes more than 30 of your 100 HP, and ultimates (slot 5) take 30-40 on cooldowns of 15s or more.
 - Burst damage is capped at 20 per second, which works out to about a 6-second kill.
 - Hard crowd control can't be chained, thanks to 2.5s of immunity after it ends.
@@ -104,7 +104,7 @@ A blue **Battleground portal** at the end of the hub's south road (and the red A
 
 ## Maps (7 flat duel maps plus the hub; the compact ones suit smaller matches)
 
-Fights are first person with auto-aim, so every duel map is **flat**: one level board, no ramps, mesas, bridges or ledges, and the game is all about cover and line of sight. Each map is a theme on the shared `Maps/FlatArena` builder:
+Fights are first person, so every duel map is **flat**: one level board, no ramps, mesas, bridges or ledges, and the game is all about cover and line of sight. Each map is a theme on the shared `Maps/FlatArena` builder:
 
 - a **tiled board** painted tile by tile: a soft checkerboard, the **Blue half** and the **Red half** tinted toward their team colour (more so near the spawns), and a centre line and mark, so you always know where you are;
 - **mirrored cover**: the layout is designed for one half and mirrored through the centre for the other, so both teams get the same map. Brick **walls** (hide behind), **low walls** (peek over), tall **pillars**, waist-high **blocks**, and trees;

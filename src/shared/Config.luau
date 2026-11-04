@@ -61,12 +61,16 @@ local Config = {
 		RELAY_RANGE = 250,
 	},
 
-	-- Movement & aiming. Players move faster than Roblox's default (16) to
-	-- keep fights lively. Bolts stay slow enough to see coming, and track a
-	-- little (AUTO_AIM.HOMING) and have a bigger hitbox so they still land.
-	WALK_SPEED = 24,
-	JUMP_POWER = 55,
-	PROJECTILE_SPEED_SCALE = 1,
+	-- Movement & aiming. Players move a little faster than Roblox's default (16)
+	-- to keep fights lively. GRAVITY (workspace.Gravity, Roblox's default is
+	-- 196.2) and JUMP_POWER go together: a jump still clears about 7.8 studs but
+	-- hangs longer. PROJECTILE_SPEED_SCALE multiplies every bolt's stats.speed
+	-- (a Fireball flies 43 studs a second): slow enough to see coming and to
+	-- sidestep, with a bigger hitbox so a good shot still lands.
+	WALK_SPEED = 20,
+	JUMP_POWER = 50,
+	GRAVITY = 160,
+	PROJECTILE_SPEED_SCALE = 0.45,
 	-- Studs added to every projectile's hit radius (spherecast) and to
 	-- area-of-effect checks against players.
 	HITBOX_BONUS = 2,
@@ -143,7 +147,7 @@ local Config = {
 	--                  just puts you on the pad
 	--   PIT_*          a player standing at the bottom of a hole that is walled in
 	--                  on every side by terrain cells taller than PIT_CLIMB (a jump
-	--                  clears about 7.7 studs) is thrown out over the nearest rim
+	--                  clears about 7.8 studs) is thrown out over the nearest rim
 	--                  after PIT_SECONDS, looking out PIT_REACH studs; the arc
 	--                  peaks PIT_APEX over the rim, and a rim higher than
 	--                  PIT_MAX_RIM puts the player back on the spawn pad instead
@@ -187,18 +191,19 @@ local Config = {
 	AIM_RANGE = 200,
 
 	-- First person and the sight (CameraController, CastService, shared/Util/AutoAim).
-	-- A spell goes where the sight points. Bolts (and only bolts) also get a quiet
-	-- assist, since the camera can't turn while drawing: the opponent closest to
-	-- the sight, in plain sight and inside the cone, is aimed at, led and tracked.
-	-- ASSIST = false makes every bolt fly dead straight. CONE and CLOSE_CONE:
-	-- half-angles in degrees at CLOSE_RANGE and beyond, and at point blank.
+	-- A spell goes where the sight points, and every bolt flies dead straight.
+	-- ASSIST = true gives bolts (and only bolts) a quiet assist instead: the
+	-- opponent closest to the sight, in plain sight and inside the cone, is aimed
+	-- at, led and tracked. CONE and CLOSE_CONE (assist only, like the settings up
+	-- to HOMING_GIVE_UP): half-angles in degrees at CLOSE_RANGE and beyond, and at
+	-- point blank.
 	-- DISTANCE_WEIGHT: how much being nearer counts against being closer to the
 	-- sight. LEAD: how much of a target's motion a bolt leads, LEAD_VERTICAL of
 	-- its vertical speed, up to MAX_LEAD_SECONDS. HOMING: degrees a second a bolt
 	-- turns toward its target, until it is HOMING_GIVE_UP off course (dodged).
 	-- MAX_YAW_ERROR: how far an aim may be from where the character faces.
 	AUTO_AIM = {
-		ASSIST = true,
+		ASSIST = false,
 		CONE = 15,
 		CLOSE_CONE = 25,
 		CLOSE_RANGE = 15,
@@ -206,7 +211,7 @@ local Config = {
 		LEAD = 0.8,
 		LEAD_VERTICAL = 0.25,
 		MAX_LEAD_SECONDS = 1.2,
-		HOMING = 60,
+		HOMING = 90,
 		HOMING_GIVE_UP = 75,
 		MAX_YAW_ERROR = 70,
 		FOV = 80,
@@ -258,14 +263,14 @@ local Config = {
 	-- Dash (DashService, client DashController): a quick leap forward on a
 	-- key (Q) or the Dash button. The server checks the cooldown and the
 	-- player's state and tells the client which way to go; the client moves its
-	-- own character at SPEED studs/s for DURATION seconds (about 28 studs) and
+	-- own character at SPEED studs/s for DURATION seconds (about 24 studs) and
 	-- pops it HOP studs/s upward, so the dash is a low arc with three wind
 	-- streaks (TRAILS) behind it.
 	DASH = {
 		COOLDOWN = 8,
-		SPEED = 70,
+		SPEED = 60,
 		DURATION = 0.4,
-		HOP = 38,
+		HOP = 34,
 		TRAILS = 3,
 	},
 

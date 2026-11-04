@@ -347,7 +347,6 @@ function Projectile.launch(opts: LaunchOptions)
 		opts = opts,
 		position = opts.origin,
 		direction = direction,
-		-- Players are fast (Config.WALK_SPEED), so every bolt is sped up too.
 		speed = (opts.stats.speed or 80) * Config.PROJECTILE_SPEED_SCALE,
 		range = opts.stats.range or 150,
 		radius = opts.stats.radius or 1,

@@ -7,7 +7,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local StarterPlayer = game:GetService("StarterPlayer")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+
+workspace.Gravity = Config.GRAVITY
 
 -- We spawn characters ourselves so dead players don't pop back into the hub
 -- mid-round (MatchService / HubService call LoadCharacter).

@@ -31,7 +31,7 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 ## Casting: draw it and it flies
 
-- **Finishing a spell's shape casts it at once**, where you are looking (auto-aim locks onto the nearest opponent near the crosshair). There is no cast button and nothing is stored. Key **N** (1-5) and spell card N are the Nth spell of your loadout.
+- **Finishing a spell's shape casts it at once**, where you are looking. There is no cast button and nothing is stored. Key **N** (1-5) and spell card N are the Nth spell of your loadout.
 - **Three ways to draw:** tap a spell card or press its key (1-5) to trace its shape over a faint guide (the server then accepts only that shape), or press **F** / tap Draw for a blank canvas.
 - **Each spell has its own cast cooldown** (the **Cooldown** column below). Basic attacks wait **3 seconds**, fast slashes **2 seconds**.
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
@@ -45,7 +45,7 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 
 | Spell type | Spells | Where it goes |
 |---|---|---|
-| Bolts | Fireball, Fire Slash, Fire Bomb, Water Slice, Water Lock, Water Wave, Rock Throw, Gust, Whirlwind, Tornado | Flies along the sight. If an opponent in plain sight is inside the cone (`Config.AUTO_AIM`), the one closest to the sight is aimed at, led and gently tracked. Invisible; can be turned off with `ASSIST`. |
+| Bolts | Fireball, Fire Slash, Fire Bomb, Water Slice, Water Lock, Water Wave, Rock Throw, Gust, Whirlwind, Tornado | Flies dead straight along the sight, at the spell's `speed` times `Config.PROJECTILE_SPEED_SCALE` (0.45). An optional assist (`Config.AUTO_AIM.ASSIST`, off) instead aims at, leads and tracks the opponent closest to the sight. |
 | Ground strikes | Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole | Exactly where the sight stops, within range, on the ground under it. The hit circle shows the spot while you trace. |
 | Line | Earth Pillar | Runs from you in the sight's direction. |
 | Placed | Earth Wall, Turret | On the first solid thing along the sight, at most `Config.PLACE_RANGE` away, side-on to you. Looks through characters. The ghost shows the spot while you trace. |
