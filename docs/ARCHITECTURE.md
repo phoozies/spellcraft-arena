@@ -83,7 +83,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
     CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing; keeps your arm and wand visible except while drawing
-    CursorController    the cursor key: Shift turns the cursor on and off, like shift lock (Config.CURSOR)
+    CursorController    the cursor key: Shift turns the cursor on and off, like shift lock (Config.CURSOR), with the shift lock icon bottom left
     CrosshairController the sight: one dot, shown over the canvas too; the cursor hint on keyboards
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback

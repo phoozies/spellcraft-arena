@@ -6,6 +6,7 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ### Added (clicking buttons in first person)
 - **Press Shift to get the cursor** (new `CursorController`, keys in `Config.CURSOR`), like Roblox's shift lock: it stays out until you press Shift again, or until a window or the canvas opens and closes. This replaces holding Left Alt, and Roblox's own shift lock is turned off.
+- **Shift lock icon in the bottom left** (PC only, Roblox's built-in textures): blue while the mouse is locked, white while the cursor is out. Click it to go back to aiming.
 - **The cursor hint now shows in fights too** (Return to Hub has no key) and changes while the cursor is out.
 - **The spectate bar frees the mouse**, and the tutorial now tells PC players how to reach the glowing button.
 
