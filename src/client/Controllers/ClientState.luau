@@ -22,7 +22,7 @@ export type ProfileSummary = {
 	quests: { Types.DailyQuest },
 	streak: number,
 	stats: { matches: number, wins: number, knockouts: number, casts: number },
-	settings: { drawKey: string, music: boolean, sfx: boolean, shake: boolean },
+	settings: { drawKey: string, music: boolean, sfx: boolean, shake: boolean, camera: number? },
 	-- likeReadyAt: server time (workspace:GetServerTimeNow) the gift can be claimed.
 	rewards: { likeFav: boolean, likeReadyAt: number },
 	pity: number, -- chests opened since the last Epic or better

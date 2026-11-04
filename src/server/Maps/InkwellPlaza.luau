@@ -138,7 +138,7 @@ local function label(part: BasePart, text: string, offset: number, maxDistance: 
 	textLabel.Name = "Text"
 	textLabel.Size = UDim2.fromScale(1, 1)
 	textLabel.BackgroundTransparency = 1
-	textLabel.Font = Enum.Font.FredokaOne
+	textLabel.Font = Enum.Font.BuilderSansBold
 	textLabel.TextScaled = true
 	textLabel.TextColor3 = Color3.new(1, 1, 1)
 	textLabel.TextStrokeTransparency = 0.3
@@ -709,7 +709,7 @@ return function(): Model
 		title.BackgroundTransparency = 1
 		title.Size = UDim2.new(1, 0, 0, 60)
 		title.Position = UDim2.fromOffset(0, 8)
-		title.Font = Enum.Font.FredokaOne
+		title.Font = Enum.Font.BuilderSansBold
 		title.TextScaled = true
 		title.TextColor3 = element.color
 		title.Text = string.upper(element.name)
@@ -731,7 +731,7 @@ return function(): Model
 				name.BackgroundTransparency = 1
 				name.Size = UDim2.fromOffset(124, 44)
 				name.Position = UDim2.fromOffset(x, 150)
-				name.Font = Enum.Font.FredokaOne
+				name.Font = Enum.Font.BuilderSansBold
 				name.TextScaled = true
 				name.TextWrapped = true
 				name.TextColor3 = Color3.new(1, 1, 1)
@@ -743,7 +743,7 @@ return function(): Model
 		hint.BackgroundTransparency = 1
 		hint.Size = UDim2.new(1, -16, 0, 40)
 		hint.Position = UDim2.fromOffset(8, 220)
-		hint.Font = Enum.Font.GothamMedium
+		hint.Font = Enum.Font.BuilderSansMedium
 		hint.TextScaled = true
 		hint.TextColor3 = Color3.fromRGB(197, 202, 233)
 		hint.Text = `{element.tagline}  ({element.price} coins)`
@@ -1273,7 +1273,7 @@ return function(): Model
 		plate.Size = UDim2.fromScale(0.9, 0.9)
 		plate.Position = UDim2.fromScale(0.05, 0.05)
 		plate.BackgroundTransparency = 1
-		plate.Font = Enum.Font.FredokaOne
+		plate.Font = Enum.Font.BuilderSansBold
 		plate.TextScaled = true
 		plate.TextColor3 = Color3.fromRGB(38, 50, 56)
 		plate.Text = `#{rank}\nWin a match to stand here!`
@@ -1298,7 +1298,7 @@ return function(): Model
 	boardText.Name = "Text"
 	boardText.Size = UDim2.fromScale(1, 1)
 	boardText.BackgroundTransparency = 1
-	boardText.Font = Enum.Font.FredokaOne
+	boardText.Font = Enum.Font.BuilderSansBold
 	boardText.TextScaled = true
 	boardText.TextColor3 = Color3.new(1, 1, 1)
 	boardText.Text = "Most Wins\n(win a match!)"

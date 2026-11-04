@@ -82,10 +82,15 @@ local Config = {
 	-- Seconds of the "VS" intro before players are moved into the arena.
 	INTRO_TIME = 4,
 
+	-- Mouse look speed: UserInputService.MouseDeltaSensitivity for the default
+	-- setting and the range and step of the Settings control (saved per player).
+	CAMERA = { SENSITIVITY = 0.5, MIN = 0.1, MAX = 1, STEP = 0.1 },
+
 	-- Settings: the default key that starts drawing a spell, and keys that
 	-- can't be bound to it (movement, chat, the spell keys, cancel, menus).
 	DEFAULT_DRAW_KEY = "F",
 	RESERVED_KEYS = {
+		"M",
 		"W",
 		"A",
 		"S",
@@ -178,32 +183,23 @@ local Config = {
 	PLACE_RANGE = 20,
 	AIM_RANGE = 200,
 
-	-- First person and auto-aim (shared/Util/AutoAim, CastService, client
-	-- CameraController / LockOnController). The camera is locked in first
-	-- person; spells fly where you look and lock onto the opponent nearest to
-	-- that line who is in plain sight.
-	--   CONE / CLOSE_CONE   half-angle in degrees an opponent may be off the
-	--                       crosshair and still be locked: CLOSE_CONE at point
-	--                       blank, narrowing to CONE at CLOSE_RANGE studs
-	--   ANGLE_WEIGHT        how much being off-centre counts against a target:
-	--                       its distance is multiplied by 1 + WEIGHT * (off)^2,
-	--                       off = 0 at the crosshair, 1 at the cone's edge
-	--   LEAD                share of a moving target's path a bolt is led by
-	--   LEAD_VERTICAL       share of vertical speed that is led (jumps fall back)
-	--   MAX_LEAD_SECONDS    never lead further ahead than this
-	--   HOMING              degrees per second a locked bolt turns toward its
-	--                       target (slight tracking, still dodgeable)
-	--   HOMING_GIVE_UP      a bolt stops tracking once its target is more than
-	--                       this many degrees off its heading (it was dodged)
-	--   MAX_YAW_ERROR       server: degrees the sent look direction may differ
-	--                       from the way the character faces (latency slack);
-	--                       beyond that the character's facing is used
-	--   FOV                 the first-person camera's field of view
+	-- First person and the sight (CameraController, CastService, shared/Util/AutoAim).
+	-- A spell goes where the sight points. Bolts (and only bolts) also get a quiet
+	-- assist, since the camera can't turn while drawing: the opponent closest to
+	-- the sight, in plain sight and inside the cone, is aimed at, led and tracked.
+	-- ASSIST = false makes every bolt fly dead straight. CONE and CLOSE_CONE:
+	-- half-angles in degrees at CLOSE_RANGE and beyond, and at point blank.
+	-- DISTANCE_WEIGHT: how much being nearer counts against being closer to the
+	-- sight. LEAD: how much of a target's motion a bolt leads, LEAD_VERTICAL of
+	-- its vertical speed, up to MAX_LEAD_SECONDS. HOMING: degrees a second a bolt
+	-- turns toward its target, until it is HOMING_GIVE_UP off course (dodged).
+	-- MAX_YAW_ERROR: how far an aim may be from where the character faces.
 	AUTO_AIM = {
-		CONE = 15,
-		CLOSE_CONE = 30,
+		ASSIST = true,
+		CONE = 10,
+		CLOSE_CONE = 25,
 		CLOSE_RANGE = 15,
-		ANGLE_WEIGHT = 1.5,
+		DISTANCE_WEIGHT = 0.25,
 		LEAD = 0.8,
 		LEAD_VERTICAL = 0.25,
 		MAX_LEAD_SECONDS = 1.2,

@@ -182,6 +182,7 @@ export type Profile = {
 		quests: { DailyQuest },
 	},
 	settings: {
+		camera: number?, -- mouse look speed (Config.CAMERA)
 		drawKey: string, -- Enum.KeyCode name that starts drawing a spell
 		music: boolean, -- background music on or off
 		sfx: boolean, -- sound effects on or off

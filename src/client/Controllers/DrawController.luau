@@ -10,7 +10,7 @@
 -- Then drag a mouse/finger (or push the right stick). The line glows in the
 -- spell's colour with a sparking pen tip, and your wand writes the same stroke
 -- in the air in front of you (WandController). When you let go the stroke is
--- sent to the server (DrawSpell) with the point under the crosshair. The server
+-- sent to the server (DrawSpell) with the point under the sight. The server
 -- decides what it is and how well it followed the shape and casts the spell at
 -- once, with no click: aim first, then draw. The answer (GlyphResult) flashes
 -- the line in its quality colour and pulls it into the wand, or turns it red.
@@ -39,7 +39,6 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local GlyphView = require(ReplicatedStorage.Shared.UI.GlyphView)
 local WandAir = require(ReplicatedStorage.Shared.Util.WandAir)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
-local Sigil = require(script.Parent.Parent.UI.Sigil)
 local SpellCard = require(script.Parent.Parent.UI.SpellCard)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ClientState = require(script.Parent.ClientState)
@@ -58,9 +57,9 @@ local SAMPLE_SPACING = 4
 local DRAW_SPACING = 8
 local STICK_RADIUS = 0.3 -- of the screen height
 -- The ink: a wide soft glow, a solid core, and a white shine down the middle.
-local GLOW_THICKNESS = 30
-local CORE_THICKNESS = 12
-local SHINE_THICKNESS = 4
+local GLOW_THICKNESS = 16
+local CORE_THICKNESS = 6
+local SHINE_THICKNESS = 2
 -- How long a sent line waits for the server's verdict before fading anyway.
 local VERDICT_TIMEOUT = 1.5
 -- Pen-tip sparkles: at most this many on screen.
@@ -76,7 +75,6 @@ local BAD = Color3.fromRGB(239, 83, 80)
 local gui: ScreenGui
 local dim: Frame -- the input surface + vignette, visible while drawing
 local bannerFrame: Frame
-local bannerIcon: Frame
 local bannerTitle: TextLabel
 local bannerHint: TextLabel
 local runes: Frame -- the turning rune circle behind the guide
@@ -87,7 +85,7 @@ local ink: Frame -- the line being drawn (glow, core and shine layers)
 local pen: Frame -- the glowing orb at the pen tip
 local sparkLayer: Frame
 local drawButton: TextButton
-local keyCap: TextLabel
+local drawTouch = false
 
 -- The spell whose shape the canvas is showing (nil = a blank canvas).
 local target: Types.SpellDef? = nil
@@ -98,7 +96,7 @@ local comet: { Frame } = {}
 local tracerPath: { Vector2 } = {}
 local tracerLength = 0
 
--- Set by InputController: the point under the crosshair, and how a placeable
+-- Set by InputController: the point under the sight, and how a placeable
 -- would be turned.
 local aimProvider: (() -> (Vector3?, number?))? = nil
 
@@ -289,9 +287,9 @@ local function showPreview(def: Types.SpellDef?)
 	}
 	-- The guide is drawn opaque inside see-through groups, so the overlapping
 	-- line pieces fade as one shape (no darker beads where they overlap).
-	local glowGroup = group(previewHolder, "GuideGlow", 0.84)
+	local glowGroup = group(previewHolder, "GuideGlow", 0.9)
 	local glow =
-		GlyphView.create(glowGroup, def.glyph, size, inkColor, props, math.max(20, size * 0.11))
+		GlyphView.create(glowGroup, def.glyph, size, inkColor, props, math.max(10, size * 0.045))
 	if glow then
 		for _, child in glow:GetChildren() do
 			if child:IsA("Frame") then
@@ -301,7 +299,7 @@ local function showPreview(def: Types.SpellDef?)
 	end
 	local lineGroup = group(previewHolder, "GuideLine", 0.42)
 	local holder =
-		GlyphView.create(lineGroup, def.glyph, size, inkColor, props, math.max(8, size * 0.05))
+		GlyphView.create(lineGroup, def.glyph, size, inkColor, props, math.max(4, size * 0.016))
 	if not holder then
 		return
 	end
@@ -361,27 +359,11 @@ local function stepTracer()
 end
 
 local function updateBanner(def: Types.SpellDef?)
-	bannerIcon:ClearAllChildren()
-	local props = {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-	}
-	local sigil = if def
-		then Sigil.create(bannerIcon, def.glyph, 48, inkColor, props)
-		else Sigil.blank(bannerIcon, 48, inkColor, "✦", props)
-	Sigil.setSpinning(sigil, true)
-	if def then
-		bannerTitle.Text = `Trace {def.name}`
-		bannerHint.Text = `Closer = stronger   [{ClientState.drawKeyName()}] cancel`
-	else
-		bannerTitle.Text = "Draw a spell with your wand"
-		bannerHint.Text = `Any shape in your loadout   [{ClientState.drawKeyName()}] cancel`
-	end
-	bannerFrame.BackgroundColor3 = Theme.COLORS.panel
-	local stripe = bannerFrame:FindFirstChild("Stripe")
-	if stripe and stripe:IsA("Frame") then
-		stripe.BackgroundColor3 = inkColor
-	end
+	bannerTitle.Text = if def then def.name else "Draw any of your spells"
+	bannerTitle.TextColor3 = inkColor
+	bannerHint.Text = if def
+		then `Trace it closely. {ClientState.drawKeyName()} cancels.`
+		else `{ClientState.drawKeyName()} cancels.`
 end
 
 -- Pops the canvas pieces in when it opens.
@@ -451,11 +433,6 @@ local function setActive(on: boolean, spellId: string?)
 				s.Color = inkColor
 			end
 		end
-		for _, tick in runes:GetChildren() do
-			if tick:IsA("Frame") and tick.Name == "Tick" then
-				tick.BackgroundColor3 = inkColor:Lerp(WHITE, 0.2)
-			end
-		end
 		pen.BackgroundColor3 = inkColor
 		if not wasActive then
 			playOpen()
@@ -465,7 +442,7 @@ local function setActive(on: boolean, spellId: string?)
 		WandController.setDrawing(on)
 	end
 	HudController.setTracing(if def then def.id else nil)
-	drawButton.BackgroundColor3 = if on then Theme.COLORS.accent else Theme.COLORS.panelLight
+	drawButton.BackgroundColor3 = if on then Theme.COLORS.accent else Theme.COLORS.panel
 end
 
 -- Opens the canvas for one spell (a tapped card), or closes it if that
@@ -716,7 +693,7 @@ local function buildRunes()
 	runesScale.Parent = runes
 	local outer = Instance.new("UIStroke")
 	outer.Thickness = 3
-	outer.Transparency = 0.55
+	outer.Transparency = 0.88
 	outer.Color = WHITE
 	outer.Parent = runes
 	runesInner = circle(runes, {
@@ -727,65 +704,33 @@ local function buildRunes()
 	})
 	local inner = Instance.new("UIStroke")
 	inner.Thickness = 2
-	inner.Transparency = 0.7
+	inner.Transparency = 1
 	inner.Color = WHITE
 	inner.Parent = runesInner
-	-- Rune ticks around the outer ring: every third one is a bigger stone.
-	for i = 0, 23 do
-		local angle = i / 24 * math.pi * 2
-		local big = i % 3 == 0
-		local tick = Instance.new("Frame")
-		tick.Name = "Tick"
-		tick.AnchorPoint = Vector2.new(0.5, 0.5)
-		tick.Position = UDim2.fromScale(0.5 + math.sin(angle) * 0.5, 0.5 - math.cos(angle) * 0.5)
-		tick.Size = UDim2.fromOffset(if big then 14 else 7, if big then 14 else 7)
-		tick.Rotation = 45
-		tick.BorderSizePixel = 0
-		tick.BackgroundTransparency = if big then 0.3 else 0.5
-		tick.Parent = runes
-	end
 end
 
 local function buildBanner()
 	bannerFrame = Theme.frame(dim, {
 		Name = "Banner",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 24),
-		Size = UDim2.new(0.9, 0, 0, 64),
+		Position = UDim2.new(0.5, 0, 0, 108),
+		Size = UDim2.fromOffset(420, 46),
+		BackgroundTransparency = 1,
 		ZIndex = 6,
 	})
-	Theme.corner(bannerFrame, 14)
-	Theme.stroke(bannerFrame, Theme.COLORS.outline, 3)
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(560, 64)
-	limit.Parent = bannerFrame
 	local scale = Instance.new("UIScale")
 	scale.Parent = bannerFrame
-	local stripe = Instance.new("Frame")
-	stripe.Name = "Stripe"
-	stripe.Position = UDim2.fromOffset(0, 0)
-	stripe.Size = UDim2.new(0, 64, 1, 0)
-	stripe.BorderSizePixel = 0
-	stripe.ZIndex = 6
-	stripe.Parent = bannerFrame
-	Theme.corner(stripe, 14)
-	bannerIcon = Instance.new("Frame")
-	bannerIcon.Name = "Icon"
-	bannerIcon.BackgroundTransparency = 1
-	bannerIcon.Size = UDim2.fromOffset(64, 64)
-	bannerIcon.ZIndex = 7
-	bannerIcon.Parent = bannerFrame
 	bannerTitle = Theme.label(bannerFrame, "", {
-		Position = UDim2.fromOffset(76, 6),
-		Size = UDim2.new(1, -88, 0, 30),
-		TextXAlignment = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, 0, 0, 26),
+		TextStrokeTransparency = 0.6,
 		ZIndex = 7,
 	})
 	bannerHint = Theme.label(bannerFrame, "", {
-		Position = UDim2.fromOffset(76, 36),
-		Size = UDim2.new(1, -88, 0, 20),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.subtext,
+		Position = UDim2.fromOffset(0, 28),
+		Size = UDim2.new(1, 0, 0, 16),
+		Font = Theme.BODY_FONT,
+		TextColor3 = Theme.COLORS.onDark,
+		TextStrokeTransparency = 0.6,
 		ZIndex = 7,
 	})
 end
@@ -795,7 +740,9 @@ local function buildCanvas()
 	gui.Name = "SpellcraftDraw"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 50
+	-- Under the HUD, so the spell row and the Draw button stay tappable: the
+	-- canvas swallows input to keep a finger's stroke from turning the camera.
+	gui.DisplayOrder = -1
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 	dim = Instance.new("Frame")
@@ -915,19 +862,19 @@ local function buildButton()
 	local buttonScale = Instance.new("UIScale")
 	buttonScale.Parent = buttonGui
 	Responsive.bind(buttonScale)
+	-- On touch a big thumb button; with keys a small chip left of the spell row.
+	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	drawButton = Theme.button(buttonGui, "Draw", {
 		Name = "Draw",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -16, 1, -150),
-		Size = UDim2.fromOffset(120, 64),
+		Position = if touch
+			then UDim2.new(1, -16, 1, -90)
+			else UDim2.new(0.5, -(HudController.cardRowWidth() / 2 + 10), 1, -20),
+		Size = if touch then UDim2.fromOffset(96, 60) else UDim2.fromOffset(48, 48),
+		BackgroundColor3 = Theme.COLORS.panel,
+		BackgroundTransparency = 0.25,
 	})
-	keyCap = Theme.label(drawButton, ClientState.drawKeyName(), {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -4, 0, 2),
-		Size = UDim2.fromOffset(22, 18),
-		TextColor3 = Theme.COLORS.heading,
-		ZIndex = 5,
-	})
+	drawTouch = touch
 	drawButton.Activated:Connect(function()
 		setActive(not active)
 	end)
@@ -937,11 +884,16 @@ end
 function DrawController.init()
 	buildCanvas()
 	buildButton()
+	if not drawTouch then
+		drawButton.Text = ClientState.drawKeyName()
+	end
 end
 
 function DrawController.start()
 	ClientState.ProfileChanged:Connect(function()
-		keyCap.Text = ClientState.drawKeyName()
+		if not drawTouch then
+			drawButton.Text = ClientState.drawKeyName()
+		end
 	end)
 	-- The Draw button only exists where drawing does; close the canvas when
 	-- drawing stops being allowed (the round ends).

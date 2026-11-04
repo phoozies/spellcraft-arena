@@ -23,7 +23,6 @@ local HealthController = {}
 local fill: Frame
 local trail: Frame
 local shieldFill: Frame
-local hpText: TextLabel
 local lastHealth = 100
 local holder: Frame
 
@@ -31,8 +30,8 @@ local function humanoidOf(character: Model?): Humanoid?
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
 
-local BOTTOM_LIFT = -34 -- bottom edge: clear of the Left Alt hint
-local GLYPH_LIFT = -114 -- bottom edge when the spell-card row is showing
+local BOTTOM_LIFT = -24 -- bottom edge: clear of the menu hint
+local GLYPH_LIFT = -78 -- bottom edge when the spell-card row is showing
 
 -- Sits at the bottom of the screen, or above the spell cards when they are up
 -- (fights, the Battleground, the Training Groves).
@@ -43,47 +42,30 @@ end
 
 local function buildHud()
 	local root = HudController.getGui():WaitForChild("Root")
+	-- A thin bar, as wide as the spell row; layoutOwn() lifts it over the row.
 	holder = Theme.frame(root, {
 		Name = "Health",
-		-- layoutOwn() lifts it over the spell cards.
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, BOTTOM_LIFT),
-		Size = UDim2.fromOffset(HudController.cardRowWidth(), 30), -- as wide as the spell cards
-		BackgroundTransparency = 0.15,
-	})
-	Theme.corner(holder, 10)
-	local back = Theme.frame(holder, {
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 1, -12),
-		BackgroundColor3 = Color3.fromRGB(20, 20, 40),
+		Size = UDim2.fromOffset(HudController.cardRowWidth(), 6),
+		BackgroundTransparency = 0.25,
 		ClipsDescendants = true,
 	})
-	Theme.corner(back, 8)
-	trail = Theme.frame(back, {
+	Theme.corner(holder, 6)
+	trail = Theme.frame(holder, {
 		Name = "Trail",
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(255, 241, 118),
+		BackgroundColor3 = Theme.COLORS.text,
 	})
-	Theme.corner(trail, 8)
-	fill = Theme.frame(back, {
+	fill = Theme.frame(holder, {
 		Name = "Fill",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Theme.COLORS.good,
 	})
-	Theme.corner(fill, 8)
-	shieldFill = Theme.frame(back, {
+	shieldFill = Theme.frame(holder, {
 		Name = "Shield",
 		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Color3.fromRGB(129, 212, 250),
-		BackgroundTransparency = 0.25,
-	})
-	Theme.corner(shieldFill, 8)
-	hpText = Theme.label(back, "100 / 100", {
-		Size = UDim2.new(1, -8, 1, 0),
-		Position = UDim2.fromOffset(4, 0),
-		TextColor3 = Theme.COLORS.onDark,
-		TextStrokeTransparency = 0.3,
-		ZIndex = 5,
+		BackgroundColor3 = Theme.COLORS.blue,
 	})
 	HudController.getGlyphRow():GetPropertyChangedSignal("Visible"):Connect(layoutOwn)
 	layoutOwn()
@@ -93,7 +75,7 @@ local function colorFor(ratio: number): Color3
 	if ratio > 0.5 then
 		return Theme.COLORS.good
 	elseif ratio > 0.25 then
-		return Color3.fromRGB(255, 193, 7)
+		return Theme.COLORS.yellow
 	end
 	return Theme.COLORS.bad
 end
@@ -108,11 +90,10 @@ local function refreshOwn()
 	local ratio = hp / max
 	fill.Size = UDim2.fromScale(ratio, 1)
 	fill.BackgroundColor3 = colorFor(ratio)
+	-- Out of the way when it says nothing: healthy, with no fight to be ready for.
+	holder.Visible = ratio < 1 or ClientState.canDraw() or ClientState.fighting()
 	local shield = (player.Character :: Model):GetAttribute("Shield") :: number? or 0
 	shieldFill.Size = UDim2.fromScale(math.clamp(shield / max, 0, 1), 1)
-	hpText.Text = if shield > 0
-		then `{math.ceil(hp)} / {math.floor(max)}  (+{math.floor(shield)})`
-		else `{math.ceil(hp)} / {math.floor(max)}`
 	if hp < lastHealth then
 		-- The yellow trail lingers, then drains: shows how big the hit was.
 		task.delay(0.35, function()
@@ -153,7 +134,7 @@ local function overheadFor(character: Model)
 	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "OverheadHealth"
-	gui.Size = UDim2.fromOffset(70, 9)
+	gui.Size = UDim2.fromOffset(56, 4)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 140
@@ -225,6 +206,7 @@ function HealthController.start()
 		task.spawn(watchOwn, player.Character)
 	end
 	ClientState.MatchChanged:Connect(refreshOwn)
+	ClientState.PresenceChanged:Connect(refreshOwn)
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt)
 		elapsed += dt

@@ -314,6 +314,14 @@ function EconomyService.start()
 			end
 			return
 		end
+		if key == "camera" then
+			if typeof(value) == "number" and value == value then
+				local limits = Config.CAMERA
+				profile.settings.camera = math.clamp(value, limits.MIN, limits.MAX)
+				sendSummary(player)
+			end
+			return
+		end
 		if typeof(value) ~= "string" or #value > 32 then
 			return
 		end

@@ -4,12 +4,15 @@
 -- the screen and spells fly where you look (InputController aims from the
 -- screen centre; CastService adds the auto-aim lock).
 --
+-- Mouse look runs at the player's Camera speed setting (Config.CAMERA), slower
+-- than Roblox's default so the sight is easy to place.
+--
 -- Each frame, after Roblox's camera has run:
 --   * the mouse is let go while the drawing canvas is open or Left Alt is held
 --     (UI/MouseLock; open windows free it themselves through whileVisible), so
 --     shapes can be traced and buttons clicked;
 --   * your right arm and wand stay visible (first person hides your own body),
---     so you see the wand raise and the magic circle open when you draw.
+--     except while you draw, when the raised arm would cover what you aim at.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +21,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MouseLock = require(script.Parent.Parent.UI.MouseLock)
+local ClientState = require(script.Parent.ClientState)
 local DrawController = require(script.Parent.DrawController)
 
 local player = Players.LocalPlayer
@@ -48,7 +52,7 @@ local function step()
 	MouseLock.set("draw", DrawController.isActive())
 	MouseLock.set("alt", UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt))
 	local character = player.Character
-	if character then
+	if character and not DrawController.isActive() then
 		showViewParts(character)
 	end
 end
@@ -66,8 +70,16 @@ function CameraController.init()
 	player.CameraMaxZoomDistance = 0.5
 end
 
+local function applySensitivity()
+	local profile = ClientState.profile
+	UserInputService.MouseDeltaSensitivity = (profile and profile.settings.camera)
+		or Config.CAMERA.SENSITIVITY
+end
+
 function CameraController.start()
 	applyCamera()
+	applySensitivity()
+	ClientState.ProfileChanged:Connect(applySensitivity)
 	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(applyCamera)
 	RunService:BindToRenderStep("SpellcraftFirstPerson", Enum.RenderPriority.Camera.Value + 1, step)
 end

@@ -52,7 +52,6 @@ function SpellCard.pill(
 		(pill :: any)[key] = value
 	end
 	Theme.corner(pill, 16)
-	Theme.stroke(pill, Theme.COLORS.outline, 2)
 	Theme.label(pill, text, {
 		Size = UDim2.new(1, -6, 1, -2),
 		Position = UDim2.fromOffset(3, 1),
@@ -74,23 +73,11 @@ function SpellCard.create(parent: Instance, spellId: string, options: Options?):
 		Size = opts.size or UDim2.fromOffset(96, 104),
 		BackgroundColor3 = Theme.COLORS.panel,
 	})
-	local stroke = card:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		stroke.Color = color
-		stroke.Thickness = 4
-	end
-	Theme.rim(card, 4)
+	Theme.stroke(card, Theme.COLORS.rim, 1)
 	if not def then
 		return card
 	end
 
-	local band = Theme.frame(card, {
-		Name = "Band",
-		Size = UDim2.new(1, 0, 0, math.floor(sigilSize * 0.62)),
-		BackgroundColor3 = color,
-		Active = false,
-	})
-	Theme.corner(band, 10)
 	local props = {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 5),

@@ -180,7 +180,13 @@ local function update()
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character :: Model, preview }
+	local through: { Instance } = { preview }
+	for _, other in Players:GetPlayers() do
+		if other.Character then
+			table.insert(through, other.Character)
+		end
+	end
+	params.FilterDescendantsInstances = through
 	local down =
 		workspace:Raycast((point :: Vector3) + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then

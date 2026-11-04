@@ -76,7 +76,7 @@ end
 local function arrowLabel(parent: Instance, text: string, size: number, color: Color3): TextLabel
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
+	label.Font = Enum.Font.BuilderSansBold
 	label.Text = text
 	label.TextSize = size
 	label.TextColor3 = color

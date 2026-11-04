@@ -45,7 +45,7 @@ Most models are **block models**: edit the spec in `tools/blender/block_models.p
 - **Server-authoritative:** remote handlers validate type, range, ownership, and rate. Never trust a client number.
 - **Tunables** go in `Config.luau`. Spell numbers go in `SpellDefinitions.luau`. Nothing is hard-coded inside systems.
 - New remotes go in `Net/Remotes.luau` with a one-line payload description.
-- UI uses `UI/Theme` builders (the studded-Roblox look: pastel studded panels and buttons with dark ink text, orange for primary, green for go, red for stop) and `UI/Responsive`, scale-friendly layouts, and touch targets of at least 52 px. No emojis in GUI text (plain glyphs like ★ ◀ ▶ ⟳ are fine). Failures are a sound (`HudController.toast(msg, "error")` plays `uiError`), not a pop-up. Make every button `Selectable` for gamepad. `Theme.button` shows its text in a child label above the studs, so keep setting `button.Text`, `TextColor3`, and the like as usual.
+- UI uses `UI/Theme` builders (the minimal look: flat near-black surfaces, one accent, one typeface); don't add one-off colours or fonts.
 
 ## Checklist for a new spell / map / system
 

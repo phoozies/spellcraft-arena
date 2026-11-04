@@ -51,7 +51,7 @@ bootstrap:
   server: "src/server/init.server.luau # init() all services in ORDER, then start() all"
   server_order: [PlayerDataService, TelemetryService, EconomyService, ElementService, StatusService, DestructibleService, BoostService, SpellbookService, CastService, DashService, SpellInputService, WandService, ArenaService, PartyService, MapVoteService, MatchService, HubService, BattlegroundService, NpcService, ChestService, LeaderboardService, AdminService, DebugService]
   client: src/client/init.client.luau
-  client_order: [ClientState, LightingController, AudioController, HudController, PartyController, MapVoteController, MenuController, ChestController, DraftController, PlacementController, ReticleController, WandController, DrawController, CameraController, LockOnController, InputController, EffectsController, JuiceController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
+  client_order: [ClientState, LightingController, AudioController, HudController, PartyController, MapVoteController, MenuController, ChestController, DraftController, PlacementController, ReticleController, WandController, DrawController, CameraController, CrosshairController, InputController, EffectsController, JuiceController, FxController, HealthController, SettingsController, AdminController, SupportController, SpectateController, DashController, MobileController, PresentationController, TutorialController]
   rules:
     - init() wires state and looks up remotes; no yielding cross-service calls
     - start() connects events and starts loops
@@ -119,7 +119,7 @@ features:
     flow: "client DrawController records a stroke -> DrawSpell(points, spellId?, crosshair point, rotationY) -> SpellInputService (draw gate: only in a match's Round phase, the Battleground, or the hub's PracticeZone; validate, 1s draw cooldown) -> GlyphRecognizer (only SpellbookService.drawable's shapes) -> CastService.cast (alive, cooldown, clamp to stats.range or PLACE_RANGE, resolveAim: auto-aim lock + lead) -> Archetypes/<archetype>.cast(ctx) -> cooldown -> Fx(\"cast\") -> GlyphResult + Fx(\"glyph\"), or Fx(\"glyphFail\") on any refusal"
     files:
       server: [src/server/Services/SpellInputService.luau, src/shared/Spells/GlyphRecognizer.luau, src/shared/Spells/Glyphs.luau, src/server/Services/SpellbookService.luau, src/server/Services/CastService.luau, src/server/Services/Archetypes/*.luau]
-      client: [src/client/Controllers/DrawController.luau, src/client/Controllers/InputController.luau, src/client/Controllers/PlacementController.luau, src/client/Controllers/ReticleController.luau, src/client/Controllers/CameraController.luau, src/client/Controllers/LockOnController.luau]
+      client: [src/client/Controllers/DrawController.luau, src/client/Controllers/InputController.luau, src/client/Controllers/PlacementController.luau, src/client/Controllers/ReticleController.luau, src/client/Controllers/CameraController.luau, src/client/Controllers/CrosshairController.luau]
     shared: [src/shared/Util/AutoAim.luau]
     tests: [tests/AutoAim.spec.luau]
     remotes:
@@ -142,7 +142,7 @@ features:
       - circle radius = stats.radius + Config.HITBOX_BONUS at the aim point clamped to stats.range, snapped to the ground
       - colors - spell color in range, orange when clamped at the limit, red while cooling down
       - faint ring around the player shows the range limit
-      - InputController casts at ReticleController.getTarget(); the reticle snaps onto LockOnController.getLock() (the auto-aim target) or else the crosshair's ground point
+      - the circle is drawn where the sight stops and the server lands the strike there; it never snaps to a target
     server_side: Zone.cast burst branch clamps and telegraphs; Fx "strike" draws the bolt model
 
   - id: effects
@@ -368,7 +368,7 @@ features:
       c2s: [DrawSpell]   # (points, spellId?): spellId = the card being traced
       s2c: [GlyphResult] # (spellId?, glyphId?, quality?)
     config: [DRAW_COOLDOWN, DRAW_MAX_POINTS, DRAW_MAX_COORD, DRAW_MAX_SECONDS, DEFAULT_DRAW_KEY, QUALITY]
-    client_ui: "Every spell is shown as its sigil (UI/Sigil: the shape in glowing ink, GlyphView.glow, inside a small night-blue magic circle ringed in the spell's colour with rune stones; setSpinning turns the rune ring): HudController glyph cards (a band of the spell's colour, the sigil, outlined by rarity with a dark rim; hover lifts it, the card being traced lifts more and spins, HudController.setTracing), UI/SpellCard (band, sigil, name, a rarity or school pill) in the Spellbook and chest, the Spellbook's big spinning sigil, the canvas banner (DrawController), and the hub shrines (GlyphView.glow on the slab)"
+    client_ui: "Every spell is shown as its sigil (UI/Sigil: the shape in its colour on a small dark disc): HudController's spell row (a disc per spell with its key and cooldown; the one being traced is outlined, HudController.setTracing), UI/SpellCard (band, sigil, name, a rarity or school pill) in the Spellbook and chest, the Spellbook's big sigil, and the hub shrines (GlyphView.glow on the slab)"
     canvas_look: "DrawController: a two-way vignette over the world (so the wand's air drawing shows through), a turning rune circle in the spell's colour, a pastel banner with the spell's spinning sigil (a star sigil on a blank canvas), a guide drawn opaque inside CanvasGroups (no beads), a comet tracer, a three-layer ink line (glow group, core, shine) in the spell's colour with a pulsing pen orb and sparks; success flashes the quality colour and collapses the line, failure shakes it red. Strokes start from UserInputService (not the canvas frame) and skip presses on buttons"
     preview: "tapping a glyph card (ClientState.DrawRequested) opens the canvas for that spell: its shape is drawn faint in the middle (GlyphView.create) with a dot tracing it; DrawSpell then carries the spell id and the server only accepts THAT shape"
     quality: "the recognizer score becomes a 0..1 quality (Spells/Quality.fromScore, Config.QUALITY); CastService applies Quality.apply to the spell def at cast time: power (damage, heal, shield, health, hazardDps, damageMult bonus) x0.85..1.5, size (radius) x0.9..1.25, time (duration, statusDuration, lifetime) x0.85..1.3; cooldown, range, and speed never change. Tiers Rough/Good/Great/Perfect show as the colour the line flashes"
@@ -464,14 +464,15 @@ features:
     debug: SpellcraftDebug:Invoke("tutorial", false) shows it again on the next join
 
   - id: first_person
-    summary: "First person everywhere: spells fly where you look the moment they are drawn (no click, never aimed with the cursor), a centre crosshair stays up over the canvas, and corner brackets mark the opponent auto-aim will lock onto."
-    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing or holding Left Alt and keeps the right arm and wand visible); src/client/Controllers/LockOnController.luau (crosshair in the traced spell's colour, red with the cooldown, shown over the canvas, 'Hold Left Alt for the mouse' hint outside fights; runs AutoAim.pick on the client for the lock-on brackets every 0.1 s wherever drawing is allowed; getLock() for ReticleController); src/client/UI/MouseLock.luau (an invisible Modal button frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, admin window, tutorial welcome)"
+    summary: "First person everywhere: spells go where a one-dot sight points the moment they are drawn (no click, nothing marks a target); bolts alone get a quiet assist toward the opponent closest to the sight."
+    client: "src/client/Controllers/CameraController.luau (player.CameraMode LockFirstPerson, FOV Config.AUTO_AIM.FOV; after the camera each frame frees the mouse while drawing or holding Left Alt and keeps the right arm and wand visible); src/client/Controllers/CrosshairController.luau (the sight: one dot, shown over the canvas; a menu hint outside fights; no target marker); src/client/UI/MouseLock.luau (an invisible Modal button frees the locked mouse while any reason is set; whileVisible(frame) for the menus, Chest Shop, boost pick, map vote, party, admin window, tutorial welcome)"
     rules:
       - every device casts at the screen centre (VR the right hand); the aim point is read when the stroke ends and sent with it; the canvas holds the camera still (mouse freed, gamepad stick sunk)
-      - the client lock-on is a preview; CastService decides the shot
+      - CastService.resolveAim decides where every spell goes; the client shows no lock
+      - mouse look speed is settings.camera (Config.CAMERA), applied through UserInputService.MouseDeltaSensitivity
 
   - id: ui_theme
-    summary: "\"Spellbook at night\": deep indigo panels with a top-lit gradient, gold headings and accents, white ink, soft rounded corners, a thin glowing rim and drop shadow on windows, and gem-coloured buttons that pick dark or white text by their colour and lift on hover / squash on press."
+    summary: "Minimal: flat near-black surfaces, off-white text, one warm accent, hairlines instead of outlines, one typeface (Builder Sans), and buttons that pick dark or light text by their colour."
     owner: src/client/UI/Theme.luau (frame, button, label, pill, shadow, juice, inkFor, corner, stroke, padding, bevel, studs; COLORS incl. ink and rim; STUD_IMAGE)
     texture: assets/ui/studs.png (made by tools/make-stud-texture.py; uploaded as rbxassetid://111722228846947)
     behavior:

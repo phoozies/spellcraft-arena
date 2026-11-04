@@ -11,22 +11,24 @@ You cast a spell by **drawing its shape**: the moment you finish, it flies where
 | Dash | **Q** or the **Dash** button | **B** | **Dash** button | n/a |
 | Watch a player | **Watch** side button | same | same | same |
 | Aim | Look with the mouse **before** you open the canvas | Right stick | Drag the screen | Your right hand points |
+| Menu | **M** (Settings during a match), or the side buttons with **Left Alt** held | Select | Side buttons | Pointer |
 | Rotate a placeable | **R** | **L1 / R1** | **⟳** button | **L1 / R1** |
 | Menus | Side buttons (Play, Spells, Chests, Quests, Watch, Settings) | Select + navigate with the stick | Side buttons | Pointer |
 | Admin panel (admins only) | **`** or the **Admin** button | n/a | **Admin** button | n/a |
 
 ## Drawing tips
 
-- **You draw with your wand.** While the canvas is open your character raises the wand and a magic circle opens in the air in front of you; everything you draw on screen is written on that circle as you draw it, and players near you watch it appear live. The canvas darkens only the screen's edges so you can watch it.
-- Every spell is shown by its **sigil**: its shape in glowing ink inside a little magic circle of its colour, on the cards, the Spellbook and the Chest Shop. The sigil of the card you are tracing turns.
+- **You draw with your wand.** While the canvas is open players near you see your wand raised and a magic circle in the air, with your stroke appearing on it live. On your own screen those stay out of the way, so you can see what you're aiming at.
+- Every spell is shown by its **sigil**: its shape in its colour on a small dark disc, in the spell row, the Spellbook and the Chest Shop. The disc you are tracing is outlined.
 - **Tap a spell card** (or press its key) and that spell's shape appears on screen with a dot showing how to draw it. **Trace it as closely as you can: the better your line follows the shape, the stronger the spell.** A Perfect drawing hits up to 50% harder, up to 25% wider, and lasts up to 30% longer; a Rough one is a bit weaker. With a card selected, drawing a different shape fizzles.
 - Draw **big and smooth**. Size, position, and angle don't matter, and you can start anywhere on a closed shape and go either way. A **slash** is just a straight line, in any direction. The X is one unbroken stroke (down, up the side, down).
-- Your line glows in the spell's colour with a sparking pen tip. When the spell is cast it flashes in its quality colour (Rough red, Good orange, Great green, Perfect gold) and is pulled into your wand; when the magic couldn't read it, it shakes, turns red, and crumbles. A Great or Perfect drawing also flashes the screen gold. Failures (too small, unknown shape, on cooldown, nowhere to place it) play an error buzz instead of a pop-up.
+- Your line glows in the spell's colour with a sparking pen tip. When the spell is cast it flashes in its quality colour (Rough red, Good orange, Great green, Perfect gold) and is pulled into your wand; when the magic couldn't read it, it shakes, turns red, and crumbles. A Great or Perfect drawing also flashes the screen gold. Failures (too small, unknown shape, on cooldown, nowhere to place it) play an error buzz with one short line under the sight.
 - Only your loadout's shapes are recognized; the others fizzle.
 
 ## Casting
 
-- **First person:** the camera is always first person and every device casts at the crosshair in the middle of the screen; nobody clicks to cast or aims with the cursor. **Look at your target first, then draw:** the canvas frees the mouse, so the view holds still until you finish. You can still walk while drawing. If an opponent is near the crosshair and in plain sight, the spell locks onto the nearest one (corner brackets show who, wherever you can draw) and bolts lead and gently track them. While you trace, the crosshair wears the spell's colour and name (red with the seconds left while it recharges).
+- **First person:** the camera is always first person and every device casts at the sight in the middle of the screen; nobody clicks to cast or aims with the cursor. **Look at your target first, then draw:** the canvas frees the mouse, so the view holds still until you finish. You can still walk while drawing. The sight is one small dot and nothing marks a target. Strikes, lines and walls land exactly where it points. Bolts fly along it and get a small, invisible assist toward the opponent closest to it.
+- **Camera speed:** mouse look runs at 50% by default; change it in **Settings**.
 - **Getting the mouse:** windows (menus, the Chest Shop, the boost pick, the map vote) and the drawing canvas free the mouse while they're open; hold **Left Alt** to use it anywhere else (the side menu, the spell cards).
 - **Ground strikes** (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole) show their hit circle on the ground and a ring for their range limit while you trace them.
 - **Placeables** (Earth Wall, Turret) show a green or red ghost while you trace them. They land where you look, at most 20 studs away, and stand side-on to you (**R** turns them further).
@@ -40,7 +42,7 @@ You cast a spell by **drawing its shape**: the moment you finish, it flies where
 
 ## Settings
 
-The **Settings** panel saves to your profile: the draw key, **Background music**, **Sound effects**, and **Screen shake** (camera shake and field-of-view kicks; flashes and sounds stay).
+The **Settings** panel saves to your profile: **Camera speed**, the draw key, **Background music**, **Sound effects**, and **Screen shake** (camera shake and field-of-view kicks; flashes and sounds stay).
 
 ## Accessibility
 

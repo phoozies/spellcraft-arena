@@ -1,6 +1,6 @@
 --!strict
--- First-person auto-aim (shared/Util/AutoAim): who gets locked, how far a bolt
--- is led, and how far a locked bolt may turn.
+-- The bolts' quiet aim assist (shared/Util/AutoAim): who gets locked, how far a
+-- bolt is led, and how far a locked bolt may turn.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,14 +23,31 @@ return function(t)
 			t.expect(pick and pick.key).toBe("A")
 		end)
 
-		t.it("prefers the nearest opponent in the cone", function()
+		t.it("prefers the opponent closest to the sight, even a further one", function()
 			local pick = AutoAim.pick(
 				ORIGIN,
 				FORWARD,
-				{ at(90, 2, "far"), at(40, 4, "near"), at(140, 0, "farthest") },
+				{ at(90, 2, "far"), at(40, 4, "near"), at(140, 0, "dead centre") },
+				{ range = 200 }
+			)
+			t.expect(pick and pick.key).toBe("dead centre")
+		end)
+
+		t.it("distance settles a tie on the sight", function()
+			local pick = AutoAim.pick(
+				ORIGIN,
+				FORWARD,
+				{ at(120, 3, "far"), at(40, 3, "near") },
 				{ range = 200 }
 			)
 			t.expect(pick and pick.key).toBe("near")
+		end)
+
+		t.it("locks nobody when the assist is off", function()
+			Config.AUTO_AIM.ASSIST = false
+			local pick = AutoAim.pick(ORIGIN, FORWARD, { at(60, 0, "A") }, { range = 200 })
+			Config.AUTO_AIM.ASSIST = true
+			t.expect(pick).toBeNil()
 		end)
 
 		t.it(

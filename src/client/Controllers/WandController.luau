@@ -7,7 +7,9 @@
 --   * Your own stroke is written in the air on that circle as you draw
 --     (DrawController calls strokeBegin / strokePoint / strokeSent /
 --     strokeCancel / verdict) and streamed to the server in small batches
---     (AirStroke), which relays it to the players near you.
+--     (AirStroke), which relays it to the players near you. Your own circle and
+--     ribbon are for them: on your screen they'd only cover what you are aiming
+--     at, and the canvas already shows your line.
 --   * Other players' live strokes arrive the same way (AirStroke): everyone
 --     watches the shape being drawn on the drawer's circle. The Fx "glyph"
 --     (FxController -> onGlyph) flashes it in its quality colour and pulls it
@@ -32,6 +34,8 @@ local AudioController = require(script.Parent.AudioController)
 local player = Players.LocalPlayer
 
 local WandController = {}
+
+local unseen: Folder
 
 -- Seconds WandDraw is held at most (it is stopped as soon as drawing ends).
 local DRAW_HOLD = 60
@@ -101,7 +105,7 @@ local function setCharging(character: Model, on: boolean)
 	local handle = charging[character]
 	if on and not handle then
 		CastAnimations.play(character, "WandDraw", DRAW_HOLD)
-		if isNear(character) then
+		if isNear(character) and character ~= player.Character then
 			charging[character] = WandVfx.charge(
 				folder,
 				character,
@@ -179,7 +183,7 @@ function WandController.strokeBegin(color: Color3)
 		return
 	end
 	local frame = WandAir.facing(root.Position, myLook or camera.CFrame.LookVector)
-	ribbon = WandVfx.ribbon(folder, character, frame, color)
+	ribbon = WandVfx.ribbon(unseen, character, frame, color)
 	table.clear(outbox)
 	sentCount = 0
 	airRemote:FireServer("begin", color)
@@ -366,6 +370,8 @@ function WandController.setDrawing(on: boolean)
 end
 
 function WandController.init()
+	-- Never parented: your own ribbon still runs here, but isn't rendered.
+	unseen = Instance.new("Folder")
 	folder = Instance.new("Folder")
 	folder.Name = "SpellcraftWandFx"
 	folder.Parent = workspace

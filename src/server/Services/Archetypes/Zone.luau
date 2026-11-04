@@ -138,7 +138,7 @@ function Zone.cast(ctx: any): boolean?
 	local visual = ctx.def.visual
 	local radius = stats.radius or 10
 	local origin = if (stats.range or 0) <= 0 then ctx.root.Position else ctx.target
-	local center = groundAt(origin, { ctx.character })
+	local center = groundAt(origin, ctx.characters)
 
 	if stats.delay and not stats.duration then
 		-- Telegraph: a pulsing warning circle, plus a falling rock for Meteor.
