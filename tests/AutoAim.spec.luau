@@ -127,6 +127,49 @@ return function(t)
 			t.expect(aim.Y < 50 * 0.5 * Config.AUTO_AIM.LEAD_VERTICAL + 1).toBeTruthy()
 		end)
 
+		-- Flies a Fireball-speed bolt at a player walking sideways, the way the
+		-- server does: led at launch, then turning at `turnRate` degrees a second
+		-- until the target is too far off its heading. True if it connects.
+		local function connects(distance: number, turnRate: number, reverses: boolean): boolean
+			local walk = Vector3.new(Config.WALK_SPEED, 0, 0)
+			local speed = 95 * Config.PROJECTILE_SPEED_SCALE
+			local target = Vector3.new(0, 0, -distance)
+			local position = ORIGIN
+			local direction = (AutoAim.lead(ORIGIN, target, walk, speed) - ORIGIN).Unit
+			local velocity = if reverses then -walk else walk
+			local dt = 1 / 60
+			for _ = 1, 300 do
+				local desired = target - position
+				if
+					AutoAim.angleBetween(direction, desired)
+					> math.rad(Config.AUTO_AIM.HOMING_GIVE_UP)
+				then
+					return false
+				end
+				direction = AutoAim.steer(direction, desired.Unit, math.rad(turnRate) * dt)
+				position += direction * speed * dt
+				target += velocity * dt
+				if (target - position).Magnitude < 4 then
+					return true
+				end
+			end
+			return false
+		end
+
+		t.it("a slow bolt tracks a player walking steadily, at any range", function()
+			for _, distance in { 30, 60, 100 } do
+				t.expect(connects(distance, Config.AUTO_AIM.HOMING, false)).toBe(true)
+			end
+		end)
+
+		t.it("needs the tracking: without it a far walker gets away", function()
+			t.expect(connects(100, 0, false)).toBe(false)
+		end)
+
+		t.it("a hard sidestep up close still dodges", function()
+			t.expect(connects(30, Config.AUTO_AIM.HOMING, true)).toBe(false)
+		end)
+
 		t.it("turns a bolt by at most the allowed angle", function()
 			local turned = AutoAim.steer(FORWARD, Vector3.new(1, 0, 0), math.rad(10))
 			t.expect(math.deg(AutoAim.angleBetween(FORWARD, turned))).toBeNear(10, 0.01)

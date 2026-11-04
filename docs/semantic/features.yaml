@@ -128,7 +128,7 @@ features:
       # card N = the Nth loadout spell; keys 1-5 (InputController.pressSpellKey) and the D-pad open the canvas with that spell's guide (ClientState.aiming); Toast kind error plays uiError, no popup
     invariants:
       - the server clamps every target to range; the client reticle/ghost only mirror that
-      - "auto-aim (shared/Util/AutoAim, Config.AUTO_AIM): for Projectile, Control, Line and ranged Zone spells the server picks, among enemy players, hostile NPCs and training dummies within range, the lowest distance x (1 + ANGLE_WEIGHT x (angle / cone)^2) inside the cone (CONE 10 deg, widening to CLOSE_CONE 30 deg up close, never narrower than the target), raycasting line of sight only in score order; the look direction is the sent crosshair point unless it is more than MAX_YAW_ERROR from the character's facing"
+      - "aim assist (shared/Util/AutoAim, Config.AUTO_AIM), bolts only: CastService.resolveAim picks the opponent closest to the sight, in plain sight and inside the cone (CONE 15, CLOSE_CONE 25); ctx.lock. Strikes, lines and placed spells land where the sight stops (sightPoint), never through a wall"
       - "bolts are led (AutoAim.lead: an intercept, LEAD 0.8, vertical speed x LEAD_VERTICAL) and home on ctx.lock at HOMING deg/s until it is HOMING_GIVE_UP deg off their heading (dodged); clients steer their copy the same way and get Fx projectileTurn corrections every 0.2 s"
       - placeables, boosts, dashes and self-centred spells never lock on
       - archetype returning false fizzles the drawing with no cooldown (e.g. blocked placement)
@@ -469,7 +469,8 @@ features:
     rules:
       - every device casts at the screen centre (VR the right hand); the aim point is read when the stroke ends and sent with it; the canvas holds the camera still (mouse freed, gamepad stick sunk)
       - CastService.resolveAim decides where every spell goes; the client shows no lock
-      - mouse look speed is settings.camera (Config.CAMERA), applied through UserInputService.MouseDeltaSensitivity
+      - mouse look speed is settings.camera (Config.CAMERA, default 0.25), applied through UserInputService.MouseDeltaSensitivity
+      - bolts fly at stats.speed x PROJECTILE_SPEED_SCALE (1) and home on the assist's pick at AUTO_AIM.HOMING; tests/AutoAim.spec checks a steady walker is hit and a close sidestep dodges
 
   - id: ui_theme
     summary: "Minimal: flat near-black surfaces, off-white text, one warm accent, hairlines instead of outlines, one typeface (Builder Sans), and buttons that pick dark or light text by their colour."

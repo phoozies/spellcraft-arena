@@ -4,6 +4,11 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (slower bolts, slower camera)
+- **Bolts fly a third slower** (`Config.PROJECTILE_SPEED_SCALE` 1.5 to 1; a Fireball now moves 95 studs a second instead of 142). This covers every projectile, including NPC and turret shots.
+- **Bolts track more often and curve more visibly:** the assist's cone is 15° (was 10°). The turn rate stays 60°/s, which now bends a slower bolt further. A steady walker gets hit; reversing direction up close still dodges (`tests/AutoAim.spec`).
+- **Mouse look is slower again:** 25% by default (`Config.CAMERA`), down to 5% in Settings, in 5% steps. Schema 7 moves profiles still on the old 50% default to the new one; a value you chose yourself stays.
+
 ### Changed (the sight)
 - **The target indicator is gone: you just have a sight**, one small dot (`CrosshairController`, replaces `LockOnController`). No brackets, ring, spell name or cooldown text around it.
 - **Every spell now follows the sight** (`CastService.resolveAim`). Strikes and lines land exactly where it stops, walls and turrets stand on the first solid thing along it, bolts fly along it, and self-cast spells ignore it. Hit circles no longer snap onto an opponent, so they show where the spell really lands.

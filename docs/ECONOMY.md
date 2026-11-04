@@ -97,7 +97,7 @@ The ranking is per server (players currently here), built from their saved `stat
 
 ## Data
 
-`Types.Profile` schema **6**. The economy fields: `coins`, `stats.wins`, `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (chest spells owned), `loadout` (up to 2 equipped chest spells), `pity` (chests opened since the last Epic or better), `rewards.likeFav`, and `daily` (login streak, first win, quests). Migrations (`PlayerDataService.reconcile`):
+`Types.Profile` schema **7**. The economy fields: `coins`, `stats.wins`, `elements` (owned elements), `element` (the equipped one, `""` until the first pick), `spells` (chest spells owned), `loadout` (up to 2 equipped chest spells), `pity` (chests opened since the last Epic or better), `rewards.likeFav`, and `daily` (login streak, first win, quests). Migrations (`PlayerDataService.reconcile`):
 
 | Step | Change |
 |---|---|

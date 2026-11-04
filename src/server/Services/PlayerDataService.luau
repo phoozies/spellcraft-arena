@@ -33,7 +33,8 @@ local STORE_NAME = "PlayerProfiles_v1"
 --    (chest spells owned), profile.loadout (up to 2 equipped), and
 --    profile.tutorial.done (players who already picked an element skip it).
 -- 6: profile.pity (chests opened since the last Epic or better).
-local SCHEMA = 6
+-- 7: settings.camera on the first default (0.5) moves to the slower new one.
+local SCHEMA = 7
 -- Locks are refreshed every autosave, so a lock older than ~3 autosaves
 -- means its server crashed; take it over.
 local LOCK_STALE = 5 * 60
@@ -122,6 +123,9 @@ local function reconcile(data: any): Profile
 		data.pity = 0
 	end
 	data.pity = math.floor(data.pity)
+	if previousSchema < 7 and data.settings.camera == 0.5 then
+		data.settings.camera = Config.CAMERA.SENSITIVITY
+	end
 	-- Spells are drawn now, not typed: the old "type a spell" key setting is gone.
 	data.settings.typeKey = nil
 	-- Elements: keep real, unique ones; the equipped element must be owned.
