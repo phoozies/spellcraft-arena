@@ -51,7 +51,7 @@ local function label(part: BasePart, text: string, offset: number, distance: num
 	textLabel.Name = "Text"
 	textLabel.Size = UDim2.fromScale(1, 1)
 	textLabel.BackgroundTransparency = 1
-	textLabel.Font = Enum.Font.FredokaOne
+	textLabel.Font = Enum.Font.BuilderSansBold
 	textLabel.TextScaled = true
 	textLabel.TextColor3 = Color3.new(1, 1, 1)
 	textLabel.TextStrokeTransparency = 0.3

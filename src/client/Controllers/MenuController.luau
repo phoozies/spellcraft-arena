@@ -10,6 +10,7 @@ local GuiService = game:GetService("GuiService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Glyphs = require(ReplicatedStorage.Shared.Spells.Glyphs)
 local Elements = require(ReplicatedStorage.Shared.Spells.Elements)
@@ -77,33 +78,22 @@ local function makePanel(root: Instance, name: string, title: string): Frame
 		ZIndex = 10,
 	})
 	Theme.corner(panel, 18)
-	Theme.stroke(panel, Theme.COLORS.rim, 2)
-	Theme.shadow(panel, 14)
+	Theme.stroke(panel, Theme.COLORS.rim, 1)
 	-- Opening pops the window in (MenuController.open).
 	local pop = Instance.new("UIScale")
 	pop.Name = "Pop"
 	pop.Parent = panel
 	Theme.label(panel, title, {
-		Size = UDim2.new(1, -80, 0, 44),
-		Position = UDim2.fromOffset(18, 8),
+		Size = UDim2.new(0, 150, 0, 26),
+		Position = UDim2.fromOffset(18, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.heading,
 	})
-	-- A thin gold rule under the title.
-	local rule = Instance.new("Frame")
-	rule.Name = "TitleRule"
-	rule.BackgroundColor3 = Theme.COLORS.accent
-	rule.BackgroundTransparency = 0.35
-	rule.BorderSizePixel = 0
-	rule.Position = UDim2.fromOffset(18, 54)
-	rule.Size = UDim2.new(1, -36, 0, 2)
-	rule.Parent = panel
-	local close = Theme.button(panel, "X", {
+	local close = Theme.button(panel, "✕", {
 		Name = "Close",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -10, 0, 10),
-		Size = UDim2.fromOffset(Theme.TOUCH, Theme.TOUCH),
-		BackgroundColor3 = Theme.COLORS.bad,
+		Size = UDim2.fromOffset(36, 36),
+		BackgroundColor3 = Theme.COLORS.panel,
 	})
 	close.Activated:Connect(function()
 		MenuController.close()
@@ -123,8 +113,8 @@ function MenuController.open(name: string)
 	local panel = panels[name]
 	local pop = panel and panel:FindFirstChild("Pop")
 	if pop and pop:IsA("UIScale") and not wasOpen then
-		pop.Scale = 0.9
-		TweenService:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		pop.Scale = 0.98
+		TweenService:Create(pop, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { Scale = 1 }):Play()
 	end
 	if panel and GuiService:IsTenFootInterface() then
 		local first = panel:FindFirstChildWhichIsA("TextButton", true)
@@ -170,8 +160,7 @@ local function buildPlay(root: Instance)
 	local leave = Theme.button(panel, "Leave queue", {
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -14),
-		Size = UDim2.fromOffset(220, Theme.TOUCH),
-		BackgroundColor3 = Theme.COLORS.bad,
+		Size = UDim2.fromOffset(160, 40),
 	})
 	leave.Activated:Connect(function()
 		Remotes.get("SetQueue"):FireServer(nil)
@@ -416,13 +405,10 @@ local function showSpell(def: Types.SpellDef)
 	local shape = Glyphs.get(def.glyph)
 	local color = SpellCard.colorOf(def.id)
 	detailGlyph:ClearAllChildren()
-	Sigil.setSpinning(
-		Sigil.create(detailGlyph, def.glyph, 88, color, {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-		}),
-		true
-	)
+	Sigil.create(detailGlyph, def.glyph, 88, color, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+	})
 	local tag = if def.ultimate then "  <b>ULTIMATE</b>" else ""
 	local rarity = if def.rarity then `  <b>{string.upper(def.rarity)}</b>` else ""
 	detailLabel.Text = `<b>{def.name}</b>{tag}{rarity}\n{def.description}\n\n`
@@ -836,20 +822,22 @@ local function refreshQuests()
 end
 
 local function buildSideButtons(root: Instance)
+	-- Plain words at the screen's edge (taller on touch, for fingers).
+	local rowHeight = if UserInputService.TouchEnabled then Theme.TOUCH else 30
 	local holder = Theme.frame(root, {
 		Name = "SideMenu",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(120, 6 * 62),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.fromOffset(92, 6 * (rowHeight + 2)),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 8)
+	layout.Padding = UDim.new(0, 2)
 	layout.Parent = holder
 	local buttons = sideButtons
 	for _, entry in
 		{
-			{ "Play", "▶ Play" },
+			{ "Play", "Play" },
 			{ "Spellbook", "Spells" },
 			{ "Chests", "Chests" },
 			{ "Quests", "Quests" },
@@ -857,7 +845,12 @@ local function buildSideButtons(root: Instance)
 			{ "Settings", "Settings" },
 		}
 	do
-		local button = Theme.button(holder, entry[2], { Size = UDim2.new(1, 0, 0, Theme.TOUCH) })
+		local button = Theme.button(holder, entry[2], {
+			Name = entry[1],
+			Size = UDim2.new(1, 0, 0, rowHeight),
+			BackgroundColor3 = Theme.COLORS.panel,
+			BackgroundTransparency = 0.45,
+		})
 		button.Activated:Connect(function()
 			MenuController.toggle(entry[1])
 		end)

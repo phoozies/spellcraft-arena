@@ -7,10 +7,12 @@
 --   Draw a spell  F (rebindable)   X (right stick)  Draw button, drag   F / X
 --   Rotate        R                L1 / R1          ⟳ button              L1 / R1
 --
+--   Menu          M                n/a              Side buttons          n/a
+--
 -- There is no cast button: finishing a shape casts its spell (DrawController
 -- sends aimPoint with the stroke). First person, so every device aims from the
--- middle of the screen (the crosshair) and players never aim with the mouse; VR
--- uses the right controller's pointing ray. The server adds the auto-aim lock
+-- middle of the screen (the sight) and players never aim with the cursor; VR
+-- uses the right controller's pointing ray. The server decides the rest
 -- (CastService).
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -22,7 +24,6 @@ local VRService = game:GetService("VRService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local ClientState = require(script.Parent.ClientState)
 local DrawController = require(script.Parent.DrawController)
-local LockOnController = require(script.Parent.LockOnController)
 local MenuController = require(script.Parent.MenuController)
 local PlacementController = require(script.Parent.PlacementController)
 local ReticleController = require(script.Parent.ReticleController)
@@ -45,10 +46,9 @@ local function aimRay(): Ray?
 	return Ray.new(camera.CFrame.Position, camera.CFrame.LookVector)
 end
 
--- World point under the crosshair, ignoring characters (a bolt only needs the
--- direction, and a wall aimed through an opponent should land, not entomb them)
--- and the ghost.
-function InputController.aimPoint(): Vector3?
+-- World point under the sight. A placeable's ghost looks through characters,
+-- as the server does; everything else stops on them.
+function InputController.aimPoint(throughCharacters: boolean?): Vector3?
 	local ray = aimRay()
 	if not ray then
 		return nil
@@ -57,7 +57,7 @@ function InputController.aimPoint(): Vector3?
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local ignore: { Instance } = {}
 	for _, other in Players:GetPlayers() do
-		if other.Character then
+		if other.Character and (throughCharacters or other == Players.LocalPlayer) then
 			table.insert(ignore, other.Character)
 		end
 	end
@@ -104,16 +104,9 @@ function InputController.start()
 		return InputController.aimPoint(), PlacementController.getRotation()
 	end)
 	PlacementController.setAimProvider(function()
-		return InputController.aimPoint(), nil
+		return InputController.aimPoint(true), nil
 	end)
-	-- A ground strike snaps onto the auto-aim lock (LockOnController), the
-	-- same opponent the server will aim it at.
 	ReticleController.setAimProvider(function()
-		local lock = LockOnController.getLock()
-		local root = lock and (lock:FindFirstChild("HumanoidRootPart") or lock.PrimaryPart)
-		if root and root:IsA("BasePart") then
-			return root.Position
-		end
 		return InputController.aimPoint()
 	end)
 
@@ -123,6 +116,13 @@ function InputController.start()
 		end
 		if input.KeyCode == Enum.KeyCode.R then
 			PlacementController.rotate(math.pi / 4)
+		elseif input.KeyCode == Enum.KeyCode.M then
+			if not DrawController.isActive() then
+				-- In a match only Settings is available.
+				MenuController.toggle(
+					if ClientState.match.phase == "Idle" then "Play" else "Settings"
+				)
+			end
 		else
 			for number, key in SLOT_KEYS do
 				if input.KeyCode == key then

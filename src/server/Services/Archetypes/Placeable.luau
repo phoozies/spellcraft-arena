@@ -381,7 +381,7 @@ function Placeable.cast(ctx: any): boolean?
 	-- Snap the requested point to the ground beneath it.
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { ctx.character }
+	params.FilterDescendantsInstances = ctx.characters
 	local down =
 		workspace:Raycast(ctx.target + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	if not down then

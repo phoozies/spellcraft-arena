@@ -17,7 +17,7 @@ local ORDER = {
 	"WandController",
 	"DrawController",
 	"CameraController",
-	"LockOnController",
+	"CrosshairController",
 	"InputController",
 	"EffectsController",
 	"JuiceController",

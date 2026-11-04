@@ -58,7 +58,14 @@ end
 local function groundBelow(point: Vector3, character: Model): Vector3
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character }
+	-- Ground checks look through every character, as the server's do.
+	local ignore: { Instance } = { character }
+	for _, other in Players:GetPlayers() do
+		if other.Character then
+			table.insert(ignore, other.Character)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
 	local hit = workspace:Raycast(point + Vector3.new(0, 8, 0), Vector3.new(0, -60, 0), params)
 	return if hit then hit.Position else point
 end

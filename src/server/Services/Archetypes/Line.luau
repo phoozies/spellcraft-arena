@@ -40,7 +40,7 @@ function Line.cast(ctx: any): boolean?
 
 	local hitOnce: { [Model]: boolean } = {}
 	for i = 1, count do
-		local center = groundAt(start + direction * spacing * (i - 1), { ctx.character })
+		local center = groundAt(start + direction * spacing * (i - 1), ctx.characters)
 		local wait = delay + (i - 1) * step
 		fxRemote:FireAllClients(
 			"rise",

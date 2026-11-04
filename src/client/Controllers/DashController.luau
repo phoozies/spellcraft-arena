@@ -18,6 +18,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local HudController = require(script.Parent.HudController)
 local ClientState = require(script.Parent.ClientState)
 
 local player = Players.LocalPlayer
@@ -96,7 +97,7 @@ local function go(direction: Vector3)
 	end)
 end
 
-local LABEL = "Dash"
+local label = "Dash"
 
 -- On cooldown the button shows only the countdown (its own word is hidden).
 local function refresh()
@@ -105,11 +106,9 @@ local function refresh()
 		cooldownText.Text = string.format("%.1f", left)
 		cooldownText.Visible = true
 		button.Text = ""
-		button.BackgroundColor3 = Theme.COLORS.panel
 	else
 		cooldownText.Visible = false
-		button.Text = LABEL
-		button.BackgroundColor3 = Theme.COLORS.accent
+		button.Text = label
 	end
 end
 
@@ -123,26 +122,25 @@ local function buildButton()
 	local scale = Instance.new("UIScale")
 	scale.Parent = gui
 	Responsive.bind(scale)
-	-- Sits under the Draw button, bottom right.
-	button = Theme.button(gui, LABEL, {
+	-- On touch a big thumb button; with keys a small chip right of the spell row.
+	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	label = if touch then "Dash" else KEY.Name
+	button = Theme.button(gui, label, {
 		Name = "Dash",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -16, 1, -226),
-		Size = UDim2.fromOffset(120, 64),
-		BackgroundColor3 = Theme.COLORS.accent,
-	})
-	Theme.label(button, "Q", {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -4, 0, 2),
-		Size = UDim2.fromOffset(22, 18),
-		TextColor3 = Theme.COLORS.text,
-		ZIndex = 5,
+		AnchorPoint = if touch then Vector2.new(1, 1) else Vector2.new(0, 1),
+		Position = if touch
+			then UDim2.new(1, -16, 1, -158)
+			else UDim2.new(0.5, HudController.cardRowWidth() / 2 + 10, 1, -20),
+		Size = if touch then UDim2.fromOffset(96, 60) else UDim2.fromOffset(48, 48),
+		BackgroundColor3 = Theme.COLORS.panel,
+		BackgroundTransparency = 0.25,
 	})
 	cooldownText = Theme.label(button, "", {
 		Name = "Cooldown",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(0.6, 0.6),
+		Size = UDim2.fromScale(0.5, 0.5),
+		TextColor3 = Theme.COLORS.subtext,
 		ZIndex = 6,
 		Visible = false,
 	})
@@ -174,6 +172,14 @@ function DashController.start()
 		end
 		return Enum.ContextActionResult.Pass
 	end, false, PAD_KEY)
+
+	-- With keys, the chip sits beside the spell row and only shows with it (Q
+	-- still dashes anywhere).
+	local function refreshChip()
+		button.Visible = label ~= KEY.Name or ClientState.canDraw()
+	end
+	ClientState.PresenceChanged:Connect(refreshChip)
+	refreshChip()
 
 	RunService.Heartbeat:Connect(refresh)
 end

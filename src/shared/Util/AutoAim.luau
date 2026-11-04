@@ -1,14 +1,14 @@
 --!strict
--- Auto-aim for the first-person camera (Config.AUTO_AIM). Players never aim
--- with the mouse: a spell flies where they look, and if an opponent is close
--- to that line and in plain sight, the spell locks onto them.
+-- A quiet aim assist for bolts (Config.AUTO_AIM). A spell goes where the sight
+-- points; nothing on screen marks a target, so the assist has to do what the
+-- player expects: help the bolt reach whoever they were looking at.
 --
 --   pick   chooses the target: every candidate inside the aim cone (narrow at
 --          range, wider up close, never narrower than the target itself) is
---          scored by distance, inflated the further it is off the crosshair, so
---          the NEAREST opponent wins unless a slightly further one is right
---          under the crosshair. Line of sight is only checked (raycast) for
---          candidates in score order, so a crowded fight costs few raycasts.
+--          scored by how far it is off the sight, so the opponent CLOSEST TO
+--          THE SIGHT wins, and distance only settles near-ties. Line of sight
+--          is only checked (raycast) for candidates in score order, so a
+--          crowded fight costs few raycasts.
 --   lead   where to throw a bolt so it meets a moving target (an intercept,
 --          softened by LEAD and with vertical speed damped, since jumps come
 --          back down).
@@ -17,8 +17,7 @@
 --          sidestep still dodges them.
 --
 -- Pure module (no Instances): CastService runs it on the server to decide the
--- shot, LockOnController on the client to show the lock-on marker, and
--- tests/AutoAim.spec checks it.
+-- shot, and tests/AutoAim.spec checks it.
 
 local Config = require(script.Parent.Parent.Config)
 
@@ -80,8 +79,7 @@ function AutoAim.score(
 	if angle > limit then
 		return nil, angle
 	end
-	local off = angle / limit
-	return distance * (1 + settings().ANGLE_WEIGHT * off * off), angle
+	return angle / limit + settings().DISTANCE_WEIGHT * distance / range, angle
 end
 
 -- The best target in front of `origin` looking along `forward`, or nil.
@@ -91,7 +89,7 @@ function AutoAim.pick(
 	candidates: { Candidate },
 	options: Options
 ): Candidate?
-	if forward.Magnitude < 1e-6 then
+	if not settings().ASSIST or forward.Magnitude < 1e-6 then
 		return nil
 	end
 	local ranked: { { candidate: Candidate, score: number } } = {}

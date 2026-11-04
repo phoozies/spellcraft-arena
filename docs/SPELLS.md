@@ -37,7 +37,21 @@ The shapes live in `Glyphs.ROLE` and each spell's `role` in `SpellDefinitions`; 
 - **You can draw one spell per second.** This **drawing cooldown** (`Config.DRAW_COOLDOWN = 1`) is enforced by the server.
 - **Where you can draw:** the rounds of a match (duels, the Sparring Arena, every map), the Battleground, and the hub's two **Training Groves** (100 x 112 stud yards in the west and east with dummies and targets). **Not anywhere else in the hub, and not while a match is in its intro, countdown, draft, or results.** The server enforces it (`MatchService.canDraw`, installed as `SpellInputService`'s draw gate) and the Draw button and spell cards hide when drawing isn't allowed.
 - **Which shapes work:** only the spells of your loadout (the others are never even considered). A shape from a spell you don't have equipped fizzles.
-- **The spell you are tracing shows on your crosshair:** the centre crosshair takes its colour and name (red with the seconds left while it recharges; finishing the shape then only fizzles), and corner brackets mark the opponent auto-aim will hit.
+- **You aim with the sight:** one dot in the middle of the screen. Nothing marks a target. A spell card shows the seconds left while its spell recharges; finishing the shape of a spell on cooldown fizzles.
+
+### How each spell follows the sight
+
+`CastService.resolveAim` decides this for every spell, by its archetype:
+
+| Spell type | Spells | Where it goes |
+|---|---|---|
+| Bolts | Fireball, Fire Slash, Fire Bomb, Water Slice, Water Lock, Water Wave, Rock Throw, Gust, Whirlwind, Tornado | Flies along the sight. If an opponent in plain sight is inside the cone (`Config.AUTO_AIM`), the one closest to the sight is aimed at, led and gently tracked. Invisible; can be turned off with `ASSIST`. |
+| Ground strikes | Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole | Exactly where the sight stops, within range, on the ground under it. The hit circle shows the spot while you trace. |
+| Line | Earth Pillar | Runs from you in the sight's direction. |
+| Placed | Earth Wall, Turret | On the first solid thing along the sight, at most `Config.PLACE_RANGE` away, side-on to you. Looks through characters. The ghost shows the spot while you trace. |
+| Self | Fire Boost, Water Body, Air Boost, Air Shield, Heal, Earthquake | On you; the sight doesn't matter. |
+
+Nothing lands through a wall: the server stops the aim at the first solid surface.
 
 ### Balance rules (enforced by `tests/Balance.spec.luau`)
 

@@ -35,18 +35,13 @@ local scoreText: TextLabel
 local toastHolder: Frame
 local feedHolder: Frame
 local boostsLabel: TextLabel
-local battleLabel: TextLabel
 local battleLeave: TextButton
 
 local TOAST_COLORS: { [string]: Color3 } = {
-	fizzle = Theme.COLORS.grey,
+	fizzle = Theme.COLORS.subtext,
 	ready = Theme.COLORS.good,
-	cooldown = Theme.COLORS.peach,
 	reward = Theme.COLORS.accent,
-	victory = Theme.COLORS.yellow,
-	round = Theme.COLORS.blue,
-	streak = Theme.COLORS.purple,
-	info = Theme.COLORS.panel,
+	victory = Theme.COLORS.accent,
 }
 
 function HudController.getGui(): ScreenGui
@@ -68,25 +63,37 @@ function HudController.boostStacks(boostId: string): number
 	return 0
 end
 
--- Kind "error" (a spell that can't be drawn or cast right now) is only a
--- sound: spells never pop up text.
+-- A refusal (a spell that can't be drawn or cast right now) is a buzz and one
+-- quiet line under the sight, gone in a moment. Everything else is a small toast.
+local refusalLabel: TextLabel
+local refusalShown = 0
+
 function HudController.toast(message: string, kind: string?)
 	if kind == "error" then
 		AudioController.play("uiError")
+		refusalShown += 1
+		local shown = refusalShown
+		refusalLabel.Text = message
+		refusalLabel.TextTransparency = 0
+		task.delay(1.2, function()
+			if shown == refusalShown then
+				TweenService:Create(refusalLabel, TweenInfo.new(0.3), { TextTransparency = 1 })
+					:Play()
+			end
+		end)
 		return
 	end
 	local frame = Theme.frame(toastHolder, {
-		Size = UDim2.new(1, 0, 0, 40),
-		BackgroundColor3 = TOAST_COLORS[kind or "info"] or Theme.COLORS.panelLight,
-		BackgroundTransparency = 0.05,
+		Size = UDim2.new(1, 0, 0, 30),
+		BackgroundTransparency = 0.2,
 	})
 	Theme.corner(frame, 10)
-	Theme.stroke(frame, Theme.COLORS.outline, 3)
-	Theme.label(
-		frame,
-		message,
-		{ Size = UDim2.new(1, -16, 1, -8), Position = UDim2.fromOffset(8, 4) }
-	)
+	Theme.label(frame, message, {
+		Size = UDim2.new(1, -16, 1, -12),
+		Position = UDim2.fromOffset(8, 6),
+		Font = Theme.BODY_FONT,
+		TextColor3 = TOAST_COLORS[kind or "info"] or Theme.COLORS.text,
+	})
 	-- Keep at most 4 toasts.
 	local count = 0
 	for _, child in toastHolder:GetChildren() do
@@ -111,41 +118,23 @@ function HudController.toast(message: string, kind: string?)
 	end)
 end
 
--- Spell cards at the bottom of the screen: what to draw for each spell you can
--- cast (key N or a tap opens the Nth card's shape on the canvas; finishing the
--- shape casts the spell at once).
--- In a match that is your match spellbook; elsewhere your loadout (your
--- element's base spells and the chest spells you equipped). Each card is a
--- small spell card in the canvas's style: a band of the spell's colour and
--- its sigil (UI/Sigil). A card shows the spell's cooldown while it recharges.
--- Tapping a card opens the drawing canvas with a preview of its shape to
--- trace (the better you follow it, the stronger the spell: Spells/Quality);
--- while you trace it the card lifts and its sigil turns (setTracing).
+-- The spell row: one small disc per spell you can cast, showing its shape and
+-- its key. Key N or a tap opens the Nth shape on the canvas (the better you
+-- trace it, the stronger the spell: Spells/Quality), and finishing it casts the
+-- spell at once. A disc dims with the seconds left while its spell recharges.
 local glyphRow: Frame
-local CARD_WIDTH, CARD_HEIGHT, CARD_GAP = 62, 74, 12
+local CARD_SIZE, CARD_GAP = 48, 6
 local MAX_CARDS = 5
 type WordCard = {
 	card: Frame,
-	name: TextLabel,
 	cover: TextLabel,
-	sigil: Frame,
 	stroke: UIStroke,
-	scale: UIScale,
-	color: Color3,
-	hovered: boolean,
 }
 local glyphCards: { [string]: WordCard } = {}
 local tracing: string? = nil
 
--- Lifts the card being traced (or hovered) and turns its sigil.
 local function styleWord(id: string, entry: WordCard)
-	local traced = tracing == id
-	entry.stroke.Color = if traced then Theme.COLORS.accent else entry.color
-	entry.stroke.Thickness = if traced then 5 else 4
-	Sigil.setSpinning(entry.sigil, traced)
-	TweenService:Create(entry.scale, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
-		Scale = if traced then 1.14 elseif entry.hovered then 1.07 else 1,
-	}):Play()
+	entry.stroke.Transparency = if tracing == id then 0 else 1
 end
 
 -- The spell whose canvas is open (nil when it closes); DrawController calls it.
@@ -161,86 +150,51 @@ local function refreshWords()
 		entry.card:Destroy()
 	end
 	table.clear(glyphCards)
-	local ids = ClientState.drawableSpells()
-	for order, id in ids do
+	for order, id in ClientState.drawableSpells() do
 		local def = SpellDefinitions.get(id)
 		if def then
-			local color = SpellCard.colorOf(def.id)
 			local card = Theme.frame(glyphRow, {
 				Name = def.id,
-				Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT),
+				Size = UDim2.fromOffset(CARD_SIZE, CARD_SIZE),
 				LayoutOrder = order,
-				BackgroundTransparency = 0.1,
+				BackgroundTransparency = 0.25,
 			})
-			Theme.corner(card, 10)
-			-- Chest spells are outlined (and drawn) in their rarity colour.
-			local stroke = Theme.stroke(card, color, 4)
-			Theme.rim(card, 4, 10)
-			local scale = Instance.new("UIScale")
-			scale.Parent = card
-			local band = Theme.frame(card, {
-				Name = "Band",
-				Size = UDim2.new(1, 0, 0, 26),
-				BackgroundColor3 = color,
+			Theme.corner(card, 12)
+			local stroke = Theme.stroke(card, Theme.COLORS.accent, 3)
+			Sigil.create(card, def.glyph, CARD_SIZE - 12, SpellCard.colorOf(def.id), {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundTransparency = 1,
 			})
-			Theme.corner(band, 10)
-			local sigil = Sigil.create(card, def.glyph, 44, color, {
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 4),
-			})
-			local name = Theme.label(card, def.name, {
-				Size = UDim2.new(1, -4, 0, 16),
-				Position = UDim2.new(0, 2, 1, -19),
-			})
-			-- Its key (1-5), which opens the same canvas as a tap.
 			Theme.label(card, tostring(order), {
 				Name = "Key",
-				Size = UDim2.fromOffset(16, 16),
+				Size = UDim2.fromOffset(12, 12),
 				Position = UDim2.fromOffset(3, 2),
-				TextStrokeTransparency = 0.2,
-				ZIndex = 3,
+				Font = Theme.BODY_FONT,
+				TextColor3 = Theme.COLORS.subtext,
+				ZIndex = 8,
 			})
 			local cover = Theme.label(card, "", {
 				Size = UDim2.fromScale(1, 1),
-				BackgroundColor3 = Color3.new(0, 0, 0),
+				BackgroundColor3 = Theme.COLORS.panel,
 				BackgroundTransparency = 1,
-				TextColor3 = Theme.COLORS.onDark,
-				TextStrokeTransparency = 0.3,
-				ZIndex = 4,
+				TextColor3 = Theme.COLORS.text,
+				ZIndex = 9,
 			})
-			Theme.corner(cover, 10)
+			Theme.corner(cover, 12)
 			local hit = Instance.new("TextButton")
 			hit.Name = "Draw"
 			hit.Text = ""
 			hit.BackgroundTransparency = 1
 			hit.Size = UDim2.fromScale(1, 1)
-			hit.ZIndex = 6
+			hit.ZIndex = 10
 			hit.Parent = card
-			local entry: WordCard = {
-				card = card,
-				name = name,
-				cover = cover,
-				sigil = sigil,
-				stroke = stroke,
-				scale = scale,
-				color = color,
-				hovered = false,
-			}
 			hit.Activated:Connect(function()
 				ClientState.DrawRequested:Fire(id)
 			end)
-			hit.MouseEnter:Connect(function()
-				entry.hovered = true
-				styleWord(id, entry)
-			end)
-			hit.MouseLeave:Connect(function()
-				entry.hovered = false
-				styleWord(id, entry)
-			end)
+			local entry: WordCard = { card = card, cover = cover, stroke = stroke }
 			glyphCards[id] = entry
-			if tracing == id then
-				styleWord(id, entry)
-			end
+			styleWord(id, entry)
 		end
 	end
 end
@@ -249,7 +203,7 @@ local function tickWords()
 	for id, entry in glyphCards do
 		local left = ClientState.cooldownLeft(id)
 		if left > 0 then
-			entry.cover.BackgroundTransparency = 0.45
+			entry.cover.BackgroundTransparency = 0.2
 			entry.cover.Text = if left >= 1 then tostring(math.ceil(left)) else ""
 		else
 			entry.cover.BackgroundTransparency = 1
@@ -263,15 +217,20 @@ local drawBar: Frame
 local function tickCooldowns()
 	tickWords()
 	local drawLeft = math.max(0, ClientState.drawReadyAt - os.clock())
-	drawBar.Size = UDim2.new(math.clamp(drawLeft / Config.DRAW_COOLDOWN, 0, 1), 0, 0, 4)
+	drawBar.Size = UDim2.new(
+		0,
+		HudController.cardRowWidth() * math.clamp(drawLeft / Config.DRAW_COOLDOWN, 0, 1),
+		0,
+		2
+	)
 	local state = ClientState.match
 	if state.phase ~= "Idle" and state.endsAt > 0 then
 		local left = math.max(0, math.ceil(state.endsAt - workspace:GetServerTimeNow()))
 		local phaseText = if state.phase == "Countdown"
-			then `Round {state.round} starts in {left}`
-			elseif state.phase == "Round" then `Round {state.round} — {left}s`
-			elseif state.phase == "Draft" then `Draft a spell! {left}s`
-			elseif state.phase == "Intro" then "Match starting…"
+			then `Round {state.round} in {left}`
+			elseif state.phase == "Round" then `Round {state.round}  ·  {left}s`
+			elseif state.phase == "Draft" then `Pick a boost  ·  {left}s`
+			elseif state.phase == "Intro" then "Starting"
 			else "Match over"
 		matchText.Text = phaseText
 	end
@@ -279,15 +238,15 @@ end
 
 -- The width the spell cards span on screen (the health bar matches it).
 function HudController.cardRowWidth(): number
-	return MAX_CARDS * CARD_WIDTH + (MAX_CARDS - 1) * CARD_GAP
+	return MAX_CARDS * CARD_SIZE + (MAX_CARDS - 1) * CARD_GAP
 end
 
 local function buildGlyphRow(root: Frame)
 	glyphRow = Theme.frame(root, {
 		Name = "Glyphs",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -32),
-		Size = UDim2.fromOffset(560, CARD_HEIGHT),
+		Position = UDim2.new(0.5, 0, 1, -20),
+		Size = UDim2.fromOffset(HudController.cardRowWidth(), CARD_SIZE),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
@@ -300,11 +259,10 @@ local function buildGlyphRow(root: Frame)
 	drawBar = Theme.frame(root, {
 		Name = "DrawCooldown",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -26),
-		Size = UDim2.new(0, 0, 0, 4),
+		Position = UDim2.new(0.5, 0, 1, -12),
+		Size = UDim2.new(0, 0, 0, 2),
 		BackgroundColor3 = Theme.COLORS.accent,
 	})
-	Theme.corner(drawBar, 2)
 end
 
 -- The row of spell cards (visible where drawing is allowed).
@@ -312,27 +270,30 @@ function HudController.getGlyphRow(): Frame
 	return glyphRow
 end
 
--- Top-left wallet: coins (spent on chests) and wins (the leaderboard stat).
+-- Top right, plain text: coins (spent on chests) and wins (the leaderboard stat).
 local function buildWallet(root: Frame)
-	local holder = Theme.frame(root, {
+	walletFrame = Theme.frame(root, {
 		Name = "Wallet",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
-		Size = UDim2.fromOffset(240, 44),
-		BackgroundTransparency = 0.15,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 8),
+		Size = UDim2.fromOffset(180, 28),
+		BackgroundTransparency = 0.35,
 	})
-	Theme.corner(holder)
-	walletFrame = holder
-	coinsLabel = Theme.label(holder, "Coins 0", {
-		Size = UDim2.new(0.55, -8, 1, -8),
-		Position = UDim2.fromOffset(8, 4),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Theme.COLORS.heading,
+	Theme.corner(walletFrame, 12)
+	Theme.padding(walletFrame, 6)
+	coinsLabel = Theme.label(walletFrame, "0 coins", {
+		Size = UDim2.fromScale(0.58, 1),
+		Font = Theme.BODY_FONT,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = Theme.COLORS.accent,
 	})
-	winsLabel = Theme.label(holder, "Wins 0", {
-		Size = UDim2.new(0.45, -8, 1, -8),
-		Position = UDim2.new(0.55, 0, 0, 4),
-		TextXAlignment = Enum.TextXAlignment.Left,
+	winsLabel = Theme.label(walletFrame, "0 wins", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.fromScale(0.38, 1),
+		Font = Theme.BODY_FONT,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = Theme.COLORS.subtext,
 	})
 end
 
@@ -342,7 +303,7 @@ local function refreshWallet()
 	if not profile then
 		return
 	end
-	winsLabel.Text = `Wins {profile.stats.wins}`
+	winsLabel.Text = `{profile.stats.wins} wins`
 	-- Count up/down to the new balance so earning and spending are felt.
 	local from, to = shownCoins, profile.coins
 	shownCoins = to
@@ -350,7 +311,7 @@ local function refreshWallet()
 	task.spawn(function()
 		while coinsLabel.Parent and shownCoins == to do
 			local t = math.min((os.clock() - start) / 0.5, 1)
-			coinsLabel.Text = `Coins {math.floor(from + (to - from) * t + 0.5)}`
+			coinsLabel.Text = `{math.floor(from + (to - from) * t + 0.5)} coins`
 			if t >= 1 then
 				break
 			end
@@ -363,20 +324,23 @@ local function buildMatchBar(root: Frame)
 	matchBar = Theme.frame(root, {
 		Name = "MatchBar",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 58),
-		Size = UDim2.fromOffset(420, 64),
-		BackgroundTransparency = 0.15,
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(360, 28),
+		BackgroundTransparency = 0.35,
 		Visible = false,
 	})
-	Theme.corner(matchBar)
-	matchText = Theme.label(
-		matchBar,
-		"",
-		{ Size = UDim2.new(1, -16, 0.5, 0), Position = UDim2.fromOffset(8, 2) }
-	)
+	Theme.corner(matchBar, 12)
+	matchText = Theme.label(matchBar, "", {
+		Size = UDim2.new(0.42, -12, 1, -10),
+		Position = UDim2.fromOffset(12, 5),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
 	scoreText = Theme.label(matchBar, "", {
-		Size = UDim2.new(1, -16, 0.45, 0),
-		Position = UDim2.new(0, 8, 0.52, 0),
+		AnchorPoint = Vector2.new(1, 0),
+		Size = UDim2.new(0.58, -12, 1, -10),
+		Position = UDim2.new(1, -12, 0, 5),
+		Font = Theme.BODY_FONT,
+		TextXAlignment = Enum.TextXAlignment.Right,
 		TextColor3 = Theme.COLORS.subtext,
 		RichText = true,
 	})
@@ -401,47 +365,28 @@ local function refreshMatch()
 	local parts = {}
 	for team, wins in state.scores do
 		local color = if team == "Blue"
-			then "#2F55C8"
-			elseif team == "Red" then "#B3262E"
-			else "#8A6A00"
+			then "#6EA0F0"
+			elseif team == "Red" then "#E06868"
+			else "#E8C878"
 		local mine = if team == state.myTeam then " (you)" else ""
 		table.insert(parts, `<font color="{color}">{team}{mine}: {wins}</font>`)
 	end
 	table.sort(parts)
-	local mapPrefix = if state.mapName then `{state.mapName} · ` else ""
-	scoreText.Text = mapPrefix .. table.concat(parts, "   ")
+	scoreText.Text = table.concat(parts, "   ")
 	if state.phase == "Results" then
 		matchText.Text = "Match over!"
 	end
 end
 
--- The top-centre stack is the wallet, then the match bar (or battleground
--- banner), then the boost icons. When the wallet is hidden (phones in a
--- fight) the rest slide up into its place.
-local function layoutTop()
-	local top = if walletFrame.Visible then 58 else 8
-	matchBar.Position = UDim2.new(0.5, 0, 0, top)
-	battleLabel.Position = UDim2.new(0.5, 0, 0, top)
-	battleLeave.Position = UDim2.new(0.5, 0, 0, top + 40)
-	boostsLabel.Position = UDim2.new(0.5, 0, 0, top + 68)
-end
-
+-- The top-centre stack: the match bar or Return to Hub, then the boost icons.
 local function buildBattleBanner(root: Frame)
-	battleLabel = Theme.label(root, "BATTLEGROUND: beat raiders for coins!", {
-		Name = "BattleBanner",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 58),
-		Size = UDim2.fromOffset(560, 36),
-		TextColor3 = Theme.COLORS.yellow,
-		TextStrokeTransparency = 0.3,
-		Visible = false,
-	})
 	battleLeave = Theme.button(root, "Return to Hub", {
 		Name = "BattleLeave",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 98),
-		Size = UDim2.fromOffset(150, 30),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(120, 26),
 		BackgroundColor3 = Theme.COLORS.panel,
+		BackgroundTransparency = 0.35,
 		Visible = false,
 	})
 	battleLeave.Activated:Connect(function()
@@ -453,10 +398,10 @@ local function buildBoosts(root: Frame)
 	boostsLabel = Theme.label(root, "", {
 		Name = "Boosts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 126),
-		Size = UDim2.fromOffset(300, 28),
-		TextColor3 = Theme.COLORS.onDark,
-		TextStrokeTransparency = 0.4,
+		Position = UDim2.new(0.5, 0, 0, 40),
+		Size = UDim2.fromOffset(300, 16),
+		Font = Theme.BODY_FONT,
+		TextColor3 = Theme.COLORS.subtext,
 		Visible = false,
 	})
 end
@@ -465,8 +410,8 @@ local function buildFeed(root: Frame)
 	feedHolder = Theme.frame(root, {
 		Name = "KillFeed",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 60),
-		Size = UDim2.fromOffset(260, 160),
+		Position = UDim2.new(1, -14, 0, 42),
+		Size = UDim2.fromOffset(260, 120),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
@@ -481,9 +426,12 @@ local function addFeed(killer: string?, victim: string, spell: string?)
 		text = `{killer} [{spell}] {victim}`
 	end
 	local row =
-		Theme.frame(feedHolder, { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 0.3 })
-	Theme.corner(row, 8)
-	Theme.label(row, text, { Size = UDim2.new(1, -10, 1, -4), Position = UDim2.fromOffset(5, 2) })
+		Theme.frame(feedHolder, { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1 })
+	Theme.label(row, text, {
+		Font = Theme.BODY_FONT,
+		TextColor3 = Theme.COLORS.subtext,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	})
 	task.delay(5, function()
 		row:Destroy()
 	end)
@@ -510,19 +458,28 @@ function HudController.init()
 	buildBoosts(root)
 	buildBattleBanner(root)
 	buildFeed(root)
-	layoutTop()
-	walletFrame:GetPropertyChangedSignal("Visible"):Connect(layoutTop)
 
 	toastHolder = Theme.frame(root, {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 170),
-		Size = UDim2.fromOffset(460, 180),
+		Position = UDim2.new(0.5, 0, 0, 62),
+		Size = UDim2.fromOffset(360, 140),
 		BackgroundTransparency = 1,
 	})
 	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 6)
+	layout.Padding = UDim.new(0, 4)
 	layout.Parent = toastHolder
+
+	refusalLabel = Theme.label(root, "", {
+		Name = "Refusal",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.5, 18),
+		Size = UDim2.fromOffset(360, 16),
+		Font = Theme.BODY_FONT,
+		TextColor3 = Theme.COLORS.onDark,
+		TextStrokeTransparency = 0.5,
+		TextTransparency = 1,
+	})
 
 	Responsive.bind(scale)
 	gui.Parent = player:WaitForChild("PlayerGui")
@@ -537,7 +494,6 @@ function HudController.start()
 	player:GetAttributeChangedSignal("Boosts"):Connect(refreshBoosts)
 	local function refreshBattle()
 		local inside = player:GetAttribute("InBattleground") == true
-		battleLabel.Visible = inside
 		battleLeave.Visible = inside
 	end
 	player:GetAttributeChangedSignal("InBattleground"):Connect(refreshBattle)

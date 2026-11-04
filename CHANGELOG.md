@@ -4,6 +4,29 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (the sight)
+- **The target indicator is gone: you just have a sight**, one small dot (`CrosshairController`, replaces `LockOnController`). No brackets, ring, spell name or cooldown text around it.
+- **Every spell now follows the sight** (`CastService.resolveAim`). Strikes and lines land exactly where it stops, walls and turrets stand on the first solid thing along it, bolts fly along it, and self-cast spells ignore it. Hit circles no longer snap onto an opponent, so they show where the spell really lands.
+- **Only bolts keep an aim assist, now invisible and narrower** (cone back to 10°, 25° up close), because the camera can't turn while drawing. It now picks the opponent **closest to the sight** rather than the nearest one, so a spell doesn't curve toward someone you weren't looking at. `Config.AUTO_AIM.ASSIST = false` turns it off.
+- **Nothing lands through a wall:** the server stops aim at the first solid surface, whatever the client sends.
+- **Mouse look is slower** (50% by default), with a new **Camera speed** setting (`Config.CAMERA`, `profile.settings.camera`).
+
+### Changed (UI)
+- **New minimal look** (`UI/Theme`): flat near-black surfaces, off-white text, one warm accent, hairlines instead of outlines, one typeface (Builder Sans). Bevels, studs, shadows, rims and bouncy animations are gone.
+- **The HUD is down to the essentials:** a row of small spell discs with their keys, a thin health bar, F and Q chips, and small pills for coins and the match. Draw and Dash are big buttons on touch only. The health bar and chips hide in the hub when they have nothing to say.
+- **Plainer screens:** one-line match bar, plain-text kill feed, a quiet Settings list, a simple loading screen, plain sigils (no rune stones or spinning).
+
+### Changed (first-person view while drawing)
+- Your own raised arm, 3D magic circle and air ribbon no longer cover the view while you draw. Other players still see them. Trace lines and ink are thinner, and the title no longer overlaps the match bar.
+
+### Added
+- **M opens the menu** (Settings during a match), so you no longer need to hold Left Alt to reach it.
+- **Refusals now say why:** a short line under the sight ("Can't cast that there."), as well as the buzz.
+
+### Fixed
+- Spell cards and the Draw button couldn't be clicked while the canvas was open, because the canvas sat on top of them and swallowed the click. Switching spells by click, and tapping Draw to cancel on touch, now work.
+- Stale text: the match bar's "Draft a spell!" (it's a boost pick) and loading tips about holding copies and spinning.
+
 ### Changed (draw to cast)
 - **Finishing a shape casts the spell at once.** There is no click, tap, R2 or trigger to cast any more, and spells can't be stored: the hotbar, held copies and readied slot are gone (`HandService` became the much smaller `SpellbookService`; remotes `CastSpell`, `SelectSlot` and `HandUpdated` are removed, `SpellbookUpdated` is new). `DrawSpell` now carries the point under the crosshair and the placement rotation.
 - **Keys 1-5 and the spell cards open a spell's shape to trace** (the D-pad cycles them); the cards moved down to the bottom of the screen and show their key. A spell on cooldown can still be previewed, but finishing its shape fizzles.

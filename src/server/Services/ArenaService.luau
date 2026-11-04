@@ -117,7 +117,7 @@ local function addSpectatorSign(model: Model, mapName: string, mode: string)
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 1)
 	text.BackgroundTransparency = 1
-	text.Font = Enum.Font.FredokaOne
+	text.Font = Enum.Font.BuilderSansBold
 	text.TextScaled = true
 	text.TextColor3 = Color3.new(1, 1, 1)
 	text.TextStrokeTransparency = 0.3

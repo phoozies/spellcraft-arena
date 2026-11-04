@@ -82,8 +82,8 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     DraftController     boost draft cards
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
-    CameraController    first person everywhere; frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible
-    LockOnController    centre crosshair (the traced spell's colour / cooldown, shown over the canvas too) and lock-on brackets over the auto-aim target wherever you can draw
+    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible except while drawing
+    CrosshairController the sight: one dot, shown over the canvas too; the menu hint outside fights
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
     InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5 open a spell's guide; no cast button
@@ -105,11 +105,11 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/WandVfx            the wand's 3D effects: tip glow + rune circle, the air ribbon and its beam, the absorb burst, the fizzle
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
   Fx/PropSwap           swaps a hub prop for its open block model for a moment (a shop chest, tinted to its rarity, while the reel spins; the quest chest on a claim)
-  UI/Theme              "spellbook at night": indigo panels, gold headings, gem buttons with auto-contrast text, hover/press juice, shadows, pills
+  UI/Theme              minimal: flat near-black surfaces, one accent, hairlines, one typeface, buttons with auto-contrast text, pills
   UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown or Left Alt is held
   UI/Responsive         keeps every UIScale matched to the screen size
   UI/SpellCard          the spell card used by the Spellbook, chest reel, and loadout
-  UI/Sigil              a spell's sigil: its shape in glowing ink in a small magic circle (HUD cards, Spellbook, canvas banner)
+  UI/Sigil              a spell's sigil: its shape in its colour on a small dark disc (HUD spell row, Spellbook, chest)
 
 src/character → StarterPlayer.StarterCharacterScripts
   Health.server.luau    empty: replaces Roblox's default regen (HubService does the hub regen)
@@ -194,9 +194,9 @@ client: stroke + crosshair point + rotation ──DrawSpell──► SpellInputS
                                ├ alive? not frozen/time-stopped/stunned?
                                ├ global lockout 0.35s; that spell's cooldown is over
                                ├ clamp target to range (placeables: Config.PLACE_RANGE, 20 studs)
-                               ├ resolveAim: look dir (crosshair point, or the facing if it's off by > MAX_YAW_ERROR);
-                               │  bolts/strikes lock on: AutoAim.pick (nearest enemy in sight near the crosshair),
-                               │  bolts are led (AutoAim.lead) → ctx.target, ctx.lock
+                               ├ resolveAim: look dir (the sent point, or the facing if it's off by > MAX_YAW_ERROR);
+                               │  self: ignored; placed/strikes/lines: sightPoint (first solid surface along it);
+                               │  bolts: AutoAim.pick (closest to the sight, in plain sight), led (AutoAim.lead) → ctx.target, ctx.lock
                                ├ build CastContext {team, structures, buildRegions, enemiesNear…}
                                ├ Archetypes[def.archetype].cast(ctx)  → false = rejected, the drawing fizzles
                                ├ SpellbookService.startCooldown(def.cooldown)
@@ -204,9 +204,9 @@ client: stroke + crosshair point + rotation ──DrawSpell──► SpellInputS
                                └ GlyphResult to the drawer, Fx("glyph") to everyone (or glyphFail on any refusal)
 ```
 
-- **Auto-aim** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): candidates are enemy players, hostile NPCs and training dummies within the spell's range. A candidate counts when it is inside the aim cone (`CONE` 15°, widening linearly to `CLOSE_CONE` 30° at point blank, and never narrower than the target's own angular size). Candidates are ranked by `distance × (1 + ANGLE_WEIGHT × (angle / cone)²)`, so the nearest opponent wins unless a slightly further one is right under the crosshair; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `LockOnController` runs the same `pick` on the client to draw the lock-on brackets (every 0.1s); only the server's pick counts.
+- **The sight and the bolts' assist** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): only bolts get an assist, and nothing on screen shows it. Candidates are enemy players, hostile NPCs and training dummies within the spell's range and inside the aim cone (`CONE` 10°, widening linearly to `CLOSE_CONE` 25° at point blank, and never narrower than the target's own angular size). They rank by how far off the sight they are (`angle / cone`), with `DISTANCE_WEIGHT` settling near-ties; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `ASSIST = false` turns it all off.
 
-- **Aiming with no click:** the point under the crosshair is read when the stroke ends and travels with it. The canvas frees the mouse, so the camera holds still while you draw; on a gamepad the drawing stick is sunk (`DrawController`) so it can't swing the aim. The crosshair and brackets stay up over the canvas, and a traced spell also shows its hit circle or placement ghost. The aim ray ignores characters, so a wall aimed through an opponent still lands. Placeables default to side-on to you (`PlacementController.getRotation`, R turns them further).
+- **Aiming with no click:** the point under the crosshair is read when the stroke ends and travels with it. The canvas frees the mouse, so the camera holds still while you draw; on a gamepad the drawing stick is sunk (`DrawController`) so it can't swing the aim. The sight stays up over the canvas, and a traced spell also shows its hit circle or placement ghost. The server's `sightPoint` looks through characters and stops at the first solid surface, so nothing lands through a wall and a wall aimed past an opponent still lands. Your own arm, 3D circle and ribbon are hidden on your screen while you draw. Placeables default to side-on to you (`PlacementController.getRotation`, R turns them further).
 
 - **Quality:** `SpellInputService` turns the recognizer's score into a quality (`Spells/Quality`) and passes it to `CastService`, which scales the spell's stats by it (`Quality.apply`).
 

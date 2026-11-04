@@ -60,6 +60,7 @@ local function defaultProfile(): Profile
 		stats = { matches = 0, wins = 0, knockouts = 0, casts = 0 },
 		daily = { lastLoginDay = 0, streak = 0, lastFirstWinDay = 0, questDay = 0, quests = {} },
 		settings = {
+			camera = Config.CAMERA.SENSITIVITY,
 			drawKey = Config.DEFAULT_DRAW_KEY,
 			music = true,
 			sfx = true,

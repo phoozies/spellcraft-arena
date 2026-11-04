@@ -107,7 +107,7 @@ local function label(head: BasePart, text: string, color: Color3, height: number
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Size = UDim2.fromScale(1, 1)
 	textLabel.BackgroundTransparency = 1
-	textLabel.Font = Enum.Font.FredokaOne
+	textLabel.Font = Enum.Font.BuilderSansBold
 	textLabel.TextScaled = true
 	textLabel.TextColor3 = color
 	textLabel.TextStrokeTransparency = 0.2
@@ -598,7 +598,7 @@ local function spawnAt(spot: BasePart)
 	local mark = Instance.new("TextLabel")
 	mark.Size = UDim2.fromScale(1, 1)
 	mark.BackgroundTransparency = 1
-	mark.Font = Enum.Font.FredokaOne
+	mark.Font = Enum.Font.BuilderSansBold
 	mark.TextScaled = true
 	mark.Text = "!"
 	mark.TextColor3 = Color3.fromRGB(235, 40, 40)

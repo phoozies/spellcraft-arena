@@ -4,9 +4,9 @@
 -- The client only sends intent, with its drawing (SpellInputService): the point
 -- under its first-person crosshair and (for placeables) a rotation. The server
 -- checks the character is alive and allowed to act and the spell is off
--- cooldown, clamps the target to range, runs auto-aim (resolveAim: the nearest
--- opponent in sight near the crosshair becomes ctx.lock, and bolts are led),
--- then builds a CastContext the archetype uses for all world queries.
+-- cooldown, clamps the target to range, follows the sight (resolveAim: nothing
+-- lands through a wall, and bolts get the quiet aim assist in ctx.lock), then
+-- builds a CastContext the archetype uses for all world queries.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -36,9 +36,11 @@ export type CastContext = {
 	def: Types.SpellDef,
 	quality: number,
 	target: Vector3,
-	-- The auto-aim lock (a character or NPC), if the spell locked onto one.
+	-- The aim assist's pick (a character or NPC), for bolts only.
 	lock: Model?,
 	rotationY: number,
+	-- Every living character: ground checks look through them.
+	characters: { Instance },
 	team: string?,
 	-- Folder new structures/summons go into (arena or hub).
 	structures: Instance,
@@ -139,9 +141,22 @@ local function isFiniteVector(v: any): boolean
 	return typeof(v) == "Vector3" and v.X == v.X and v.Y == v.Y and v.Z == v.Z and v.Magnitude < 1e6
 end
 
--- Spells that are thrown or struck AT something get the auto-aim lock; boosts,
--- walls, dashes and turrets just go where you look.
-local AIMED_ARCHETYPES = { Projectile = true, Control = true, Line = true, Zone = true }
+-- Every living character: a sight or a spell's ground check passes through them.
+local function allCharacters(): { Instance }
+	local list: { Instance } = {}
+	for _, other in Players:GetPlayers() do
+		if other.Character then
+			table.insert(list, other.Character)
+		end
+	end
+	return list
+end
+
+-- Only bolts get the aim assist: they have to fly there and can be dodged.
+-- Anything that lands (strikes, lines, walls, turrets) lands on the sight.
+local function isBolt(def: Types.SpellDef): boolean
+	return def.archetype == "Projectile" or (def.archetype == "Control" and def.stats.speed ~= nil)
+end
 
 local function rootOf(model: Model): BasePart?
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
@@ -223,8 +238,23 @@ local function lookDirection(eye: Vector3, root: BasePart, target: Vector3): Vec
 	return look
 end
 
--- Decides the shot: the auto-aim lock (a character or NPC) and the point to
--- throw at (led for bolts), or no lock and the point under the crosshair.
+-- How far the sight reaches along `look` before something solid stops it (never
+-- through a wall, whatever the client says): the end of the ray, or the hit.
+local function sightPoint(eye: Vector3, look: Vector3, reach: number): Vector3
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = allCharacters()
+	params.RespectCanCollide = true
+	local hit = workspace:Raycast(eye, look * reach, params)
+	return if hit then hit.Position else eye + look * reach
+end
+
+-- Decides where the spell goes. Every spell follows the sight:
+--   * self-centred spells (buffs, Earthquake) ignore it;
+--   * placeables stand on the first solid thing along it, up to PLACE_RANGE, and
+--     look through characters so a wall aimed past someone doesn't entomb them;
+--   * strikes, lines and area spells land where the sight stops;
+--   * bolts fly along it, led at the opponent the aim assist picks, if any.
 local function resolveAim(
 	player: Player,
 	character: Model,
@@ -237,12 +267,18 @@ local function resolveAim(
 	local eye = if head and head:IsA("BasePart")
 		then head.Position
 		else root.Position + Vector3.new(0, 1.5, 0)
-	if not AIMED_ARCHETYPES[def.archetype] or (def.stats.range or 1) <= 0 then
-		return target, nil -- placed, self-centred or self-cast: exactly where asked
+	if def.archetype == "Buff" or (def.stats.range or 1) <= 0 then
+		return target, nil
 	end
 	local look = lookDirection(eye, root, target)
-	local reach = math.min((target - eye).Magnitude, maxRange)
-	local straight = eye + look * math.max(reach, 1)
+	if def.archetype == "Placeable" then
+		return sightPoint(eye, look, maxRange), nil
+	end
+	local reach = math.max(math.min((target - eye).Magnitude, maxRange), 1)
+	if not isBolt(def) then
+		return sightPoint(eye, look, reach), nil
+	end
+	local straight = eye + look * reach
 	local lock = AutoAim.pick(eye, look, aimCandidates(player), {
 		range = maxRange,
 		visible = function(candidate)
@@ -254,7 +290,6 @@ local function resolveAim(
 	end
 	local speed = def.stats.speed
 	local aimPoint = if speed
-			and (def.archetype == "Projectile" or def.archetype == "Control")
 		then AutoAim.lead(eye, lock.position, lock.velocity, speed * Config.PROJECTILE_SPEED_SCALE)
 		else lock.position
 	return aimPoint, lock.key :: Model
@@ -312,8 +347,7 @@ function CastService.cast(
 	if offset.Magnitude > maxRange then
 		target = root.Position + offset.Unit * maxRange
 	end
-	-- First person: the spell goes where the player looks, locked onto the
-	-- nearest opponent in sight near the crosshair (shared/Util/AutoAim).
+	-- First person: the spell goes where the sight points.
 	local lock: Model? = nil
 	target, lock = resolveAim(player, character, root, def, target :: Vector3, maxRange)
 
@@ -334,6 +368,7 @@ function CastService.cast(
 		target = target,
 		lock = lock,
 		rotationY = rotation,
+		characters = allCharacters(),
 		team = activeHooks.teamOf(player),
 		structures = activeHooks.structuresFolderFor(player),
 		buildRegions = activeHooks.buildRegionsFor(player),

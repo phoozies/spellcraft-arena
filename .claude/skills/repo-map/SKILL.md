@@ -16,7 +16,7 @@ Read `CLAUDE.md` first, then use this to jump straight to the right place.
 | `src/server/Services/Archetypes/` | server | Spell behaviours (Projectile, Zone, Buff, ...) |
 | `src/server/Maps/` | server | Maps and the hub built from code (`MapKit` helpers, `InkwellPlaza` = the floating-island hub) |
 | `src/client/Controllers/` | client | One controller per feature (`init()` then `start()`), order in `src/client/init.client.luau` |
-| `src/client/Fx/`, `src/client/UI/` | client | Visual effects, `Theme` (night-indigo GUI), `MouseLock` (first-person mouse release), `Responsive` |
+| `src/client/Fx/`, `src/client/UI/` | client | Visual effects, `Theme` (minimal GUI), `MouseLock` (first-person mouse release), `Responsive` |
 | `tests/` | `ServerScriptService.Tests` | `Runner.luau` runs every `*.spec.luau` |
 | `docs/` | | Human docs; `docs/semantic/features.yaml` is the machine-readable feature index |
 | `tools/` | | Studio sync, Blender model scripts, registry generator, art scripts |
