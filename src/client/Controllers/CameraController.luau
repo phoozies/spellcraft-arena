@@ -12,7 +12,8 @@
 --     (UI/MouseLock; open windows free it themselves through whileVisible), so
 --     shapes can be traced and buttons clicked;
 --   * your right arm and wand stay visible (first person hides your own body),
---     except while you draw, when the raised arm would cover what you aim at.
+--     except while you draw, when the raised arm would cover what you aim at
+--     and a first-person wand writes under your pen instead (Fx/WandView).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +21,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local WandView = require(script.Parent.Parent.Fx.WandView)
 local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local ClientState = require(script.Parent.ClientState)
 local DrawController = require(script.Parent.DrawController)
@@ -52,7 +54,7 @@ local function step()
 	MouseLock.set("draw", DrawController.isActive())
 	MouseLock.set("alt", UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt))
 	local character = player.Character
-	if character and not DrawController.isActive() then
+	if character and not DrawController.isActive() and not WandView.isShown() then
 		showViewParts(character)
 	end
 end

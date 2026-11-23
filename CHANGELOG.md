@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added (your wand in first person)
+- **You now see your own wand while you draw** (`Fx/WandView`). It rises into the bottom right of the screen when the canvas opens, and its tip follows your pen and sits right under it, so you watch the wand write the line. It lags a touch behind and twists with the stroke, glows and sparks in the ink's colour while the pen is down, flicks forward with a burst in the quality colour when the drawing lands (shakes red when it fizzles), and drops away when the circle closes. Cosmetic and local only; tunables are `Config.WAND.VIEW_*`.
+
 ### Changed (slower bolts, slower camera)
 - **Bolts fly a third slower** (`Config.PROJECTILE_SPEED_SCALE` 1.5 to 1; a Fireball now moves 95 studs a second instead of 142). This covers every projectile, including NPC and turret shots.
 - **Bolts track more often and curve more visibly:** the assist's cone is 15° (was 10°). The turn rate stays 60°/s, which now bends a slower bolt further. A steady walker gets hit; reversing direction up close still dodges (`tests/AutoAim.spec`).
