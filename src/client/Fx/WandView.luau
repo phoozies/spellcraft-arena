@@ -4,9 +4,12 @@
 -- aim at, so while the canvas is open a copy of your wand is held in the
 -- bottom right of the screen instead (Config.WAND.VIEW_*):
 --   * it rises in when the canvas opens and drops away when the circle closes;
+--   * it is a small, slim copy: scaled down, with its shaft stretched so the
+--     tip still reaches every pen pixel from the grip;
 --   * its tip follows your pen (or the cursor, before you press) and sits
---     right under it, so you watch the wand write the line; it lags a touch
---     behind and twists with the stroke, like a wrist;
+--     right under it, so you watch the wand write the line; the hand moves
+--     part of the way toward the pen (so the wand stays short on screen),
+--     lags a touch behind, and twists with the stroke, like a wrist;
 --   * the tip glows brighter and sparks in the ink's colour while the pen is
 --     down;
 --   * when the drawing lands it flicks forward with a burst in the quality
@@ -60,6 +63,7 @@ local raise = 0 -- 0 = lowered out of sight, 1 = held up
 local penDown = false
 local pen: Vector2? = nil
 local tipNow: Vector3? = nil -- camera space, smoothed
+local handNow: Vector3? = nil
 local roll = 0
 local flickAt = -math.huge
 local flickOk = true
@@ -122,8 +126,45 @@ local function copyWand(character: Model, color: Color3): Model
 	return model
 end
 
+-- Stretches the shaft (only) so the wand is Config.WAND.VIEW_LENGTH from its
+-- pivot to its tip: parts before the shaft stay, parts on it spread along it,
+-- parts past it slide out by the extra length.
+local function stretch(model: Model)
+	local tip = model:FindFirstChild("Tip")
+	local shaft = model:FindFirstChild("Shaft")
+	if not tip or not tip:IsA("BasePart") or not shaft or not shaft:IsA("BasePart") then
+		return
+	end
+	local pivot = model:GetPivot()
+	local tipLocal = pivot:PointToObjectSpace(tip.Position)
+	local extra = Config.WAND.VIEW_LENGTH - tipLocal.Magnitude
+	if extra <= 0 or tipLocal.Magnitude < 1e-3 then
+		return
+	end
+	local dir = tipLocal.Unit
+	local size = shaft.Size
+	local long = math.max(size.X, size.Y, size.Z)
+	local center = pivot:PointToObjectSpace(shaft.Position):Dot(dir)
+	local from, to = center - long / 2, center + long / 2
+	local k = (long + extra) / long
+	local worldDir = pivot:VectorToWorldSpace(dir)
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			local a = pivot:PointToObjectSpace(part.Position):Dot(dir)
+			local moved = if a <= from then a elseif a < to then from + (a - from) * k else a + extra
+			part.CFrame += worldDir * (moved - a)
+		end
+	end
+	shaft.Size = Vector3.new(
+		if size.X == long then size.X * k else size.X,
+		if size.Y == long and size.X ~= long then size.Y * k else size.Y,
+		if size.Z == long and size.X ~= long and size.Y ~= long then size.Z * k else size.Z
+	)
+end
+
 local function build(character: Model, color: Color3, parent: Instance): View
 	local model = copyWand(character, color)
+	stretch(model)
 	local tip = model:FindFirstChild("Tip") :: BasePart
 	local tipLocal = model:GetPivot():PointToObjectSpace(tip.Position)
 	local length = math.max(tipLocal.Magnitude, 0.1)
@@ -187,6 +228,7 @@ local function clear()
 		view = nil
 	end
 	tipNow = nil
+	handNow = nil
 	pen = nil
 	penDown = false
 	roll = 0
@@ -207,16 +249,20 @@ local function step(dt: number)
 		return
 	end
 
-	-- Where the tip should be: on the pen's ray, the wand's length from the grip.
-	local grip = Config.WAND.VIEW_GRIP
+	-- The hand moves part of the way toward the pen's ray (at the grip's
+	-- depth); the tip sits on that ray, the wand's length from the hand.
+	local rest = Config.WAND.VIEW_GRIP
 	local pixel = aimPixel(camera)
 	local ray = camera:ViewportPointToRay(pixel.X, pixel.Y)
 	local origin = camera.CFrame:PointToObjectSpace(ray.Origin)
-	local direction = camera.CFrame:VectorToObjectSpace(ray.Direction)
-	local target = WandAir.viewTip(origin, direction, grip, v.length)
-		or grip + (origin + direction.Unit * 2 - grip).Unit * v.length
-	local last = tipNow or target
+	local direction = camera.CFrame:VectorToObjectSpace(ray.Direction).Unit
+	local hand = WandAir.viewHand(origin, direction, rest, Config.WAND.VIEW_HAND_FOLLOW)
 	local follow = 1 - math.exp(-Config.WAND.VIEW_FOLLOW * dt)
+	local grip = (handNow or rest):Lerp(hand, follow)
+	handNow = grip
+	local target = WandAir.viewTip(origin, direction, grip, v.length)
+		or grip + (origin + direction * 2 - grip).Unit * v.length
+	local last = tipNow or target
 	local tip = last:Lerp(target, follow)
 	tipNow = tip
 

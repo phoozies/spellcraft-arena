@@ -4,6 +4,9 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed (first-person wand)
+- **Your first-person wand is smaller.** It is half the size it was, and only its shaft is lengthened (to `Config.WAND.VIEW_LENGTH`), so the tip still reaches the pen while the wand looks slim. Your hand now moves halfway toward the pen as you draw (`VIEW_HAND_FOLLOW`, shared maths in `WandAir.viewHand`), so the wand stays short on screen instead of spanning from the corner.
+
 ### Fixed
 - **Your first-person wand now shows up wherever you are.** It was built at the spot where your wand was first equipped (a welded model's pivot doesn't follow the hand), so once you had walked away it was thousands of studs off screen. `Fx/WandView` now takes the grip from your hand.
 
