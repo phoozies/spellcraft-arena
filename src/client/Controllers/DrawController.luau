@@ -73,7 +73,7 @@ local GOOD = Color3.fromRGB(255, 214, 64)
 local BAD = Color3.fromRGB(239, 83, 80)
 
 local gui: ScreenGui
-local dim: Frame -- the input surface + vignette, visible while drawing
+local dim: Frame -- the clear input surface, visible while drawing
 local bannerFrame: Frame
 local bannerTitle: TextLabel
 local bannerHint: TextLabel
@@ -659,27 +659,6 @@ local function circle(parent: Instance, props: { [string]: any }): Frame
 	return f
 end
 
--- The vignette: darker at the edges, clear in the middle so the world (and
--- the wand's drawing in the air) shows through.
-local function vignette(parent: Frame, rotation: number)
-	local edge = Instance.new("Frame")
-	edge.Name = "Vignette"
-	edge.Size = UDim2.fromScale(1, 1)
-	edge.BackgroundColor3 = Color3.fromRGB(14, 8, 36)
-	edge.BackgroundTransparency = 0.35
-	edge.BorderSizePixel = 0
-	edge.Parent = parent
-	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = rotation
-	gradient.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.28, 1),
-		NumberSequenceKeypoint.new(0.72, 1),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-	gradient.Parent = edge
-end
-
 local function buildRunes()
 	runes = circle(dim, {
 		Name = "Runes",
@@ -748,14 +727,11 @@ local function buildCanvas()
 	dim = Instance.new("Frame")
 	dim.Name = "Canvas"
 	dim.Size = UDim2.fromScale(1, 1)
-	dim.BackgroundColor3 = Color3.fromRGB(14, 8, 36)
-	dim.BackgroundTransparency = 0.82
+	dim.BackgroundTransparency = 1 -- the world stays in full view while drawing
 	dim.BorderSizePixel = 0
 	dim.Active = true -- swallows clicks so drawing never casts a spell
 	dim.Visible = false
 	dim.Parent = gui
-	vignette(dim, 90)
-	vignette(dim, 0)
 	buildRunes()
 
 	previewHolder = Instance.new("Frame")

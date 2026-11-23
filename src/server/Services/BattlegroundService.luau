@@ -1,8 +1,9 @@
 --!strict
 -- The Battleground: a drop-in open world (Maps/Battleground) far from the
--- hub. Step into the hub's Battleground portal to be teleported to a random
--- open spot there; step on a green gate pad (or press the HUD button) to go
--- back. NpcService fills the world with hostile NPCs worth coins.
+-- hub. Step into the hub's Battleground portal (or press the button in the Play
+-- window) to be teleported to a random open spot there; step on a green gate pad
+-- (or press the HUD button) to go back. NpcService fills the world with hostile
+-- NPCs worth coins.
 --
 --   * Anyone inside can hurt anyone else inside (MatchService.relation reads
 --     the player attribute "InBattleground"); nobody outside can hurt them.
@@ -196,7 +197,24 @@ end
 
 local lastLeave: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 
+-- The portal or the Play window's button; a refusal is explained with a toast.
+local function requestEnter(player: Player)
+	local ok, reason = BattlegroundService.enter(player)
+	if not ok and reason then
+		toastRemote:FireClient(player, reason, "fizzle")
+	end
+end
+
 function BattlegroundService.start()
+	-- "Battleground" button in the Play window (shares the portal's cooldown).
+	Remotes.get("EnterBattleground").OnServerEvent:Connect(function(player)
+		local now = os.clock()
+		if now - (lastTouch[player] or 0) < TOUCH_COOLDOWN then
+			return
+		end
+		lastTouch[player] = now
+		requestEnter(player)
+	end)
 	-- "Return to hub" button on the HUD.
 	Remotes.get("LeaveBattleground").OnServerEvent:Connect(function(player)
 		local now = os.clock()
@@ -206,12 +224,7 @@ function BattlegroundService.start()
 		lastLeave[player] = now
 		BattlegroundService.leave(player)
 	end)
-	wire("BattlegroundPortal", function(player)
-		local ok, reason = BattlegroundService.enter(player)
-		if not ok and reason then
-			toastRemote:FireClient(player, reason, "fizzle")
-		end
-	end)
+	wire("BattlegroundPortal", requestEnter)
 	wire("BattlegroundExit", function(player)
 		BattlegroundService.leave(player)
 	end)

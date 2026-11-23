@@ -16,15 +16,29 @@ local function at(distance: number, degrees: number, key: string): AutoAim.Candi
 	return { position = Vector3.new(math.sin(a), 0, -math.cos(a)) * distance, key = key }
 end
 
+-- The assist ships off (Config.AUTO_AIM.ASSIST); these check how it picks when on.
+local function assistedPick(
+	origin: Vector3,
+	forward: Vector3,
+	candidates: { AutoAim.Candidate },
+	options: AutoAim.Options
+): AutoAim.Candidate?
+	local was = Config.AUTO_AIM.ASSIST
+	Config.AUTO_AIM.ASSIST = true
+	local found = AutoAim.pick(origin, forward, candidates, options)
+	Config.AUTO_AIM.ASSIST = was
+	return found
+end
+
 return function(t)
 	t.describe("Auto-aim target", function()
 		t.it("locks the opponent under the crosshair", function()
-			local pick = AutoAim.pick(ORIGIN, FORWARD, { at(60, 1, "A") }, { range = 200 })
+			local pick = assistedPick(ORIGIN, FORWARD, { at(60, 1, "A") }, { range = 200 })
 			t.expect(pick and pick.key).toBe("A")
 		end)
 
 		t.it("prefers the opponent closest to the sight, even a further one", function()
-			local pick = AutoAim.pick(
+			local pick = assistedPick(
 				ORIGIN,
 				FORWARD,
 				{ at(90, 2, "far"), at(40, 4, "near"), at(140, 0, "dead centre") },
@@ -34,7 +48,7 @@ return function(t)
 		end)
 
 		t.it("distance settles a tie on the sight", function()
-			local pick = AutoAim.pick(
+			local pick = assistedPick(
 				ORIGIN,
 				FORWARD,
 				{ at(120, 3, "far"), at(40, 3, "near") },
@@ -44,17 +58,18 @@ return function(t)
 		end)
 
 		t.it("locks nobody when the assist is off", function()
+			local was = Config.AUTO_AIM.ASSIST
 			Config.AUTO_AIM.ASSIST = false
-			local pick = AutoAim.pick(ORIGIN, FORWARD, { at(60, 0, "A") }, { range = 200 })
-			Config.AUTO_AIM.ASSIST = true
-			t.expect(pick).toBeNil()
+			local off = AutoAim.pick(ORIGIN, FORWARD, { at(60, 0, "A") }, { range = 200 })
+			Config.AUTO_AIM.ASSIST = was
+			t.expect(off).toBeNil()
 		end)
 
 		t.it(
 			"a slightly further opponent dead centre beats a near one at the cone's edge",
 			function()
 				local edge = Config.AUTO_AIM.CONE - 0.5
-				local pick = AutoAim.pick(
+				local pick = assistedPick(
 					ORIGIN,
 					FORWARD,
 					{ at(40, edge, "edge"), at(46, 0, "centre") },
@@ -65,7 +80,7 @@ return function(t)
 		)
 
 		t.it("ignores opponents outside the cone, behind you, or out of range", function()
-			local pick = AutoAim.pick(ORIGIN, FORWARD, {
+			local pick = assistedPick(ORIGIN, FORWARD, {
 				at(60, Config.AUTO_AIM.CONE + 6, "side"),
 				at(30, 180, "behind"),
 				at(260, 0, "far"),
@@ -75,12 +90,12 @@ return function(t)
 
 		t.it("the cone is wider up close", function()
 			t.expect(AutoAim.cone(0) > AutoAim.cone(100)).toBeTruthy()
-			local pick = AutoAim.pick(ORIGIN, FORWARD, { at(5, 20, "close") }, { range = 200 })
+			local pick = assistedPick(ORIGIN, FORWARD, { at(5, 20, "close") }, { range = 200 })
 			t.expect(pick and pick.key).toBe("close")
 		end)
 
 		t.it("skips a nearer opponent hidden behind a wall", function()
-			local pick = AutoAim.pick(ORIGIN, FORWARD, { at(30, 0, "hidden"), at(70, 2, "open") }, {
+			local pick = assistedPick(ORIGIN, FORWARD, { at(30, 0, "hidden"), at(70, 2, "open") }, {
 				range = 200,
 				visible = function(candidate)
 					return candidate.key ~= "hidden"
@@ -91,7 +106,7 @@ return function(t)
 
 		t.it("only checks line of sight until a visible target is found", function()
 			local checks = 0
-			AutoAim.pick(ORIGIN, FORWARD, { at(30, 0, "a"), at(50, 1, "b"), at(70, 2, "c") }, {
+			assistedPick(ORIGIN, FORWARD, { at(30, 0, "a"), at(50, 1, "b"), at(70, 2, "c") }, {
 				range = 200,
 				visible = function()
 					checks += 1

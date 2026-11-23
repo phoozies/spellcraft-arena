@@ -1,15 +1,17 @@
 --!strict
 -- Frees the mouse from the first-person lock while something clickable needs
--- it: a menu, the drawing canvas, a boost pick, a map vote, or the player
--- holding Left Alt. Roblox releases LockFirstPerson's centred mouse while a
+-- it: a menu, the drawing canvas, a boost pick, a map vote, or the cursor key
+-- (CursorController). Roblox releases LockFirstPerson's centred mouse while a
 -- visible GuiButton has Modal = true, so this keeps one invisible modal button
 -- and shows it whenever any reason is set. Touch and gamepad never lock a
--- mouse, so for them this does nothing visible.
+-- mouse, so without a mouse the button stays hidden.
 --
---   MouseLock.set(reason, free)   turn one reason on or off
---   MouseLock.isFree()            true while any reason is on
+--   MouseLock.set(reason, free)     turn one reason on or off
+--   MouseLock.isFree()              true while any reason is on
+--   MouseLock.heldBesides(reason)   true while any other reason is on
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
 local MouseLock = {}
 
@@ -39,7 +41,7 @@ local function button(): TextButton
 end
 
 local function apply()
-	button().Visible = next(reasons) ~= nil
+	button().Visible = next(reasons) ~= nil and UserInputService.MouseEnabled
 end
 
 function MouseLock.set(reason: string, free: boolean)
@@ -52,6 +54,15 @@ end
 
 function MouseLock.isFree(): boolean
 	return next(reasons) ~= nil
+end
+
+function MouseLock.heldBesides(reason: string): boolean
+	for other in reasons do
+		if other ~= reason then
+			return true
+		end
+	end
+	return false
 end
 
 -- Frees the mouse whenever `frame` is shown (it and its ScreenGui are visible):

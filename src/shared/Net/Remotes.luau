@@ -25,6 +25,7 @@ local DEFINITIONS: { [string]: string } = {
 	SetLoadout = "(slot: number, spellId: string?) put an owned chest spell in loadout slot 1 or 2, or empty the slot with nil; the server checks ownership and that its shape is not already in your loadout",
 	TutorialDone = "() the first-join tutorial was finished or skipped; saved so it never shows again",
 	SaveSettings = "(key: string, value: string | boolean) save a player setting: drawKey (a key name), or music / sfx / shake (boolean)",
+	EnterBattleground = "() go to the Battleground from the Play window; the server applies the same rules as the portal (rate limited)",
 	LeaveBattleground = "() leave the Battleground and return to the hub",
 	Dash = "(direction: Vector3?) dash the way the player is heading (their move direction); the server checks the cooldown and state",
 	MapVote = "(mapName: string) your pick in the pre-match map vote (duels); can be changed until the vote closes",

@@ -9,7 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Ballistic = require(ReplicatedStorage.Shared.Util.Ballistic)
 local Pit = require(ReplicatedStorage.Shared.Util.Pit)
 
-local GRAVITY = 196.2
+local GRAVITY = Config.GRAVITY
 
 -- A fake world: terrain walls at these distances (nil = open) in each of the
 -- eight directions, in Pit.DIRECTIONS order.

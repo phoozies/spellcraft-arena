@@ -54,7 +54,7 @@ Leaving the target out means `me` where that makes sense.
 | `;heal <player>` | Restores full health |
 | `;kill <player>` | Knocks the player out |
 | `;god <player>` | Toggles invulnerability. Resets on respawn. |
-| `;speed <player> <n>` | Sets walk speed (0 to 200; the normal speed is `Config.WALK_SPEED`, 24). Resets on the next status change or respawn. |
+| `;speed <player> <n>` | Sets walk speed (0 to 200; the normal speed is `Config.WALK_SPEED`, 20). Resets on the next status change or respawn. |
 | `;freecast <player>` | Toggles no drawing cooldown and no recharges, for testing |
 | `;tp <player> <destination>` | Teleports players to another player |
 | `;bring <player>` | Teleports players to you |

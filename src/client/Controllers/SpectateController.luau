@@ -11,6 +11,7 @@
 local Players = game:GetService("Players")
 
 local Theme = require(script.Parent.Parent.UI.Theme)
+local MouseLock = require(script.Parent.Parent.UI.MouseLock)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
 local ClientState = require(script.Parent.ClientState)
 local HudController = require(script.Parent.HudController)
@@ -161,6 +162,8 @@ function SpectateController.init()
 	})
 	Theme.corner(bar, 12)
 	Theme.stroke(bar, Theme.COLORS.accent, 3)
+	-- Watching someone else: the mouse has nothing to aim, so keep it for the bar.
+	MouseLock.whileVisible(bar)
 	local previous = Theme.button(bar, "◀", {
 		Position = UDim2.fromOffset(6, 6),
 		Size = UDim2.fromOffset(44, 44),

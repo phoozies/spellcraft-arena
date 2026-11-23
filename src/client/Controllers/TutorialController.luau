@@ -158,6 +158,14 @@ end
 -- The steps
 ----------------------------------------------------------------------
 
+-- First person locks the mouse, so a coach line about a button says how to reach it.
+local function useGlowingButton(): string
+	if Responsive.isTouch() then
+		return "tap the glowing button"
+	end
+	return "press <b>Shift</b> and click the glowing button"
+end
+
 local STEPS: { Step } = {
 	{
 		id = "element",
@@ -166,7 +174,7 @@ local STEPS: { Step } = {
 			if panelOpen("Spellbook") then
 				return "Tap an element you like, then press <b>Choose</b>. Your first one is <b>free</b>!"
 			end
-			return "Open your <b>Spellbook</b>: use the glowing button or walk to the book on the plaza."
+			return `Open your <b>Spellbook</b>: {useGlowingButton()} or walk to the book on the plaza.`
 		end,
 		guide = function()
 			return {
@@ -461,8 +469,8 @@ local function buildUi()
 	local skip = Theme.button(card, "Skip", {
 		Name = "Skip",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -8, 0, 8),
-		Size = UDim2.fromOffset(70, 30),
+		Position = UDim2.new(1, -8, 0, if Responsive.isTouch() then 4 else 8),
+		Size = if Responsive.isTouch() then UDim2.fromOffset(84, 36) else UDim2.fromOffset(70, 30),
 		BackgroundColor3 = Theme.COLORS.panel,
 	})
 	skip.Activated:Connect(function()
@@ -480,7 +488,7 @@ local function buildUi()
 		TutorialController.finish(true)
 	end)
 	-- First person: the mouse is free while there is a button to press (the
-	-- welcome screen and the last step's "Got it!"); Skip is a hold of Left Alt.
+	-- welcome screen and the last step's "Got it!"); Skip is a press of Shift.
 	MouseLock.whileVisible(gotItButton)
 
 	-- The welcome screen shown before step one.
