@@ -119,7 +119,7 @@ src/loading   → ReplicatedFirst.LoadingScreen
   LoadingScreen.client  custom join screen (title, tips, progress) until the HUD exists
 
 tests/      → ServerScriptService.Tests     Runner + *.spec modules
-tools/      studio-sync.js / .luau (sync without the Rojo CLI), blender/ (model specs),
+tools/      studio-sync.js / -plugin.lua / .luau (live sync without the Rojo CLI), blender/ (model specs),
             gen-spell-registry.py, prepare-models.luau, make-stud-texture.py, make-marketing-art.py
 ```
 
