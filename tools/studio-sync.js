@@ -145,6 +145,11 @@ http
 			res.end();
 		}
 	})
+	.on("error", (err) => {
+		if (err.code !== "EADDRINUSE") throw err;
+		// Another studio-sync is already serving the repo; the plugin uses it.
+		console.log(`studio-sync is already running on http://localhost:${PORT}`);
+	})
 	.listen(PORT, "127.0.0.1", () => {
 		console.log(`studio-sync serving ${ROOT} on http://localhost:${PORT}/manifest`);
 	});
