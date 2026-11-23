@@ -59,7 +59,7 @@ src/server  → ServerScriptService.Server    (init.server.luau bootstraps)
     Rescue              water splash and pit rescue (called from MatchService's round loop)
     TrapBubble          Water Lock's bubble around a stunned victim
     HubService          builds the hub, spawning, team boxes, dummies, hub regen (no regen anywhere else)
-    BattlegroundService the drop-in Battleground: portal/gate pads, random-spot teleports, respawns, no queue while inside
+    BattlegroundService the drop-in Battleground: portal/gate pads, the Play window's button, random-spot teleports, respawns, no queue while inside
     NpcService          Battleground NPCs: bodies, AI, aggro that sticks to whoever hit them, coin rewards, respawn at NpcSpot parts
     MapVoteService      the pre-duel map vote (MatchService.startMatch waits on it)
     PartyService        parties (invites, leader, PartyId attribute); party mates are allies in the Battleground
@@ -82,10 +82,11 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     DraftController     boost draft cards
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
-    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible except while drawing (Fx/WandView shows a first-person wand then)
-    CrosshairController the sight: one dot, shown over the canvas too; the menu hint outside fights
+    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing; keeps your arm and wand visible except while drawing (Fx/WandView shows a first-person wand then)
+    CursorController    the cursor key: Shift turns the cursor on and off, like shift lock (Config.CURSOR), with the shift lock icon bottom left
+    CrosshairController the sight: one dot, shown over the canvas too; the cursor hint on keyboards
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
-    DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
+    DrawController      the drawing canvas (blank or traced over a spell's guide): clear over the world, rune circle, banner, glowing ink, pen sparks, quality feedback
     InputController     per-device bindings; every device aims from the screen centre (VR: right hand), keys 1-5 open a spell's guide; no cast button
     EffectsController   self boosts, slippery friction, team outlines, camera reset
     FxController        dispatches Fx events (bolts, impacts, cast anim, glyphs, shatter, chips, dust, numbers, element pillars, rising rocks, earthquake)
@@ -107,7 +108,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
   Fx/PropSwap           swaps a hub prop for its open block model for a moment (a shop chest, tinted to its rarity, while the reel spins; the quest chest on a claim)
   UI/Theme              minimal: flat near-black surfaces, one accent, hairlines, one typeface, buttons with auto-contrast text, pills
-  UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown or Left Alt is held
+  UI/MouseLock          frees the first-person mouse (an invisible Modal button) while any window is shown, the canvas is open or the cursor key is used
   UI/Responsive         keeps every UIScale matched to the screen size
   UI/SpellCard          the spell card used by the Spellbook, chest reel, and loadout
   UI/Sigil              a spell's sigil: its shape in its colour on a small dark disc (HUD spell row, Spellbook, chest)
@@ -205,7 +206,7 @@ client: stroke + crosshair point + rotation ──DrawSpell──► SpellInputS
                                └ GlyphResult to the drawer, Fx("glyph") to everyone (or glyphFail on any refusal)
 ```
 
-- **The sight and the bolts' assist** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): only bolts get an assist, and nothing on screen shows it. Candidates are enemy players, hostile NPCs and training dummies within the spell's range and inside the aim cone (`CONE` 15°, widening linearly to `CLOSE_CONE` 25° at point blank, and never narrower than the target's own angular size). They rank by how far off the sight they are (`angle / cone`), with `DISTANCE_WEIGHT` settling near-ties; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading. `ASSIST = false` turns it all off.
+- **The sight and the bolts' assist** (`shared/Util/AutoAim`, `Config.AUTO_AIM`): bolts fly dead straight along the sight; the assist is off (`ASSIST = false`). With it on, only bolts get it, and nothing on screen shows it. Candidates are enemy players, hostile NPCs and training dummies within the spell's range and inside the aim cone (`CONE` 15°, widening linearly to `CLOSE_CONE` 25° at point blank, and never narrower than the target's own angular size). They rank by how far off the sight they are (`angle / cone`), with `DISTANCE_WEIGHT` settling near-ties; line of sight is raycast only in rank order until one is visible. Bolts aim at the intercept with the target's motion (`LEAD` 0.8 of it, vertical speed damped by `LEAD_VERTICAL`, capped at `MAX_LEAD_SECONDS`) and home on the lock at `HOMING` °/s until it is more than `HOMING_GIVE_UP` off their heading.
 
 - **Aiming with no click:** the point under the crosshair is read when the stroke ends and travels with it. The canvas frees the mouse, so the camera holds still while you draw; on a gamepad the drawing stick is sunk (`DrawController`) so it can't swing the aim. The sight stays up over the canvas, and a traced spell also shows its hit circle or placement ghost. The server's `sightPoint` looks through characters and stops at the first solid surface, so nothing lands through a wall and a wall aimed past an opponent still lands. Your own arm, 3D circle and ribbon are hidden on your screen while you draw. Placeables default to side-on to you (`PlacementController.getRotation`, R turns them further).
 

@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local MouseLock = require(script.Parent.Parent.UI.MouseLock)
+local Responsive = require(script.Parent.Parent.UI.Responsive)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local HudController = require(script.Parent.HudController)
 
@@ -181,9 +182,12 @@ function PartyController.init()
 
 	toggle = Theme.button(root, "Party", {
 		Name = "PartyToggle",
-		-- Under the Admin button (12, 12, 36 tall), so neither covers the other.
-		Position = UDim2.fromOffset(10, 54),
-		Size = UDim2.fromOffset(92, 30),
+		-- Under the Admin button (12, 12, 36 tall), so neither covers the other. On
+		-- touch it is taller, so it sits beside the side menu and clear of it.
+		Position = if Responsive.isTouch()
+			then UDim2.fromOffset(112, 8)
+			else UDim2.fromOffset(10, 54),
+		Size = if Responsive.isTouch() then UDim2.fromOffset(92, 44) else UDim2.fromOffset(92, 30),
 		BackgroundColor3 = Theme.COLORS.panel,
 		BackgroundTransparency = 0.45,
 	})

@@ -16,6 +16,23 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ### Added (your wand in first person)
 - **You now see your own wand while you draw** (`Fx/WandView`). It rises into the bottom right of the screen when the canvas opens, and its tip follows your pen and sits right under it, so you watch the wand write the line. It lags a touch behind and twists with the stroke, glows and sparks in the ink's colour while the pen is down, flicks forward with a burst in the quality colour when the drawing lands (shakes red when it fizzles), and drops away when the circle closes. Cosmetic and local only; tunables are `Config.WAND.VIEW_*`.
+### Changed (slower, straighter bolts and heavier movement)
+- **Bolts are much slower** (`Config.PROJECTILE_SPEED_SCALE` 1 to 0.45; a Fireball now flies about 43 studs a second instead of 95). This covers every projectile, including NPC and turret shots.
+- **Bolts fly dead straight at the sight:** the aim assist is off (`Config.AUTO_AIM.ASSIST = false`), so there is no lock, lead, or tracking. Its turn rate is now 90°/s (was 60°) so that it still works at this speed if it is turned back on.
+- **The screen no longer darkens while drawing:** the canvas's tint and vignette are gone. The rune circle and the ink stay.
+- **Movement is a bit slower:** walk speed 20 (was 24), and lower gravity (new `Config.GRAVITY` 160, was Roblox's default 196.2) with jump power 50 (was 55), so a jump is as high as before but hangs longer. The dash is slowed to match (speed 60, hop 34), about 24 studs instead of 28.
+
+### Added (clicking buttons in first person)
+- **Press Shift to get the cursor** (new `CursorController`, keys in `Config.CURSOR`), like Roblox's shift lock: it stays out until you press Shift again, or until a window or the canvas opens and closes. This replaces holding Left Alt, and Roblox's own shift lock is turned off.
+- **Shift lock icon in the bottom left** (PC only, Roblox's built-in textures): blue while the mouse is locked, white while the cursor is out. Click it to go back to aiming.
+- **The cursor hint now shows in fights too** (Return to Hub has no key) and changes while the cursor is out.
+- **The spectate bar frees the mouse**, and the tutorial now tells PC players how to reach the glowing button.
+
+### Added (Battleground button)
+- **The Play window has a Battleground button** (`EnterBattleground` remote). It follows the same rules as walking into the portal, and is hidden while you are already there.
+
+### Changed (bigger buttons on touch)
+- **Bigger touch targets on phones and tablets:** spell cards, Return to Hub, Party, window Close buttons, and the tutorial's Skip. Party moves beside the side menu on touch so they can't overlap. The hidden button that frees the mouse is no longer shown on devices without a mouse.
 
 ### Changed (slower bolts, slower camera)
 - **Bolts fly a third slower** (`Config.PROJECTILE_SPEED_SCALE` 1.5 to 1; a Fireball now moves 95 studs a second instead of 142). This covers every projectile, including NPC and turret shots.
