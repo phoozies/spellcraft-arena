@@ -9,7 +9,8 @@
 --     strokeCancel / verdict) and streamed to the server in small batches
 --     (AirStroke), which relays it to the players near you. Your own circle and
 --     ribbon are for them: on your screen they'd only cover what you are aiming
---     at, and the canvas already shows your line.
+--     at, and the canvas already shows your line. You see your wand instead,
+--     held in first person with its tip writing under your pen (Fx/WandView).
 --   * Other players' live strokes arrive the same way (AirStroke): everyone
 --     watches the shape being drawn on the drawer's circle. The Fx "glyph"
 --     (FxController -> onGlyph) flashes it in its quality colour and pulls it
@@ -29,6 +30,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local WandAir = require(ReplicatedStorage.Shared.Util.WandAir)
 local CastAnimations = require(script.Parent.Parent.Fx.CastAnimations)
 local WandVfx = require(script.Parent.Parent.Fx.WandVfx)
+local WandView = require(script.Parent.Parent.Fx.WandView)
 local AudioController = require(script.Parent.AudioController)
 
 local player = Players.LocalPlayer
@@ -116,6 +118,9 @@ local function setCharging(character: Model, on: boolean)
 			)
 			local root = rootOf(character)
 			AudioController.play("wandCharge", if root then root.Position else nil)
+		elseif character == player.Character then
+			WandView.show(character, WandVfx.colorOf(character))
+			charging[character] = { stop = WandView.hide, flash = function(_: Color3) end }
 		else
 			charging[character] = { stop = function() end, flash = function(_: Color3) end }
 		end
@@ -172,6 +177,7 @@ end
 
 -- Your drawing starts: a fresh ribbon on your magic circle.
 function WandController.strokeBegin(color: Color3)
+	WandView.penDown(color)
 	if ribbon then
 		ribbon:cancel()
 		ribbon = nil
@@ -191,6 +197,7 @@ end
 
 -- A point of your stroke, in screen pixels.
 function WandController.strokePoint(screen: Vector2)
+	WandView.point(screen)
 	local camera = workspace.CurrentCamera
 	if not ribbon or not camera then
 		return
@@ -204,6 +211,7 @@ end
 -- Your stroke is about to go to the server: send the rest of it, and keep it
 -- in the air until the verdict.
 function WandController.strokeSent()
+	WandView.penUp()
 	if pending then
 		pending:cancel()
 	end
@@ -229,6 +237,7 @@ end
 
 -- Your stroke was thrown away before it was sent (too small, cancelled).
 function WandController.strokeCancel()
+	WandView.penUp()
 	if ribbon then
 		ribbon:cancel()
 		ribbon = nil
@@ -244,6 +253,7 @@ function WandController.verdict(ok: boolean, color: Color3?)
 	if sent then
 		sent:finish(ok, color)
 	end
+	WandView.flick(ok, color)
 	local character = player.Character
 	if not character then
 		return

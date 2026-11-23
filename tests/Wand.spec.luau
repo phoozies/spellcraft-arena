@@ -115,6 +115,26 @@ return function(t: any)
 			t.expect(w.RELAY_RANGE > 50).toBeTruthy()
 		end)
 
+		t.it("puts the first-person wand's tip under the pen", function()
+			local grip = Config.WAND.VIEW_GRIP
+			local length = 1.6
+			-- The grip is inside the wand's reach of the eye, so any pen pixel works.
+			t.expect(grip.Magnitude < length).toBeTruthy()
+			for _, dir in
+				{ Vector3.new(0, 0, -1), Vector3.new(-0.6, 0.4, -1), Vector3.new(0.5, -0.5, -1) }
+			do
+				local tip = WandAir.viewTip(Vector3.zero, dir, grip, length) :: Vector3
+				t.expect(tip ~= nil).toBeTruthy()
+				t.expect((tip - grip).Magnitude).toBeNear(length, 1e-4)
+				t.expect(tip.Unit:Dot(dir.Unit)).toBeNear(1, 1e-4)
+			end
+			-- Out of reach: a short wand far from the eye.
+			t.expect(WandAir.viewTip(Vector3.zero, Vector3.new(0, 0, -1), Vector3.new(5, 0, 0), 1))
+				.toBeNil()
+			t.expect(Config.WAND.VIEW_SCALE > 0 and Config.WAND.VIEW_SCALE <= 1).toBeTruthy()
+			t.expect(Config.WAND.VIEW_RAISE > 0 and Config.WAND.VIEW_RAISE < 1).toBeTruthy()
+		end)
+
 		t.it("stands the circle upright, facing where the drawer looks", function()
 			local frame = WandAir.facing(Vector3.zero, Vector3.new(0, -0.5, -2))
 			t.expect((frame.LookVector - Vector3.new(0, 0, -1)).Magnitude).toBeNear(0, 1e-6)

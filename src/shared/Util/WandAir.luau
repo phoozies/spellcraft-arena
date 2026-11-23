@@ -8,6 +8,7 @@
 --   cleanLook / cleanPoints   validate relayed drawing data (WandService)
 --   fromScreen a point of the on-screen stroke -> studs on the air canvas
 --   fromGlyph  a point of a glyph shape (Spells/Glyphs, 0..1 box) -> studs
+--   viewTip    where your first-person wand's tip goes to sit on the pen
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -111,6 +112,29 @@ end
 -- Canvas studs -> a world position on `frame`.
 function WandAir.toWorld(frame: CFrame, offset: Vector2): Vector3
 	return frame.Position + frame.RightVector * offset.X + frame.UpVector * offset.Y
+end
+
+-- Your first-person wand (Fx/WandView): the point on the ray from `origin`
+-- along `direction` (the pen's pixel) that is `length` studs from the grip, so
+-- the tip of a wand held at `grip` sits right under the pen. Nil when the ray
+-- passes out of reach.
+function WandAir.viewTip(
+	origin: Vector3,
+	direction: Vector3,
+	grip: Vector3,
+	length: number
+): Vector3?
+	local d = direction.Unit
+	local o = origin - grip
+	-- |o + t*d| = length, the farther root.
+	local b = o:Dot(d)
+	local c = o:Dot(o) - length * length
+	local disc = b * b - c
+	if disc < 0 then
+		return nil
+	end
+	local t = -b + math.sqrt(disc)
+	return if t > 0 then origin + d * t else nil
 end
 
 return WandAir

@@ -1205,7 +1205,8 @@ return function(): Model
 			shopModel:PivotTo(spot)
 			for _, part in shopModel:GetDescendants() do
 				if
-					part:IsA("BasePart") and (part.Name == "Chest_Trim" or part.Name == "Chest_Gem")
+					part:IsA("BasePart")
+					and (part.Name == "Chest_Trim" or part.Name == "Chest_Gem")
 				then
 					part.Color = color
 				end

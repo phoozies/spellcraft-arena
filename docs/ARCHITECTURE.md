@@ -82,7 +82,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
     DraftController     boost draft cards
     PlacementController ghost preview while a placeable's shape is on the canvas; turns placeables side-on to you (+ R)
     ReticleController   hit circle + range ring while tracing point-and-click spells (Fire Pillar, Water Nebula, Earth Punch, Lightning, Black Hole)
-    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible except while drawing
+    CameraController    first person everywhere; mouse look speed (settings.camera); frees the mouse while drawing or holding Left Alt; keeps your arm and wand visible except while drawing (Fx/WandView shows a first-person wand then)
     CrosshairController the sight: one dot, shown over the canvas too; the menu hint outside fights
     WandController      raises every drawing player's wand (pose, tip glow, rune circle), writes your stroke in the air, traces other players' glyphs
     DrawController      the drawing canvas (blank or traced over a spell's guide): vignette, rune circle, banner, glowing ink, pen sparks, quality feedback
@@ -103,6 +103,7 @@ src/client  → StarterPlayerScripts.Client   (init.client.luau bootstraps)
   Fx/SpellVfx           bolt trails, impact bursts, swells, cast beats, buff auras, model columns/boulders/cracks, black hole vortex, magic circle
   Fx/CastAnimations     plays a spell's cast pose as a runtime KeyframeSequence through the Animator (stop() ends a held pose)
   Fx/WandVfx            the wand's 3D effects: tip glow + rune circle, the air ribbon and its beam, the absorb burst, the fizzle
+  Fx/WandView           your own wand in first person while you draw: rises in, its tip follows your pen, flicks or shakes on the verdict
   Fx/GuideArrow         the tutorial's world and GUI arrows, outlines, ground trail, edge pointer
   Fx/PropSwap           swaps a hub prop for its open block model for a moment (a shop chest, tinted to its rarity, while the reel spins; the quest chest on a claim)
   UI/Theme              minimal: flat near-black surfaces, one accent, hairlines, one typeface, buttons with auto-contrast text, pills

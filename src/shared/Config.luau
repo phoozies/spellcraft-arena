@@ -45,6 +45,11 @@ local Config = {
 	--   STROKE_BATCH   most points in one batch; STROKE_MAX_POINTS per stroke
 	--   STROKE_RATE    least seconds between batches the server accepts
 	--   RELAY_RANGE    studs: players farther away aren't sent your stroke
+	--   VIEW_*         your own wand in first person while you draw
+	--                  (Fx/WandView): its scale, where it is held (camera
+	--                  space: right, up, forward is -Z), how fast its tip
+	--                  follows the pen (higher = snappier), and the seconds it
+	--                  takes to rise in and drop away
 	WAND = {
 		MODEL = "Wand",
 		TILT = 30,
@@ -59,6 +64,10 @@ local Config = {
 		STROKE_MAX_POINTS = 300,
 		STROKE_RATE = 0.05,
 		RELAY_RANGE = 250,
+		VIEW_SCALE = 0.6,
+		VIEW_GRIP = Vector3.new(0.7, -0.7, -0.9),
+		VIEW_FOLLOW = 22,
+		VIEW_RAISE = 0.22,
 	},
 
 	-- Movement & aiming. Players move faster than Roblox's default (16) to
