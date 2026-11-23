@@ -98,6 +98,14 @@ local function copyWand(character: Model, color: Color3): Model
 		copy:Destroy()
 	end
 	model.Name = "WandView"
+	-- The welded wand's WorldPivot stays where it was equipped (its parts
+	-- follow the hand, the pivot doesn't), so take the grip from the hand.
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local isR15 = humanoid ~= nil and humanoid.RigType == Enum.HumanoidRigType.R15
+	local hand = character:FindFirstChild(if isR15 then "RightHand" else "Right Arm")
+	if model == copy and hand and hand:IsA("BasePart") then
+		model.WorldPivot = hand.CFrame * WandAir.grip(isR15, hand.Size)
+	end
 	for _, item in model:GetDescendants() do
 		if item:IsA("JointInstance") or item:IsA("WeldConstraint") or item:IsA("Constraint") then
 			item:Destroy()

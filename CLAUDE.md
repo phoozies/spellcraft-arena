@@ -48,7 +48,7 @@ All-ages Roblox PvP: draw a spell's shape, get a copy of the spell, cast it. Roj
 
 ## Working in Studio (Studio MCP)
 
-- No Rojo CLI here: run `node tools/studio-sync.js` (background), then in **Edit** mode enable `HttpService.HttpEnabled`, run the body of `tools/studio-sync.luau`, and disable HTTP again.
+- No Rojo CLI here: run `node tools/studio-sync.js` (background). The **Spellcraft Sync** plugin (`tools/studio-sync-plugin.lua`, installed once by the user with `node tools/studio-sync.js --install-plugin`) then live-syncs the place in Edit mode, like `rojo serve`. Code run through the Studio MCP can't reach `localhost` (Assistant HTTP allowlist), so without the plugin push changes with MCP `multi_edit` or ask the user to paste `tools/studio-sync.luau` into the command bar.
 - Tests: during Play, from the **Server** context: `require(game.ServerScriptService.Tests.Runner)()`.
 - Live state: the command bar/MCP has its **own module cache and `_G`**, so requiring a service gives a fresh copy. Use `game.ServerStorage.SpellcraftDebug:Invoke("state" | "coins", n | "wins", n | "chest", "unlockall" | "element", "Water")` instead (Studio only).
 - Studio playtests may save to the real DataStore when API access is on: debug commands change the tester's saved profile.

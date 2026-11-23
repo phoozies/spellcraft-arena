@@ -4,6 +4,12 @@ All notable changes to this project are documented here ([Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed
+- **Your first-person wand now shows up wherever you are.** It was built at the spot where your wand was first equipped (a welded model's pivot doesn't follow the hand), so once you had walked away it was thousands of studs off screen. `Fx/WandView` now takes the grip from your hand.
+
+### Changed (tools)
+- **Live sync without Rojo:** the new **Spellcraft Sync** Studio plugin (`tools/studio-sync-plugin.lua`, installed with `node tools/studio-sync.js --install-plugin`) polls the sync server's new `/version` endpoint and updates the place in Edit mode within a second of a change. It updates scripts open in the editor in place, skips unchanged ones, and can be paused from the Spellcraft toolbar. This replaces running `tools/studio-sync.luau` through the Studio MCP, which can no longer reach localhost.
+
 ### Added (your wand in first person)
 - **You now see your own wand while you draw** (`Fx/WandView`). It rises into the bottom right of the screen when the canvas opens, and its tip follows your pen and sits right under it, so you watch the wand write the line. It lags a touch behind and twists with the stroke, glows and sparks in the ink's colour while the pen is down, flicks forward with a burst in the quality colour when the drawing lands (shakes red when it fizzles), and drops away when the circle closes. Cosmetic and local only; tunables are `Config.WAND.VIEW_*`.
 

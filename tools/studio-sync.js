@@ -2,13 +2,21 @@
 // Fallback sync for machines without the Rojo CLI.
 //
 // Serves the Rojo tree described in default.project.json as JSON on
-// http://localhost:34873/manifest. tools/studio-sync.luau (run in the
-// Studio command bar, or via the Studio MCP) pulls it and creates or updates
-// the scripts. Prefer `rojo serve` when Rojo is installed.
+// http://localhost:34873/manifest (and a hash of it on /version). The
+// Spellcraft Sync plugin (tools/studio-sync-plugin.lua) polls /version and
+// syncs the place in Edit mode whenever the repo changes, like `rojo serve`.
+// Code run through the Studio MCP can't reach localhost (the Assistant HTTP
+// allowlist), so the plugin is how the MCP-driven workflow syncs.
+// tools/studio-sync.luau is a one-off fallback for the command bar. Prefer
+// Rojo when installed.
 //
-// Usage: node tools/studio-sync.js
+// Usage: node tools/studio-sync.js                    serve
+//        node tools/studio-sync.js --install-plugin   install or update the
+//                                                     plugin (once), then serve
 
+const crypto = require("crypto");
 const fs = require("fs");
+const os = require("os");
 const http = require("http");
 const path = require("path");
 
@@ -88,9 +96,42 @@ function manifest() {
 	return out;
 }
 
+// Studio's local Plugins folder (Windows, then macOS).
+function pluginsFolder() {
+	if (process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, "Roblox", "Plugins");
+	return path.join(os.homedir(), "Documents", "Roblox", "Plugins");
+}
+
+// Copies the sync plugin into Studio's Plugins folder when it is missing or
+// out of date (only when asked: --install-plugin).
+function installPlugin() {
+	const source = fs.readFileSync(path.join(__dirname, "studio-sync-plugin.lua"), "utf8");
+	const folder = pluginsFolder();
+	const target = path.join(folder, "SpellcraftSync.lua");
+	try {
+		if (fs.existsSync(target) && fs.readFileSync(target, "utf8") === source) return;
+		fs.mkdirSync(folder, { recursive: true });
+		fs.writeFileSync(target, source);
+		console.log(`studio-sync installed the Spellcraft Sync plugin at ${target}`);
+	} catch (err) {
+		console.log(`studio-sync could not install the plugin (${err.message}); use tools/studio-sync.luau`);
+	}
+}
+
+if (process.argv.includes("--install-plugin")) installPlugin();
+
 http
 	.createServer((req, res) => {
-		if (req.url === "/manifest") {
+		if (req.url === "/version") {
+			try {
+				const hash = crypto.createHash("sha1").update(JSON.stringify(manifest())).digest("hex");
+				res.writeHead(200, { "Content-Type": "text/plain" });
+				res.end(hash);
+			} catch (err) {
+				res.writeHead(500);
+				res.end(String(err));
+			}
+		} else if (req.url === "/manifest") {
 			try {
 				const body = JSON.stringify(manifest());
 				res.writeHead(200, { "Content-Type": "application/json" });

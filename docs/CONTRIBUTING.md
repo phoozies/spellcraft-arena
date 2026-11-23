@@ -4,7 +4,7 @@
 
 1. Install the toolchain with [Rokit](https://github.com/rojo-rbx/rokit): `rokit install` (pins live in `rokit.toml`).
 2. Run `rojo serve`, then connect from the Rojo plugin in Studio.
-3. **No Rojo CLI?** Run `node tools/studio-sync.js` and paste `tools/studio-sync.luau` into the Studio command bar in Edit mode. It temporarily needs *Allow HTTP Requests*, so turn that back off afterwards. With the Studio MCP, the `test-in-studio` skill does this for you.
+3. **No Rojo CLI?** Run `node tools/studio-sync.js --install-plugin` once: it installs the **Spellcraft Sync** Studio plugin (allow its localhost access when Studio asks). From then on, `node tools/studio-sync.js` keeps the place in Edit mode in step with the repo, like `rojo serve`; the Sync button on the Spellcraft toolbar pauses it. Without the plugin, paste `tools/studio-sync.luau` into the Studio command bar in Edit mode (it temporarily needs *Allow HTTP Requests*, so turn that back off afterwards).
 
 ## 3D models
 

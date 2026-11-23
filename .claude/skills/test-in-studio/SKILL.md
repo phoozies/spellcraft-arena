@@ -9,9 +9,10 @@ There is no Rojo CLI on this machine. Call `mcp__Roblox_Studio__list_roblox_stud
 
 ## 1. Sync the code
 
-1. Run `node tools/studio-sync.js` **in the background** (it serves `default.project.json` on `localhost:34873`).
-2. With Studio in **Edit** mode, call `execute_luau` (datamodel `Edit`): set `HttpService.HttpEnabled = true`, run the body of `tools/studio-sync.luau` (inline it; the tool cannot read repo files), then set `HttpEnabled = false` again. Wrap the body in `pcall` so HTTP is always switched back off.
-3. Re-sync after every edit. Stop the node server when you are finished.
+1. Run `node tools/studio-sync.js` **in the background** (it serves `default.project.json` on `localhost:34873`, and a hash of it on `/version`).
+2. With the **Spellcraft Sync** plugin installed (`tools/studio-sync-plugin.lua`; the user installs it once with `node tools/studio-sync.js --install-plugin` and allows its localhost access when Studio asks), Studio syncs by itself within a second of every file change while in **Edit** mode. Check `get_console_output` for `[Spellcraft Sync] synced ...`. The plugin's Sync toolbar button turns it off and on.
+3. Without the plugin: `execute_luau` **cannot** reach localhost (the Studio Assistant HTTP allowlist denies it), so push the changed scripts with `multi_edit` (paths in dot notation; Studio's copies may have CRLF line endings, and names with dots like `Wand.spec` need `execute_luau` with `game.ServerScriptService.Tests["Wand.spec"]`), or ask the user to paste `tools/studio-sync.luau` into the command bar with HTTP enabled.
+4. Sync again after every edit (automatic with the plugin), and stop playing first: the plugin only syncs in Edit mode. Stop the node server when you are finished.
 
 ## 2. Run the tests
 
