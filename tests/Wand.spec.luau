@@ -117,15 +117,20 @@ return function(t: any)
 
 		t.it("puts the first-person wand's tip under the pen", function()
 			local grip = Config.WAND.VIEW_GRIP
-			local length = 1.6
-			-- The grip is inside the wand's reach of the eye, so any pen pixel works.
-			t.expect(grip.Magnitude < length).toBeTruthy()
+			local length = Config.WAND.VIEW_LENGTH
+			-- The hand moves VIEW_HAND_FOLLOW of the way to the pen's ray, so it is
+			-- at most (1 - follow) * |grip| from it: within reach, any pen pixel works.
+			local follow = Config.WAND.VIEW_HAND_FOLLOW
+			t.expect(follow >= 0 and follow < 1).toBeTruthy()
+			t.expect((1 - follow) * grip.Magnitude < length).toBeTruthy()
 			for _, dir in
 				{ Vector3.new(0, 0, -1), Vector3.new(-0.6, 0.4, -1), Vector3.new(0.5, -0.5, -1) }
 			do
-				local tip = WandAir.viewTip(Vector3.zero, dir, grip, length) :: Vector3
+				local hand = WandAir.viewHand(Vector3.zero, dir, grip, follow)
+				t.expect(hand.Z).toBeNear(grip.Z, 1e-4)
+				local tip = WandAir.viewTip(Vector3.zero, dir, hand, length) :: Vector3
 				t.expect(tip ~= nil).toBeTruthy()
-				t.expect((tip - grip).Magnitude).toBeNear(length, 1e-4)
+				t.expect((tip - hand).Magnitude).toBeNear(length, 1e-4)
 				t.expect(tip.Unit:Dot(dir.Unit)).toBeNear(1, 1e-4)
 			end
 			-- Out of reach: a short wand far from the eye.

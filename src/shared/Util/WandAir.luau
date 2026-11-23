@@ -8,7 +8,8 @@
 --   cleanLook / cleanPoints   validate relayed drawing data (WandService)
 --   fromScreen a point of the on-screen stroke -> studs on the air canvas
 --   fromGlyph  a point of a glyph shape (Spells/Glyphs, 0..1 box) -> studs
---   viewTip    where your first-person wand's tip goes to sit on the pen
+--   viewHand / viewTip  where your first-person wand's hand and tip go so the
+--              tip sits on the pen
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -112,6 +113,21 @@ end
 -- Canvas studs -> a world position on `frame`.
 function WandAir.toWorld(frame: CFrame, offset: Vector2): Vector3
 	return frame.Position + frame.RightVector * offset.X + frame.UpVector * offset.Y
+end
+
+-- Your first-person wand (Fx/WandView): where the hand goes for a pen whose
+-- ray runs from `origin` along `direction`: `follow` of the way from `rest`
+-- toward that ray, at rest's depth (camera space, forward is -Z). It ends up at
+-- most (1 - follow) * |rest| from the ray, so a wand longer than that reaches.
+function WandAir.viewHand(
+	origin: Vector3,
+	direction: Vector3,
+	rest: Vector3,
+	follow: number
+): Vector3
+	local d = direction.Unit
+	local t = math.max((rest.Z - origin.Z) / math.min(d.Z, -1e-3), 0)
+	return rest:Lerp(origin + d * t, follow)
 end
 
 -- Your first-person wand (Fx/WandView): the point on the ray from `origin`
